@@ -13,7 +13,10 @@ return new class extends Migration
     {
         Schema::create('sectors', function (Blueprint $table) {
             $table->id();
+            $table->string('name');
+            $table->string('code')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 
