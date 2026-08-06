@@ -17,6 +17,7 @@ return new class extends Migration
             $table->dateTime('activity_date');
             $table->text('notes')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

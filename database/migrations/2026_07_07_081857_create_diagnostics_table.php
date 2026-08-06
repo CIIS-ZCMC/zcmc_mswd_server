@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('attending_physician')->nullable();
             $table->string('facility_name')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

@@ -22,6 +22,7 @@ return new class extends Migration
             $table->text('assessment_notes')->nullable();
             $table->text('intervention_plan')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

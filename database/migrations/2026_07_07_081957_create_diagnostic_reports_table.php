@@ -18,6 +18,7 @@ return new class extends Migration
             $table->string('file_type');
             $table->string('remarks')->nullable();
             $table->timestamps();
+            $table->softDeletes();
         });
     }
 

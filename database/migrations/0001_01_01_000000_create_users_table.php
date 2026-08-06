@@ -12,8 +12,13 @@ return new class extends Migration
     public function up(): void
     {
         Schema::create('users', function (Blueprint $table) {
-            $table->unsignedBigInteger('id')->primary();   // UMIS user id, not auto-increment
-            $table->string('displayName');
+            $table->id();
+
+            $table->unsignedBigInteger('employee_id');   // UMIS user id, not auto-increment
+            $table->integer('employee_number');          // UMIS employee_id
+            $table->string('full_name');                 // UMIS full_name
+            $table->string('email');                     // UMIS email
+
             $table->string('role');                        // display/filter cache only
             $table->boolean('is_active')->default(true);
             $table->dateTime('synced_at')->nullable();
