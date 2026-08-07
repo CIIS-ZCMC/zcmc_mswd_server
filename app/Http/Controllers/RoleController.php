@@ -58,6 +58,12 @@ class RoleController extends Controller
 
     public function destroy(Role $role): Response
     {
+        abort_if(
+            $role->name === config('filament-shield.super_admin.name'),
+            Response::HTTP_FORBIDDEN,
+            'The super administrator role cannot be deleted.',
+        );
+
         $role->delete();
 
         return response()->noContent();
