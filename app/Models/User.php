@@ -2,13 +2,16 @@
 
 namespace App\Models;
 
+use Filament\Models\Contracts\FilamentUser;
+use Filament\Models\Contracts\HasName;
+use Filament\Panel;
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Foundation\Auth\User as Authenticatable;
 use Illuminate\Notifications\Notifiable;
 use Laravel\Sanctum\HasApiTokens;
 use Spatie\Permission\Traits\HasRoles;
 
-class User extends Authenticatable
+class User extends Authenticatable implements FilamentUser, HasName
 {
     use HasApiTokens, HasFactory, HasRoles, Notifiable;
 
@@ -35,6 +38,23 @@ class User extends Authenticatable
             'is_active' => 'boolean',
             'synced_at' => 'datetime',
         ];
+    }
+
+    /**
+     * Gate access to the Filament admin panel: active users holding the
+     * `panel.access` permission (via any assigned role).
+     */
+    public function canAccessPanel(Panel $panel): bool
+    {
+        return $this->is_active && $this->can('panel.access');
+    }
+
+    /**
+     * Name shown in the Filament panel (user menu, etc.).
+     */
+    public function getFilamentName(): string
+    {
+        return $this->employee_name ?? (string) $this->email;
     }
 
     /**
