@@ -2,12 +2,12 @@
 
 use App\Filament\Resources\Users\Pages\EditUser;
 use App\Filament\Resources\Users\UserResource;
+use App\Models\Permission;
+use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 use function Pest\Laravel\actingAs;
 
@@ -30,8 +30,8 @@ it('adds panel.access to the seeded catalog', function () {
     expect(Permission::where('name', 'panel.access')->exists())->toBeTrue();
 });
 
-it('makes Admin the Shield super admin', function () {
-    expect(config('filament-shield.super_admin.name'))->toBe('Admin');
+it('treats Admin as the super admin role', function () {
+    expect(RolesAndPermissionsSeeder::SUPER_ADMIN)->toBe('Admin');
 });
 
 it('lets an active user with panel.access reach the panel', function () {
