@@ -27,6 +27,7 @@ use App\Repositories\Contracts\PatientWatcherRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\SectorRepositoryInterface;
+use App\Repositories\Contracts\UnifiedIntakeSheetRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\DiagnosticReportRepository;
 use App\Repositories\DiagnosticRepository;
@@ -45,6 +46,7 @@ use App\Repositories\PatientWatcherRepository;
 use App\Repositories\PermissionRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\SectorRepository;
+use App\Repositories\UnifiedIntakeSheetRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
 
@@ -76,6 +78,7 @@ class RepositoryServiceProvider extends ServiceProvider
         PatientAssistanceRepositoryInterface::class => PatientAssistanceRepository::class,
         PatientAssistanceLogRepositoryInterface::class => PatientAssistanceLogRepository::class,
         PatientAssistanceReportRepositoryInterface::class => PatientAssistanceReportRepository::class,
+        UnifiedIntakeSheetRepositoryInterface::class => UnifiedIntakeSheetRepository::class,
     ];
 
     /**
