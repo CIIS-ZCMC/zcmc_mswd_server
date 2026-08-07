@@ -37,6 +37,8 @@ Route::middleware('auth:sanctum')->group(function () {
             ->middleware('permission:intake.view');
         Route::get('{intakeSheet}/history', [UnifiedIntakeSheetController::class, 'history'])
             ->middleware('permission:intake.view');
+        Route::get('{intakeSheet}/pdf', [UnifiedIntakeSheetController::class, 'pdf'])
+            ->middleware('permission:intake.view');
         Route::post('/', [UnifiedIntakeSheetController::class, 'store'])
             ->middleware('permission:intake.create');
         Route::put('{intakeSheet}', [UnifiedIntakeSheetController::class, 'update'])
