@@ -15,11 +15,19 @@ class DatabaseSeeder extends Seeder
      */
     public function run(): void
     {
+        $this->call(RolesAndPermissionsSeeder::class);
+
         // User::factory(10)->create();
 
-        User::factory()->create([
-            'name' => 'Test User',
-            'email' => 'test@example.com',
+        $admin = User::factory()->create([
+            'employee_id' => 1,
+            'employee_name' => 'Admin University',
+            'employee_number' => 2023060551,
+            'email' => 'zcmc@admin.com',
+            'role' => 'System Administrator',
         ]);
+
+        $admin->assignRole('System Administrator');
+        $admin->syncRoleCache();
     }
 }
