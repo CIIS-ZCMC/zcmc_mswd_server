@@ -22,6 +22,7 @@ class StoreRoleRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique($rolesTable, 'name')],
+            'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['sometimes', 'array'],
             'permissions.*' => ['string', Rule::exists($permissionsTable, 'name')],
         ];

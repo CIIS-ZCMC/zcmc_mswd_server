@@ -17,13 +17,15 @@ use App\Repositories\Contracts\GuarantorRepositoryInterface;
 use App\Repositories\Contracts\InterventionRepositoryInterface;
 use App\Repositories\Contracts\InterventionTypeRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceLogRepositoryInterface;
-use App\Repositories\Contracts\PatientAssistanceRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceReportRepositoryInterface;
+use App\Repositories\Contracts\PatientAssistanceRepositoryInterface;
 use App\Repositories\Contracts\PatientCaretakerRepositoryInterface;
 use App\Repositories\Contracts\PatientFamilyMemberRepositoryInterface;
 use App\Repositories\Contracts\PatientIdRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\PatientWatcherRepositoryInterface;
+use App\Repositories\Contracts\PermissionRepositoryInterface;
+use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\SectorRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\DiagnosticReportRepository;
@@ -40,6 +42,8 @@ use App\Repositories\PatientFamilyMemberRepository;
 use App\Repositories\PatientIdRepository;
 use App\Repositories\PatientRepository;
 use App\Repositories\PatientWatcherRepository;
+use App\Repositories\PermissionRepository;
+use App\Repositories\RoleRepository;
 use App\Repositories\SectorRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
@@ -51,6 +55,8 @@ class RepositoryServiceProvider extends ServiceProvider
      */
     public array $bindings = [
         UserRepositoryInterface::class => UserRepository::class,
+        RoleRepositoryInterface::class => RoleRepository::class,
+        PermissionRepositoryInterface::class => PermissionRepository::class,
         SectorRepositoryInterface::class => SectorRepository::class,
         InterventionTypeRepositoryInterface::class => InterventionTypeRepository::class,
         AssistantTypeRepositoryInterface::class => AssistantTypeRepository::class,
