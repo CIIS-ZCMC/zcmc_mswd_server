@@ -30,30 +30,30 @@ it('adds panel.access to the seeded catalog', function () {
     expect(Permission::where('name', 'panel.access')->exists())->toBeTrue();
 });
 
-it('makes System Administrator the Shield super admin', function () {
-    expect(config('filament-shield.super_admin.name'))->toBe('System Administrator');
+it('makes Admin the Shield super admin', function () {
+    expect(config('filament-shield.super_admin.name'))->toBe('Admin');
 });
 
 it('lets an active user with panel.access reach the panel', function () {
-    actingAs(panelUser('System Administrator'));
+    actingAs(panelUser('Admin'));
 
     $this->get('/admin')->assertOk();
 });
 
 it('denies panel access to a role without panel.access', function () {
-    actingAs(panelUser('Viewer'));
+    actingAs(panelUser('Processor'));
 
     $this->get('/admin')->assertForbidden();
 });
 
 it('denies panel access to an inactive user who otherwise qualifies', function () {
-    actingAs(panelUser('System Administrator', active: false));
+    actingAs(panelUser('Admin', active: false));
 
     $this->get('/admin')->assertForbidden();
 });
 
 it('shows the users list to a role with users.view', function () {
-    actingAs(panelUser('MSWD Head')); // has panel.access + users.view
+    actingAs(panelUser('MSS Head')); // has panel.access + users.view
 
     $this->get('/admin/users')->assertOk();
 });
@@ -68,20 +68,20 @@ it('hides the users list from a panel user without users.view', function () {
 });
 
 it('syncs the role cache when roles are changed via the Filament editor', function () {
-    actingAs(panelUser('System Administrator'));
-    $target = panelUser('Encoder');
-    $socialWorkerId = Role::findByName('Social Worker')->getKey();
+    actingAs(panelUser('Admin'));
+    $target = panelUser('Processor');
+    $caseManagerId = Role::findByName('Case Manager')->getKey();
 
     Livewire::test(EditUser::class, ['record' => $target->getKey()])
-        ->fillForm(['roles' => [$socialWorkerId]])
+        ->fillForm(['roles' => [$caseManagerId]])
         ->call('save')
         ->assertHasNoFormErrors();
 
     $target->refresh();
 
-    expect($target->hasRole('Social Worker'))->toBeTrue()
-        ->and($target->hasRole('Encoder'))->toBeFalse()
-        ->and($target->role)->toBe('Social Worker');
+    expect($target->hasRole('Case Manager'))->toBeTrue()
+        ->and($target->hasRole('Processor'))->toBeFalse()
+        ->and($target->role)->toBe('Case Manager');
 });
 
 it('does not allow creating users through the panel', function () {

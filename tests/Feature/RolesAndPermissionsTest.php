@@ -33,34 +33,40 @@ it('seeds every default role with the expected permission counts', function () {
     expect(Role::pluck('name')->all())
         ->toEqualCanonicalizing(array_keys(RolesAndPermissionsSeeder::ROLES));
 
-    expect(Role::findByName('System Administrator')->permissions)
+    expect(Role::findByName('Admin')->permissions)
         ->toHaveCount(count(RolesAndPermissionsSeeder::PERMISSIONS));
 
-    expect(Role::findByName('Viewer')->permissions->pluck('name')->all())
-        ->toEqualCanonicalizing(['patients.view', 'cases.view', 'assistance.view', 'reports.view']);
+    expect(Role::findByName('Processor')->permissions->pluck('name')->all())
+        ->toEqualCanonicalizing([
+            'patients.view', 'cases.view',
+            'assistance.view', 'assistance.create', 'assistance.update',
+            'reports.view',
+        ]);
 });
 
 it('mirrors the assigned role into the role cache column', function () {
-    $user = userWithRole('Social Worker');
+    $user = userWithRole('Case Manager');
 
-    expect($user->fresh()->role)->toBe('Social Worker');
+    expect($user->fresh()->role)->toBe('Case Manager');
 });
 
 test('role permission matrix', function (string $role, string $permission, bool $allowed) {
     expect(userWithRole($role)->can($permission))->toBe($allowed);
 })->with([
-    'admin can manage roles' => ['System Administrator', 'roles.manage', true],
-    'head can approve assistance' => ['MSWD Head', 'assistance.approve', true],
-    'head cannot manage roles' => ['MSWD Head', 'roles.manage', false],
-    'social worker can create cases' => ['Social Worker', 'cases.create', true],
-    'social worker cannot approve assistance' => ['Social Worker', 'assistance.approve', false],
-    'encoder cannot delete patients' => ['Encoder', 'patients.delete', false],
-    'viewer can view patients' => ['Viewer', 'patients.view', true],
-    'viewer cannot create patients' => ['Viewer', 'patients.create', false],
+    'admin can manage roles' => ['Admin', 'roles.manage', true],
+    'head can approve assistance' => ['MSS Head', 'assistance.approve', true],
+    'head cannot manage roles' => ['MSS Head', 'roles.manage', false],
+    'supervisor can approve assistance' => ['Supervisor', 'assistance.approve', true],
+    'supervisor cannot manage settings' => ['Supervisor', 'settings.manage', false],
+    'case manager can create cases' => ['Case Manager', 'cases.create', true],
+    'case manager cannot approve assistance' => ['Case Manager', 'assistance.approve', false],
+    'processor cannot delete patients' => ['Processor', 'patients.delete', false],
+    'processor can update assistance' => ['Processor', 'assistance.update', true],
+    'processor cannot create patients' => ['Processor', 'patients.create', false],
 ]);
 
 it('lets an authorized user list roles', function () {
-    Sanctum::actingAs(userWithRole('System Administrator'));
+    Sanctum::actingAs(userWithRole('Admin'));
 
     $this->getJson('/api/roles')
         ->assertOk()
@@ -68,37 +74,37 @@ it('lets an authorized user list roles', function () {
 });
 
 it('forbids listing roles without roles.manage', function () {
-    Sanctum::actingAs(userWithRole('Viewer'));
+    Sanctum::actingAs(userWithRole('Processor'));
 
     $this->getJson('/api/roles')->assertForbidden();
 });
 
 it('lets an admin sync another user\'s roles', function () {
-    Sanctum::actingAs(userWithRole('System Administrator'));
-    $target = userWithRole('Encoder');
+    Sanctum::actingAs(userWithRole('Admin'));
+    $target = userWithRole('Processor');
 
-    $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['Social Worker']])
+    $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['Case Manager']])
         ->assertOk()
-        ->assertJsonPath('data.roles', ['Social Worker']);
+        ->assertJsonPath('data.roles', ['Case Manager']);
 
-    expect($target->fresh()->role)->toBe('Social Worker')
-        ->and($target->fresh()->hasRole('Social Worker'))->toBeTrue()
-        ->and($target->fresh()->hasRole('Encoder'))->toBeFalse();
+    expect($target->fresh()->role)->toBe('Case Manager')
+        ->and($target->fresh()->hasRole('Case Manager'))->toBeTrue()
+        ->and($target->fresh()->hasRole('Processor'))->toBeFalse();
 });
 
 it('forbids a non-admin from syncing roles', function () {
-    Sanctum::actingAs(userWithRole('Social Worker'));
-    $target = userWithRole('Encoder');
+    Sanctum::actingAs(userWithRole('Case Manager'));
+    $target = userWithRole('Processor');
 
-    $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['System Administrator']])
+    $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['Admin']])
         ->assertForbidden();
 
-    expect($target->fresh()->hasRole('System Administrator'))->toBeFalse();
+    expect($target->fresh()->hasRole('Admin'))->toBeFalse();
 });
 
 it('validates role names when syncing', function () {
-    Sanctum::actingAs(userWithRole('System Administrator'));
-    $target = userWithRole('Encoder');
+    Sanctum::actingAs(userWithRole('Admin'));
+    $target = userWithRole('Processor');
 
     $this->putJson("/api/users/{$target->id}/roles", ['roles' => ['Nonexistent Role']])
         ->assertUnprocessable()

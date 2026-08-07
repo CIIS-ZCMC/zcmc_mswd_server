@@ -54,8 +54,8 @@ class RolesAndPermissionsSeeder extends Seeder
      * @var array<string, list<string>>
      */
     public const ROLES = [
-        'System Administrator' => ['*'],
-        'MSWD Head' => [
+        'Admin' => ['*'],
+        'MSS Head' => [
             'patients.view', 'patients.create', 'patients.update', 'patients.delete',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
@@ -64,21 +64,23 @@ class RolesAndPermissionsSeeder extends Seeder
             'users.view',
             'panel.access',
         ],
-        'Social Worker' => [
+        'Supervisor' => [
+            'patients.view', 'patients.create', 'patients.update',
+            'cases.view', 'cases.create', 'cases.update', 'cases.delete',
+            'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
+            'reports.view', 'reports.generate',
+            'panel.access',
+        ],
+        'Case Manager' => [
             'patients.view', 'patients.create', 'patients.update',
             'cases.view', 'cases.create', 'cases.update',
             'assistance.view', 'assistance.create', 'assistance.update',
             'reports.view',
         ],
-        'Encoder' => [
-            'patients.view', 'patients.create', 'patients.update',
-            'cases.view', 'cases.create', 'cases.update',
-            'assistance.view',
-        ],
-        'Viewer' => [
+        'Processor' => [
             'patients.view',
             'cases.view',
-            'assistance.view',
+            'assistance.view', 'assistance.create', 'assistance.update',
             'reports.view',
         ],
     ];
