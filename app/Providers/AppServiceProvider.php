@@ -2,9 +2,10 @@
 
 namespace App\Providers;
 
+use App\Models\Role;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Support\ServiceProvider;
 use RuntimeException;
-use Spatie\Permission\Models\Role;
 
 class AppServiceProvider extends ServiceProvider
 {
@@ -21,11 +22,11 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Hard guard: the Shield super-admin role can never be deleted, from
-        // any surface (panel, API, tinker). A policy alone is insufficient
-        // because the super-admin bypasses gates via Shield's Gate::before.
+        // Hard guard: the super-admin role can never be deleted, from any
+        // surface (panel, API, tinker). The RoleService enforces this for the
+        // HTTP layer; this model event covers every other path.
         Role::deleting(function (Role $role): void {
-            if ($role->name === config('filament-shield.super_admin.name')) {
+            if ($role->name === RolesAndPermissionsSeeder::SUPER_ADMIN) {
                 throw new RuntimeException('The super administrator role cannot be deleted.');
             }
         });

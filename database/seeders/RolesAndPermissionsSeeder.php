@@ -11,6 +11,22 @@ use Spatie\Permission\PermissionRegistrar;
 class RolesAndPermissionsSeeder extends Seeder
 {
     /**
+     * The all-powerful role. Protected from rename/deletion everywhere.
+     */
+    public const SUPER_ADMIN = 'Admin';
+
+    /**
+     * The guard all RBAC data is stored under.
+     *
+     * Must be the User model's Eloquent guard (`web`) — NOT the request's
+     * active guard. Under token auth the active guard is `sanctum`, which maps
+     * to no model, so relying on config('auth.defaults.guard') during an
+     * authenticated request would store roles/permissions under an unusable
+     * guard. Pinning to `web` keeps every row consistent and resolvable.
+     */
+    public const GUARD = 'web';
+
+    /**
      * The full permission catalog, grouped by aggregate.
      * Sub-records fold into their parent (patient ids/watchers/family/caretakers
      * → patients; case activities/diagnostics/assessments/interventions/documents
@@ -90,7 +106,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Reset the cached roles and permissions before (re)seeding.
         app(PermissionRegistrar::class)->forgetCachedPermissions();
 
-        $guard = config('auth.defaults.guard');
+        $guard = self::GUARD;
 
         DB::transaction(function () use ($guard) {
             foreach (self::PERMISSIONS as $permission) {

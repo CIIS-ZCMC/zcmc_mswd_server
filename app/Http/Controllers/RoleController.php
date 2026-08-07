@@ -2,38 +2,30 @@
 
 namespace App\Http\Controllers;
 
+use App\DTOs\RoleDto;
 use App\Http\Requests\StoreRoleRequest;
 use App\Http\Requests\UpdateRoleRequest;
-use App\Http\Resources\PermissionResource;
 use App\Http\Resources\RoleResource;
+use App\Models\Role;
+use App\Services\RoleService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 
 class RoleController extends Controller
 {
+    public function __construct(protected RoleService $service) {}
+
     public function index(): AnonymousResourceCollection
     {
-        $roles = Role::query()
-            ->with('permissions')
-            ->orderBy('name')
-            ->get();
-
-        return RoleResource::collection($roles);
+        return RoleResource::collection($this->service->list());
     }
 
     public function store(StoreRoleRequest $request): JsonResponse
     {
-        $role = Role::create([
-            'name' => $request->validated('name'),
-            'guard_name' => config('auth.defaults.guard'),
-        ]);
+        $role = $this->service->create(RoleDto::fromArray($request->validated()));
 
-        $role->syncPermissions($request->validated('permissions', []));
-
-        return RoleResource::make($role->load('permissions'))
+        return RoleResource::make($role)
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
@@ -45,37 +37,15 @@ class RoleController extends Controller
 
     public function update(UpdateRoleRequest $request, Role $role): RoleResource
     {
-        if ($request->has('name')) {
-            $role->update(['name' => $request->validated('name')]);
-        }
+        $role = $this->service->update($role, RoleDto::fromArray($request->validated()));
 
-        if ($request->has('permissions')) {
-            $role->syncPermissions($request->validated('permissions'));
-        }
-
-        return RoleResource::make($role->load('permissions'));
+        return RoleResource::make($role);
     }
 
     public function destroy(Role $role): Response
     {
-        abort_if(
-            $role->name === config('filament-shield.super_admin.name'),
-            Response::HTTP_FORBIDDEN,
-            'The super administrator role cannot be deleted.',
-        );
-
-        $role->delete();
+        $this->service->delete($role);
 
         return response()->noContent();
-    }
-
-    /**
-     * List every assignable permission (for building role forms).
-     */
-    public function permissions(): AnonymousResourceCollection
-    {
-        return PermissionResource::collection(
-            Permission::query()->orderBy('name')->get(),
-        );
     }
 }
