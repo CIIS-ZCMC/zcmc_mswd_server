@@ -43,6 +43,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'users.view',
         'users.manage',
         'roles.manage',
+        // Admin panel
+        'panel.access',
     ];
 
     /**
@@ -60,6 +62,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'reports.view', 'reports.generate',
             'settings.manage',
             'users.view',
+            'panel.access',
         ],
         'Social Worker' => [
             'patients.view', 'patients.create', 'patients.update',
