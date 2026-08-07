@@ -9,6 +9,7 @@ use App\Http\Resources\ActivityResource;
 use App\Http\Resources\PatientResource;
 use App\Http\Resources\UnifiedIntakeSheetResource;
 use App\Models\UnifiedIntakeSheet;
+use App\Services\UnifiedIntakeSheetPdfService;
 use App\Services\UnifiedIntakeSheetService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -70,6 +71,16 @@ class UnifiedIntakeSheetController extends Controller
     public function history(UnifiedIntakeSheet $intakeSheet): AnonymousResourceCollection
     {
         return ActivityResource::collection($this->service->history($intakeSheet));
+    }
+
+    public function pdf(Request $request, UnifiedIntakeSheet $intakeSheet, UnifiedIntakeSheetPdfService $pdfService): Response
+    {
+        $pdf = $pdfService->render($intakeSheet);
+        $filename = $pdfService->filename($intakeSheet);
+
+        return $request->boolean('download')
+            ? $pdf->download($filename)
+            : $pdf->stream($filename);
     }
 
     public function matchPatients(Request $request): AnonymousResourceCollection
