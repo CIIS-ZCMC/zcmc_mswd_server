@@ -50,6 +50,12 @@ class RolesAndPermissionsSeeder extends Seeder
         'assistance.create',
         'assistance.update',
         'assistance.approve',
+        // Unified Intake Sheet
+        'intake.view',
+        'intake.create',
+        'intake.update',
+        'intake.finalize',
+        'intake.delete',
         // Reports
         'reports.view',
         'reports.generate',
@@ -75,6 +81,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update', 'patients.delete',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
+            'intake.view', 'intake.create', 'intake.update', 'intake.finalize', 'intake.delete',
             'reports.view', 'reports.generate',
             'settings.manage',
             'users.view',
@@ -84,6 +91,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
+            'intake.view', 'intake.create', 'intake.update', 'intake.finalize',
             'reports.view', 'reports.generate',
             'panel.access',
         ],
@@ -91,12 +99,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update',
             'cases.view', 'cases.create', 'cases.update',
             'assistance.view', 'assistance.create', 'assistance.update',
+            'intake.view', 'intake.create', 'intake.update',
             'reports.view',
         ],
         'Processor' => [
             'patients.view',
             'cases.view',
             'assistance.view', 'assistance.create', 'assistance.update',
+            'intake.view', 'intake.create', 'intake.update',
             'reports.view',
         ],
     ];
