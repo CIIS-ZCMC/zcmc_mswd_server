@@ -97,6 +97,12 @@ class RolesAndPermissionsSeeder extends Seeder
                 Permission::findOrCreate($permission, $guard);
             }
 
+            // Flush the registrar cache after creating permissions so the role
+            // sync below reads them fresh. Necessary because DatabaseSeeder runs
+            // with WithoutModelEvents, which suppresses the model events Spatie
+            // would otherwise use to invalidate this cache.
+            app(PermissionRegistrar::class)->forgetCachedPermissions();
+
             foreach (self::ROLES as $roleName => $permissions) {
                 $role = Role::findOrCreate($roleName, $guard);
 
