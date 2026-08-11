@@ -12,7 +12,7 @@ class UpdatePatientRequest extends FormRequest
      */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('patients.update') ?? false;
     }
 
     /**
@@ -26,8 +26,8 @@ class UpdatePatientRequest extends FormRequest
 
         return [
             'sector_id' => ['sometimes', 'required', 'exists:sectors,id'],
-            'hospital_id' => ['nullable', 'integer', 'unique:patients,hospital_id,' . $patientId],
-            'mswd_id' => ['nullable', 'integer', 'unique:patients,mswd_id,' . $patientId],
+            'hospital_id' => ['nullable', 'integer', 'unique:patients,hospital_id,'.$patientId],
+            'mswd_id' => ['nullable', 'integer', 'unique:patients,mswd_id,'.$patientId],
             'first_name' => ['sometimes', 'required', 'string', 'max:255'],
             'last_name' => ['sometimes', 'required', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],

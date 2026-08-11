@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\PatientCaretakerController;
+use App\Http\Controllers\PatientController;
+use App\Http\Controllers\PatientFamilyMemberController;
+use App\Http\Controllers\PatientIdController;
+use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\UnifiedIntakeSheetController;
@@ -50,4 +56,50 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('{intakeSheet}', [UnifiedIntakeSheetController::class, 'destroy'])
             ->middleware('permission:intake.delete');
     });
+
+    // Patient management
+    Route::middleware('permission:patients.view')->group(function () {
+        Route::get('patients', [PatientController::class, 'index']);
+        Route::get('patients/{patient}', [PatientController::class, 'show']);
+        Route::get('patients/{patient}/profile', [PatientController::class, 'profile']);
+        Route::get('patients/{patient}/history', [PatientController::class, 'history']);
+        Route::get('patients/{patient}/ids', [PatientIdController::class, 'index']);
+        Route::get('patients/{patient}/family-members', [PatientFamilyMemberController::class, 'index']);
+        Route::get('patients/{patient}/watchers', [PatientWatcherController::class, 'index']);
+        Route::get('patients/{patient}/caretakers', [PatientCaretakerController::class, 'index']);
+        Route::get('patients/{patient}/documents', [DocumentController::class, 'index']);
+    });
+
+    Route::post('patients', [PatientController::class, 'store'])
+        ->middleware('permission:patients.create');
+
+    Route::middleware('permission:patients.update')->group(function () {
+        Route::put('patients/{patient}', [PatientController::class, 'update']);
+
+        // Records
+        Route::post('patients/{patient}/ids', [PatientIdController::class, 'store']);
+        Route::put('patient-ids/{patientId}', [PatientIdController::class, 'update']);
+        Route::delete('patient-ids/{patientId}', [PatientIdController::class, 'destroy']);
+
+        Route::post('patients/{patient}/family-members', [PatientFamilyMemberController::class, 'store']);
+        Route::put('family-members/{familyMember}', [PatientFamilyMemberController::class, 'update']);
+        Route::delete('family-members/{familyMember}', [PatientFamilyMemberController::class, 'destroy']);
+
+        Route::post('patients/{patient}/watchers', [PatientWatcherController::class, 'store']);
+        Route::put('watchers/{watcher}', [PatientWatcherController::class, 'update']);
+        Route::delete('watchers/{watcher}', [PatientWatcherController::class, 'destroy']);
+
+        // Social-worker assignment
+        Route::post('patients/{patient}/caretakers', [PatientCaretakerController::class, 'store']);
+        Route::patch('caretakers/{caretaker}/unassign', [PatientCaretakerController::class, 'unassign']);
+
+        // Documents (tied to one of the patient's cases)
+        Route::post('patients/{patient}/documents', [DocumentController::class, 'store']);
+        Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
+    });
+
+    Route::delete('patients/{patient}', [PatientController::class, 'destroy'])
+        ->middleware('permission:patients.delete');
+    Route::post('patients/{id}/restore', [PatientController::class, 'restore'])
+        ->middleware('permission:patients.delete');
 });

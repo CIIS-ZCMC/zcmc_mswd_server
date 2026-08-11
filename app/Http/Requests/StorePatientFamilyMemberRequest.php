@@ -20,6 +20,13 @@ class StorePatientFamilyMemberRequest extends FormRequest
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
+    protected function prepareForValidation(): void
+    {
+        if ($this->route('patient')) {
+            $this->merge(['patient_id' => $this->route('patient')->id]);
+        }
+    }
+
     public function rules(): array
     {
         return [
