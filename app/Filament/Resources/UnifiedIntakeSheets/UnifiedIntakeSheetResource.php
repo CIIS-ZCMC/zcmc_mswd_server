@@ -16,6 +16,7 @@ use App\Services\UnifiedIntakeSheetService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
+use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -25,6 +26,7 @@ use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Components\Utilities\Get;
+use Filament\Schemas\Components\Utilities\Set;
 use Filament\Schemas\Components\Wizard;
 use Filament\Schemas\Components\Wizard\Step;
 use Filament\Schemas\Schema;
@@ -63,7 +65,27 @@ class UnifiedIntakeSheetResource extends Resource
                                 ->get()
                                 ->mapWithKeys(fn (Patient $p) => [$p->id => "{$p->last_name}, {$p->first_name}"]))
                             ->getOptionLabelUsing(fn ($value) => optional(Patient::find($value))->last_name)
-                            ->helperText('Search to reuse a patient; leave blank to register a new one.'),
+                            // Preload the patient's current family & IDs so an
+                            // intake edits (and updates) them rather than duplicating.
+                            ->afterStateUpdated(function ($state, Set $set): void {
+                                $patient = filled($state)
+                                    ? Patient::with(['familyMembers', 'patientIds'])->find($state)
+                                    : null;
+
+                                $set('family_members', $patient
+                                    ? $patient->familyMembers->map(fn ($m) => [
+                                        'id' => $m->id, 'name' => $m->name, 'relationship' => $m->relationship,
+                                        'age' => $m->age, 'occupation' => $m->occupation, 'monthly_income' => $m->monthly_income,
+                                    ])->all()
+                                    : []);
+
+                                $set('patient_ids', $patient
+                                    ? $patient->patientIds->map(fn ($i) => [
+                                        'id' => $i->id, 'id_type' => $i->id_type, 'id_number' => $i->id_number,
+                                    ])->all()
+                                    : []);
+                            })
+                            ->helperText('Search to reuse a patient (their family & IDs load for editing); leave blank to register a new one.'),
                         Section::make('New patient')
                             ->visible(fn (Get $get): bool => blank($get('patient_id')))
                             ->columns(2)
@@ -88,10 +110,11 @@ class UnifiedIntakeSheetResource extends Resource
                     ]),
 
                 Step::make('Family & Socioeconomic')
-                    ->visible(fn (Get $get): bool => blank($get('patient_id')))
+                    ->description('For an existing patient these load pre-filled and are updated on save.')
                     ->schema([
                         Repeater::make('family_members')
                             ->schema([
+                                Hidden::make('id'),
                                 TextInput::make('name')->required(),
                                 TextInput::make('relationship'),
                                 TextInput::make('age')->numeric(),
@@ -104,10 +127,11 @@ class UnifiedIntakeSheetResource extends Resource
                     ]),
 
                 Step::make('Identification')
-                    ->visible(fn (Get $get): bool => blank($get('patient_id')))
+                    ->description('For an existing patient these load pre-filled and are updated on save.')
                     ->schema([
                         Repeater::make('patient_ids')
                             ->schema([
+                                Hidden::make('id'),
                                 TextInput::make('id_type')->required(),
                                 TextInput::make('id_number')->required(),
                             ])

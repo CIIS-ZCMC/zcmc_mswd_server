@@ -79,6 +79,29 @@ it('creates a draft intake through the Filament wizard', function () {
         ->and(Patient::first()->familyMembers)->toHaveCount(1);
 });
 
+it('updates an existing patient family through the wizard on reuse', function () {
+    actingAs(intakePanelUser('MSS Head'));
+    $patient = Patient::create([
+        'sector_id' => $this->sector->id, 'first_name' => 'Ana', 'last_name' => 'Reyes', 'sex' => 'female',
+    ]);
+    $member = $patient->familyMembers()->create(['name' => 'Old Name', 'relationship' => 'spouse', 'monthly_income' => 1000]);
+
+    Livewire::test(CreateUnifiedIntakeSheet::class)
+        ->fillForm([
+            'patient_id' => $patient->id,
+            'family_members' => [['id' => $member->id, 'name' => 'Updated Name', 'relationship' => 'spouse', 'monthly_income' => 7000]],
+            'case' => ['case_type' => 'medical', 'priority_level' => 'high', 'admission_type' => 'ER'],
+            'assessment' => ['classification' => 'indigent', 'presenting_problem' => 'x'],
+            'date_of_intake' => now()->toDateString(),
+        ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect($member->fresh()->name)->toBe('Updated Name')
+        ->and($member->fresh()->monthly_income)->toEqual('7000.00')
+        ->and(Patient::count())->toBe(1);
+});
+
 it('finalizes an intake from the view page', function () {
     $worker = intakePanelUser('MSS Head');
     actingAs($worker);
