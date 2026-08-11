@@ -3,11 +3,13 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\PatientDto;
+use App\Http\Requests\MergePatientRequest;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
 use App\Http\Resources\ActivityResource;
 use App\Http\Resources\PatientResource;
 use App\Models\Patient;
+use App\Services\PatientMergeService;
 use App\Services\PatientService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -68,5 +70,23 @@ class PatientController extends Controller
     public function history(Patient $patient): AnonymousResourceCollection
     {
         return ActivityResource::collection($this->service->history($patient));
+    }
+
+    /**
+     * Candidate duplicate patients (same name + birthdate).
+     */
+    public function duplicates(Patient $patient): AnonymousResourceCollection
+    {
+        return PatientResource::collection($this->service->duplicatesOf($patient));
+    }
+
+    /**
+     * Merge this patient (source) into another (target), reassigning records.
+     */
+    public function merge(MergePatientRequest $request, Patient $patient, PatientMergeService $merge): PatientResource
+    {
+        $target = Patient::findOrFail($request->validated('target_id'));
+
+        return PatientResource::make($merge->merge($patient, $target));
     }
 }
