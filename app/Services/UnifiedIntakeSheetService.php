@@ -6,6 +6,7 @@ use App\DTOs\UnifiedIntakeSheetDto;
 use App\Models\Assessment;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
+use App\Models\Document;
 use App\Models\Patient;
 use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
@@ -17,6 +18,7 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
 use Spatie\Activitylog\Models\Activity;
 
@@ -27,6 +29,7 @@ class UnifiedIntakeSheetService
         protected PatientRepositoryInterface $patients,
         protected CaseModelRepositoryInterface $cases,
         protected AssessmentRepositoryInterface $assessments,
+        protected UnifiedIntakeSheetPdfService $pdf,
     ) {}
 
     public function list(int $perPage = 15): LengthAwarePaginator
@@ -144,16 +147,42 @@ class UnifiedIntakeSheetService
             ]);
         }
 
-        $this->sheets->update($sheet, [
-            'status' => UnifiedIntakeSheet::STATUS_FINALIZED,
-            'submitted_at' => $sheet->submitted_at ?? now(),
-            'finalized_at' => now(),
-            'finalized_by' => $user->id,
+        return DB::transaction(function () use ($sheet, $user) {
+            $this->sheets->update($sheet, [
+                'status' => UnifiedIntakeSheet::STATUS_FINALIZED,
+                'submitted_at' => $sheet->submitted_at ?? now(),
+                'finalized_at' => now(),
+                'finalized_by' => $user->id,
+            ]);
+
+            // Archive the official PDF once, reflecting the finalized state.
+            $this->archiveFinalizedPdf($sheet->refresh(), $user);
+
+            $this->recordCaseActivity($sheet->case, $user, 'assessment_completed', "Intake {$sheet->intake_no} finalized");
+
+            return $sheet->refresh();
+        });
+    }
+
+    /**
+     * Render the finalized sheet and store it as a Document linked to the case
+     * and patient, so the signed copy is retained.
+     */
+    private function archiveFinalizedPdf(UnifiedIntakeSheet $sheet, User $user): Document
+    {
+        $path = "intake-sheets/{$sheet->intake_no}.pdf";
+
+        Storage::put($path, $this->pdf->render($sheet)->output());
+
+        return Document::create([
+            'case_id' => $sheet->case_id,
+            'patient_id' => $sheet->patient_id,
+            'uploaded_by' => $user->id,
+            'document_type' => 'intake_sheet',
+            'file_name' => $this->pdf->filename($sheet),
+            'file_path' => $path,
+            'file_type' => 'application/pdf',
         ]);
-
-        $this->recordCaseActivity($sheet->case, $user, 'assessment_completed', "Intake {$sheet->intake_no} finalized");
-
-        return $sheet->refresh();
     }
 
     public function cancel(UnifiedIntakeSheet $sheet): bool

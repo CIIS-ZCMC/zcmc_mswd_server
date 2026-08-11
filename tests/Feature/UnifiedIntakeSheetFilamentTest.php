@@ -13,6 +13,7 @@ use App\Models\User;
 use App\Services\UnifiedIntakeSheetService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Livewire\Livewire;
 
 use function Pest\Laravel\actingAs;
@@ -20,6 +21,7 @@ use function Pest\Laravel\actingAs;
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    Storage::fake();
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
     $this->assistType = AssistantType::create(['name' => 'Medicine', 'code' => 'MED', 'category' => 'medical', 'is_active' => true]);
