@@ -68,7 +68,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('patients/{patient}/watchers', [PatientWatcherController::class, 'index']);
         Route::get('patients/{patient}/caretakers', [PatientCaretakerController::class, 'index']);
         Route::get('patients/{patient}/documents', [DocumentController::class, 'index']);
+        Route::get('patients/{patient}/duplicates', [PatientController::class, 'duplicates']);
     });
+
+    Route::post('patients/{patient}/merge', [PatientController::class, 'merge'])
+        ->middleware('permission:patients.merge');
 
     Route::post('patients', [PatientController::class, 'store'])
         ->middleware('permission:patients.create');

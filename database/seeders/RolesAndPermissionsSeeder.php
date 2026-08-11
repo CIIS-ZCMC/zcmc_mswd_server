@@ -40,6 +40,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'patients.create',
         'patients.update',
         'patients.delete',
+        'patients.merge',
         // Cases
         'cases.view',
         'cases.create',
@@ -78,7 +79,7 @@ class RolesAndPermissionsSeeder extends Seeder
     public const ROLES = [
         'Admin' => ['*'],
         'MSS Head' => [
-            'patients.view', 'patients.create', 'patients.update', 'patients.delete',
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view', 'intake.create', 'intake.update', 'intake.finalize', 'intake.delete',
@@ -88,7 +89,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'panel.access',
         ],
         'Supervisor' => [
-            'patients.view', 'patients.create', 'patients.update',
+            'patients.view', 'patients.create', 'patients.update', 'patients.merge',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view', 'intake.create', 'intake.update', 'intake.finalize',

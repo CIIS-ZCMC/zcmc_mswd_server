@@ -50,6 +50,17 @@ class PatientService
     }
 
     /**
+     * Candidate duplicates of a patient (same name + birthdate), excluding itself.
+     */
+    public function duplicatesOf(Patient $patient): Collection
+    {
+        return $this->repository
+            ->matchByIdentity($patient->last_name, $patient->first_name, $patient->birthdate?->toDateString())
+            ->reject(fn (Patient $candidate) => $candidate->is($patient))
+            ->values();
+    }
+
+    /**
      * The full patient record for the 360 profile view.
      */
     public function profile(Patient $patient): Patient
