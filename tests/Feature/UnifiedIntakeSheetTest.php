@@ -2,18 +2,21 @@
 
 use App\Models\AssistantType;
 use App\Models\CaseModel;
+use App\Models\Document;
 use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 use Spatie\Activitylog\Models\Activity;
 
 uses(RefreshDatabase::class);
 
 beforeEach(function () {
+    Storage::fake();
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
     $this->assistType = AssistantType::create(['name' => 'Medicine', 'code' => 'MED', 'category' => 'medical', 'is_active' => true]);
@@ -209,6 +212,26 @@ it('finalizes a complete draft and stamps the finalizer', function () {
         ->assertJsonPath('data.finalized_by', $worker->id);
 
     expect(UnifiedIntakeSheet::find($id)->finalized_at)->not->toBeNull();
+});
+
+it('archives a PDF document when an intake is finalized', function () {
+    $worker = intakeWorker('Supervisor');
+    Sanctum::actingAs($worker);
+    $id = $this->postJson('/api/intake-sheets', newIntakePayload($this->sector->id, $this->assistType->id))
+        ->assertCreated()->json('data.id');
+
+    $this->postJson("/api/intake-sheets/{$id}/finalize")->assertOk();
+
+    $sheet = UnifiedIntakeSheet::find($id);
+    $doc = Document::where('document_type', 'intake_sheet')->where('case_id', $sheet->case_id)->first();
+
+    expect($doc)->not->toBeNull()
+        ->and($doc->file_type)->toBe('application/pdf')
+        ->and($doc->patient_id)->toBe($sheet->patient_id)
+        ->and($doc->uploaded_by)->toBe($worker->id)
+        ->and($doc->file_name)->toBe("{$sheet->intake_no}.pdf");
+
+    Storage::assertExists($doc->file_path);
 });
 
 it('will not finalize a draft that has no assessment', function () {
