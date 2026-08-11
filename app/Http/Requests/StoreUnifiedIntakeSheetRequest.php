@@ -38,12 +38,16 @@ class StoreUnifiedIntakeSheetRequest extends FormRequest
             'patient.contact_number' => ['nullable', 'string', 'max:50'],
 
             'patient_ids' => ['nullable', 'array'],
+            'patient_ids.*.id' => ['nullable', 'integer'],
             'patient_ids.*.id_type' => ['required_with:patient_ids', 'string', 'max:50'],
             'patient_ids.*.id_number' => ['required_with:patient_ids', 'string', 'max:100'],
 
             'family_members' => ['nullable', 'array'],
+            'family_members.*.id' => ['nullable', 'integer'],
             'family_members.*.name' => ['required_with:family_members', 'string', 'max:255'],
             'family_members.*.relationship' => ['nullable', 'string', 'max:100'],
+            'family_members.*.age' => ['nullable', 'integer', 'min:0'],
+            'family_members.*.occupation' => ['nullable', 'string', 'max:255'],
             'family_members.*.monthly_income' => ['nullable', 'numeric', 'min:0'],
 
             'watchers' => ['nullable', 'array'],

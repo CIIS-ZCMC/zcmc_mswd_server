@@ -106,6 +106,38 @@ it('reuses an existing patient instead of creating a duplicate', function () {
         ->and(UnifiedIntakeSheet::first()->patient_id)->toBe($patient->id);
 });
 
+it('updates the existing patient family and IDs on reuse', function () {
+    Sanctum::actingAs(intakeWorker());
+    $patient = Patient::create([
+        'sector_id' => $this->sector->id, 'first_name' => 'Ana', 'last_name' => 'Reyes', 'sex' => 'female',
+    ]);
+    $keep = $patient->familyMembers()->create(['name' => 'Old Name', 'relationship' => 'spouse', 'monthly_income' => 1000]);
+    $remove = $patient->familyMembers()->create(['name' => 'Gone', 'relationship' => 'child']);
+    $pid = $patient->patientIds()->create(['id_type' => 'philhealth', 'id_number' => 'OLD-1']);
+
+    $this->postJson('/api/intake-sheets', [
+        'date_of_intake' => now()->toDateString(),
+        'patient_id' => $patient->id,
+        'family_members' => [
+            ['id' => $keep->id, 'name' => 'New Name', 'relationship' => 'spouse', 'monthly_income' => 7000],
+            ['name' => 'Baby', 'relationship' => 'child'],
+        ],
+        'patient_ids' => [
+            ['id' => $pid->id, 'id_type' => 'philhealth', 'id_number' => 'UPDATED-1'],
+        ],
+        'case' => ['case_type' => 'medical', 'priority_level' => 'high', 'admission_type' => 'ER'],
+        'assessment' => ['classification' => 'indigent'],
+    ])->assertCreated();
+
+    $patient->refresh();
+    expect($patient->familyMembers()->count())->toBe(2)           // one updated, one created, one removed
+        ->and($keep->fresh()->name)->toBe('New Name')
+        ->and($keep->fresh()->monthly_income)->toEqual('7000.00')
+        ->and($remove->fresh()->trashed())->toBeTrue()
+        ->and($pid->fresh()->id_number)->toBe('UPDATED-1')
+        ->and(Patient::count())->toBe(1);
+});
+
 it('attaches the intake to an existing open case', function () {
     Sanctum::actingAs(intakeWorker());
     $patient = Patient::create([

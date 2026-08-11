@@ -15,6 +15,7 @@ use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\UnifiedIntakeSheetRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Support\Arr;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 use Spatie\Activitylog\Models\Activity;
@@ -173,26 +174,50 @@ class UnifiedIntakeSheetService
         if ($dto->patient_id !== null) {
             /** @var Patient $patient */
             $patient = $this->patients->findOrFail($dto->patient_id);
-
-            return $patient;
+        } else {
+            /** @var Patient $patient */
+            $patient = $this->patients->create($dto->patient->toArray());
         }
 
-        /** @var Patient $patient */
-        $patient = $this->patients->create($dto->patient->toArray());
-
-        foreach ($dto->patientIds as $row) {
-            $patient->patientIds()->create($row);
-        }
-
-        foreach ($dto->familyMembers as $row) {
-            $patient->familyMembers()->create($row);
-        }
-
-        foreach ($dto->watchers as $row) {
-            $patient->watchers()->create($row);
-        }
+        // Applied whether the patient is new or reused: an intake refreshes the
+        // patient's identification and family / socioeconomic profile.
+        $this->syncCollection($patient, 'patientIds', $dto->patientIds);
+        $this->syncCollection($patient, 'familyMembers', $dto->familyMembers);
+        $this->syncCollection($patient, 'watchers', $dto->watchers);
 
         return $patient;
+    }
+
+    /**
+     * Reconcile a patient sub-collection with the submitted rows: update rows
+     * that carry an `id`, create the rest, and drop existing rows omitted from
+     * the payload. An empty payload leaves the collection untouched.
+     *
+     * @param  array<int, array<string, mixed>>  $rows
+     */
+    private function syncCollection(Patient $patient, string $relation, array $rows): void
+    {
+        if ($rows === []) {
+            return;
+        }
+
+        $keptIds = [];
+
+        foreach ($rows as $row) {
+            $attributes = Arr::except($row, ['id']);
+            $existing = isset($row['id'])
+                ? $patient->{$relation}()->whereKey($row['id'])->first()
+                : null;
+
+            if ($existing !== null) {
+                $existing->update($attributes);
+                $keptIds[] = $existing->getKey();
+            } else {
+                $keptIds[] = $patient->{$relation}()->create($attributes)->getKey();
+            }
+        }
+
+        $patient->{$relation}()->whereKeyNot($keptIds)->get()->each->delete();
     }
 
     /**
