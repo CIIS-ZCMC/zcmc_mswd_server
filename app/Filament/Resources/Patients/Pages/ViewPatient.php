@@ -15,6 +15,7 @@ class ViewPatient extends ViewRecord
         return [
             EditAction::make(),
             PatientResource::mergeAction(),
+            PatientResource::reverseMergeAction(),
             PatientResource::archiveAction(),
             PatientResource::restoreAction(),
         ];

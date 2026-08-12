@@ -6,8 +6,10 @@ use App\Filament\Resources\Patients\Pages\ViewPatient;
 use App\Filament\Resources\Patients\PatientResource;
 use App\Models\CaseModel;
 use App\Models\Patient;
+use App\Models\PatientId;
 use App\Models\Sector;
 use App\Models\User;
+use App\Services\PatientMergeService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -93,6 +95,22 @@ it('merges a patient into another, reassigning records', function () {
 
     expect($source->fresh()->trashed())->toBeTrue()
         ->and($target->patientIds()->count())->toBe(1);
+});
+
+it('reverses a merge from the panel', function () {
+    actingAs(patientPanelUser());
+    $source = filamentMakePatient($this->sector->id);
+    $target = filamentMakePatient($this->sector->id);
+    $source->patientIds()->create(['id_type' => 'philhealth', 'id_number' => 'PH-1']);
+
+    app(PatientMergeService::class)->merge($source->fresh(), $target->fresh());
+    expect($source->fresh()->trashed())->toBeTrue();
+
+    Livewire::test(ViewPatient::class, ['record' => $target->getKey()])
+        ->callAction('reverseMerge');
+
+    expect(Patient::find($source->id))->not->toBeNull()
+        ->and(PatientId::where('patient_id', $source->id)->count())->toBe(1);
 });
 
 it('gates the resource on patient permissions', function () {

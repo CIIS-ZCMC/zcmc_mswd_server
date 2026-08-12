@@ -127,6 +127,7 @@ class PatientResource extends Resource
                     ->icon(Heroicon::OutlinedEye)
                     ->url(fn (Patient $record) => static::getUrl('view', ['record' => $record])),
                 static::mergeAction(),
+                static::reverseMergeAction(),
                 static::archiveAction(),
                 static::restoreAction(),
             ])
@@ -182,6 +183,32 @@ class PatientResource extends Resource
                 $target = Patient::findOrFail($data['target_id']);
                 app(PatientMergeService::class)->merge($record, $target);
                 Notification::make()->title('Patient merged')->success()->send();
+            });
+    }
+
+    /**
+     * Reverse the most recent un-reversed merge into this patient.
+     */
+    public static function reverseMergeAction(): Action
+    {
+        return Action::make('reverseMerge')
+            ->label('Reverse merge')
+            ->icon(Heroicon::OutlinedArrowUturnLeft)
+            ->color('warning')
+            ->requiresConfirmation()
+            ->visible(fn (Patient $record): bool => (auth()->user()?->can('patients.merge') ?? false)
+                && app(PatientMergeService::class)->latestActiveMergeInto($record) !== null)
+            ->action(function (Patient $record) {
+                $merge = app(PatientMergeService::class)->latestActiveMergeInto($record);
+
+                if ($merge === null) {
+                    Notification::make()->title('No merge to reverse')->warning()->send();
+
+                    return;
+                }
+
+                app(PatientMergeService::class)->reverse($merge);
+                Notification::make()->title('Merge reversed')->success()->send();
             });
     }
 

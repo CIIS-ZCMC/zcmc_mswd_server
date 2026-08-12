@@ -7,13 +7,16 @@ use App\Http\Requests\MergePatientRequest;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
 use App\Http\Resources\ActivityResource;
+use App\Http\Resources\PatientMergeResource;
 use App\Http\Resources\PatientResource;
 use App\Models\Patient;
+use App\Models\PatientMerge;
 use App\Services\PatientMergeService;
 use App\Services\PatientService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Validation\ValidationException;
 
 class PatientController extends Controller
 {
@@ -88,5 +91,32 @@ class PatientController extends Controller
         $target = Patient::findOrFail($request->validated('target_id'));
 
         return PatientResource::make($merge->merge($patient, $target));
+    }
+
+    /**
+     * The merge history for a patient (merges where it is the surviving target).
+     */
+    public function merges(Patient $patient): AnonymousResourceCollection
+    {
+        return PatientMergeResource::collection(
+            PatientMerge::query()->where('target_patient_id', $patient->id)->latest()->get(),
+        );
+    }
+
+    /**
+     * Reverse the most recent un-reversed merge into this patient: records move
+     * back to the duplicate and it is restored.
+     */
+    public function unmerge(Patient $patient, PatientMergeService $merge): PatientResource
+    {
+        $record = $merge->latestActiveMergeInto($patient);
+
+        if ($record === null) {
+            throw ValidationException::withMessages([
+                'patient' => 'This patient has no merge to reverse.',
+            ]);
+        }
+
+        return PatientResource::make($merge->reverse($record));
     }
 }
