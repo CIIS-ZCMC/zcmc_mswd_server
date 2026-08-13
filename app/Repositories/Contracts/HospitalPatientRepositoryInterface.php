@@ -2,7 +2,7 @@
 
 namespace App\Repositories\Contracts;
 
-use Illuminate\Database\Eloquent\Collection;
+use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -12,10 +12,12 @@ use Illuminate\Database\Eloquent\Model;
  */
 interface HospitalPatientRepositoryInterface
 {
-    /**
-     * @return Collection<int, Model>
-     */
-    public function get(?string $search = null, int $limit = 100): Collection;
+    public function paginate(?string $search = null, int $perPage = 15): LengthAwarePaginator;
 
     public function find(int|string $id): ?Model;
+
+    /**
+     * Find a single patient by name and/or hospital number.
+     */
+    public function findByNameAndHospitalNumber(?string $name = null, int|string|null $hospitalNumber = null): ?Model;
 }

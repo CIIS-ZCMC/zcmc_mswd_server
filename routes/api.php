@@ -74,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         // Hospital (SQL Server) patient lookup — read-only
         Route::get('hospital-patients', [HospitalPatientController::class, 'index']);
+        Route::get('hospital-patients/find', [HospitalPatientController::class, 'find']);
         Route::get('hospital-patients/{id}', [HospitalPatientController::class, 'show']);
     });
 

@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
 
-class HospitalPatientIndexRequest extends FormRequest
+class HospitalPatientSearchRequest extends FormRequest
 {
     public function authorize(): bool
     {
@@ -17,8 +17,8 @@ class HospitalPatientIndexRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'search' => ['nullable', 'string', 'max:255'],
-            'per_page' => ['nullable', 'integer', 'min:1', 'max:100'],
+            'name' => ['required_without:hospital_number', 'nullable', 'string', 'max:255'],
+            'hospital_number' => ['required_without:name', 'nullable', 'string', 'max:255'],
         ];
     }
 }
