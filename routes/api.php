@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\PatientCaretakerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientFamilyMemberController;
@@ -70,6 +71,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('patients/{patient}/documents', [DocumentController::class, 'index']);
         Route::get('patients/{patient}/duplicates', [PatientController::class, 'duplicates']);
         Route::get('patients/{patient}/merges', [PatientController::class, 'merges']);
+
+        // Hospital (SQL Server) patient lookup — read-only
+        Route::get('hospital-patients', [HospitalPatientController::class, 'index']);
+        Route::get('hospital-patients/{id}', [HospitalPatientController::class, 'show']);
     });
 
     Route::middleware('permission:patients.merge')->group(function () {

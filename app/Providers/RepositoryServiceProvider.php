@@ -14,6 +14,7 @@ use App\Repositories\Contracts\DiagnosticReportRepositoryInterface;
 use App\Repositories\Contracts\DiagnosticRepositoryInterface;
 use App\Repositories\Contracts\DocumentRepositoryInterface;
 use App\Repositories\Contracts\GuarantorRepositoryInterface;
+use App\Repositories\Contracts\HospitalPatientRepositoryInterface;
 use App\Repositories\Contracts\InterventionRepositoryInterface;
 use App\Repositories\Contracts\InterventionTypeRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceLogRepositoryInterface;
@@ -33,6 +34,7 @@ use App\Repositories\DiagnosticReportRepository;
 use App\Repositories\DiagnosticRepository;
 use App\Repositories\DocumentRepository;
 use App\Repositories\GuarantorRepository;
+use App\Repositories\HospitalPatientRepository;
 use App\Repositories\InterventionRepository;
 use App\Repositories\InterventionTypeRepository;
 use App\Repositories\PatientAssistanceLogRepository;
@@ -79,6 +81,7 @@ class RepositoryServiceProvider extends ServiceProvider
         PatientAssistanceLogRepositoryInterface::class => PatientAssistanceLogRepository::class,
         PatientAssistanceReportRepositoryInterface::class => PatientAssistanceReportRepository::class,
         UnifiedIntakeSheetRepositoryInterface::class => UnifiedIntakeSheetRepository::class,
+        HospitalPatientRepositoryInterface::class => HospitalPatientRepository::class,
     ];
 
     /**
