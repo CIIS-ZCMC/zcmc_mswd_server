@@ -6,11 +6,28 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Spatie\Activitylog\Models\Activity;
 
 class CaseModel extends Model
 {
     use Auditable, SoftDeletes;
+
+    public const STATUS_OPEN = 'open';
+
+    public const STATUS_ONGOING = 'ongoing';
+
+    public const STATUS_CLOSED = 'closed';
+
+    public const STATUS_REFERRED = 'referred';
+
+    /**
+     * Statuses from which a case may be archived (soft-deleted).
+     *
+     * @var list<string>
+     */
+    public const ARCHIVABLE_STATUSES = [self::STATUS_CLOSED, self::STATUS_REFERRED];
 
     protected $table = 'cases';
 
@@ -72,5 +89,19 @@ class CaseModel extends Model
     public function patientAssistances(): HasMany
     {
         return $this->hasMany(PatientAssistance::class, 'case_id');
+    }
+
+    /**
+     * Automatic field-level audit trail (from the Auditable trait). Distinct
+     * from activities(), which is the CaseActivity milestone timeline.
+     */
+    public function auditLogs(): MorphMany
+    {
+        return $this->morphMany(Activity::class, 'subject');
+    }
+
+    public function isArchivable(): bool
+    {
+        return in_array($this->status, self::ARCHIVABLE_STATUSES, true);
     }
 }

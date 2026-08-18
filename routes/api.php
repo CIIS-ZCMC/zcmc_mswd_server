@@ -1,5 +1,11 @@
 <?php
 
+use App\Http\Controllers\AssignCaseController;
+use App\Http\Controllers\CaseActivitiesController;
+use App\Http\Controllers\CaseHistoryController;
+use App\Http\Controllers\CaseModelController;
+use App\Http\Controllers\CaseProfileController;
+use App\Http\Controllers\CloseCaseController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinalizeIntakeSheetController;
 use App\Http\Controllers\FindHospitalPatientController;
@@ -20,6 +26,9 @@ use App\Http\Controllers\PatientProfileController;
 use App\Http\Controllers\PatientRegisterController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\ReferCaseController;
+use App\Http\Controllers\ReopenCaseController;
+use App\Http\Controllers\RestoreCaseController;
 use App\Http\Controllers\RestorePatientController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SubmitIntakeSheetController;
@@ -107,5 +116,23 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('patients/{patient}/documents', [DocumentController::class, 'store']);
         Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
+    });
+
+    // Case management (per-action permissions declared on the controller)
+    Route::apiResource('cases', CaseModelController::class);
+    Route::post('cases/{id}/restore', RestoreCaseController::class)
+        ->middleware('permission:cases.delete');
+
+    Route::middleware('permission:cases.view')->group(function () {
+        Route::get('cases/{case}/profile', CaseProfileController::class);
+        Route::get('cases/{case}/history', CaseHistoryController::class);
+        Route::get('cases/{case}/activities', CaseActivitiesController::class);
+    });
+
+    Route::middleware('permission:cases.update')->group(function () {
+        Route::post('cases/{case}/assign', AssignCaseController::class);
+        Route::post('cases/{case}/close', CloseCaseController::class);
+        Route::post('cases/{case}/refer', ReferCaseController::class);
+        Route::post('cases/{case}/reopen', ReopenCaseController::class);
     });
 });
