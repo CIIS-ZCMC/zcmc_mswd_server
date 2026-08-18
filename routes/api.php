@@ -6,6 +6,7 @@ use App\Http\Controllers\PatientCaretakerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientFamilyMemberController;
 use App\Http\Controllers\PatientIdController;
+use App\Http\Controllers\PatientRegisterController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\RoleController;
@@ -76,6 +77,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('hospital-patients', [HospitalPatientController::class, 'index']);
         Route::get('hospital-patients/find', [HospitalPatientController::class, 'find']);
         Route::get('hospital-patients/{id}', [HospitalPatientController::class, 'show']);
+
+        // Hospital (SQL Server) patient registration lookup — read-only
+        Route::get('patient-registers', [PatientRegisterController::class, 'index']);
+        Route::get('patient-registers/find', [PatientRegisterController::class, 'find']);
+        Route::get('patient-registers/{id}', [PatientRegisterController::class, 'show']);
     });
 
     Route::middleware('permission:patients.merge')->group(function () {

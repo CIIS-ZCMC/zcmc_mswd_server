@@ -2,9 +2,10 @@
 
 namespace App\Services;
 
-use App\Models\HospitalPatient;
+use App\Models\Bizbox\HospitalPatient;
 use App\Repositories\Contracts\HospitalPatientRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
 class HospitalPatientService
@@ -23,11 +24,24 @@ class HospitalPatientService
     }
 
     /**
-     * Find one patient by name and/or hospital number (404 when none match).
+     * Candidate HIS patients for a one-box search (name or hospital number).
      */
-    public function findByNameAndHospitalNumber(?string $name = null, int|string|null $hospitalNumber = null): HospitalPatient
+    public function search(string $term, int $limit = 20): Collection
     {
-        return $this->repository->findByNameAndHospitalNumber($name, $hospitalNumber)
-            ?? throw (new ModelNotFoundException)->setModel(HospitalPatient::class);
+        return $this->repository->search($term, $limit);
+    }
+
+    /**
+     * Find patients by name and/or hospital number (404 when none match).
+     */
+    public function findByNameAndHospitalNumber(?string $name = null, int|string|null $hospitalNumber = null): Collection
+    {
+        $patients = $this->repository->findByNameAndHospitalNumber($name, $hospitalNumber);
+
+        if ($patients->isEmpty()) {
+            throw (new ModelNotFoundException)->setModel(HospitalPatient::class);
+        }
+
+        return $patients;
     }
 }
