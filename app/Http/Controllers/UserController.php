@@ -2,13 +2,21 @@
 
 namespace App\Http\Controllers;
 
-use App\Http\Requests\SyncUserRolesRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class UserController extends Controller
+class UserController extends Controller implements HasMiddleware
 {
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:users.view'),
+        ];
+    }
+
     public function index(): AnonymousResourceCollection
     {
         $users = User::query()
@@ -21,17 +29,6 @@ class UserController extends Controller
 
     public function show(User $user): UserResource
     {
-        return UserResource::make($user->load('roles', 'permissions'));
-    }
-
-    /**
-     * Replace the user's roles with the given set, then refresh the role cache.
-     */
-    public function syncRoles(SyncUserRolesRequest $request, User $user): UserResource
-    {
-        $user->syncRoles($request->validated('roles'));
-        $user->syncRoleCache();
-
         return UserResource::make($user->load('roles', 'permissions'));
     }
 }

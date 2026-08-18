@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PatientRegisterIndexRequest;
-use App\Http\Requests\PatientRegisterSearchRequest;
 use App\Http\Resources\PatientRegisterResource;
 use App\Services\PatientRegisterService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,22 +21,6 @@ class PatientRegisterController extends Controller
 
         return PatientRegisterResource::collection(
             $this->service->paginate($validated['search'] ?? null, $validated['date'] ?? null, $validated['per_page'] ?? 15),
-        );
-    }
-
-    /**
-     * Find registrations by name and/or hospital number and/or registration date (404 when none match).
-     */
-    public function find(PatientRegisterSearchRequest $request): AnonymousResourceCollection
-    {
-        $validated = $request->validated();
-
-        return PatientRegisterResource::collection(
-            $this->service->findByNameAndHospitalNumber(
-                $validated['name'] ?? null,
-                $validated['hospital_number'] ?? null,
-                $validated['date'] ?? null,
-            ),
         );
     }
 

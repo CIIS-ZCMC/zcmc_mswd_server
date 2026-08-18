@@ -3,24 +3,30 @@
 namespace App\Http\Controllers;
 
 use App\DTOs\PatientDto;
-use App\Http\Requests\MergePatientRequest;
 use App\Http\Requests\StorePatientRequest;
 use App\Http\Requests\UpdatePatientRequest;
-use App\Http\Resources\ActivityResource;
-use App\Http\Resources\PatientMergeResource;
 use App\Http\Resources\PatientResource;
 use App\Models\Patient;
-use App\Models\PatientMerge;
-use App\Services\PatientMergeService;
 use App\Services\PatientService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Validation\ValidationException;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class PatientController extends Controller
+class PatientController extends Controller implements HasMiddleware
 {
     public function __construct(protected PatientService $service) {}
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:patients.view', only: ['index', 'show']),
+            new Middleware('permission:patients.create', only: ['store']),
+            new Middleware('permission:patients.update', only: ['update']),
+            new Middleware('permission:patients.delete', only: ['destroy']),
+        ];
+    }
 
     public function index(): AnonymousResourceCollection
     {
@@ -55,68 +61,5 @@ class PatientController extends Controller
         $this->service->archive($patient);
 
         return response()->noContent();
-    }
-
-    public function restore(int $id): PatientResource
-    {
-        return PatientResource::make($this->service->restore($id));
-    }
-
-    /**
-     * Consolidated 360 profile: demographics, records, relationships.
-     */
-    public function profile(Patient $patient): PatientResource
-    {
-        return PatientResource::make($this->service->profile($patient));
-    }
-
-    public function history(Patient $patient): AnonymousResourceCollection
-    {
-        return ActivityResource::collection($this->service->history($patient));
-    }
-
-    /**
-     * Candidate duplicate patients (same name + birthdate).
-     */
-    public function duplicates(Patient $patient): AnonymousResourceCollection
-    {
-        return PatientResource::collection($this->service->duplicatesOf($patient));
-    }
-
-    /**
-     * Merge this patient (source) into another (target), reassigning records.
-     */
-    public function merge(MergePatientRequest $request, Patient $patient, PatientMergeService $merge): PatientResource
-    {
-        $target = Patient::findOrFail($request->validated('target_id'));
-
-        return PatientResource::make($merge->merge($patient, $target));
-    }
-
-    /**
-     * The merge history for a patient (merges where it is the surviving target).
-     */
-    public function merges(Patient $patient): AnonymousResourceCollection
-    {
-        return PatientMergeResource::collection(
-            PatientMerge::query()->where('target_patient_id', $patient->id)->latest()->get(),
-        );
-    }
-
-    /**
-     * Reverse the most recent un-reversed merge into this patient: records move
-     * back to the duplicate and it is restored.
-     */
-    public function unmerge(Patient $patient, PatientMergeService $merge): PatientResource
-    {
-        $record = $merge->latestActiveMergeInto($patient);
-
-        if ($record === null) {
-            throw ValidationException::withMessages([
-                'patient' => 'This patient has no merge to reverse.',
-            ]);
-        }
-
-        return PatientResource::make($merge->reverse($record));
     }
 }

@@ -6,7 +6,6 @@ use App\DTOs\PatientCaretakerDto;
 use App\Http\Requests\StorePatientCaretakerRequest;
 use App\Http\Resources\PatientCaretakerResource;
 use App\Models\Patient;
-use App\Models\PatientCaretaker;
 use App\Services\PatientCaretakerService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -31,16 +30,5 @@ class PatientCaretakerController extends Controller
         $record = $this->service->create(PatientCaretakerDto::fromArray($request->validated()));
 
         return PatientCaretakerResource::make($record)->response()->setStatusCode(Response::HTTP_CREATED);
-    }
-
-    /**
-     * End an assignment: stamp the unassigned date and deactivate it.
-     */
-    public function unassign(PatientCaretaker $caretaker): PatientCaretakerResource
-    {
-        return PatientCaretakerResource::make($this->service->update($caretaker, PatientCaretakerDto::fromArray([
-            'unassigned_date' => now()->toDateTimeString(),
-            'is_active' => false,
-        ])));
     }
 }
