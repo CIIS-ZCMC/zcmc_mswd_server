@@ -3,7 +3,6 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\HospitalPatientIndexRequest;
-use App\Http\Requests\HospitalPatientSearchRequest;
 use App\Http\Resources\HospitalPatientResource;
 use App\Services\HospitalPatientService;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -22,21 +21,6 @@ class HospitalPatientController extends Controller
 
         return HospitalPatientResource::collection(
             $this->service->paginate($validated['search'] ?? null, $validated['per_page'] ?? 15),
-        );
-    }
-
-    /**
-     * Find patients by name and/or hospital number (404 when none match).
-     */
-    public function find(HospitalPatientSearchRequest $request): AnonymousResourceCollection
-    {
-        $validated = $request->validated();
-
-        return HospitalPatientResource::collection(
-            $this->service->findByNameAndHospitalNumber(
-                $validated['name'] ?? null,
-                $validated['hospital_number'] ?? null,
-            ),
         );
     }
 
