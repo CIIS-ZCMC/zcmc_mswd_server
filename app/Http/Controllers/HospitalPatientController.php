@@ -26,13 +26,13 @@ class HospitalPatientController extends Controller
     }
 
     /**
-     * Find one patient by name and/or hospital number (404 when none match).
+     * Find patients by name and/or hospital number (404 when none match).
      */
-    public function find(HospitalPatientSearchRequest $request): HospitalPatientResource
+    public function find(HospitalPatientSearchRequest $request): AnonymousResourceCollection
     {
         $validated = $request->validated();
 
-        return HospitalPatientResource::make(
+        return HospitalPatientResource::collection(
             $this->service->findByNameAndHospitalNumber(
                 $validated['name'] ?? null,
                 $validated['hospital_number'] ?? null,

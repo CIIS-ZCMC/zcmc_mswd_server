@@ -7,10 +7,13 @@ use App\Filament\Resources\UnifiedIntakeSheets\Pages\ListUnifiedIntakeSheets;
 use App\Filament\Resources\UnifiedIntakeSheets\Pages\ViewUnifiedIntakeSheet;
 use App\Filament\Resources\UnifiedIntakeSheets\RelationManagers\ActivitiesRelationManager;
 use App\Models\AssistantType;
+use App\Models\Bizbox\PatientRegister;
 use App\Models\CaseModel;
 use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\UnifiedIntakeSheet;
+use App\Repositories\Contracts\PatientRegisterRepositoryInterface;
+use App\Services\PatientRegisterService;
 use App\Services\UnifiedIntakeSheetPdfService;
 use App\Services\UnifiedIntakeSheetService;
 use BackedEnum;
@@ -90,10 +93,51 @@ class UnifiedIntakeSheetResource extends Resource
                             ->visible(fn (Get $get): bool => blank($get('patient_id')))
                             ->columns(2)
                             ->schema([
+                                DatePicker::make('hospital_patient_date')
+                                    ->label('Registration date (HIS)')
+                                    ->helperText('Optional — narrows the HIS search below to a specific registration date.')
+                                    ->live()
+                                    ->dehydrated(false)
+                                    ->columnSpanFull(),
+                                Select::make('hospital_patient')
+                                    ->label('Search hospital records (HIS)')
+                                    ->helperText('Search the hospital system (SQL Server) by name or hospital number to auto-fill the fields below.')
+                                    ->searchable()
+                                    ->live()
+                                    ->dehydrated(false)
+                                    ->columnSpanFull()
+                                    ->getSearchResultsUsing(fn (string $search, Get $get) => app(PatientRegisterService::class)
+                                        ->search($search, $get('hospital_patient_date'))
+                                        ->mapWithKeys(fn (PatientRegister $pr) => [
+                                            $pr->getKey() => trim($pr->patient?->displayName().' — #'.$pr->patient?->hospital_number, ' —#'),
+                                        ]))
+                                    ->getOptionLabelUsing(fn ($value) => optional(
+                                        app(PatientRegisterRepositoryInterface::class)->find($value)?->patient
+                                    )?->displayName())
+                                    // Pull the HIS registration's linked patient and map it onto the patient fields.
+                                    ->afterStateUpdated(function ($state, Set $set): void {
+                                        if (blank($state)) {
+                                            return;
+                                        }
+
+                                        $hp = app(PatientRegisterRepositoryInterface::class)->find($state)?->patient;
+
+                                        if ($hp === null) {
+                                            return;
+                                        }
+
+                                        foreach ($hp->toPatientAttributes() as $key => $value) {
+                                            $set("patient.{$key}", $value);
+                                        }
+                                    }),
                                 Select::make('patient.sector_id')
                                     ->label('Sector')
                                     ->options(fn () => Sector::orderBy('name')->pluck('name', 'id'))
                                     ->required(fn (Get $get) => blank($get('patient_id'))),
+                                TextInput::make('patient.hospital_id')
+                                    ->label('Hospital number')
+                                    ->numeric()
+                                    ->helperText('From the HIS; filled automatically when you pick a hospital record.'),
                                 Select::make('patient.sex')
                                     ->options(['male' => 'Male', 'female' => 'Female'])
                                     ->required(fn (Get $get) => blank($get('patient_id'))),
@@ -102,6 +146,7 @@ class UnifiedIntakeSheetResource extends Resource
                                 TextInput::make('patient.last_name')
                                     ->required(fn (Get $get) => blank($get('patient_id'))),
                                 TextInput::make('patient.middle_name'),
+                                TextInput::make('patient.extension_name')->label('Suffix'),
                                 DatePicker::make('patient.birthdate'),
                                 TextInput::make('patient.civil_status'),
                                 TextInput::make('patient.contact_number'),

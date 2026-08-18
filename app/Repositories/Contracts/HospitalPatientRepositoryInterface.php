@@ -3,6 +3,7 @@
 namespace App\Repositories\Contracts;
 
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
 /**
@@ -17,7 +18,12 @@ interface HospitalPatientRepositoryInterface
     public function find(int|string $id): ?Model;
 
     /**
-     * Find a single patient by name and/or hospital number.
+     * One-box lookup matching a term against the hospital number OR name.
      */
-    public function findByNameAndHospitalNumber(?string $name = null, int|string|null $hospitalNumber = null): ?Model;
+    public function search(string $term, int $limit = 20): Collection;
+
+    /**
+     * Find patients by name and/or hospital number (name matches can be many, e.g. "Juan").
+     */
+    public function findByNameAndHospitalNumber(?string $name = null, int|string|null $hospitalNumber = null): Collection;
 }
