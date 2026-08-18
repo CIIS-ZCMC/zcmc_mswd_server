@@ -20,6 +20,7 @@
 /public/js/filament
 /public/storage
 /storage/*.key
+/storage/framework/lsp-*.php
 /storage/pail
 /vendor
 Homestead.json
