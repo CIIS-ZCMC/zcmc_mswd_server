@@ -2,33 +2,25 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class UpdateAssessmentRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('cases.update') ?? false;
     }
 
     /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'case_id' => ['sometimes', 'required', 'exists:cases,id'],
-            'created_by' => ['sometimes', 'required', 'exists:users,id'],
-            'total_family_income' => ['nullable', 'numeric'],
+            'classification' => ['sometimes', 'required', 'string', 'max:255'],
+            'total_family_income' => ['nullable', 'numeric', 'min:0'],
             'housing_type' => ['nullable', 'string', 'max:255'],
             'utilities_access' => ['nullable', 'string', 'max:255'],
-            'classification' => ['sometimes', 'required', 'string', 'max:255'],
             'presenting_problem' => ['nullable', 'string'],
             'family_background' => ['nullable', 'string'],
             'social_functioning' => ['nullable', 'string'],

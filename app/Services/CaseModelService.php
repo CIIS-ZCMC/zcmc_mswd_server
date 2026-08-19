@@ -181,6 +181,15 @@ class CaseModelService
             ->get();
     }
 
+    /**
+     * Record a milestone on the case timeline (used by clinical sub-records
+     * such as assessments, diagnostics and interventions).
+     */
+    public function logMilestone(CaseModel $case, User $user, string $type, ?string $notes = null): void
+    {
+        $this->recordActivity($case, $user, $type, $notes);
+    }
+
     private function nextCaseCode(): string
     {
         $year = now()->year;

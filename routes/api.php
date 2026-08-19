@@ -1,11 +1,15 @@
 <?php
 
+use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\CaseActivitiesController;
+use App\Http\Controllers\CaseDocumentController;
 use App\Http\Controllers\CaseHistoryController;
 use App\Http\Controllers\CaseModelController;
 use App\Http\Controllers\CaseProfileController;
 use App\Http\Controllers\CloseCaseController;
+use App\Http\Controllers\DiagnosticController;
+use App\Http\Controllers\DiagnosticReportController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinalizeIntakeSheetController;
 use App\Http\Controllers\FindHospitalPatientController;
@@ -13,6 +17,7 @@ use App\Http\Controllers\FindPatientRegisterController;
 use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\IntakeSheetHistoryController;
 use App\Http\Controllers\IntakeSheetPdfController;
+use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\MatchIntakePatientsController;
 use App\Http\Controllers\MergePatientController;
 use App\Http\Controllers\PatientCaretakerController;
@@ -135,4 +140,27 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('cases/{case}/refer', ReferCaseController::class);
         Route::post('cases/{case}/reopen', ReopenCaseController::class);
     });
+
+    // Case clinical records (per-action permissions declared on the controllers)
+    Route::get('cases/{case}/assessments', [AssessmentController::class, 'index']);
+    Route::post('cases/{case}/assessments', [AssessmentController::class, 'store']);
+    Route::put('assessments/{assessment}', [AssessmentController::class, 'update']);
+    Route::delete('assessments/{assessment}', [AssessmentController::class, 'destroy']);
+
+    Route::get('cases/{case}/diagnostics', [DiagnosticController::class, 'index']);
+    Route::post('cases/{case}/diagnostics', [DiagnosticController::class, 'store']);
+    Route::put('diagnostics/{diagnostic}', [DiagnosticController::class, 'update']);
+    Route::delete('diagnostics/{diagnostic}', [DiagnosticController::class, 'destroy']);
+    Route::get('diagnostics/{diagnostic}/reports', [DiagnosticReportController::class, 'index']);
+    Route::post('diagnostics/{diagnostic}/reports', [DiagnosticReportController::class, 'store']);
+    Route::delete('diagnostic-reports/{diagnosticReport}', [DiagnosticReportController::class, 'destroy']);
+
+    Route::get('cases/{case}/interventions', [InterventionController::class, 'index']);
+    Route::post('cases/{case}/interventions', [InterventionController::class, 'store']);
+    Route::put('interventions/{intervention}', [InterventionController::class, 'update']);
+    Route::delete('interventions/{intervention}', [InterventionController::class, 'destroy']);
+
+    Route::get('cases/{case}/documents', [CaseDocumentController::class, 'index']);
+    Route::post('cases/{case}/documents', [CaseDocumentController::class, 'store']);
+    Route::delete('cases/{case}/documents/{document}', [CaseDocumentController::class, 'destroy']);
 });
