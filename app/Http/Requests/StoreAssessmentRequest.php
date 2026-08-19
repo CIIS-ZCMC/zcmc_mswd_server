@@ -2,33 +2,27 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAssessmentRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('cases.create') ?? false;
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * `case_id` and `created_by` are set from the route + actor.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'case_id' => ['required', 'exists:cases,id'],
-            'created_by' => ['required', 'exists:users,id'],
-            'total_family_income' => ['nullable', 'numeric'],
+            'classification' => ['required', 'string', 'max:255'],
+            'total_family_income' => ['nullable', 'numeric', 'min:0'],
             'housing_type' => ['nullable', 'string', 'max:255'],
             'utilities_access' => ['nullable', 'string', 'max:255'],
-            'classification' => ['required', 'string', 'max:255'],
             'presenting_problem' => ['nullable', 'string'],
             'family_background' => ['nullable', 'string'],
             'social_functioning' => ['nullable', 'string'],
