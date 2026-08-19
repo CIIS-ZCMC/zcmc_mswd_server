@@ -57,8 +57,11 @@ class DiagnosticsRelationManager extends RelationManager
     }
 
     private const REPORT_TYPES = [
-        'lab' => 'Lab', 'xray' => 'X-ray', 'ct_scan' => 'CT scan',
-        'medical_abstract' => 'Medical abstract', 'others' => 'Others',
+        'lab' => 'Lab',
+        'xray' => 'X-ray',
+        'ct_scan' => 'CT scan',
+        'medical_abstract' => 'Medical abstract',
+        'others' => 'Others',
     ];
 
     public function form(Schema $schema): Schema
