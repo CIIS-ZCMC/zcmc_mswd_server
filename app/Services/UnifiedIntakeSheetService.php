@@ -32,9 +32,9 @@ class UnifiedIntakeSheetService
         protected UnifiedIntakeSheetPdfService $pdf,
     ) {}
 
-    public function list(int $perPage = 15): LengthAwarePaginator
+    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->sheets->paginate($perPage);
+        return $this->sheets->paginate($page, $perPage);
     }
 
     public function find(int|string $id): UnifiedIntakeSheet
