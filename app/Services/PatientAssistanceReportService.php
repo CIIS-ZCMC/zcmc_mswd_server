@@ -2,7 +2,6 @@
 
 namespace App\Services;
 
-use App\DTOs\PatientAssistanceReportDto;
 use App\Models\PatientAssistanceReport;
 use App\Repositories\Contracts\PatientAssistanceReportRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -21,18 +20,11 @@ class PatientAssistanceReportService
         return $this->repository->findOrFail($id);
     }
 
-    public function create(PatientAssistanceReportDto $dto): PatientAssistanceReport
+    /**
+     * Void a report (e.g. issued in error) without removing the audit record.
+     */
+    public function void(PatientAssistanceReport $report): PatientAssistanceReport
     {
-        return $this->repository->create($dto->toArray());
-    }
-
-    public function update(PatientAssistanceReport $patientAssistanceReport, PatientAssistanceReportDto $dto): PatientAssistanceReport
-    {
-        return $this->repository->update($patientAssistanceReport, $dto->toArray());
-    }
-
-    public function delete(PatientAssistanceReport $patientAssistanceReport): bool
-    {
-        return $this->repository->delete($patientAssistanceReport);
+        return $this->repository->update($report, ['is_void' => true]);
     }
 }

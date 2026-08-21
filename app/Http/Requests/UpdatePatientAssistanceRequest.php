@@ -7,30 +7,25 @@ use Illuminate\Foundation\Http\FormRequest;
 
 class UpdatePatientAssistanceRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
-        return true;
+        return $this->user()?->can('assistance.update') ?? false;
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * Status transitions go through the dedicated approve/release/cancel
+     * endpoints, so only the aid's own details are editable here.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
         return [
-            'case_id' => ['sometimes', 'required', 'exists:cases,id'],
-            'assistant_type_id' => ['sometimes', 'required', 'exists:assistant_types,id'],
-            'guarantor_id' => ['nullable', 'exists:guarantors,id'],
-            'amount' => ['nullable', 'numeric'],
+            'assistant_type_id' => ['sometimes', 'required', 'integer', 'exists:assistant_types,id'],
+            'guarantor_id' => ['nullable', 'integer', 'exists:guarantors,id'],
+            'amount' => ['nullable', 'numeric', 'min:0'],
             'notes' => ['nullable', 'string'],
             'date_given' => ['sometimes', 'required', 'date'],
-            'created_by' => ['sometimes', 'required', 'exists:users,id'],
-            'status' => ['sometimes', 'required', 'string', 'max:255'],
         ];
     }
 }

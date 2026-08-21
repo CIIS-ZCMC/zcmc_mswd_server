@@ -1,7 +1,10 @@
 <?php
 
+use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssignCaseController;
+use App\Http\Controllers\AssistanceHistoryController;
+use App\Http\Controllers\CancelAssistanceController;
 use App\Http\Controllers\CaseActivitiesController;
 use App\Http\Controllers\CaseDocumentController;
 use App\Http\Controllers\CaseHistoryController;
@@ -20,6 +23,9 @@ use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\MatchIntakePatientsController;
 use App\Http\Controllers\MergePatientController;
+use App\Http\Controllers\PatientAssistanceController;
+use App\Http\Controllers\PatientAssistanceLogController;
+use App\Http\Controllers\PatientAssistanceReportController;
 use App\Http\Controllers\PatientCaretakerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicatesController;
@@ -32,6 +38,7 @@ use App\Http\Controllers\PatientRegisterController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\ReferCaseController;
+use App\Http\Controllers\ReleaseAssistanceController;
 use App\Http\Controllers\ReopenCaseController;
 use App\Http\Controllers\RestoreCaseController;
 use App\Http\Controllers\RestorePatientController;
@@ -159,4 +166,25 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('cases/{case}/documents', [CaseDocumentController::class, 'index']);
     Route::post('cases/{case}/documents', [CaseDocumentController::class, 'store']);
     Route::delete('cases/{case}/documents/{document}', [CaseDocumentController::class, 'destroy']);
+
+    // Patient assistance (case-scoped financial aid; per-action permissions on controllers)
+    Route::get('cases/{case}/assistances', [PatientAssistanceController::class, 'index']);
+    Route::post('cases/{case}/assistances', [PatientAssistanceController::class, 'store']);
+    Route::get('assistances/{assistance}', [PatientAssistanceController::class, 'show']);
+    Route::put('assistances/{assistance}', [PatientAssistanceController::class, 'update']);
+    Route::delete('assistances/{assistance}', [PatientAssistanceController::class, 'destroy']);
+
+    Route::get('assistances/{assistance}/history', AssistanceHistoryController::class)->middleware('permission:assistance.view');
+    Route::get('assistances/{assistance}/logs', [PatientAssistanceLogController::class, 'index']);
+
+    // Lifecycle transitions (each writes a log entry)
+    Route::post('assistances/{assistance}/approve', ApproveAssistanceController::class)->middleware('permission:assistance.approve');
+    Route::post('assistances/{assistance}/release', ReleaseAssistanceController::class)->middleware('permission:assistance.approve');
+    Route::post('assistances/{assistance}/cancel', CancelAssistanceController::class)->middleware('permission:assistance.update');
+
+    // Released-aid report snapshots
+    Route::get('assistances/{assistance}/reports', [PatientAssistanceReportController::class, 'forAssistance']);
+    Route::get('assistance-reports', [PatientAssistanceReportController::class, 'index']);
+    Route::get('assistance-reports/{report}', [PatientAssistanceReportController::class, 'show']);
+    Route::post('assistance-reports/{report}/void', [PatientAssistanceReportController::class, 'void']);
 });
