@@ -9,13 +9,11 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class PatientWatcherService
 {
-    public function __construct(protected PatientWatcherRepositoryInterface $repository)
-    {
-    }
+    public function __construct(protected PatientWatcherRepositoryInterface $repository) {}
 
-    public function list(int $perPage = 15): LengthAwarePaginator
+    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->paginate($perPage);
+        return $this->repository->paginate($page, $perPage);
     }
 
     public function find(int|string $id): PatientWatcher

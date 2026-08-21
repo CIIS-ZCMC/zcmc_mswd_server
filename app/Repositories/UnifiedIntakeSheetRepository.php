@@ -13,11 +13,11 @@ class UnifiedIntakeSheetRepository extends BaseRepository implements UnifiedInta
         parent::__construct($model);
     }
 
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function paginate(int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model->newQuery()
             ->with(['patient', 'case', 'intakeWorker'])
             ->latest()
-            ->paginate($perPage);
+            ->paginate(perPage: $perPage, page: $page);
     }
 }

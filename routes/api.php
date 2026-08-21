@@ -50,8 +50,7 @@ Route::get('/user', fn (Request $request) => $request->user())->middleware('auth
 Route::middleware('auth:sanctum')->group(function () {
     // Users (read-only) + role assignment
     Route::apiResource('users', UserController::class)->only(['index', 'show']);
-    Route::put('users/{user}/roles', SyncUserRolesController::class)
-        ->middleware('permission:users.manage');
+    Route::put('users/{user}/roles', SyncUserRolesController::class)->middleware('permission:users.manage');
 
     // Roles & permissions
     Route::middleware('permission:roles.manage')->group(function () {
@@ -60,22 +59,20 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // Unified Intake Sheet (per-action permissions declared on the controller)
-    Route::apiResource('intake-sheets', UnifiedIntakeSheetController::class)
-        ->parameters(['intake-sheets' => 'intakeSheet']);
+    Route::apiResource('intake-sheets', UnifiedIntakeSheetController::class)->parameters(['intake-sheets' => 'intakeSheet']);
+
     Route::middleware('permission:intake.view')->group(function () {
         Route::post('intake-sheets/match-patients', MatchIntakePatientsController::class);
         Route::get('intake-sheets/{intakeSheet}/history', IntakeSheetHistoryController::class);
         Route::get('intake-sheets/{intakeSheet}/pdf', IntakeSheetPdfController::class);
     });
-    Route::post('intake-sheets/{intakeSheet}/submit', SubmitIntakeSheetController::class)
-        ->middleware('permission:intake.update');
-    Route::post('intake-sheets/{intakeSheet}/finalize', FinalizeIntakeSheetController::class)
-        ->middleware('permission:intake.finalize');
+
+    Route::post('intake-sheets/{intakeSheet}/submit', SubmitIntakeSheetController::class)->middleware('permission:intake.update');
+    Route::post('intake-sheets/{intakeSheet}/finalize', FinalizeIntakeSheetController::class)->middleware('permission:intake.finalize');
 
     // Patients (per-action permissions declared on the controller)
     Route::apiResource('patients', PatientController::class);
-    Route::post('patients/{id}/restore', RestorePatientController::class)
-        ->middleware('permission:patients.delete');
+    Route::post('patients/{id}/restore', RestorePatientController::class)->middleware('permission:patients.delete');
 
     Route::middleware('permission:patients.merge')->group(function () {
         Route::post('patients/{patient}/merge', MergePatientController::class);
@@ -125,8 +122,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Case management (per-action permissions declared on the controller)
     Route::apiResource('cases', CaseModelController::class);
-    Route::post('cases/{id}/restore', RestoreCaseController::class)
-        ->middleware('permission:cases.delete');
+    Route::post('cases/{id}/restore', RestoreCaseController::class)->middleware('permission:cases.delete');
 
     Route::middleware('permission:cases.view')->group(function () {
         Route::get('cases/{case}/profile', CaseProfileController::class);

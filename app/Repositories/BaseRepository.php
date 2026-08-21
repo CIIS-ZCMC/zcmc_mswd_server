@@ -9,18 +9,16 @@ use Illuminate\Database\Eloquent\Model;
 
 abstract class BaseRepository implements RepositoryInterface
 {
-    public function __construct(protected Model $model)
-    {
-    }
+    public function __construct(protected Model $model) {}
 
     public function all(): Collection
     {
         return $this->model->newQuery()->get();
     }
 
-    public function paginate(int $perPage = 15): LengthAwarePaginator
+    public function paginate(int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->model->newQuery()->paginate($perPage);
+        return $this->model->newQuery()->paginate(perPage: $perPage, page: $page);
     }
 
     public function find(int|string $id): ?Model
