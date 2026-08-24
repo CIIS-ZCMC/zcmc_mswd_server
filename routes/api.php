@@ -21,6 +21,8 @@ use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\IntakeSheetHistoryController;
 use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
+use App\Http\Controllers\LoginController;
+use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MatchIntakePatientsController;
 use App\Http\Controllers\MergePatientController;
 use App\Http\Controllers\PatientAssistanceController;
@@ -52,9 +54,14 @@ use App\Http\Controllers\UserController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
+// Authentication — token issue is public (rate-limited); the rest need a token.
+Route::post('login', LoginController::class)->middleware('throttle:6,1');
+
 Route::get('/user', fn (Request $request) => $request->user())->middleware('auth:sanctum');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::post('logout', LogoutController::class);
+
     // Users (read-only) + role assignment
     Route::apiResource('users', UserController::class)->only(['index', 'show']);
     Route::put('users/{user}/roles', SyncUserRolesController::class)->middleware('permission:users.manage');
