@@ -10,6 +10,7 @@ use App\Models\PatientFamilyMember;
 use App\Models\PatientId;
 use App\Models\PatientWatcher;
 use App\Repositories\Contracts\PatientRepositoryInterface;
+use App\Support\ListQuery;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
@@ -26,9 +27,9 @@ class PatientService
 
     public function __construct(protected PatientRepositoryInterface $repository) {}
 
-    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
+    public function list(?ListQuery $query = null): LengthAwarePaginator
     {
-        return $this->repository->paginate($page, $perPage);
+        return $this->repository->paginateList($query ?? new ListQuery);
     }
 
     public function find(int|string $id): Patient

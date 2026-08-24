@@ -5,15 +5,16 @@ namespace App\Services;
 use App\DTOs\UserDto;
 use App\Models\User;
 use App\Repositories\Contracts\UserRepositoryInterface;
+use App\Support\ListQuery;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class UserService
 {
     public function __construct(protected UserRepositoryInterface $repository) {}
 
-    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
+    public function list(?ListQuery $query = null): LengthAwarePaginator
     {
-        return $this->repository->paginate($page, $perPage);
+        return $this->repository->paginateList($query ?? new ListQuery);
     }
 
     public function find(int|string $id): User

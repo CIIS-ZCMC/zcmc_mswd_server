@@ -8,7 +8,9 @@ use App\Http\Requests\UpdateUnifiedIntakeSheetRequest;
 use App\Http\Resources\UnifiedIntakeSheetResource;
 use App\Models\UnifiedIntakeSheet;
 use App\Services\UnifiedIntakeSheetService;
+use App\Support\ListQuery;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -28,9 +30,9 @@ class UnifiedIntakeSheetController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return UnifiedIntakeSheetResource::collection($this->service->list());
+        return UnifiedIntakeSheetResource::collection($this->service->list(ListQuery::fromRequest($request)));
     }
 
     public function store(StoreUnifiedIntakeSheetRequest $request): JsonResponse

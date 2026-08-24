@@ -32,6 +32,15 @@ class User extends Authenticatable implements FilamentUser, HasName
         'synced_at',
     ];
 
+    /**
+     * Never serialize the credential columns — `/api/user` returns the raw
+     * model, so anything not hidden here goes over the wire.
+     */
+    protected $hidden = [
+        'password',
+        'remember_token',
+    ];
+
     protected function casts(): array
     {
         return [

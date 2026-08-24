@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTOs\PermissionDto;
 use App\Models\Permission;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
+use App\Support\ListQuery;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -13,9 +14,9 @@ class PermissionService
 {
     public function __construct(protected PermissionRepositoryInterface $repository) {}
 
-    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
+    public function list(?ListQuery $query = null): LengthAwarePaginator
     {
-        return $this->repository->paginate($page, $perPage);
+        return $this->repository->paginateList($query ?? new ListQuery);
     }
 
     public function find(int|string $id): Permission

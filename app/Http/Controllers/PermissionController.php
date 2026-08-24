@@ -8,7 +8,9 @@ use App\Http\Requests\UpdatePermissionRequest;
 use App\Http\Resources\PermissionResource;
 use App\Models\Permission;
 use App\Services\PermissionService;
+use App\Support\ListQuery;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -16,9 +18,9 @@ class PermissionController extends Controller
 {
     public function __construct(protected PermissionService $service) {}
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return PermissionResource::collection($this->service->list());
+        return PermissionResource::collection($this->service->list(ListQuery::fromRequest($request)));
     }
 
     public function store(StorePermissionRequest $request): JsonResponse

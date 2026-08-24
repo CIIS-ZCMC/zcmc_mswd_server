@@ -9,6 +9,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class RoleRepository extends BaseRepository implements RoleRepositoryInterface
 {
+    /** @var list<string> */
+    protected array $searchable = ['name', 'description'];
+
+    /** @var list<string> */
+    protected array $filterable = ['guard_name'];
+
+    /** @var list<string> */
+    protected array $sortable = ['name', 'created_at'];
+
+    protected string $defaultSort = 'name';
+
+    /** @var list<string> */
+    protected array $listWithCount = ['permissions'];
+
     public function __construct(Role $model)
     {
         parent::__construct($model);
