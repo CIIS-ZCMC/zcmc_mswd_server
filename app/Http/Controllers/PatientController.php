@@ -8,7 +8,9 @@ use App\Http\Requests\UpdatePatientRequest;
 use App\Http\Resources\PatientResource;
 use App\Models\Patient;
 use App\Services\PatientService;
+use App\Support\ListQuery;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -28,9 +30,9 @@ class PatientController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return PatientResource::collection($this->service->list());
+        return PatientResource::collection($this->service->list(ListQuery::fromRequest($request)));
     }
 
     public function store(StorePatientRequest $request): JsonResponse
@@ -45,7 +47,10 @@ class PatientController extends Controller implements HasMiddleware
     public function show(Patient $patient): PatientResource
     {
         return PatientResource::make(
-            $patient->loadCount(['cases', 'patientIds', 'familyMembers', 'watchers', 'documents']),
+            $patient
+                // The detail view shows the sector name, not just its id.
+                ->load('sector')
+                ->loadCount(['cases', 'patientIds', 'familyMembers', 'watchers', 'documents']),
         );
     }
 

@@ -9,6 +9,7 @@ use App\Models\CaseModel;
 use App\Models\Document;
 use App\Models\User;
 use App\Repositories\Contracts\CaseModelRepositoryInterface;
+use App\Support\ListQuery;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
@@ -19,9 +20,9 @@ class CaseModelService
 {
     public function __construct(protected CaseModelRepositoryInterface $repository) {}
 
-    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
+    public function list(?ListQuery $query = null): LengthAwarePaginator
     {
-        return $this->repository->paginate($page, $perPage);
+        return $this->repository->paginateList($query ?? new ListQuery);
     }
 
     public function find(int|string $id): CaseModel

@@ -8,6 +8,23 @@ use Illuminate\Database\Eloquent\Collection;
 
 class PatientRepository extends BaseRepository implements PatientRepositoryInterface
 {
+    /** @var list<string> */
+    protected array $searchable = ['mswd_id', 'hospital_id', 'first_name', 'last_name'];
+
+    /** @var list<string> */
+    protected array $filterable = ['sector_id', 'sex'];
+
+    /** @var list<string> */
+    protected array $sortable = ['mswd_id', 'last_name', 'first_name', 'created_at'];
+
+    protected string $defaultSort = 'last_name';
+
+    /** @var list<string> */
+    protected array $listWith = ['sector'];
+
+    /** @var list<string> */
+    protected array $listWithCount = ['cases'];
+
     public function __construct(Patient $model)
     {
         parent::__construct($model);

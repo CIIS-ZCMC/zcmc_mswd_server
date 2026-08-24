@@ -14,6 +14,7 @@ use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use App\Repositories\Contracts\CaseModelRepositoryInterface;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Repositories\Contracts\UnifiedIntakeSheetRepositoryInterface;
+use App\Support\ListQuery;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Arr;
@@ -32,9 +33,9 @@ class UnifiedIntakeSheetService
         protected UnifiedIntakeSheetPdfService $pdf,
     ) {}
 
-    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
+    public function list(?ListQuery $query = null): LengthAwarePaginator
     {
-        return $this->sheets->paginate($page, $perPage);
+        return $this->sheets->paginateList($query ?? new ListQuery);
     }
 
     public function find(int|string $id): UnifiedIntakeSheet

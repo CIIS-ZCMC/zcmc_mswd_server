@@ -8,7 +8,9 @@ use App\Http\Requests\UpdateCaseModelRequest;
 use App\Http\Resources\CaseModelResource;
 use App\Models\CaseModel;
 use App\Services\CaseModelService;
+use App\Support\ListQuery;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -28,9 +30,9 @@ class CaseModelController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return CaseModelResource::collection($this->service->list());
+        return CaseModelResource::collection($this->service->list(ListQuery::fromRequest($request)));
     }
 
     public function store(StoreCaseModelRequest $request): JsonResponse

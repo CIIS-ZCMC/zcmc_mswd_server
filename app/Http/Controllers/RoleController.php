@@ -8,7 +8,9 @@ use App\Http\Requests\UpdateRoleRequest;
 use App\Http\Resources\RoleResource;
 use App\Models\Role;
 use App\Services\RoleService;
+use App\Support\ListQuery;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 
@@ -16,9 +18,9 @@ class RoleController extends Controller
 {
     public function __construct(protected RoleService $service) {}
 
-    public function index(): AnonymousResourceCollection
+    public function index(Request $request): AnonymousResourceCollection
     {
-        return RoleResource::collection($this->service->list());
+        return RoleResource::collection($this->service->list(ListQuery::fromRequest($request)));
     }
 
     public function store(StoreRoleRequest $request): JsonResponse

@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 use Laravel\Sanctum\Sanctum;
@@ -93,6 +94,35 @@ it('returns the authenticated user from /api/user with a token', function () {
 
 it('rejects /api/user without a token', function () {
     $this->getJson('/api/user')->assertUnauthorized();
+});
+
+it('never exposes the password hash on /api/user', function () {
+    Sanctum::actingAs(authUser());
+
+    $this->getJson('/api/user')
+        ->assertOk()
+        ->assertJsonMissingPath('password')
+        ->assertJsonMissingPath('remember_token');
+});
+
+it('returns the current user with roles and permissions from /api/me', function () {
+    $this->seed(RolesAndPermissionsSeeder::class);
+
+    $user = authUser();
+    $user->assignRole('Supervisor');
+
+    Sanctum::actingAs($user);
+
+    $response = $this->getJson('/api/me')
+        ->assertOk()
+        ->assertJsonPath('data.email', 'worker@zcmc.test')
+        ->assertJsonPath('data.roles', ['Supervisor']);
+
+    expect($response->json('data.permissions'))->not->toBeEmpty();
+});
+
+it('rejects /api/me without a token', function () {
+    $this->getJson('/api/me')->assertUnauthorized();
 });
 
 it('revokes the current token on logout', function () {

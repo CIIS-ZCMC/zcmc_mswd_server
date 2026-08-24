@@ -5,6 +5,7 @@ namespace App\Services;
 use App\DTOs\RoleDto;
 use App\Models\Role;
 use App\Repositories\Contracts\RoleRepositoryInterface;
+use App\Support\ListQuery;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Auth\Access\AuthorizationException;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -13,9 +14,9 @@ class RoleService
 {
     public function __construct(protected RoleRepositoryInterface $repository) {}
 
-    public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
+    public function list(?ListQuery $query = null): LengthAwarePaginator
     {
-        return $this->repository->paginate($page, $perPage);
+        return $this->repository->paginateList($query ?? new ListQuery);
     }
 
     public function find(int|string $id): Role

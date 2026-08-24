@@ -9,6 +9,20 @@ use Illuminate\Database\Eloquent\Model;
 
 class PermissionRepository extends BaseRepository implements PermissionRepositoryInterface
 {
+    /** @var list<string> */
+    protected array $searchable = ['name'];
+
+    /** @var list<string> */
+    protected array $filterable = ['guard_name'];
+
+    /** @var list<string> */
+    protected array $sortable = ['name', 'created_at'];
+
+    protected string $defaultSort = 'name';
+
+    /** @var list<string> */
+    protected array $listWithCount = ['roles'];
+
     public function __construct(Permission $model)
     {
         parent::__construct($model);

@@ -4,6 +4,7 @@ use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
+use App\Http\Controllers\AssistantTypeController;
 use App\Http\Controllers\CancelAssistanceController;
 use App\Http\Controllers\CaseActivitiesController;
 use App\Http\Controllers\CaseDocumentController;
@@ -17,13 +18,16 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinalizeIntakeSheetController;
 use App\Http\Controllers\FindHospitalPatientController;
 use App\Http\Controllers\FindPatientRegisterController;
+use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\IntakeSheetHistoryController;
 use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
+use App\Http\Controllers\InterventionTypeController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MatchIntakePatientsController;
+use App\Http\Controllers\MeController;
 use App\Http\Controllers\MergePatientController;
 use App\Http\Controllers\PatientAssistanceController;
 use App\Http\Controllers\PatientAssistanceLogController;
@@ -45,6 +49,7 @@ use App\Http\Controllers\ReopenCaseController;
 use App\Http\Controllers\RestoreCaseController;
 use App\Http\Controllers\RestorePatientController;
 use App\Http\Controllers\RoleController;
+use App\Http\Controllers\SectorController;
 use App\Http\Controllers\SubmitIntakeSheetController;
 use App\Http\Controllers\SyncUserRolesController;
 use App\Http\Controllers\UnassignCaretakerController;
@@ -60,7 +65,14 @@ Route::post('login', LoginController::class)->middleware('throttle:6,1');
 Route::get('/user', fn (Request $request) => $request->user())->middleware('auth:sanctum');
 
 Route::middleware('auth:sanctum')->group(function () {
+    Route::get('me', MeController::class);
     Route::post('logout', LogoutController::class);
+
+    // Reference lookups backing the client's select inputs (read-only).
+    Route::apiResource('sectors', SectorController::class)->only(['index', 'show']);
+    Route::apiResource('assistant-types', AssistantTypeController::class)->only(['index', 'show'])->parameters(['assistant-types' => 'assistantType']);
+    Route::apiResource('intervention-types', InterventionTypeController::class)->only(['index', 'show'])->parameters(['intervention-types' => 'interventionType']);
+    Route::apiResource('guarantors', GuarantorController::class)->only(['index', 'show']);
 
     // Users (read-only) + role assignment
     Route::apiResource('users', UserController::class)->only(['index', 'show']);
