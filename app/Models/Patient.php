@@ -31,12 +31,22 @@ class Patient extends Model
         'municipality',
         'province',
         'contact_number',
+        'religion',
+        'nationality',
+        'place_of_birth',
+        'permanent_address',
+        'present_address',
+        'educational_attainment',
+        'occupation',
+        'employer',
+        'monthly_income',
     ];
 
     protected function casts(): array
     {
         return [
             'birthdate' => 'date',
+            'monthly_income' => 'decimal:2',
         ];
     }
 

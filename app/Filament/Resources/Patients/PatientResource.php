@@ -74,6 +74,17 @@ class PatientResource extends Resource
                 TextInput::make('province'),
                 TextInput::make('contact_number'),
             ]),
+            Section::make('Background')->columns(2)->schema([
+                TextInput::make('religion'),
+                TextInput::make('nationality'),
+                TextInput::make('place_of_birth')->label('Place of birth'),
+                TextInput::make('educational_attainment')->label('Educational attainment'),
+                TextInput::make('permanent_address')->label('Permanent address')->columnSpanFull(),
+                TextInput::make('present_address')->label('Present address')->columnSpanFull(),
+                TextInput::make('occupation'),
+                TextInput::make('employer'),
+                TextInput::make('monthly_income')->label('Monthly income')->numeric()->prefix('₱'),
+            ]),
         ]);
     }
 
@@ -97,6 +108,17 @@ class PatientResource extends Resource
                 TextEntry::make('municipality')->placeholder('—'),
                 TextEntry::make('province')->placeholder('—'),
                 TextEntry::make('contact_number')->placeholder('—'),
+            ]),
+            Section::make('Background')->columns(2)->schema([
+                TextEntry::make('religion')->placeholder('—'),
+                TextEntry::make('nationality')->placeholder('—'),
+                TextEntry::make('place_of_birth')->label('Place of birth')->placeholder('—'),
+                TextEntry::make('educational_attainment')->label('Educational attainment')->placeholder('—'),
+                TextEntry::make('permanent_address')->label('Permanent address')->placeholder('—')->columnSpanFull(),
+                TextEntry::make('present_address')->label('Present address')->placeholder('—')->columnSpanFull(),
+                TextEntry::make('occupation')->placeholder('—'),
+                TextEntry::make('employer')->placeholder('—'),
+                TextEntry::make('monthly_income')->label('Monthly income')->money('PHP')->placeholder('—'),
             ]),
         ]);
     }

@@ -21,6 +21,15 @@ class PatientDto
         public readonly ?string $municipality = null,
         public readonly ?string $province = null,
         public readonly ?string $contact_number = null,
+        public readonly ?string $religion = null,
+        public readonly ?string $nationality = null,
+        public readonly ?string $place_of_birth = null,
+        public readonly ?string $permanent_address = null,
+        public readonly ?string $present_address = null,
+        public readonly ?string $educational_attainment = null,
+        public readonly ?string $occupation = null,
+        public readonly ?string $employer = null,
+        public readonly ?float $monthly_income = null,
     ) {
     }
 
@@ -43,6 +52,15 @@ class PatientDto
             municipality: $data['municipality'] ?? null,
             province: $data['province'] ?? null,
             contact_number: $data['contact_number'] ?? null,
+            religion: $data['religion'] ?? null,
+            nationality: $data['nationality'] ?? null,
+            place_of_birth: $data['place_of_birth'] ?? null,
+            permanent_address: $data['permanent_address'] ?? null,
+            present_address: $data['present_address'] ?? null,
+            educational_attainment: $data['educational_attainment'] ?? null,
+            occupation: $data['occupation'] ?? null,
+            employer: $data['employer'] ?? null,
+            monthly_income: $data['monthly_income'] ?? null,
         );
     }
 
@@ -65,6 +83,15 @@ class PatientDto
             'municipality' => $this->municipality,
             'province' => $this->province,
             'contact_number' => $this->contact_number,
+            'religion' => $this->religion,
+            'nationality' => $this->nationality,
+            'place_of_birth' => $this->place_of_birth,
+            'permanent_address' => $this->permanent_address,
+            'present_address' => $this->present_address,
+            'educational_attainment' => $this->educational_attainment,
+            'occupation' => $this->occupation,
+            'employer' => $this->employer,
+            'monthly_income' => $this->monthly_income,
         ], fn ($value) => $value !== null);
     }
 }

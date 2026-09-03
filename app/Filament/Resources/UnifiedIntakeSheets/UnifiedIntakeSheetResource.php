@@ -224,6 +224,22 @@ class UnifiedIntakeSheetResource extends Resource
                         Textarea::make('assessment.intervention_plan')->columnSpanFull(),
                     ]),
 
+                Step::make('Household Expenses')
+                    ->description('Recorded against this assessment — only meaningful once a classification is set above.')
+                    ->schema([
+                        Repeater::make('expenses')
+                            ->schema([
+                                TextInput::make('expense_type')
+                                    ->label('Expense type')
+                                    ->helperText('e.g. food, rent, utilities, medicine, education, transportation')
+                                    ->required(),
+                                TextInput::make('amount')->numeric()->prefix('₱')->required(),
+                            ])
+                            ->columns(2)
+                            ->defaultItems(0)
+                            ->addActionLabel('Add expense'),
+                    ]),
+
                 Step::make('Recommended Assistance')
                     ->schema([
                         Repeater::make('assistances')

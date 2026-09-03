@@ -50,7 +50,7 @@ class UnifiedIntakeSheetController extends Controller implements HasMiddleware
     public function show(UnifiedIntakeSheet $intakeSheet): UnifiedIntakeSheetResource
     {
         return UnifiedIntakeSheetResource::make(
-            $intakeSheet->load('patient', 'case', 'assessment', 'intakeWorker'),
+            $intakeSheet->load('patient', 'case', 'assessment.expenses', 'intakeWorker'),
         );
     }
 

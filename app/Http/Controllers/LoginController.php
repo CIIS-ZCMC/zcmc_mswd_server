@@ -12,24 +12,25 @@ use Illuminate\Validation\ValidationException;
 class LoginController extends Controller
 {
     /**
-     * Authenticate a user by email + password and issue a Sanctum API token.
-     * React stores the token and sends it as `Authorization: Bearer <token>`.
+     * Authenticate a user by employee number + password and issue a Sanctum
+     * API token. React stores the token and sends it as
+     * `Authorization: Bearer <token>`.
      */
     public function __invoke(LoginRequest $request): JsonResponse
     {
         /** @var User|null $user */
-        $user = User::where('email', $request->validated('email'))->first();
+        $user = User::where('employee_number', $request->validated('employee_number'))->first();
 
         if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
-            // Same message for unknown email and wrong password (no user enumeration).
+            // Same message for unknown employee number and wrong password (no user enumeration).
             throw ValidationException::withMessages([
-                'email' => 'These credentials do not match our records.',
+                'employee_number' => 'These credentials do not match our records.',
             ]);
         }
 
         if (! $user->is_active) {
             throw ValidationException::withMessages([
-                'email' => 'This account is inactive. Please contact your administrator.',
+                'employee_number' => 'This account is inactive. Please contact your administrator.',
             ]);
         }
 

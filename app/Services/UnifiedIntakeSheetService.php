@@ -88,6 +88,7 @@ class UnifiedIntakeSheetService
             [$case, $isNewCase] = $this->resolveCase($dto, $patient, $worker);
             $assessment = $this->createAssessment($dto, $case, $worker);
             $this->createAssistances($dto, $case, $worker);
+            $this->createExpenses($dto, $assessment);
 
             /** @var UnifiedIntakeSheet $sheet */
             $sheet = $this->sheets->create(array_merge($dto->headerAttributes(), [
@@ -107,7 +108,7 @@ class UnifiedIntakeSheetService
                 "Intake {$sheet->intake_no}",
             );
 
-            return $sheet->fresh(['patient', 'case', 'assessment', 'intakeWorker']);
+            return $sheet->fresh(['patient', 'case', 'assessment.expenses', 'intakeWorker']);
         });
     }
 
@@ -122,7 +123,7 @@ class UnifiedIntakeSheetService
                 $this->assessments->update($sheet->assessment, $dto->assessment->toArray());
             }
 
-            return $sheet->fresh(['patient', 'case', 'assessment', 'intakeWorker']);
+            return $sheet->fresh(['patient', 'case', 'assessment.expenses', 'intakeWorker']);
         });
     }
 
@@ -308,6 +309,21 @@ class UnifiedIntakeSheetService
                 'status' => $row['status'] ?? 'pending',
                 'date_given' => $row['date_given'] ?? now(),
             ]));
+        }
+    }
+
+    /**
+     * Household expenses captured at this intake — only meaningful once an
+     * assessment exists (there's nowhere to attach them otherwise).
+     */
+    private function createExpenses(UnifiedIntakeSheetDto $dto, ?Assessment $assessment): void
+    {
+        if ($assessment === null) {
+            return;
+        }
+
+        foreach ($dto->expenses as $row) {
+            $assessment->expenses()->create($row);
         }
     }
 

@@ -31,7 +31,7 @@ class AssessmentController extends Controller implements HasMiddleware
 
     public function index(CaseModel $case): AnonymousResourceCollection
     {
-        return AssessmentResource::collection($case->assessments()->latest()->get());
+        return AssessmentResource::collection($case->assessments()->with('expenses')->latest()->get());
     }
 
     public function store(StoreAssessmentRequest $request, CaseModel $case, CaseModelService $cases): JsonResponse

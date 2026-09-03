@@ -75,6 +75,11 @@ class StoreUnifiedIntakeSheetRequest extends FormRequest
             'assistances.*.assistant_type_id' => ['required_with:assistances', 'integer', 'exists:assistant_types,id'],
             'assistances.*.amount' => ['nullable', 'numeric', 'min:0'],
             'assistances.*.notes' => ['nullable', 'string'],
+
+            // Household expenses recorded at this intake (only meaningful alongside an assessment)
+            'expenses' => ['nullable', 'array'],
+            'expenses.*.expense_type' => ['required_with:expenses', 'string', 'max:255'],
+            'expenses.*.amount' => ['required_with:expenses', 'numeric', 'min:0'],
         ];
     }
 
