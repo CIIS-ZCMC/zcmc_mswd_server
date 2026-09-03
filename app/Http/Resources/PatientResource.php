@@ -32,6 +32,15 @@ class PatientResource extends JsonResource
             'municipality' => $this->municipality,
             'province' => $this->province,
             'contact_number' => $this->contact_number,
+            'religion' => $this->religion,
+            'nationality' => $this->nationality,
+            'place_of_birth' => $this->place_of_birth,
+            'permanent_address' => $this->permanent_address,
+            'present_address' => $this->present_address,
+            'educational_attainment' => $this->educational_attainment,
+            'occupation' => $this->occupation,
+            'employer' => $this->employer,
+            'monthly_income' => $this->monthly_income,
             'archived_at' => $this->deleted_at,
 
             // Counts (when loaded via loadCount)

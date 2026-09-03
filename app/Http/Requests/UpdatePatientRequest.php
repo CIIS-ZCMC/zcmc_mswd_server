@@ -41,6 +41,15 @@ class UpdatePatientRequest extends FormRequest
             'municipality' => ['nullable', 'string', 'max:255'],
             'province' => ['nullable', 'string', 'max:255'],
             'contact_number' => ['nullable', 'string', 'max:255'],
+            'religion' => ['nullable', 'string', 'max:255'],
+            'nationality' => ['nullable', 'string', 'max:255'],
+            'place_of_birth' => ['nullable', 'string', 'max:255'],
+            'permanent_address' => ['nullable', 'string', 'max:255'],
+            'present_address' => ['nullable', 'string', 'max:255'],
+            'educational_attainment' => ['nullable', 'string', 'max:255'],
+            'occupation' => ['nullable', 'string', 'max:255'],
+            'employer' => ['nullable', 'string', 'max:255'],
+            'monthly_income' => ['nullable', 'numeric', 'min:0'],
         ];
     }
 }
