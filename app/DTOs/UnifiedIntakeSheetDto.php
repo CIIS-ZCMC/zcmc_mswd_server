@@ -26,9 +26,10 @@ class UnifiedIntakeSheetDto
         // Case: open a new case OR attach to an existing open/ongoing one
         public readonly ?int $case_id = null,
         public readonly ?CaseModelDto $case = null,
-        // Assessment + recommended assistance
+        // Assessment + recommended assistance + household expenses
         public readonly ?AssessmentDto $assessment = null,
         public readonly array $assistances = [],
+        public readonly array $expenses = [],
     ) {}
 
     public static function fromArray(array $data): self
@@ -47,6 +48,7 @@ class UnifiedIntakeSheetDto
             case: isset($data['case']) ? CaseModelDto::fromArray($data['case']) : null,
             assessment: isset($data['assessment']) ? AssessmentDto::fromArray($data['assessment']) : null,
             assistances: $data['assistances'] ?? [],
+            expenses: $data['expenses'] ?? [],
         );
     }
 

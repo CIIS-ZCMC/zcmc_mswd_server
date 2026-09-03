@@ -27,6 +27,7 @@ class AssessmentResource extends JsonResource
             'social_functioning' => $this->social_functioning,
             'assessment_notes' => $this->assessment_notes,
             'intervention_plan' => $this->intervention_plan,
+            'expenses' => AssessmentExpenseResource::collection($this->whenLoaded('expenses')),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
