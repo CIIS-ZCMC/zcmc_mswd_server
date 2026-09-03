@@ -60,7 +60,12 @@ it('creates a draft intake through the Filament wizard', function () {
                 'sex' => 'male',
                 'birthdate' => '1980-05-01',
             ],
-            'family_members' => [['name' => 'Maria Dela Cruz', 'relationship' => 'spouse', 'monthly_income' => 5000]],
+            'family_members' => [[
+                'name' => 'Maria Dela Cruz', 'relationship' => 'spouse',
+                'birthdate' => '1985-03-02', 'sex' => 'female', 'age' => 40,
+                'educational_attainment' => 'College graduate', 'occupation' => 'Vendor',
+                'monthly_income' => 5000,
+            ]],
             'patient_ids' => [['id_type' => 'philhealth', 'id_number' => 'PH-123']],
             'case' => ['case_type' => 'medical', 'priority_level' => 'high', 'admission_type' => 'ER'],
             'assessment' => ['classification' => 'indigent', 'presenting_problem' => 'Cannot afford medicine'],
@@ -79,6 +84,12 @@ it('creates a draft intake through the Filament wizard', function () {
         ->and(CaseModel::count())->toBe(1)
         ->and($sheet->assessment_id)->not->toBeNull()
         ->and(Patient::first()->familyMembers)->toHaveCount(1);
+
+    $member = Patient::first()->familyMembers->first();
+    expect($member->sex)->toBe('female')
+        ->and($member->educational_attainment)->toBe('College graduate')
+        ->and($member->occupation)->toBe('Vendor')
+        ->and($member->birthdate->toDateString())->toBe('1985-03-02');
 });
 
 it('updates an existing patient family through the wizard on reuse', function () {
@@ -102,6 +113,47 @@ it('updates an existing patient family through the wizard on reuse', function ()
     expect($member->fresh()->name)->toBe('Updated Name')
         ->and($member->fresh()->monthly_income)->toEqual('7000.00')
         ->and(Patient::count())->toBe(1);
+});
+
+it('does not wipe family demographics when an existing patient is reused', function () {
+    actingAs(intakePanelUser('MSS Head'));
+    $patient = Patient::create([
+        'sector_id' => $this->sector->id, 'first_name' => 'Ana', 'last_name' => 'Reyes', 'sex' => 'female',
+    ]);
+    $member = $patient->familyMembers()->create([
+        'name' => 'Old Name', 'relationship' => 'spouse', 'monthly_income' => 1000,
+        'birthdate' => '1990-01-02', 'sex' => 'female', 'age' => 35,
+        'educational_attainment' => 'High school', 'occupation' => 'Vendor',
+    ]);
+
+    // Selecting the patient fires the afterStateUpdated prefill.
+    $component = Livewire::test(CreateUnifiedIntakeSheet::class)
+        ->fillForm(['patient_id' => $patient->id]);
+
+    // Guard 1: every field the repeater renders must come back prefilled. This
+    // is what fails first — and points straight at the cause — if someone adds
+    // a repeater field and forgets the prefill map.
+    $row = collect($component->get('data.family_members'))->first();
+    expect($row['sex'])->toBe('female')
+        ->and($row['educational_attainment'])->toBe('High school')
+        ->and($row['occupation'])->toBe('Vendor')
+        ->and($row['birthdate'])->toBe('1990-01-02');
+
+    // Guard 2: saving without touching the family step must not null anything.
+    $component->fillForm([
+        'case' => ['case_type' => 'medical', 'priority_level' => 'high', 'admission_type' => 'ER'],
+        'assessment' => ['classification' => 'indigent', 'presenting_problem' => 'x'],
+        'date_of_intake' => now()->toDateString(),
+    ])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    $member->refresh();
+    expect($member->sex)->toBe('female')
+        ->and($member->educational_attainment)->toBe('High school')
+        ->and($member->occupation)->toBe('Vendor')
+        ->and($member->age)->toBe(35)                             // birthdate must not clobber it
+        ->and($member->birthdate->toDateString())->toBe('1990-01-02');
 });
 
 it('finalizes an intake from the view page', function () {
