@@ -46,9 +46,16 @@ class StoreUnifiedIntakeSheetRequest extends FormRequest
             'family_members.*.id' => ['nullable', 'integer'],
             'family_members.*.name' => ['required_with:family_members', 'string', 'max:255'],
             'family_members.*.relationship' => ['nullable', 'string', 'max:100'],
+            'family_members.*.birthdate' => ['nullable', 'date'],
+            'family_members.*.sex' => ['nullable', 'string', 'max:20'],
             'family_members.*.age' => ['nullable', 'integer', 'min:0'],
             'family_members.*.occupation' => ['nullable', 'string', 'max:255'],
             'family_members.*.monthly_income' => ['nullable', 'numeric', 'min:0'],
+            'family_members.*.educational_attainment' => ['nullable', 'string', 'max:255'],
+            // Rules are what let a key through validated(); without these two the
+            // columns were unreachable from the API even though they are fillable.
+            'family_members.*.contact_number' => ['nullable', 'string', 'max:50'],
+            'family_members.*.is_living_with_patient' => ['nullable', 'boolean'],
 
             'watchers' => ['nullable', 'array'],
             'watchers.*.name' => ['required_with:watchers', 'string', 'max:255'],

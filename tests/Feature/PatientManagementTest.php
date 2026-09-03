@@ -82,8 +82,19 @@ it('manages patient records through nested endpoints', function () {
         ->assertCreated()->assertJsonPath('data.patient_id', $patient->id);
 
     // Family member
-    $this->postJson("/api/patients/{$patient->id}/family-members", ['name' => 'Maria', 'monthly_income' => 5000])
-        ->assertCreated()->assertJsonPath('data.name', 'Maria');
+    $this->postJson("/api/patients/{$patient->id}/family-members", [
+        'name' => 'Maria',
+        'relationship' => 'spouse',
+        'birthdate' => '1985-03-02',
+        'sex' => 'female',
+        'educational_attainment' => 'College graduate',
+        'occupation' => 'Vendor',
+        'monthly_income' => 5000,
+    ])
+        ->assertCreated()
+        ->assertJsonPath('data.name', 'Maria')
+        ->assertJsonPath('data.sex', 'female')
+        ->assertJsonPath('data.educational_attainment', 'College graduate');
 
     // Watcher
     $this->postJson("/api/patients/{$patient->id}/watchers", ['name' => 'Pedro', 'is_primary' => true])
@@ -91,7 +102,26 @@ it('manages patient records through nested endpoints', function () {
 
     expect($patient->patientIds()->count())->toBe(1)
         ->and($patient->familyMembers()->count())->toBe(1)
-        ->and($patient->watchers()->count())->toBe(1);
+        ->and($patient->watchers()->count())->toBe(1)
+        // Asserted on the model, not the response: the date cast serialises to
+        // a full ISO-8601 timestamp, which is a brittle literal to hard-code.
+        ->and($patient->familyMembers()->first()->birthdate->toDateString())->toBe('1985-03-02');
+});
+
+it('keeps family member demographics on a partial update', function () {
+    Sanctum::actingAs(patientUser());
+    $patient = makePatient();
+    $member = $patient->familyMembers()->create([
+        'name' => 'Maria', 'relationship' => 'spouse', 'sex' => 'female',
+        'birthdate' => '1985-03-02', 'educational_attainment' => 'College graduate',
+        'occupation' => 'Vendor',
+    ]);
+
+    $this->putJson("/api/family-members/{$member->id}", ['occupation' => 'Teacher'])
+        ->assertOk()
+        ->assertJsonPath('data.occupation', 'Teacher')
+        ->assertJsonPath('data.sex', 'female')
+        ->assertJsonPath('data.educational_attainment', 'College graduate');
 });
 
 it('assigns and unassigns a social worker (caretaker)', function () {
