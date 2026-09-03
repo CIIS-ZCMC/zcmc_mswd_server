@@ -12,6 +12,11 @@
     $address = collect([$p?->address, $p?->barangay, $p?->municipality, $p?->province])
         ->filter()->join(', ');
 
+    // Same birthdate-first, fallback-second rule the patient header uses above.
+    $memberAge = fn ($m) => $m->birthdate
+        ? \Illuminate\Support\Carbon::parse($m->birthdate)->age
+        : $m->age;
+
     $peso = fn ($v) => $v === null ? '—' : '₱ '.number_format((float) $v, 2);
     $val = fn ($v) => filled($v) ? e($v) : '—';
 @endphp
@@ -50,6 +55,11 @@
         table.grid th { background: #f3f4f6; text-align: left; padding: 4px 6px; font-size: 9px;
                         border: 1px solid #d1d5db; }
         table.grid td { padding: 4px 6px; border: 1px solid #d1d5db; }
+        /* Seven columns on A4 portrait: fixed layout makes the percentage widths
+           authoritative, without it a long occupation blows the column out. */
+        table.grid.family { table-layout: fixed; }
+        table.grid.family th, table.grid.family td { padding: 3px 4px; font-size: 9px; word-wrap: break-word; }
+        table.grid.family .sub { font-size: 8px; color: #666; }
 
         .prose { padding: 4px 6px; }
         .prose .q { color: #666; font-style: italic; }
@@ -130,13 +140,28 @@
 
 <div class="section-title">3. Family Composition & Socioeconomic Profile</div>
 @if($p && $p->familyMembers->isNotEmpty())
-    <table class="grid">
-        <tr><th>Name</th><th>Relationship</th><th>Age</th><th>Occupation</th><th class="right">Monthly Income</th></tr>
+    <table class="grid family">
+        <tr>
+            <th style="width:22%">Name</th>
+            <th style="width:13%">Relationship</th>
+            <th style="width:8%">Sex</th>
+            <th style="width:8%">Age</th>
+            <th style="width:17%">Educational Attainment</th>
+            <th style="width:17%">Occupation</th>
+            <th class="right" style="width:15%">Monthly Income</th>
+        </tr>
         @foreach($p->familyMembers as $m)
             <tr>
                 <td>{{ $val($m->name) }}</td>
                 <td>{{ $val($m->relationship) }}</td>
-                <td>{{ $val($m->age) }}</td>
+                <td>{{ $val($m->sex) }}</td>
+                <td>
+                    {{ $val($memberAge($m)) }}
+                    @if($m->birthdate)
+                        <div class="sub">{{ $m->birthdate->format('m/d/Y') }}</div>
+                    @endif
+                </td>
+                <td>{{ $val($m->educational_attainment) }}</td>
                 <td>{{ $val($m->occupation) }}</td>
                 <td class="right">{{ $peso($m->monthly_income) }}</td>
             </tr>

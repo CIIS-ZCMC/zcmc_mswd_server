@@ -38,7 +38,12 @@ function makeIntakeDraft(int $sectorId, int $assistTypeId, User $worker): Unifie
                 'sector_id' => $sectorId, 'first_name' => 'Juan', 'last_name' => 'Dela Cruz',
                 'sex' => 'male', 'birthdate' => '1980-05-01', 'address' => 'Sta. Maria',
             ],
-            'family_members' => [['name' => 'Maria Dela Cruz', 'relationship' => 'spouse', 'monthly_income' => 5000]],
+            'family_members' => [[
+                'name' => 'Maria Dela Cruz', 'relationship' => 'spouse',
+                'birthdate' => '1985-03-02', 'sex' => 'female',
+                'educational_attainment' => 'College graduate', 'occupation' => 'Vendor',
+                'monthly_income' => 5000,
+            ]],
             'patient_ids' => [['id_type' => 'philhealth', 'id_number' => 'PH-123']],
             'case' => ['case_type' => 'medical', 'priority_level' => 'high', 'admission_type' => 'ER'],
             'assessment' => ['classification' => 'indigent', 'presenting_problem' => 'Cannot afford medicine'],
@@ -47,6 +52,26 @@ function makeIntakeDraft(int $sectorId, int $assistTypeId, User $worker): Unifie
         $worker,
     );
 }
+
+it('prints family demographics on the intake sheet', function () {
+    $worker = pdfIntakeWorker('MSS Head');
+    $sheet = makeIntakeDraft($this->sector->id, $this->assistType->id, $worker);
+
+    // Rendering the view rather than the PDF: the other tests only check the
+    // %PDF magic bytes, which a broken column would sail straight past.
+    $html = view('pdf.unified-intake-sheet', [
+        'sheet' => $sheet->loadMissing([
+            'patient.patientIds', 'patient.familyMembers', 'patient.sector',
+            'case.patientAssistances.assistantType', 'assessment', 'intakeWorker',
+        ]),
+    ])->render();
+
+    expect($html)->toContain('Educational Attainment')
+        ->and($html)->toContain('College graduate')
+        ->and($html)->toContain('Vendor')
+        ->and($html)->toContain('female')
+        ->and($html)->toContain('03/02/1985');
+});
 
 it('streams a PDF for a finalized intake', function () {
     $worker = pdfIntakeWorker('MSS Head');
