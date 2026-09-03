@@ -26,10 +26,12 @@ class UpdatePatientFamilyMemberRequest extends FormRequest
             'patient_id' => ['sometimes', 'required', 'exists:patients,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'relationship' => ['nullable', 'string', 'max:255'],
+            'birthdate' => ['nullable', 'date'],
+            'sex' => ['nullable', 'string', 'max:20'],
             'age' => ['nullable', 'integer'],
             'occupation' => ['nullable', 'string', 'max:255'],
             'monthly_income' => ['nullable', 'numeric'],
-            'education' => ['nullable', 'string', 'max:255'],
+            'educational_attainment' => ['nullable', 'string', 'max:255'],
             'contact_number' => ['nullable', 'string', 'max:255'],
             'is_living_with_patient' => ['boolean'],
         ];

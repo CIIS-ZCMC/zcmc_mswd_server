@@ -43,7 +43,12 @@ function newIntakePayload(int $sectorId, int $assistTypeId, bool $withAssessment
             'birthdate' => '1980-05-01',
         ],
         'family_members' => [
-            ['name' => 'Maria Dela Cruz', 'relationship' => 'spouse', 'monthly_income' => 5000],
+            [
+                'name' => 'Maria Dela Cruz', 'relationship' => 'spouse',
+                'birthdate' => '1985-03-02', 'sex' => 'female', 'age' => 40,
+                'educational_attainment' => 'College graduate', 'occupation' => 'Vendor',
+                'monthly_income' => 5000,
+            ],
         ],
         'patient_ids' => [
             ['id_type' => 'philhealth', 'id_number' => 'PH-123'],
@@ -86,6 +91,15 @@ it('creates a draft intake that assembles patient, case, assessment and assistan
         ->and(Patient::first()->patientIds)->toHaveCount(1)
         ->and(CaseModel::first()->patientAssistances)->toHaveCount(1);
 
+    // Every demographic in the payload must survive validation: an unruled key
+    // is silently dropped by validated() and never reaches the model.
+    $member = Patient::first()->familyMembers->first();
+    expect($member->sex)->toBe('female')
+        ->and($member->educational_attainment)->toBe('College graduate')
+        ->and($member->occupation)->toBe('Vendor')
+        ->and($member->age)->toBe(40)
+        ->and($member->birthdate->toDateString())->toBe('1985-03-02');
+
     // Milestone written to the case timeline
     expect(CaseModel::first()->activities()->where('activity_type', 'case_opened')->exists())->toBeTrue();
 
@@ -114,7 +128,10 @@ it('updates the existing patient family and IDs on reuse', function () {
     $patient = Patient::create([
         'sector_id' => $this->sector->id, 'first_name' => 'Ana', 'last_name' => 'Reyes', 'sex' => 'female',
     ]);
-    $keep = $patient->familyMembers()->create(['name' => 'Old Name', 'relationship' => 'spouse', 'monthly_income' => 1000]);
+    $keep = $patient->familyMembers()->create([
+        'name' => 'Old Name', 'relationship' => 'spouse', 'monthly_income' => 1000,
+        'sex' => 'female', 'educational_attainment' => 'High school',
+    ]);
     $remove = $patient->familyMembers()->create(['name' => 'Gone', 'relationship' => 'child']);
     $pid = $patient->patientIds()->create(['id_type' => 'philhealth', 'id_number' => 'OLD-1']);
 
@@ -122,7 +139,10 @@ it('updates the existing patient family and IDs on reuse', function () {
         'date_of_intake' => now()->toDateString(),
         'patient_id' => $patient->id,
         'family_members' => [
-            ['id' => $keep->id, 'name' => 'New Name', 'relationship' => 'spouse', 'monthly_income' => 7000],
+            [
+                'id' => $keep->id, 'name' => 'New Name', 'relationship' => 'spouse',
+                'monthly_income' => 7000, 'educational_attainment' => 'College graduate',
+            ],
             ['name' => 'Baby', 'relationship' => 'child'],
         ],
         'patient_ids' => [
@@ -136,6 +156,8 @@ it('updates the existing patient family and IDs on reuse', function () {
     expect($patient->familyMembers()->count())->toBe(2)           // one updated, one created, one removed
         ->and($keep->fresh()->name)->toBe('New Name')
         ->and($keep->fresh()->monthly_income)->toEqual('7000.00')
+        ->and($keep->fresh()->educational_attainment)->toBe('College graduate')
+        ->and($keep->fresh()->sex)->toBe('female')                // omitted from the payload — untouched
         ->and($remove->fresh()->trashed())->toBeTrue()
         ->and($pid->fresh()->id_number)->toBe('UPDATED-1')
         ->and(Patient::count())->toBe(1);

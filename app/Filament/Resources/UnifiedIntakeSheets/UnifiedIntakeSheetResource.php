@@ -75,10 +75,23 @@ class UnifiedIntakeSheetResource extends Resource
                                     ? Patient::with(['familyMembers', 'patientIds'])->find($state)
                                     : null;
 
+                                // INVARIANT: these keys must match the family_members
+                                // repeater's schema exactly. A field rendered in the
+                                // repeater but missing here hydrates as null, submits as
+                                // null, and syncCollection() then wipes the stored value.
                                 $set('family_members', $patient
                                     ? $patient->familyMembers->map(fn ($m) => [
-                                        'id' => $m->id, 'name' => $m->name, 'relationship' => $m->relationship,
-                                        'age' => $m->age, 'occupation' => $m->occupation, 'monthly_income' => $m->monthly_income,
+                                        'id' => $m->id,
+                                        'name' => $m->name,
+                                        'relationship' => $m->relationship,
+                                        // Y-m-d, not the raw Carbon: keeps the prefilled
+                                        // wire state identical to a freshly-typed date.
+                                        'birthdate' => $m->birthdate?->toDateString(),
+                                        'sex' => $m->sex,
+                                        'age' => $m->age,
+                                        'educational_attainment' => $m->educational_attainment,
+                                        'occupation' => $m->occupation,
+                                        'monthly_income' => $m->monthly_income,
                                     ])->all()
                                     : []);
 
@@ -162,7 +175,12 @@ class UnifiedIntakeSheetResource extends Resource
                                 Hidden::make('id'),
                                 TextInput::make('name')->required(),
                                 TextInput::make('relationship'),
-                                TextInput::make('age')->numeric(),
+                                DatePicker::make('birthdate'),
+                                Select::make('sex')
+                                    ->options(['male' => 'Male', 'female' => 'Female'])
+                                    ->native(false),
+                                TextInput::make('age')->numeric()->helperText('When the birthdate is unknown.'),
+                                TextInput::make('educational_attainment')->label('Educational attainment'),
                                 TextInput::make('occupation'),
                                 TextInput::make('monthly_income')->numeric()->prefix('₱'),
                             ])
