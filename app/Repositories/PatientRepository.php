@@ -9,7 +9,7 @@ use Illuminate\Database\Eloquent\Collection;
 class PatientRepository extends BaseRepository implements PatientRepositoryInterface
 {
     /** @var list<string> */
-    protected array $searchable = ['mswd_id', 'hospital_id', 'first_name', 'last_name'];
+    protected array $searchable = ['mswd_id', 'hospital_id', 'first_name', 'middle_name', 'last_name', 'barangay'];
 
     /** @var list<string> */
     protected array $filterable = ['sector_id', 'sex'];

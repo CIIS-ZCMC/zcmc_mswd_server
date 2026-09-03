@@ -72,7 +72,8 @@ class PatientService
             'familyMembers',
             'watchers',
             'caretakers',
-            'cases',
+            // assignedUser so the Staff tab has a name, not just an id.
+            'cases.assignedUser',
             'documents',
         ])->loadCount(['cases', 'patientIds', 'familyMembers', 'watchers', 'documents']);
     }
