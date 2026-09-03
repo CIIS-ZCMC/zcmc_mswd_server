@@ -151,10 +151,19 @@ Schema::create('patients', function (Blueprint $table) {
     $table->integer('estimated_age')->nullable();
     $table->string('sex');
     $table->string('civil_status')->nullable();
+    $table->string('religion')->nullable();
+    $table->string('nationality')->nullable();
+    $table->string('place_of_birth')->nullable();
     $table->string('address')->nullable();
     $table->string('barangay')->nullable();
     $table->string('municipality')->nullable();
     $table->string('province')->nullable();
+    $table->string('permanent_address')->nullable();
+    $table->string('present_address')->nullable();
+    $table->string('educational_attainment')->nullable();
+    $table->string('occupation')->nullable();
+    $table->string('employer')->nullable();
+    $table->decimal('monthly_income', 12, 2)->nullable();   // the patient's own
     $table->string('contact_number')->nullable();
     $table->timestamps();
     $table->softDeletes();
@@ -202,10 +211,12 @@ Schema::create('patient_family_members', function (Blueprint $table) {
     $table->foreignId('patient_id')->constrained('patients');
     $table->string('name');
     $table->string('relationship')->nullable();
-    $table->integer('age')->nullable();
+    $table->date('birthdate')->nullable();
+    $table->string('sex')->nullable();
+    $table->integer('age')->nullable();          // fallback when the birthdate is unknown
     $table->string('occupation')->nullable();
     $table->decimal('monthly_income', 12, 2)->nullable();
-    $table->string('education')->nullable();
+    $table->string('educational_attainment')->nullable();
     $table->string('contact_number')->nullable();
     $table->boolean('is_living_with_patient')->default(true);
     $table->timestamps();

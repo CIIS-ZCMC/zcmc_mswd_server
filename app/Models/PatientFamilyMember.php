@@ -15,10 +15,12 @@ class PatientFamilyMember extends Model
         'patient_id',
         'name',
         'relationship',
+        'birthdate',
+        'sex',
         'age',
         'occupation',
         'monthly_income',
-        'education',
+        'educational_attainment',
         'contact_number',
         'is_living_with_patient',
     ];
@@ -26,6 +28,7 @@ class PatientFamilyMember extends Model
     protected function casts(): array
     {
         return [
+            'birthdate' => 'date',
             'monthly_income' => 'decimal:2',
             'is_living_with_patient' => 'boolean',
         ];
