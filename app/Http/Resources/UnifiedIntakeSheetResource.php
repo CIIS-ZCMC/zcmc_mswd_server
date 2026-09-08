@@ -27,6 +27,10 @@ class UnifiedIntakeSheetResource extends JsonResource
             'submitted_at' => $this->submitted_at,
             'finalized_at' => $this->finalized_at,
             'finalized_by' => $this->finalized_by,
+            'intake_worker' => $this->whenLoaded('intakeWorker', fn () => [
+                'id' => $this->intakeWorker?->id,
+                'name' => $this->intakeWorker?->employee_name,
+            ]),
             'patient' => PatientResource::make($this->whenLoaded('patient')),
             'case' => CaseModelResource::make($this->whenLoaded('case')),
             'assessment' => AssessmentResource::make($this->whenLoaded('assessment')),
