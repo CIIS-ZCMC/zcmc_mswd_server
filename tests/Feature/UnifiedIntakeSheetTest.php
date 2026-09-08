@@ -311,3 +311,63 @@ it('cancels a draft but not a finalized intake', function () {
     $this->deleteJson("/api/intake-sheets/{$id}")->assertNoContent();
     expect(UnifiedIntakeSheet::withTrashed()->find($id)->status)->toBe('cancelled');
 });
+
+it('persists the full assessment narrative on create', function () {
+    Sanctum::actingAs(intakeWorker());
+
+    $payload = newIntakePayload($this->sector->id, $this->assistType->id);
+    $payload['assessment'] = array_merge($payload['assessment'], [
+        'housing_type' => 'Owned - light materials',
+        'utilities_access' => 'Electricity only',
+        'social_functioning' => 'Withdrawn since admission',
+        'assessment_notes' => 'Referred by ward nurse; spouse is sole earner.',
+    ]);
+
+    $this->postJson('/api/intake-sheets', $payload)->assertCreated();
+
+    // An unruled key is silently dropped by validated() and never reaches the
+    // model — these four were unreachable from the API until the rules existed.
+    $assessment = UnifiedIntakeSheet::first()->assessment;
+    expect($assessment->housing_type)->toBe('Owned - light materials')
+        ->and($assessment->utilities_access)->toBe('Electricity only')
+        ->and($assessment->social_functioning)->toBe('Withdrawn since admission')
+        ->and($assessment->assessment_notes)->toBe('Referred by ward nurse; spouse is sole earner.');
+});
+
+it('updates the full assessment narrative on a draft', function () {
+    Sanctum::actingAs(intakeWorker());
+    $id = $this->postJson('/api/intake-sheets', newIntakePayload($this->sector->id, $this->assistType->id))
+        ->assertCreated()->json('data.id');
+
+    $this->putJson("/api/intake-sheets/{$id}", [
+        'assessment' => [
+            'classification' => 'low_income',
+            'housing_type' => 'Rented',
+            'utilities_access' => 'Water and electricity',
+            'social_functioning' => 'Cooperative',
+            'assessment_notes' => 'Follow-up scheduled.',
+        ],
+    ])->assertOk();
+
+    $assessment = UnifiedIntakeSheet::find($id)->assessment->refresh();
+    expect($assessment->classification)->toBe('low_income')
+        ->and($assessment->housing_type)->toBe('Rented')
+        ->and($assessment->utilities_access)->toBe('Water and electricity')
+        ->and($assessment->social_functioning)->toBe('Cooperative')
+        ->and($assessment->assessment_notes)->toBe('Follow-up scheduled.');
+});
+
+it('exposes the intake worker and links the case and assessment on the list', function () {
+    $worker = intakeWorker();
+    Sanctum::actingAs($worker);
+    $this->postJson('/api/intake-sheets', newIntakePayload($this->sector->id, $this->assistType->id))->assertCreated();
+
+    $this->getJson('/api/intake-sheets')
+        ->assertOk()
+        ->assertJsonPath('data.0.intake_worker.id', $worker->id)
+        ->assertJsonPath('data.0.intake_worker.name', $worker->employee_name)
+        // $listWith now carries these, so a list row no longer needs a second
+        // request to show its case code or classification.
+        ->assertJsonPath('data.0.case.case_code', fn ($c) => is_string($c))
+        ->assertJsonPath('data.0.assessment.classification', 'indigent');
+});

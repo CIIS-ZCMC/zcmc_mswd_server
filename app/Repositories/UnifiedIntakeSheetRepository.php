@@ -22,7 +22,7 @@ class UnifiedIntakeSheetRepository extends BaseRepository implements UnifiedInta
     protected string $defaultDirection = 'desc';
 
     /** @var list<string> */
-    protected array $listWith = ['patient', 'intakeWorker'];
+    protected array $listWith = ['patient', 'intakeWorker', 'case', 'assessment'];
 
     public function __construct(UnifiedIntakeSheet $model)
     {

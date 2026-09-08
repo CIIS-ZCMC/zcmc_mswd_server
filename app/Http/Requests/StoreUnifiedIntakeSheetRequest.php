@@ -73,8 +73,12 @@ class StoreUnifiedIntakeSheetRequest extends FormRequest
             'assessment' => ['nullable', 'array'],
             'assessment.classification' => ['required_with:assessment', 'string', 'max:50'],
             'assessment.total_family_income' => ['nullable', 'numeric', 'min:0'],
+            'assessment.housing_type' => ['nullable', 'string', 'max:255'],
+            'assessment.utilities_access' => ['nullable', 'string', 'max:255'],
             'assessment.presenting_problem' => ['nullable', 'string'],
             'assessment.family_background' => ['nullable', 'string'],
+            'assessment.social_functioning' => ['nullable', 'string'],
+            'assessment.assessment_notes' => ['nullable', 'string'],
             'assessment.intervention_plan' => ['nullable', 'string'],
 
             // Recommended assistance
