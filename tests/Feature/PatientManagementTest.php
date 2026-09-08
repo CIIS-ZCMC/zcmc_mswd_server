@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Document;
 use App\Models\Patient;
@@ -9,6 +10,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Laravel\Sanctum\Sanctum;
 
@@ -38,13 +40,21 @@ function makePatient(array $overrides = []): Patient
     ], $overrides));
 }
 
-function openCaseFor(Patient $patient): CaseModel
+function openCaseFor(Patient $patient, array $overrides = []): CaseModel
 {
-    return CaseModel::create([
+    return CaseModel::create(array_merge([
         'patient_id' => $patient->id, 'assigned_user_id' => auth()->id() ?? User::factory()->create()->id,
         'case_code' => 'CASE-'.uniqid(), 'case_type' => 'medical', 'priority_level' => 'high',
         'status' => 'open', 'admission_type' => 'ER', 'date_opened' => now(),
-    ]);
+    ], $overrides));
+}
+
+function assessmentFor(CaseModel $case, array $overrides = []): Assessment
+{
+    return Assessment::create(array_merge([
+        'case_id' => $case->id, 'created_by' => User::factory()->create()->id,
+        'classification' => 'indigent',
+    ], $overrides));
 }
 
 // --- Patient CRUD ----------------------------------------------------------
@@ -69,6 +79,98 @@ it('lists, shows and updates a patient', function () {
     $this->getJson("/api/patients/{$patient->id}")->assertOk()->assertJsonPath('data.cases_count', 0);
     $this->putJson("/api/patients/{$patient->id}", ['contact_number' => '0917'])
         ->assertOk()->assertJsonPath('data.contact_number', '0917');
+});
+
+// --- Latest case / latest assessment (Phase 3) -----------------------------
+
+it('exposes latest_case and latest_assessment on the patients list', function () {
+    Sanctum::actingAs(patientUser());
+    $patient = makePatient();
+    $case = openCaseFor($patient, ['date_opened' => now()->subDay()]);
+    assessmentFor($case, ['classification' => 'indigent']);
+
+    $this->getJson('/api/patients')
+        ->assertOk()
+        ->assertJsonPath('data.0.latest_case.id', $case->id)
+        ->assertJsonPath('data.0.latest_case.case_code', $case->case_code)
+        ->assertJsonPath('data.0.latest_assessment.classification', 'indigent');
+});
+
+it('reports null latest_case and latest_assessment for a patient with no cases', function () {
+    Sanctum::actingAs(patientUser());
+    makePatient();
+
+    $this->getJson('/api/patients')
+        ->assertOk()
+        ->assertJsonPath('data.0.latest_case', null)
+        ->assertJsonPath('data.0.latest_assessment', null);
+});
+
+it('picks the most recently opened case as latest, not a superseded one', function () {
+    Sanctum::actingAs(patientUser());
+    $patient = makePatient();
+    openCaseFor($patient, ['date_opened' => now()->subDays(5), 'status' => 'closed']);
+    $recent = openCaseFor($patient, ['date_opened' => now()]);
+
+    $this->getJson('/api/patients')->assertOk()->assertJsonPath('data.0.latest_case.id', $recent->id);
+});
+
+it('excludes a soft-deleted case and its assessment from the latest read surface', function () {
+    Sanctum::actingAs(patientUser());
+    $patient = makePatient();
+    $older = openCaseFor($patient, ['date_opened' => now()->subDays(5)]);
+    assessmentFor($older, ['classification' => 'low_income']);
+    $newer = openCaseFor($patient, ['date_opened' => now()]);
+    assessmentFor($newer, ['classification' => 'indigent']);
+    $newer->delete();
+
+    $this->getJson('/api/patients')
+        ->assertOk()
+        ->assertJsonPath('data.0.latest_case.id', $older->id)
+        ->assertJsonPath('data.0.latest_assessment.classification', 'low_income');
+});
+
+it('breaks a latest_case tie on identical date_opened deterministically', function () {
+    Sanctum::actingAs(patientUser());
+    $patient = makePatient();
+    $sameDate = now();
+    openCaseFor($patient, ['date_opened' => $sameDate]);
+    $second = openCaseFor($patient, ['date_opened' => $sameDate]);
+
+    // Same date_opened for both — the tie-break is the higher id, i.e. the
+    // one created second.
+    $this->getJson('/api/patients')->assertOk()->assertJsonPath('data.0.latest_case.id', $second->id);
+});
+
+it('keeps the patients list query count constant regardless of row count', function () {
+    Sanctum::actingAs(patientUser());
+
+    // Warm up permission/role caches so they don't skew the comparison below
+    // — Spatie's permission lookup is cached after the first check.
+    $this->getJson('/api/patients')->assertOk();
+
+    foreach (range(1, 3) as $i) {
+        $patient = makePatient(['first_name' => "Patient{$i}"]);
+        assessmentFor(openCaseFor($patient));
+    }
+
+    DB::enableQueryLog();
+    $this->getJson('/api/patients')->assertOk()->assertJsonCount(3, 'data');
+    $threeRowQueries = count(DB::getQueryLog());
+    DB::flushQueryLog();
+    DB::disableQueryLog();
+
+    foreach (range(4, 6) as $i) {
+        $patient = makePatient(['first_name' => "Patient{$i}"]);
+        assessmentFor(openCaseFor($patient));
+    }
+
+    DB::enableQueryLog();
+    $this->getJson('/api/patients')->assertOk()->assertJsonCount(6, 'data');
+    $sixRowQueries = count(DB::getQueryLog());
+    DB::disableQueryLog();
+
+    expect($sixRowQueries)->toBe($threeRowQueries);
 });
 
 // --- Records ---------------------------------------------------------------

@@ -15,7 +15,7 @@ the client must not land until Phase 4 here is deployed.
 |-------|--------|
 | 1. Additive contract fixes | ☑ done — 17 passed, 2026-09-08 |
 | 2. `AssessmentDto` null clearing | ☑ done — 189 passed, 2026-09-08 |
-| 3. Latest-case / latest-assessment read surface | ☐ |
+| 3. Latest-case / latest-assessment read surface | ☑ done — 193 passed, 2026-09-08 |
 | 4. Relational filters | ☐ |
 
 ---
@@ -110,21 +110,25 @@ assertions (2026-09-08).
 
 ---
 
-## Phase 3 — Latest-case / latest-assessment read surface ☐
+## Phase 3 — Latest-case / latest-assessment read surface ☑
 
 Additive. Only `GET /patients` gains keys.
 
 - `app/Models/Patient.php`:
-  - `latestCase(): HasOne` → `latestOfMany(['date_opened' => 'max', 'id' => 'max'])`
-  - `latestAssessment(): HasOneThrough` → through `CaseModel`,
-    `->one()->latestOfMany()` (`HasOneThrough` uses `CanBeOneOfMany` in
-    Laravel 12 — verified in vendor)
+  - `latestCase(): HasOne` → `hasOne(CaseModel::class)->latestOfMany(['date_opened', 'id'])`
+  - `latestAssessment(): HasOneThrough` →
+    `hasManyThrough(Assessment::class, CaseModel::class, 'patient_id', 'case_id')->one()->latestOfMany()`
+    — the explicit key names are required: Eloquent guesses the through key
+    from the class name (`case_model_id`), not the actual FK (`case_id`),
+    since `CaseModel`'s class name doesn't match its `cases` table.
 - `app/Repositories/PatientRepository.php`: `$listWith` →
   `['sector', 'latestCase', 'latestAssessment']`
 - `app/Http/Resources/PatientResource.php`: `latest_assessment` via
-  `AssessmentResource`; `latest_case` as a **flat lite shape** (`id`,
-  `case_code`, `status`, `admission_type`, `date_opened`) — `CaseModelResource`
-  nests `PatientResource`, so emitting the full resource would risk
+  `AssessmentResource` (explicit null when the loaded relation is empty, to
+  avoid a property-read-on-null warning from `Resource::make(null)`);
+  `latest_case` as a **flat lite shape** (`id`, `case_code`, `status`,
+  `admission_type`, `date_opened`) — `CaseModelResource` nests
+  `PatientResource`, so emitting the full resource would risk
   `patient → case → patient` recursion.
 
 **Blast radius.** `PatientController@index` is the only consumer of the
@@ -137,14 +141,29 @@ is unaffected. Both new keys are `whenLoaded`, so the other ten
 eager-load with a single correlated subquery each. `cases.patient_id` and
 `assessments.case_id` are both `foreignId()->constrained()`, so both are indexed.
 
+**Correction to the original assumption below:** `Assessment` does **not**
+use `SoftDeletes` (the migration adds a `deleted_at` column, but the model
+never mixes in the trait), so `AssessmentService::delete()` is a hard delete
+— unlike `CaseModel`, which does soft-delete. This doesn't change the fix: a
+soft-deleted case is still excluded from `latestAssessment` for free, because
+`HasOneOrManyThrough` detects the through-parent's own soft-delete trait and
+joins with `whereNull(cases.deleted_at)` automatically.
+
 **Gate:** tests asserting
 
-- `GET /patients` returns both keys
-- a soft-deleted case is **not** returned as latest (both `cases` and
-  `assessments` use `SoftDeletes`; if the one-of-many subquery doesn't inherit
-  the scope, constrain it explicitly)
-- tie-break on identical `date_opened` is deterministic
-- constant query count regardless of row count
+- `GET /patients` returns both keys (present, and `null` for a patient with
+  no cases yet)
+- the most recently *opened* case wins over an earlier, since-closed one
+- a soft-deleted case (and, through it, its assessment) is excluded from
+  `latest_case` / `latest_assessment`
+- tie-break on identical `date_opened` is deterministic (falls to the higher
+  `id`)
+- constant query count regardless of row count (verified 3 rows vs. 6, after
+  a warm-up request so Spatie's cached permission lookup doesn't skew the
+  comparison)
+
+`php artisan test --filter=PatientManagementTest` — 17 passed, 69 assertions.
+Full suite `php artisan test` — 193 passed, 756 assertions (2026-09-08).
 
 ---
 
