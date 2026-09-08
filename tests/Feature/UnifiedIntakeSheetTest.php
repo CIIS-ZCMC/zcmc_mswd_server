@@ -357,6 +357,32 @@ it('updates the full assessment narrative on a draft', function () {
         ->and($assessment->assessment_notes)->toBe('Follow-up scheduled.');
 });
 
+it('leaves assessment_notes untouched when the key is omitted on an intake update', function () {
+    Sanctum::actingAs(intakeWorker());
+    $payload = newIntakePayload($this->sector->id, $this->assistType->id);
+    $payload['assessment']['assessment_notes'] = 'Initial note.';
+    $id = $this->postJson('/api/intake-sheets', $payload)->assertCreated()->json('data.id');
+
+    $this->putJson("/api/intake-sheets/{$id}", [
+        'assessment' => ['classification' => 'low_income'],
+    ])->assertOk();
+
+    expect(UnifiedIntakeSheet::find($id)->assessment->refresh()->assessment_notes)->toBe('Initial note.');
+});
+
+it('clears assessment_notes when explicitly set to null on an intake update', function () {
+    Sanctum::actingAs(intakeWorker());
+    $payload = newIntakePayload($this->sector->id, $this->assistType->id);
+    $payload['assessment']['assessment_notes'] = 'Initial note.';
+    $id = $this->postJson('/api/intake-sheets', $payload)->assertCreated()->json('data.id');
+
+    $this->putJson("/api/intake-sheets/{$id}", [
+        'assessment' => ['classification' => 'indigent', 'assessment_notes' => null],
+    ])->assertOk();
+
+    expect(UnifiedIntakeSheet::find($id)->assessment->refresh()->assessment_notes)->toBeNull();
+});
+
 it('exposes the intake worker and links the case and assessment on the list', function () {
     $worker = intakeWorker();
     Sanctum::actingAs($worker);
