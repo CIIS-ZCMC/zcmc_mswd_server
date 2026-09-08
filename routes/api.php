@@ -56,6 +56,7 @@ use App\Http\Controllers\UnassignCaretakerController;
 use App\Http\Controllers\UnifiedIntakeSheetController;
 use App\Http\Controllers\UnmergePatientController;
 use App\Http\Controllers\UserController;
+use App\Http\Controllers\WatcherRelationshipTypeController;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Route;
 
@@ -73,6 +74,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('assistant-types', AssistantTypeController::class)->only(['index', 'show'])->parameters(['assistant-types' => 'assistantType']);
     Route::apiResource('intervention-types', InterventionTypeController::class)->only(['index', 'show'])->parameters(['intervention-types' => 'interventionType']);
     Route::apiResource('guarantors', GuarantorController::class)->only(['index', 'show']);
+    Route::apiResource('watcher-relationship-types', WatcherRelationshipTypeController::class)->only(['index', 'show'])->parameters(['watcher-relationship-types' => 'watcherRelationshipType']);
 
     // Users (read-only) + role assignment
     Route::apiResource('users', UserController::class)->only(['index', 'show']);
