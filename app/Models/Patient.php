@@ -6,6 +6,8 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
+use Illuminate\Database\Eloquent\Relations\HasOneThrough;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Activity;
@@ -83,6 +85,26 @@ class Patient extends Model
     public function documents(): HasMany
     {
         return $this->hasMany(Document::class);
+    }
+
+    /**
+     * The patient's most recently opened case (by date_opened, then id to
+     * break ties). Excludes soft-deleted cases via CaseModel's own scope.
+     */
+    public function latestCase(): HasOne
+    {
+        return $this->hasOne(CaseModel::class)->latestOfMany(['date_opened', 'id']);
+    }
+
+    /**
+     * The patient's most recently created assessment across all their cases.
+     * Assessments belonging to a soft-deleted case are excluded automatically
+     * — HasOneThrough joins the cases table and filters its deleted_at.
+     */
+    public function latestAssessment(): HasOneThrough
+    {
+        return $this->hasManyThrough(Assessment::class, CaseModel::class, 'patient_id', 'case_id')
+            ->one()->latestOfMany();
     }
 
     /**

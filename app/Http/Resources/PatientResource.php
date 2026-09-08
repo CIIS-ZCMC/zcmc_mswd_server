@@ -59,6 +59,20 @@ class PatientResource extends JsonResource
             'cases' => CaseModelResource::collection($this->whenLoaded('cases')),
             'documents' => DocumentResource::collection($this->whenLoaded('documents')),
 
+            // Flat lite shape, not the full CaseModelResource: that nests
+            // PatientResource, which would recurse patient -> case -> patient.
+            'latest_case' => $this->whenLoaded('latestCase', fn () => $this->latestCase === null ? null : [
+                'id' => $this->latestCase->id,
+                'case_code' => $this->latestCase->case_code,
+                'status' => $this->latestCase->status,
+                'admission_type' => $this->latestCase->admission_type,
+                'date_opened' => $this->latestCase->date_opened,
+            ]),
+            'latest_assessment' => $this->whenLoaded(
+                'latestAssessment',
+                fn () => $this->latestAssessment === null ? null : AssessmentResource::make($this->latestAssessment),
+            ),
+
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
