@@ -41,6 +41,11 @@ class CaseModel extends Model
         'admission_type',
         'date_opened',
         'date_closed',
+        'watcher_waiver_reason',
+        'watcher_waiver_note',
+        'watcher_waived_by',
+        'watcher_waived_at',
+        'watcher_legacy_exempt',
     ];
 
     protected function casts(): array
@@ -48,6 +53,8 @@ class CaseModel extends Model
         return [
             'date_opened' => 'datetime',
             'date_closed' => 'datetime',
+            'watcher_waived_at' => 'datetime',
+            'watcher_legacy_exempt' => 'boolean',
         ];
     }
 
@@ -89,6 +96,11 @@ class CaseModel extends Model
     public function patientAssistances(): HasMany
     {
         return $this->hasMany(PatientAssistance::class, 'case_id');
+    }
+
+    public function watchers(): HasMany
+    {
+        return $this->hasMany(CaseWatcher::class, 'case_id');
     }
 
     /**
