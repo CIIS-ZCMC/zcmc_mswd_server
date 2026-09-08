@@ -14,7 +14,7 @@ the client must not land until Phase 4 here is deployed.
 | Phase | Status |
 |-------|--------|
 | 1. Additive contract fixes | ☑ done — 17 passed, 2026-09-08 |
-| 2. `AssessmentDto` null clearing | ☑ done — 189 passed, 2026-09-08 |
+| 2. `AssessmentDto` null clearing | ☐ |
 | 3. Latest-case / latest-assessment read surface | ☐ |
 | 4. Relational filters | ☐ |
 
@@ -72,7 +72,7 @@ validation was the only gate. An unruled key is silently dropped by
 
 ---
 
-## Phase 2 — `AssessmentDto` null clearing ☑
+## Phase 2 — `AssessmentDto` null clearing ☐
 
 The one intentional behaviour change in this plan. Isolated on purpose.
 
@@ -102,9 +102,7 @@ can never reassign an assessment to another case.
 
 **Gate:** two Pest tests per write path — an omitted key leaves the column
 untouched; an explicit `null` clears it. Then
-`php artisan test --filter="Assessment|CaseRecords|UnifiedIntakeSheet"` — 41
-passed, 221 assertions. Full suite `php artisan test` — 189 passed, 744
-assertions (2026-09-08).
+`php artisan test --filter="Assessment|CaseRecords|UnifiedIntakeSheet"`.
 
 **Revert:** single-file revert, no schema or contract impact.
 
