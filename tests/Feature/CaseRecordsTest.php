@@ -112,6 +112,32 @@ it('uploads and lists a case document', function () {
     $this->deleteJson("/api/cases/{$case->id}/documents/{$doc['id']}")->assertNoContent();
 });
 
+it('leaves assessment_notes untouched when the key is omitted on update', function () {
+    Sanctum::actingAs(recordsUser());
+    $case = caseForRecords(recordsUser(), $this->patient);
+
+    $id = $this->postJson("/api/cases/{$case->id}/assessments", [
+        'classification' => 'indigent', 'assessment_notes' => 'Initial note.',
+    ])->assertCreated()->json('data.id');
+
+    $this->putJson("/api/assessments/{$id}", ['classification' => 'low_income'])->assertOk();
+
+    expect(\App\Models\Assessment::find($id)->assessment_notes)->toBe('Initial note.');
+});
+
+it('clears assessment_notes when explicitly set to null on update', function () {
+    Sanctum::actingAs(recordsUser());
+    $case = caseForRecords(recordsUser(), $this->patient);
+
+    $id = $this->postJson("/api/cases/{$case->id}/assessments", [
+        'classification' => 'indigent', 'assessment_notes' => 'Initial note.',
+    ])->assertCreated()->json('data.id');
+
+    $this->putJson("/api/assessments/{$id}", ['assessment_notes' => null])->assertOk();
+
+    expect(\App\Models\Assessment::find($id)->assessment_notes)->toBeNull();
+});
+
 it('forbids adding a record without cases.create', function () {
     Sanctum::actingAs(recordsUser('Processor')); // cases.view only
     $case = caseForRecords(recordsUser('Case Manager'), $this->patient);

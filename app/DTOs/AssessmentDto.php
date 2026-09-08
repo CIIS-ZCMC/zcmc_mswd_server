@@ -4,6 +4,15 @@ namespace App\DTOs;
 
 class AssessmentDto
 {
+    /**
+     * Keys present in the source array, whatever their value — lets toArray()
+     * distinguish "omitted" (leave column untouched) from "explicit null"
+     * (clear the column) instead of collapsing both to "not written".
+     *
+     * @var array<int, string>
+     */
+    private readonly array $suppliedKeys;
+
     public function __construct(
         public readonly ?int $case_id = null,
         public readonly ?int $created_by = null,
@@ -16,7 +25,9 @@ class AssessmentDto
         public readonly ?string $social_functioning = null,
         public readonly ?string $assessment_notes = null,
         public readonly ?string $intervention_plan = null,
+        array $suppliedKeys = [],
     ) {
+        $this->suppliedKeys = $suppliedKeys;
     }
 
     public static function fromArray(array $data): self
@@ -33,12 +44,13 @@ class AssessmentDto
             social_functioning: $data['social_functioning'] ?? null,
             assessment_notes: $data['assessment_notes'] ?? null,
             intervention_plan: $data['intervention_plan'] ?? null,
+            suppliedKeys: array_keys($data),
         );
     }
 
     public function toArray(): array
     {
-        return array_filter([
+        $all = [
             'case_id' => $this->case_id,
             'created_by' => $this->created_by,
             'total_family_income' => $this->total_family_income,
@@ -50,6 +62,16 @@ class AssessmentDto
             'social_functioning' => $this->social_functioning,
             'assessment_notes' => $this->assessment_notes,
             'intervention_plan' => $this->intervention_plan,
-        ], fn ($value) => $value !== null);
+        ];
+
+        $attributes = array_intersect_key($all, array_flip($this->suppliedKeys));
+
+        // case_id/created_by stay present-only regardless of what was supplied,
+        // so an update can never null out — and thus reassign — an assessment's case.
+        return array_filter(
+            $attributes,
+            fn ($value, $key) => ! in_array($key, ['case_id', 'created_by'], true) || $value !== null,
+            ARRAY_FILTER_USE_BOTH,
+        );
     }
 }
