@@ -4,6 +4,8 @@ namespace App\Repositories;
 
 use App\Models\Patient;
 use App\Repositories\Contracts\PatientRepositoryInterface;
+use App\Support\ListQuery;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Collection;
 
 class PatientRepository extends BaseRepository implements PatientRepositoryInterface
@@ -39,5 +41,33 @@ class PatientRepository extends BaseRepository implements PatientRepositoryInter
             ->orderBy('last_name')
             ->limit(20)
             ->get();
+    }
+
+    /**
+     * `classification` and `intake_date` live on related tables, so
+     * BaseRepository::applyFilters' plain `where($column, $value)` can't
+     * reach them. `sector_id` / `sex` still fall through to it below.
+     *
+     * @param  Builder<Patient>  $builder
+     */
+    protected function applyFilters(Builder $builder, ListQuery $query): void
+    {
+        if (array_key_exists('classification', $query->filters)) {
+            $classification = $query->filters['classification'];
+
+            // Matches the patient's *current* classification (latestAssessment),
+            // not "ever had" — a superseded assessment must not match.
+            $builder->whereHas('latestAssessment', fn (Builder $q) => is_array($classification)
+                ? $q->whereIn('classification', $classification)
+                : $q->where('classification', $classification));
+        }
+
+        if (array_key_exists('intake_date', $query->filters)) {
+            $intakeDate = $query->filters['intake_date'];
+
+            $builder->whereHas('cases', fn (Builder $q) => $q->whereDate('date_opened', $intakeDate));
+        }
+
+        parent::applyFilters($builder, $query);
     }
 }
