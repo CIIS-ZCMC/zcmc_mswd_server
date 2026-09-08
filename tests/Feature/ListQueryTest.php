@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Patient;
 use App\Models\Sector;
@@ -41,6 +42,15 @@ function listCase(Patient $patient, array $overrides = []): CaseModel
         'status' => 'open',
         'admission_type' => 'OPD',
         'date_opened' => now(),
+    ], $overrides));
+}
+
+function listAssessment(CaseModel $case, array $overrides = []): Assessment
+{
+    return Assessment::create(array_merge([
+        'case_id' => $case->id,
+        'created_by' => test()->admin->id,
+        'classification' => 'indigent',
     ], $overrides));
 }
 
@@ -97,6 +107,42 @@ it('filters on a declared column and ignores an undeclared one', function () {
     $this->getJson('/api/patients?filter[address]=nowhere')
         ->assertOk()
         ->assertJsonCount(2, 'data');
+});
+
+it('filters patients by their current classification, ignoring a superseded assessment', function () {
+    $reclassified = listPatient(['last_name' => 'Reclassified']);
+    $oldCase = listCase($reclassified, ['case_code' => 'CASE-OLD', 'date_opened' => now()->subDays(5)]);
+    listAssessment($oldCase, ['classification' => 'low_income']);
+    $newCase = listCase($reclassified, ['case_code' => 'CASE-NEW', 'date_opened' => now()]);
+    listAssessment($newCase, ['classification' => 'indigent']);
+
+    $stillLowIncome = listPatient(['last_name' => 'StillLowIncome']);
+    listAssessment(listCase($stillLowIncome, ['case_code' => 'CASE-OTHER']), ['classification' => 'low_income']);
+
+    $this->getJson('/api/patients?filter[classification]=indigent')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.last_name', 'Reclassified');
+
+    // The superseded low_income assessment must not match — only the other
+    // patient's *current* classification is low_income.
+    $this->getJson('/api/patients?filter[classification]=low_income')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.last_name', 'StillLowIncome');
+});
+
+it('filters patients by intake date, matching a case opened that day', function () {
+    $january = listPatient(['last_name' => 'January']);
+    listCase($january, ['case_code' => 'CASE-JAN', 'date_opened' => '2026-01-05']);
+
+    $february = listPatient(['last_name' => 'February']);
+    listCase($february, ['case_code' => 'CASE-FEB', 'date_opened' => '2026-02-10']);
+
+    $this->getJson('/api/patients?filter[intake_date]=2026-01-05')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.last_name', 'January');
 });
 
 it('sorts by a declared column in both directions', function () {

@@ -16,7 +16,7 @@ the client must not land until Phase 4 here is deployed.
 | 1. Additive contract fixes | ☑ done — 17 passed, 2026-09-08 |
 | 2. `AssessmentDto` null clearing | ☑ done — 189 passed, 2026-09-08 |
 | 3. Latest-case / latest-assessment read surface | ☑ done — 193 passed, 2026-09-08 |
-| 4. Relational filters | ☐ |
+| 4. Relational filters | ☑ done — 197 passed, 2026-09-08 |
 
 ---
 
@@ -167,7 +167,7 @@ Full suite `php artisan test` — 193 passed, 756 assertions (2026-09-08).
 
 ---
 
-## Phase 4 — Relational filters ☐
+## Phase 4 — Relational filters ☑
 
 Depends on Phase 3's relations.
 
@@ -178,10 +178,16 @@ does exact `where`, so these two need their own handling:
   **current** classification, not "ever had"
 - `filter[intake_date]` → `whereHas('cases', fn ($q) => $q->whereDate('date_opened', $v))`
 
-Falls through to `parent::applyFilters` for `sector_id` / `sex`.
+Falls through to `parent::applyFilters` for `sector_id` / `sex`. Confirmed
+`whereHas` on a one-of-many relation (`latestAssessment`) correctly scopes to
+just the latest row per patient, not any historical match —
+`HasOneThrough::getRelationExistenceQuery()` detects `isOneOfMany()` and
+merges the one-of-many joins into the `EXISTS` subquery.
 
-**Gate:** a test per filter, including one asserting `classification` ignores a
-superseded assessment.
+**Gate:** a test per filter in `tests/Feature/ListQueryTest.php`, including
+one asserting `classification` ignores a superseded assessment.
+`php artisan test --filter=ListQueryTest` — 15 passed, 65 assertions. Full
+suite `php artisan test` — 197 passed, 773 assertions (2026-09-08).
 
 **Revert:** safe — nothing sends these params yet.
 
