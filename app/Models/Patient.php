@@ -26,6 +26,7 @@ class Patient extends Model
         'extension_name',
         'birthdate',
         'estimated_age',
+        'is_incapacitated',
         'sex',
         'civil_status',
         'address',
@@ -48,6 +49,7 @@ class Patient extends Model
     {
         return [
             'birthdate' => 'date',
+            'is_incapacitated' => 'boolean',
             'monthly_income' => 'decimal:2',
         ];
     }
