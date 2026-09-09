@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\UnifiedIntakeSheetDto;
 use App\Models\Assessment;
 use App\Models\CaseActivity;
@@ -31,6 +32,7 @@ class UnifiedIntakeSheetService
         protected CaseModelRepositoryInterface $cases,
         protected AssessmentRepositoryInterface $assessments,
         protected UnifiedIntakeSheetPdfService $pdf,
+        protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
     ) {}
 
     public function list(?ListQuery $query = null): LengthAwarePaginator
@@ -131,6 +133,10 @@ class UnifiedIntakeSheetService
     {
         $this->assertEditable($sheet);
 
+        if ($sheet->case !== null) {
+            ($this->ensureWatcherRequirement)($sheet->case, 'be submitted');
+        }
+
         $this->sheets->update($sheet, [
             'status' => UnifiedIntakeSheet::STATUS_SUBMITTED,
             'submitted_at' => now(),
@@ -148,6 +154,8 @@ class UnifiedIntakeSheetService
                 'status' => 'An intake needs a case and an assessment before it can be finalized.',
             ]);
         }
+
+        ($this->ensureWatcherRequirement)($sheet->case, 'be finalized');
 
         return DB::transaction(function () use ($sheet, $user) {
             $this->sheets->update($sheet, [
