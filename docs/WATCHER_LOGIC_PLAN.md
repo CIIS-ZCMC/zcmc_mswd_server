@@ -11,7 +11,7 @@ patient-scoped `patient_watchers` model. Covers both `zcmc_mswd_server` and
 | 1. Schema — `case_watchers` + waiver columns | server | ☑ done — 209 passed, 2026-09-08 |
 | 2. Requirement resolver + model invariants | server | ☑ done — 232 passed, 2026-09-09 |
 | 3. Endpoints, resources, DTOs | server | ☑ done — 247 passed, 2026-09-09 |
-| 4. Enforcement at transitions | server | ☐ |
+| 4. Enforcement at transitions | server | ☑ done — 260 passed, 2026-09-09 |
 | 5. Backfill + legacy flag | server | ☐ |
 | 6. Types + adapter + API layer | client | ☐ |
 | 7. Case-scoped Watchers tab | client | ☐ |
@@ -20,6 +20,18 @@ patient-scoped `patient_watchers` model. Covers both `zcmc_mswd_server` and
 Phases 1–5 ship independently; the client keeps working unchanged because the
 existing `patient_watchers` endpoints stay live throughout. Phase 6 must not
 land before Phase 3 is deployed.
+
+**Deployment-ordering note, added with Phase 4:** Phase 4 is now live in
+`master`, and Phase 5 (backfill) is not. Until the backfill runs and sets
+`watcher_legacy_exempt` on pre-cutover cases, **every existing open inpatient
+or ER case with no registered watcher will 422 the first time someone tries
+to close it, submit/finalize its intake, record an assessment on it, or
+approve assistance against it** — there was no enforcement before Phase 4,
+so no existing case has a watcher recorded or a waiver filed. The workaround
+already exists (file a waiver via `POST cases/{case}/watcher-waiver`, granted
+to `MSS Head`), but it's manual per case until Phase 5 ships. Run Phase 5
+before — or immediately after — deploying Phase 4 to a real environment with
+existing case data.
 
 ---
 
@@ -422,6 +434,59 @@ the top of each guarded controller, returning a consistent 422 body:
 
 The client keys its banner off `watcher_status`, so the same shape must appear
 on both the 422 and on `GET /cases/{case}/profile`.
+
+### Phase 4 implementation notes ☑
+
+**One deliberate deviation from "invoked at the top of each guarded
+controller":** `EnsureWatcherRequirementSatisfied` (`app/Actions/`) is called
+from **service methods**, not controllers —
+`UnifiedIntakeSheetService::submit()`/`::finalize()`,
+`AssessmentService::create()`, `CaseModelService::close()`,
+`PatientAssistanceService::approve()`. Every one of these methods already
+guards its own transition with a service-level `ValidationException` (e.g.
+`assertEditable()`, `isPending()`, `status === closed`) — none of that logic
+lives in the controllers, which are thin `__invoke`-only wrappers. Putting
+the watcher check anywhere else would have been the odd one out, and would
+miss the same class of caller Phase 2's `CaseWatcherService` invariants were
+built to catch: Filament actions or console commands that call these
+services directly, bypassing controllers (and therefore any Form Request or
+controller-level guard) entirely.
+
+`WatcherRequirementNotSatisfiedException` (`app/Exceptions/`) carries the
+`watcher_status` payload and defines `render()`, which Laravel calls
+automatically — no change needed to the exception handler.
+
+**Assessment scope note:** `AssessmentService::create()` is only reachable
+from `AssessmentController@store` (`POST /cases/{case}/assessments`) — the
+intake flow creates its assessment through the `AssessmentRepositoryInterface`
+directly (`UnifiedIntakeSheetService::finalizeAssessment`), never through
+`AssessmentService`. Guarding `AssessmentService::create()` therefore blocks
+exactly the standalone endpoint the plan's table names, without touching
+intake draft creation (§5 row 1, which must stay unblocked).
+
+**Not implemented, and not planned as code:** the GL row (guarantee letters
+don't exist in this codebase) and the "expose `watcher_status.blocking` on
+case/intake-draft creation" half of row 1 — case creation and intake draft
+save already return their normal resource without it; a client can always
+fetch `GET cases/{case}/watcher-status` separately. Adding it to those two
+creation responses touched more surface (both response shapes, more
+call sites) for a UI nicety that isn't a blocking behaviour, so it's left as
+optional client-side polish rather than bundled into this phase.
+
+**Reopen and `PUT /cases/{case}` (admission_type changes) needed no code
+change** — they were never guarded, "allow" was already the existing
+behaviour, and `resolve()`/`status()` are computed fresh on every read, so
+there's no stale cache to invalidate when admission_type changes.
+
+**Tests** (`tests/Feature/WatcherEnforcementTest.php`, 13 new): each of the
+five guarded transitions blocked on an inpatient case with no watcher, then
+unblocked once a primary watcher is registered (close, approve assistance,
+store assessment) or once a waiver is filed (close); an OPD case is never
+blocked; the full 422 body shape (`message`, `errors.watcher`,
+`watcher_status`); and confirmation that reopen and the `admission_type` PUT
+never block.
+
+`php artisan test` — 260 passed, 908 assertions (2026-09-09).
 
 ---
 

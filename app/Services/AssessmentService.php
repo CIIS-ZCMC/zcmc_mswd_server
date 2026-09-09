@@ -2,14 +2,19 @@
 
 namespace App\Services;
 
+use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\AssessmentDto;
 use App\Models\Assessment;
+use App\Models\CaseModel;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 
 class AssessmentService
 {
-    public function __construct(protected AssessmentRepositoryInterface $repository) {}
+    public function __construct(
+        protected AssessmentRepositoryInterface $repository,
+        protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
+    ) {}
 
     public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
     {
@@ -23,6 +28,8 @@ class AssessmentService
 
     public function create(AssessmentDto $dto): Assessment
     {
+        ($this->ensureWatcherRequirement)(CaseModel::findOrFail($dto->case_id), 'have an assessment recorded');
+
         return $this->repository->create($dto->toArray());
     }
 

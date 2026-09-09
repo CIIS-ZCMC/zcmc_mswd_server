@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\CaseModelDto;
 use App\Models\Assessment;
 use App\Models\CaseActivity;
@@ -18,7 +19,10 @@ use Spatie\Activitylog\Models\Activity;
 
 class CaseModelService
 {
-    public function __construct(protected CaseModelRepositoryInterface $repository) {}
+    public function __construct(
+        protected CaseModelRepositoryInterface $repository,
+        protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
+    ) {}
 
     public function list(?ListQuery $query = null): LengthAwarePaginator
     {
@@ -85,6 +89,8 @@ class CaseModelService
         if ($case->status === CaseModel::STATUS_CLOSED) {
             throw ValidationException::withMessages(['status' => 'This case is already closed.']);
         }
+
+        ($this->ensureWatcherRequirement)($case, 'be closed');
 
         return DB::transaction(function () use ($case, $actor) {
             /** @var CaseModel $case */

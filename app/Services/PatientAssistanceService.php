@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\PatientAssistanceDto;
 use App\Models\CaseModel;
 use App\Models\Patient;
@@ -19,7 +20,10 @@ use Spatie\Activitylog\Models\Activity;
 
 class PatientAssistanceService
 {
-    public function __construct(protected PatientAssistanceRepositoryInterface $repository) {}
+    public function __construct(
+        protected PatientAssistanceRepositoryInterface $repository,
+        protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
+    ) {}
 
     public function list(?ListQuery $query = null): LengthAwarePaginator
     {
@@ -75,6 +79,8 @@ class PatientAssistanceService
                 'status' => 'Only a pending assistance can be approved.',
             ]);
         }
+
+        ($this->ensureWatcherRequirement)($assistance->case, 'have assistance approved');
 
         return DB::transaction(function () use ($assistance, $actor) {
             /** @var PatientAssistance $assistance */
