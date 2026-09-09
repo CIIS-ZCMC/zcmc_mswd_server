@@ -46,6 +46,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'cases.create',
         'cases.update',
         'cases.delete',
+        'cases.waive_watcher',
         // Patient assistance
         'assistance.view',
         'assistance.create',
@@ -80,7 +81,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Admin' => ['*'],
         'MSS Head' => [
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge',
-            'cases.view', 'cases.create', 'cases.update', 'cases.delete',
+            'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view', 'intake.create', 'intake.update', 'intake.finalize', 'intake.delete',
             'reports.view', 'reports.generate',

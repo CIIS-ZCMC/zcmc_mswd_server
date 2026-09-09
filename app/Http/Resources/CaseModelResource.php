@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Services\WatcherRequirementService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -33,6 +34,15 @@ class CaseModelResource extends JsonResource
             'diagnostics_count' => $this->whenCounted('diagnostics'),
             'interventions_count' => $this->whenCounted('interventions'),
             'documents_count' => $this->whenCounted('documents'),
+            'watchers' => CaseWatcherResource::collection($this->whenLoaded('watchers')),
+            // Tied to whether `watchers` was eager-loaded (only
+            // CaseModelService::profile() does), so every other
+            // CaseModelResource call site — list rows, PatientResource::cases,
+            // etc. — skips this extra query.
+            'watcher_status' => $this->whenLoaded(
+                'watchers',
+                fn () => app(WatcherRequirementService::class)->status($this->resource),
+            ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
