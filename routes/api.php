@@ -11,7 +11,10 @@ use App\Http\Controllers\CaseDocumentController;
 use App\Http\Controllers\CaseHistoryController;
 use App\Http\Controllers\CaseModelController;
 use App\Http\Controllers\CaseProfileController;
+use App\Http\Controllers\CaseWatcherController;
+use App\Http\Controllers\CaseWatcherStatusController;
 use App\Http\Controllers\CloseCaseController;
+use App\Http\Controllers\DestroyWatcherWaiverController;
 use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
 use App\Http\Controllers\DocumentController;
@@ -24,6 +27,7 @@ use App\Http\Controllers\IntakeSheetHistoryController;
 use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionTypeController;
+use App\Http\Controllers\IssueWatcherPassController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MatchIntakePatientsController;
@@ -43,13 +47,16 @@ use App\Http\Controllers\PatientProfileController;
 use App\Http\Controllers\PatientRegisterController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PromoteCaseWatcherController;
 use App\Http\Controllers\ReferCaseController;
 use App\Http\Controllers\ReleaseAssistanceController;
 use App\Http\Controllers\ReopenCaseController;
 use App\Http\Controllers\RestoreCaseController;
 use App\Http\Controllers\RestorePatientController;
+use App\Http\Controllers\RevokeWatcherPassController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\StoreWatcherWaiverController;
 use App\Http\Controllers\SubmitIntakeSheetController;
 use App\Http\Controllers\SyncUserRolesController;
 use App\Http\Controllers\UnassignCaretakerController;
@@ -156,6 +163,8 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('cases/{case}/profile', CaseProfileController::class);
         Route::get('cases/{case}/history', CaseHistoryController::class);
         Route::get('cases/{case}/activities', CaseActivitiesController::class);
+        Route::get('cases/{case}/watchers', [CaseWatcherController::class, 'index']);
+        Route::get('cases/{case}/watcher-status', CaseWatcherStatusController::class);
     });
 
     Route::middleware('permission:cases.update')->group(function () {
@@ -163,6 +172,18 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('cases/{case}/close', CloseCaseController::class);
         Route::post('cases/{case}/refer', ReferCaseController::class);
         Route::post('cases/{case}/reopen', ReopenCaseController::class);
+        Route::post('cases/{case}/watchers', [CaseWatcherController::class, 'store']);
+        Route::put('case-watchers/{caseWatcher}', [CaseWatcherController::class, 'update']);
+        Route::delete('case-watchers/{caseWatcher}', [CaseWatcherController::class, 'destroy']);
+        Route::post('case-watchers/{caseWatcher}/promote', PromoteCaseWatcherController::class);
+        Route::post('case-watchers/{caseWatcher}/issue-pass', IssueWatcherPassController::class);
+        Route::post('case-watchers/{caseWatcher}/revoke-pass', RevokeWatcherPassController::class);
+    });
+
+    // Waiver is section-head level — its own permission, not cases.update.
+    Route::middleware('permission:cases.waive_watcher')->group(function () {
+        Route::post('cases/{case}/watcher-waiver', StoreWatcherWaiverController::class);
+        Route::delete('cases/{case}/watcher-waiver', DestroyWatcherWaiverController::class);
     });
 
     // Case clinical records (per-action permissions declared on the controllers)

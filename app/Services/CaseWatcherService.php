@@ -3,7 +3,9 @@
 namespace App\Services;
 
 use App\Enums\WatcherRequirement;
+use App\Models\CaseModel;
 use App\Models\CaseWatcher;
+use App\Models\PatientWatcher;
 use App\Models\WatcherRelationshipType;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -21,19 +23,43 @@ class CaseWatcherService
     ) {}
 
     /**
+     * Accepts either a `patient_watcher_id` (links an existing directory
+     * entry, snapshotting its fields) or a full inline person (creates the
+     * directory row and the case link together, so a social worker doesn't
+     * retype the same spouse on the next admission).
+     *
      * @param  array<string, mixed>  $attributes
      */
     public function create(array $attributes): CaseWatcher
     {
-        $this->assertKnownRelationship($attributes['relationship'] ?? null);
-
         return DB::transaction(function () use ($attributes) {
+            $attributes = $this->resolveDirectoryLink($attributes);
+            $this->assertKnownRelationship($attributes['relationship'] ?? null);
+
             if ($attributes['is_primary'] ?? false) {
                 $this->demoteExistingPrimary($attributes['case_id']);
             }
 
             return CaseWatcher::create($attributes);
         });
+    }
+
+    /**
+     * Generic field update — relationship stays validated, but is_primary is
+     * deliberately not accepted here; promotion only ever happens through
+     * promote(), so the demote-then-set atomicity can't be bypassed.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    public function update(CaseWatcher $watcher, array $attributes): CaseWatcher
+    {
+        if (array_key_exists('relationship', $attributes)) {
+            $this->assertKnownRelationship($attributes['relationship']);
+        }
+
+        $watcher->update($attributes);
+
+        return $watcher->refresh();
     }
 
     /**
@@ -88,6 +114,36 @@ class CaseWatcherService
         $watcher->update(['pass_status' => 'revoked']);
 
         return $watcher->refresh();
+    }
+
+    /**
+     * @param  array<string, mixed>  $attributes
+     * @return array<string, mixed>
+     */
+    private function resolveDirectoryLink(array $attributes): array
+    {
+        if (! empty($attributes['patient_watcher_id'])) {
+            $directoryEntry = PatientWatcher::findOrFail($attributes['patient_watcher_id']);
+
+            // Snapshot the directory row's fields; explicit request values win.
+            return array_merge([
+                'name' => $directoryEntry->name,
+                'relationship' => $directoryEntry->relationship,
+                'contact_number' => $directoryEntry->contact_number,
+                'address' => $directoryEntry->address,
+            ], $attributes);
+        }
+
+        $case = CaseModel::findOrFail($attributes['case_id']);
+        $directoryEntry = PatientWatcher::create([
+            'patient_id' => $case->patient_id,
+            'name' => $attributes['name'] ?? null,
+            'relationship' => $attributes['relationship'] ?? null,
+            'contact_number' => $attributes['contact_number'] ?? null,
+            'address' => $attributes['address'] ?? null,
+        ]);
+
+        return array_merge($attributes, ['patient_watcher_id' => $directoryEntry->id]);
     }
 
     private function demoteExistingPrimary(int $caseId, ?int $except = null): void

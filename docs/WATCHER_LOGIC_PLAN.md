@@ -10,7 +10,7 @@ patient-scoped `patient_watchers` model. Covers both `zcmc_mswd_server` and
 |-------|------|--------|
 | 1. Schema — `case_watchers` + waiver columns | server | ☑ done — 209 passed, 2026-09-08 |
 | 2. Requirement resolver + model invariants | server | ☑ done — 232 passed, 2026-09-09 |
-| 3. Endpoints, resources, DTOs | server | ☐ |
+| 3. Endpoints, resources, DTOs | server | ☑ done — 247 passed, 2026-09-09 |
 | 4. Enforcement at transitions | server | ☐ |
 | 5. Backfill + legacy flag | server | ☐ |
 | 6. Types + adapter + API layer | client | ☐ |
@@ -470,6 +470,77 @@ existing directory entry, snapshotting its fields) or a full inline person
 - `cases.waive_watcher` — **new**, granted to section head only
 - Protective cases keep their existing restricted visibility; watcher rows
   inherit the case's visibility, no separate rule.
+
+### Phase 3 implementation notes ☑
+
+**Shipped**, all under the route groups above (no `HasMiddleware` on the
+controllers — gated the same way `PatientWatcherController`'s routes already
+are, permission middleware on the route group, `authorize()` on every new
+Form Request just returns `true`):
+
+- `CaseWatcherDto` — built with the "supplied keys" null-clearing pattern from
+  day one (the pattern issue #55 retrofitted onto `AssessmentDto` and
+  `PatientFamilyMemberDto`), so `PUT case-watchers/{id}` can clear
+  `contact_number`/`address`/`notes`/etc. with an explicit `null` without
+  needing a follow-up fix later. `case_id`/`added_by` stay present-only, same
+  reasoning as `AssessmentDto`'s `case_id`/`created_by`.
+- `StoreCaseWatcherRequest` / `UpdateCaseWatcherRequest` / `CaseWatcherResource`
+  / `CaseWatcherController` (index/store/update/destroy).
+- `CaseWatcherService::create()` extended to actually do the "accepts either
+  `patient_watcher_id` or a full inline person" behaviour from §6: given a
+  `patient_watcher_id`, it snapshots that directory row's name/relationship/
+  contact/address (request values still win if also supplied); given none, it
+  creates the `PatientWatcher` directory row and the `CaseWatcher` link in the
+  same transaction. `CaseWatcherService::update()` added for generic field
+  edits — deliberately excludes `is_primary` (enforced by
+  `UpdateCaseWatcherRequest`'s rules, which just don't declare it), so
+  promotion can only ever happen through `promote()`'s atomic demote-then-set.
+- `CaseWatcherStatusController` (`GET cases/{case}/watcher-status`),
+  `PromoteCaseWatcherController`, `RevokeWatcherPassController`,
+  `StoreWatcherWaiverController` + `DestroyWatcherWaiverController` (new
+  `WatcherWaiverService`, files/clears the four waiver columns).
+- `cases.waive_watcher` added to the permission catalog, granted to `MSS
+  Head` (this codebase's closest match to "section head") and implicitly to
+  `Admin` via its `['*']` grant. `RolesAndPermissionsTest`'s exact-count
+  assertions read `count(RolesAndPermissionsSeeder::PERMISSIONS)` dynamically,
+  so adding one didn't need a test update.
+- `CaseProfileController` (`GET cases/{case}/profile`) now returns `watchers`
+  and `watcher_status`.
+
+**One addition beyond the plan's route list:** `IssueWatcherPassController`
+(`POST case-watchers/{caseWatcher}/issue-pass`). The plan lists
+`revoke-pass` but never an endpoint to issue one — Phase 8's client notes
+describe an "Issue Watcher Pass" button that "actually issues one," which
+has nothing to call without this. Mirrors `RevokeWatcherPassController`'s
+shape; takes an optional `pass_valid_until`.
+
+**How `watcher_status` avoids becoming a site-wide N+1:** `CaseModelResource`
+is reused across ~8 call sites (list rows, `PatientResource::cases`, etc.),
+so computing it unconditionally would have added an extra query to every one
+of them. It's gated on `$this->whenLoaded('watchers', ...)` instead — true
+only when a case was actually eager-loaded with its watchers, which today
+only `CaseModelService::profile()` does. (First attempt stashed the computed
+value as a dynamic attribute on the Eloquent model instead — reverted before
+it shipped: Eloquent's `__set` stores an unrecognised key straight into the
+attribute bag, so a later `$case->save()` on that same instance would have
+tried to `UPDATE` a `watcher_status` column that doesn't exist.)
+
+**Relationship validation happens twice, deliberately.** `Rule::exists('watcher_relationship_types', 'code')`
+in the Form Requests gives a clean 422 with a field-level message for the
+common HTTP path. `CaseWatcherService::assertKnownRelationship()` (from
+Phase 2) stays as the real backstop — Filament and seeders don't go through
+Form Requests at all.
+
+**Tests** (`tests/Feature/CaseWatcherApiTest.php`, 15 new): index, both create
+paths (inline person vs. directory link, including that the directory-link
+path snapshots fields), relationship rejection, atomic demotion on
+create-as-primary, explicit-null clearing on update, `is_primary` ignored on
+generic update, blocked vs. allowed removal, promote, issue/revoke pass,
+`watcher-status`, profile carrying `watchers`/`watcher_status` while a plain
+case read does not, waiver gated on `cases.waive_watcher` specifically (not
+`cases.update`), and the 403 without `cases.update` at all.
+
+`php artisan test` — 247 passed, 884 assertions (2026-09-09).
 
 ---
 
