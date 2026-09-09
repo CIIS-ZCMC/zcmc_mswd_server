@@ -12,7 +12,7 @@ patient-scoped `patient_watchers` model. Covers both `zcmc_mswd_server` and
 | 2. Requirement resolver + model invariants | server | ☑ done — 232 passed, 2026-09-09 |
 | 3. Endpoints, resources, DTOs | server | ☑ done — 247 passed, 2026-09-09 |
 | 4. Enforcement at transitions | server | ☑ done — 260 passed, 2026-09-09 |
-| 5. Backfill + legacy flag | server | ☐ |
+| 5. Backfill + legacy flag | server | ☑ done — 268 passed, 2026-09-09 |
 | 6. Types + adapter + API layer | client | ☐ |
 | 7. Case-scoped Watchers tab | client | ☐ |
 | 8. Requirement banner, waiver dialog, worklist filter | client | ☐ |
@@ -21,17 +21,18 @@ Phases 1–5 ship independently; the client keeps working unchanged because the
 existing `patient_watchers` endpoints stay live throughout. Phase 6 must not
 land before Phase 3 is deployed.
 
-**Deployment-ordering note, added with Phase 4:** Phase 4 is now live in
-`master`, and Phase 5 (backfill) is not. Until the backfill runs and sets
-`watcher_legacy_exempt` on pre-cutover cases, **every existing open inpatient
-or ER case with no registered watcher will 422 the first time someone tries
-to close it, submit/finalize its intake, record an assessment on it, or
-approve assistance against it** — there was no enforcement before Phase 4,
-so no existing case has a watcher recorded or a waiver filed. The workaround
-already exists (file a waiver via `POST cases/{case}/watcher-waiver`, granted
-to `MSS Head`), but it's manual per case until Phase 5 ships. Run Phase 5
-before — or immediately after — deploying Phase 4 to a real environment with
-existing case data.
+**Deployment-ordering note, updated with Phase 5:** Phases 4 and 5 are both
+in `master` now, but the backfill is a **command that has to be run**, not
+something that happens on deploy automatically — `php artisan
+mss:backfill-case-watchers` (see §7 below). Until it's actually run against
+an environment's real data, that environment is in the same state described
+when this note was written for Phase 4: every existing open inpatient or ER
+case with no registered watcher will 422 the first time someone tries to
+close it, submit/finalize its intake, record an assessment on it, or approve
+assistance against it. Run the command — `--dry-run` first to see the
+counts, matching what was verified against a real MariaDB copy while
+building it — before or immediately after Phase 4/5 reaches an environment
+with existing case data.
 
 ---
 
@@ -624,6 +625,63 @@ directory. One-time command `mss:backfill-case-watchers`:
 
 Idempotent, dry-runnable (`--dry-run`), and logged. No data loss; reversible by
 truncating `case_watchers` and dropping the flag.
+
+### Phase 5 implementation notes ☑
+
+**Shipped:** `app/Console/Commands/BackfillCaseWatchers.php`
+(`mss:backfill-case-watchers {--dry-run} {--before=}`) — the first custom
+Artisan command in this codebase (Laravel auto-discovers `app/Console/Commands/`,
+so nothing else needed registering it). `--before` sets the cutover date
+(`YYYY-MM-DD`, defaults to today); everything from step 2 reuses
+`Patient::latestCase()` (Phase 3) to find "most recent case."
+
+**Idempotency mechanism:** step 2 checks for an existing `case_watchers` row
+with the same `(case_id, patient_watcher_id)` pair before inserting, so a
+second run creates nothing new. Step 3's `UPDATE ... WHERE watcher_legacy_exempt
+= false` is naturally idempotent — re-running it against already-exempted
+cases is a no-op.
+
+**One gap the plan didn't address, resolved while building it: legacy
+`relationship` values don't match the master list.** `patient_watchers.relationship`
+has always been free text; `case_watchers.relationship` is meant to be a
+`watcher_relationship_types.code`. A caseworker's typed-in "Wife" or "kapatid"
+won't match a seeded `code` like `spouse` or `sibling`. Resolved with a
+best-effort case-insensitive match against the master list's `code` or
+`name`, falling back to `other` when nothing matches (logged either way, so
+a data-cleanup pass can find every fallback later via the log). This keeps
+the backfill from stalling on a data-quality problem it can't fully resolve
+automatically, while not silently guessing wrong.
+
+**One invariant the plan's "preserving `is_primary`" doesn't account for:**
+Phase 1's "at most one live primary per case" constraint didn't exist when
+the legacy `patient_watchers` rows were created, so a patient could have more
+than one `is_primary = true` directory row. Copying all of them onto the same
+case verbatim would violate the unique index and abort the command mid-run.
+Fixed by keeping `is_primary = true` on only the first such row per patient
+(iteration order), demoting the rest — the same "one primary" rule everywhere
+else in this feature, just applied to backfill data instead of a live request.
+
+**`added_by`** (required, not nullable) has no real actor for a backfilled
+row, so it's set to the case's own `assigned_user_id` — the worker already
+responsible for that case is the closest meaningful attribution available,
+rather than inventing a "system" user that doesn't otherwise exist in this
+app.
+
+**Verified against real MariaDB**, not just SQLite: applied the four watcher
+migrations plus the relationship-type seeder to the local dev DB, ran
+`--dry-run` against its actual patient/case data (reported real counts with
+no errors — the `whereRaw('LOWER(...) = ?')` match and `chunkById` both work
+identically to SQLite), then rolled every migration back, leaving the dev DB
+exactly as found.
+
+**Tests** (`tests/Feature/BackfillCaseWatchersTest.php`, 8 new): copies onto
+the most recent of several cases, demotes a second legacy primary, relationship
+fallback and case-insensitive match, skips patients with no case or no
+directory watchers, idempotent on a second run, `--dry-run` writes nothing,
+cutoff correctly splits legacy vs. current cases, and a legacy-exempt case
+resolves to `Waived` end-to-end through `WatcherRequirementService`.
+
+`php artisan test` — 268 passed, 936 assertions (2026-09-09).
 
 ---
 
