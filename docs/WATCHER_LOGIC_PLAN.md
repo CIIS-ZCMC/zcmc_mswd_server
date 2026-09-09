@@ -9,7 +9,7 @@ patient-scoped `patient_watchers` model. Covers both `zcmc_mswd_server` and
 | Phase | Side | Status |
 |-------|------|--------|
 | 1. Schema — `case_watchers` + waiver columns | server | ☑ done — 209 passed, 2026-09-08 |
-| 2. Requirement resolver + model invariants | server | ☐ |
+| 2. Requirement resolver + model invariants | server | ☑ done — 232 passed, 2026-09-09 |
 | 3. Endpoints, resources, DTOs | server | ☐ |
 | 4. Enforcement at transitions | server | ☐ |
 | 5. Backfill + legacy flag | server | ☐ |
@@ -224,24 +224,30 @@ enum WatcherRequirement: string
 ```
 
 ```php
+// As shipped in Phase 2 — see "Phase 2 implementation notes" below for why
+// this differs from the original sketch (no converted_to_admission, and
+// watcher_legacy_exempt checked here rather than only in Phase 5).
 public function resolve(CaseModel $case): WatcherRequirement
 {
-    // 1. An approved waiver overrides everything.
+    // 1. A legacy case predating the cutover, or an approved waiver,
+    //    overrides everything.
+    if ($case->watcher_legacy_exempt) {
+        return WatcherRequirement::Waived;
+    }
+
     if ($case->watcher_waiver_reason !== null && $case->watcher_waived_at !== null) {
         return WatcherRequirement::Waived;
     }
 
     // 2. Legally incapable of speaking for themselves — any admission type.
-    if ($this->isMinor($case->patient) || $case->patient->is_incapacitated) {
+    if ($this->isMinor($case->patient) || (bool) $case->patient->is_incapacitated) {
         return WatcherRequirement::Required;
     }
 
     // 3. Admission type.
     return match ($case->admission_type) {
         'inpatient' => WatcherRequirement::Required,
-        'ER'        => $case->converted_to_admission
-                        ? WatcherRequirement::Required
-                        : WatcherRequirement::Recommended,
+        'ER'        => WatcherRequirement::Recommended,
         'OPD'       => WatcherRequirement::Optional,
         default     => WatcherRequirement::Optional,
     };
@@ -302,6 +308,79 @@ form requests — Filament and seeders bypass requests.
    letter** — the GL holds its own snapshot (A2).
 6. **Every write goes through `Auditable`**, matching the existing convention on
    `PatientWatcher` and `CaseModel`.
+
+---
+
+### Phase 2 implementation notes ☑
+
+**Shipped:**
+
+- `App\Enums\WatcherRequirement` (first enum in this codebase).
+- `WatcherRequirementService::resolve()`, `::status()`, `::isMinor()` — as
+  designed above, with two changes (below).
+- `CaseWatcherService`: `create()` (validates `relationship` against
+  `watcher_relationship_types.code`, atomically demotes an existing primary
+  when the new watcher is created as primary), `promote()` (demote-then-set
+  in one transaction), `remove()` (422 via `ValidationException` when
+  removing the last primary would leave a `Required` case unmet),
+  `issuePass()` / `revokePass()`.
+- `WatcherPassNumberService::next()` — same count-based control-number
+  pattern as `UnifiedIntakeSheetService::nextIntakeNumber()` /
+  `nextCaseCode()` (guarantee letters, which the plan's invariant #4
+  references, don't exist in this codebase yet — nothing to actually mirror
+  there, so this mirrors the closest real precedent instead).
+- `is_incapacitated` (nullable boolean) added to `patients` now, fillable
+  and cast — the resolver needs it to exist to compile. The genuinely open
+  question from §10 — whether intake should capture it, or MSS infers it
+  from the case narrative — is still open; that's a client-side (Phase 6+)
+  workflow decision, not a schema one.
+
+**Two deviations from the resolver sketch in §3, made while implementing:**
+
+1. **Dropped `converted_to_admission`.** Checked how ER→inpatient conversion
+   is actually recorded: `UpdateCaseModelRequest` validates `admission_type`
+   as a plain `string|max:255` with no enum constraint, and it's a normal
+   `PUT /cases/{case}` field update — not a new case. So a converted case's
+   `admission_type` is simply `'inpatient'` by the time `resolve()` runs,
+   which already hits the `'inpatient' => Required` arm directly. A separate
+   flag would never change the outcome for any real conversion, only add a
+   value that has to be kept in sync for nothing — exactly the "drop the
+   flag" resolution the plan's own §10 open item anticipated for this case.
+2. **Pulled the `watcher_legacy_exempt` check (from §7, Phase 5) into
+   `resolve()` now**, ahead of the actual backfill, since the column already
+   exists from Phase 1 and it's a one-line extension of the existing
+   waiver-precedence check — cheaper to add once than to reopen tested
+   resolver code in Phase 5.
+
+**Assumption flagged, not confirmed:** minor = under 18 (Philippine age of
+majority, RA 6809). Not stated in the plan; if MSS uses a different
+threshold in practice, it's a one-line constant change in
+`WatcherRequirementService`.
+
+**Skipped:** invariant #5 (a soft-deleted case watcher must not mutate an
+already-issued guarantee letter) — guarantee letters aren't built in this
+codebase yet, so there's nothing to violate. Revisit when GL exists.
+
+**Bug caught by the swap test, fixed before merge:** `remove()` originally
+trusted the passed-in model's in-memory `is_primary` attribute. A caller that
+calls `promote($replacement)` (which demotes the old primary via a separate
+`CaseWatcher::where(...)->update(...)` query, not through the old primary's
+own model instance) and then calls `remove($oldPrimary)` on its
+now-stale-in-memory copy would see `is_primary === true` and wrongly reject
+the removal. Fixed by `$watcher->refresh()` at the top of `remove()`.
+
+**Deferred to Phase 3:** `CaseWatcherController`, `StoreCaseWatcherRequest`
+/ `UpdateCaseWatcherRequest`, `CaseWatcherDto`, `CaseWatcherResource`, routes,
+and wiring `watcher_status` onto `CaseProfileController`. `CaseWatcherService`
+above is written so Phase 3's controller is a thin wrapper over it.
+
+**Tests:** `WatcherRequirementServiceTest.php` (14, dataset-driven truth
+table: admission type × minor/incapacitated/adult × waived/legacy-exempt) and
+`CaseWatcherServiceTest.php` (9: relationship validation, create-as-primary
+demotion, promote demotion, blocked vs. allowed removal, waiver unblocks
+removal, promote-then-remove swap, pass sequencing survives a revoke).
+
+`php artisan test` — 232 passed, 832 assertions (2026-09-09).
 
 ---
 
@@ -546,12 +625,19 @@ remove it (blocked), file waiver (banner changes), OPD case (no banner).
 
 ## 10. Open items
 
-- **`is_incapacitated`** on `patients` is new. Confirm the intake sheet should
-  carry it, or whether MSS infers it from the case narrative today.
-- **`converted_to_admission`** on `cases` is new. Confirm how ER→inpatient
-  conversion is currently recorded — if it is a new case rather than a field
-  change, drop the flag and treat the new case as plain `inpatient`.
+- **`is_incapacitated`** on `patients` shipped in Phase 2 (nullable, defaults
+  unknown/false). Still open: whether the intake sheet should carry a field
+  for it, or whether MSS infers it from the case narrative — a client-side
+  (Phase 6+) workflow question, not resolved by the column existing.
+- ~~`converted_to_admission` on `cases` is new...~~ **Resolved in Phase 2:**
+  checked the code — `admission_type` is a plain mutable field
+  (`UpdateCaseModelRequest`, no enum constraint), so ER→inpatient conversion
+  is a field change, not a new case. Dropped the flag; a converted case's
+  `admission_type` is just `'inpatient'` by the time `resolve()` sees it.
 - **Pass number format.** Guarantee letters use sequential control numbers;
   confirm whether watcher passes share that series, use their own, or are
-  physical pre-printed cards whose number is transcribed.
+  physical pre-printed cards whose number is transcribed. Phase 2 shipped
+  `WatcherPassNumberService` with its own `PASS-{year}-{seq}` series as a
+  placeholder, since GL doesn't exist yet to share a series with — revisit
+  once GL is built.
 - **A1 / A2 / A3** above.
