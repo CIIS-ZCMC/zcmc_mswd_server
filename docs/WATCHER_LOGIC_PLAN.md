@@ -4,6 +4,13 @@ Design and build plan for episode-scoped watchers, replacing the current
 patient-scoped `patient_watchers` model. Covers both `zcmc_mswd_server` and
 `zcmc_mswd_client`.
 
+**All 5 server phases below are shipped.** The client half (Phases 6–8) has
+its own, more detailed plan file, written after checking the actual client
+codebase against §8's original sketch below — several of its assumptions
+didn't hold (there's no case-detail page to move the Watchers tab to, for
+one) and the real plan adapts around that:
+`zcmc_mswd_client/docs/WATCHER_LOGIC_PLAN.md`.
+
 **Status legend:** ☐ not started · ◐ in progress · ☑ done
 
 | Phase | Side | Status |

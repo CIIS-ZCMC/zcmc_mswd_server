@@ -5,6 +5,7 @@ use App\Models\CaseModel;
 use App\Models\Document;
 use App\Models\Patient;
 use App\Models\PatientCaretaker;
+use App\Models\PatientFamilyMember;
 use App\Models\Sector;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -224,6 +225,32 @@ it('keeps family member demographics on a partial update', function () {
         ->assertJsonPath('data.occupation', 'Teacher')
         ->assertJsonPath('data.sex', 'female')
         ->assertJsonPath('data.educational_attainment', 'College graduate');
+});
+
+it('clears a family member field on an explicit null', function () {
+    Sanctum::actingAs(patientUser());
+    $patient = makePatient();
+    $member = $patient->familyMembers()->create([
+        'name' => 'Maria', 'sex' => 'female', 'occupation' => 'Vendor',
+    ]);
+
+    $this->putJson("/api/family-members/{$member->id}", ['occupation' => null])
+        ->assertOk()
+        ->assertJsonPath('data.occupation', null)
+        ->assertJsonPath('data.sex', 'female');
+
+    expect($member->refresh()->occupation)->toBeNull();
+});
+
+it('removes a family member', function () {
+    Sanctum::actingAs(patientUser());
+    $patient = makePatient();
+    $member = $patient->familyMembers()->create(['name' => 'Maria', 'relationship' => 'spouse']);
+
+    $this->deleteJson("/api/family-members/{$member->id}")->assertNoContent();
+
+    expect($patient->familyMembers()->count())->toBe(0)
+        ->and(PatientFamilyMember::onlyTrashed()->whereKey($member->id)->exists())->toBeTrue();
 });
 
 it('assigns and unassigns a social worker (caretaker)', function () {

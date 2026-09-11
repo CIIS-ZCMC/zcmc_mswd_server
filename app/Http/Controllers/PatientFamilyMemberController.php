@@ -12,10 +12,20 @@ use App\Services\PatientFamilyMemberService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
+use Illuminate\Routing\Controllers\HasMiddleware;
+use Illuminate\Routing\Controllers\Middleware;
 
-class PatientFamilyMemberController extends Controller
+class PatientFamilyMemberController extends Controller implements HasMiddleware
 {
     public function __construct(protected PatientFamilyMemberService $service) {}
+
+    public static function middleware(): array
+    {
+        return [
+            new Middleware('permission:patients.view', only: ['index']),
+            new Middleware('permission:patients.update', only: ['store', 'update', 'destroy']),
+        ];
+    }
 
     public function index(Patient $patient): AnonymousResourceCollection
     {

@@ -14,12 +14,37 @@ use Filament\Schemas\Schema;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
+use Illuminate\Database\Eloquent\Model;
 
 class FamilyMembersRelationManager extends RelationManager
 {
     protected static string $relationship = 'familyMembers';
 
     protected static ?string $title = 'Family & Socioeconomic';
+
+    /**
+     * Keep the manager editable on the patient View page (Filament makes relation
+     * managers read-only there by default).
+     */
+    public function isReadOnly(): bool
+    {
+        return false;
+    }
+
+    public function canCreate(): bool
+    {
+        return auth()->user()?->can('patients.update') ?? false;
+    }
+
+    public function canEdit(Model $record): bool
+    {
+        return auth()->user()?->can('patients.update') ?? false;
+    }
+
+    public function canDelete(Model $record): bool
+    {
+        return auth()->user()?->can('patients.update') ?? false;
+    }
 
     public function form(Schema $schema): Schema
     {
@@ -33,6 +58,7 @@ class FamilyMembersRelationManager extends RelationManager
             TextInput::make('age')->numeric()->helperText('When the birthdate is unknown.'),
             TextInput::make('educational_attainment')->label('Educational attainment'),
             TextInput::make('occupation'),
+            TextInput::make('contact_number'),
             TextInput::make('monthly_income')->numeric()->prefix('₱'),
             Toggle::make('is_living_with_patient')->default(true),
         ]);
