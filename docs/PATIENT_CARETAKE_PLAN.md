@@ -13,7 +13,7 @@ contract. Client phase gates are listed in that document.
 
 | Phase | Status |
 |-------|--------|
-| 1. Audit coverage | ☐ |
+| 1. Audit coverage | ☑ |
 | 2. Activity ownership columns | ☐ |
 | 3. Custody hardening | ☐ |
 | 4. Read surfaces | ☐ |
@@ -75,7 +75,7 @@ class basename) on 10 models. `GET /patients/{patient}/history` and
 
 ---
 
-## Phase 1 — Audit coverage ☐
+## Phase 1 — Audit coverage ☑
 
 Add `use Auditable` to the nine models the module must cover. Purely additive:
 the trait only registers model event listeners, changes no schema, no contract
@@ -86,7 +86,7 @@ and no existing behaviour.
 | `Intervention` | counselling and crisis interventions — core case-note trail |
 | `Diagnostic` | case-attached diagnostic records |
 | `DiagnosticReport` | uploaded diagnostic files |
-| `UnifiedIntakeSheet` | intake status changes, finalisation |
+| `UnifiedIntakeSheet` | intake status changes, finalisation — see the note below |
 | `AssessmentExpense` | expense lines behind a classification |
 | `PatientAssistanceLog` | assistance status transitions |
 | `PatientAssistanceReport` | released/voided disbursement records |
@@ -103,11 +103,32 @@ are not patient data).
 surfaced in the trail by Phase 4 as a first-class source, not through
 `activity_log`.
 
+**`UnifiedIntakeSheet` was already audited.** The premise above — that it
+carries no trail — was wrong: it used `LogsActivity` directly, with a curated
+`logOnly()` field list (excluding the `submitted_at` / `finalized_at`
+timestamps) under its own `intake` log name, which `UnifiedIntakeSheetTest`
+asserts on. It now uses `Auditable` like the rest, but keeps its own
+`getActivitylogOptions()` override, so its logged fields and log name are
+unchanged. The reason for adopting the trait anyway is Phase 2: ownership
+stamping lands in `Auditable::tapActivity()`, and a model outside the trait
+would silently miss it. Actual coverage is therefore 19 models, not the 19
+the table implies plus a converted one.
+
 **Blast radius.** Row volume in `activity_log` rises. `logOnlyDirty` +
 `dontSubmitEmptyLogs` keep no-op saves out. No test asserts activity counts
 today, so nothing breaks.
 
+**Known bloat risk.** `PatientAssistanceReport.snapshot_json` is a full patient
+snapshot and is fillable, so `logFillable` copies it into `activity_log` on
+create. Left as-is deliberately — reports are effectively write-once, so it
+costs one duplicate per report rather than one per edit. If volume becomes a
+problem, the fix is a `logExcept(['snapshot_json'])` override on that model,
+the same shape as `UnifiedIntakeSheet`'s.
+
 **Gate.** `php artisan test` — full suite green.
+`tests/Feature/AuditCoverageTest.php` locks the coverage list in both
+directions: the 19 models that must carry the trait, and the master-data and
+identity models that must not.
 
 ---
 
