@@ -14,7 +14,7 @@ sequencing them.
 
 | Phase | Side | Status |
 |-------|------|--------|
-| A. SCSR authoring, lifecycle, sign-off + PDF | server | ☐ |
+| A. SCSR authoring, lifecycle, sign-off + PDF | server | ☑ done — 420 passed, 2026-09-11 |
 | B. Caseload queue | server | ☐ |
 | C. Progress notes / follow-ups | server | ☐ |
 | D. Reporting + case summary PDF | server | ☐ |
@@ -138,7 +138,7 @@ queue.
 
 ---
 
-## Phase A — SCSR authoring, lifecycle, sign-off + PDF ☐
+## Phase A — SCSR authoring, lifecycle, sign-off + PDF ☑
 
 ### A.1 Migration
 
@@ -679,7 +679,11 @@ cases with a `for_review` SCSR sitting in someone's queue). Flagged, out of scop
 3. **Verify the guard against MySQL before shipping Phase A**, not only SQLite:
    the `storedAs` branch is the production path and the test suite never exercises
    it. `PATIENT_CARETAKE_PLAN.md` records the same check as "Verified against real
-   MariaDB".
+   MariaDB". **Verified against real MySQL 8.0.45, 2026-09-11**: the column is
+   `STORED GENERATED` as `if(((social_case_status is not null) and (deleted_at is
+   null)), case_id, NULL)`; two NULL-status assessments on one case are accepted,
+   a second flagged row is rejected by `uniq_case_social_case`, and soft-deleting
+   the SCSR frees the guard for a replacement.
 4. Manual end-to-end for Phase A: open a case via intake → `POST
    /cases/{case}/social-case` → confirm income, classification and expenses
    carried over from the intake assessment with no retyping → `PUT` narrative

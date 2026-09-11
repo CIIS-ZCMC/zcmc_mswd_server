@@ -202,6 +202,24 @@ four new assessment fields → confirm they render in the Social Case tab → cl
 one via `PUT` → confirm it clears → confirm the patient sidebar pages, filters
 and classification badges against real data.
 
+## Contract changes made elsewhere
+
+Recorded here because the client reads this document for behaviour changes, even
+when the change ships under another plan.
+
+- **`DELETE /assessments/{assessment}` is now a soft delete** (2026-09-11,
+  `SOCIAL_CASE_PLAN.md` §A.4). `assessments` always had a `deleted_at` column;
+  the model never mixed in `SoftDeletes`, so the endpoint hard-deleted and
+  cascade-removed the row's `assessment_expenses` with it. The response is
+  unchanged (`204`), but a deleted assessment is now recoverable, `?trashed=with`
+  starts working on `AssessmentRepository`, and `Patient::latestAssessment`
+  excludes trashed rows.
+- **`AssessmentResource` gains `social_case_status`** (same date). Null on an
+  ordinary assessment; `draft` / `for_review` / `finalized` marks the one row
+  that is the case's Social Case Study Report.
+- **A finalized social case study rejects `PUT /assessments/{assessment}`** with
+  a `422` on `social_case_status`. Amend the report first.
+
 ## Commit boundaries
 
 Phases 1, 2, 3, 4 as four separate commits.

@@ -123,6 +123,17 @@ class UnifiedIntakeSheetService
 
             if ($dto->assessment !== null && $sheet->assessment_id !== null) {
                 $this->assessments->update($sheet->assessment, $dto->assessment->toArray());
+            } elseif ($dto->assessment !== null && $sheet->case_id !== null) {
+                // A draft created without an assessment could never be
+                // finalized: finalize() demands one and nothing could attach it
+                // afterwards, so its 422 was unreachable advice. Creating it
+                // here is the only path that closes the dead end.
+                $assessment = $this->assessments->create(array_merge($dto->assessment->toArray(), [
+                    'case_id' => $sheet->case_id,
+                    'created_by' => $sheet->intake_worker_id,
+                ]));
+
+                $this->sheets->update($sheet, ['assessment_id' => $assessment->id]);
             }
 
             return $sheet->fresh(['patient', 'case', 'assessment.expenses', 'intakeWorker']);
