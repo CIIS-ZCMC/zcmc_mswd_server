@@ -4,6 +4,15 @@ namespace App\DTOs;
 
 class PatientFamilyMemberDto
 {
+    /**
+     * The keys the caller actually supplied. An update must touch exactly these
+     * columns: anything omitted is left alone, while an explicit `null` clears
+     * the column instead of being silently dropped.
+     *
+     * @var array<int, string>
+     */
+    private array $provided = [];
+
     public function __construct(
         public readonly ?int $patient_id = null,
         public readonly ?string $name = null,
@@ -18,12 +27,11 @@ class PatientFamilyMemberDto
         public readonly ?string $educational_attainment = null,
         public readonly ?string $contact_number = null,
         public readonly ?bool $is_living_with_patient = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
-        return new self(
+        $dto = new self(
             patient_id: $data['patient_id'] ?? null,
             name: $data['name'] ?? null,
             relationship: $data['relationship'] ?? null,
@@ -36,11 +44,31 @@ class PatientFamilyMemberDto
             contact_number: $data['contact_number'] ?? null,
             is_living_with_patient: $data['is_living_with_patient'] ?? null,
         );
+
+        $dto->provided = array_keys(array_intersect_key($data, $dto->attributes()));
+
+        return $dto;
     }
 
     public function toArray(): array
     {
-        return array_filter([
+        $attributes = $this->attributes();
+
+        // A DTO built by hand carries no key list, so fall back to dropping
+        // nulls — the behaviour every direct caller was written against.
+        if ($this->provided === []) {
+            return array_filter($attributes, fn ($value) => $value !== null);
+        }
+
+        return array_intersect_key($attributes, array_flip($this->provided));
+    }
+
+    /**
+     * @return array<string, mixed>
+     */
+    private function attributes(): array
+    {
+        return [
             'patient_id' => $this->patient_id,
             'name' => $this->name,
             'relationship' => $this->relationship,
@@ -52,6 +80,6 @@ class PatientFamilyMemberDto
             'educational_attainment' => $this->educational_attainment,
             'contact_number' => $this->contact_number,
             'is_living_with_patient' => $this->is_living_with_patient,
-        ], fn ($value) => $value !== null);
+        ];
     }
 }
