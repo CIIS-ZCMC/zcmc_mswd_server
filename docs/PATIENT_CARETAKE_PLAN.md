@@ -15,7 +15,7 @@ contract. Client phase gates are listed in that document.
 |-------|--------|
 | 1. Audit coverage | ☑ |
 | 2. Activity ownership columns | ☑ |
-| 3. Custody hardening | ☐ |
+| 3. Custody hardening | ☑ |
 | 4. Read surfaces | ☐ |
 | 5. Tests | ☐ |
 
@@ -263,7 +263,7 @@ patient with multiple episodes.
 
 ---
 
-## Phase 3 — Custody hardening ☐
+## Phase 3 — Custody hardening ☑
 
 Depends on nothing; can run in parallel with 1–2.
 
@@ -332,7 +332,24 @@ will reject writes that previously succeeded; that is the point, but
 `PatientCaretakerService::create()` must catch the violation and throw a
 `ValidationException` with a usable message rather than a 500.
 
-**Gate.** `php artisan test`. New tests in Phase 5.
+### Corrections found while building it
+
+1. **SQLite cannot add a *stored* generated column to an existing table.**
+   `case_watchers` got away with `storedAs` because the guard was declared in
+   the `CREATE TABLE`. Here the column is added by `ALTER TABLE`, which SQLite
+   only accepts for VIRTUAL columns. The migration branches: `storedAs` on
+   MySQL, `virtualAs` elsewhere. Both drivers index either kind, so the guard
+   behaves identically.
+2. **`reassign()` returns 201, not 200.** A handover creates the replacement
+   row, and `JsonResource` reports the status of the record it wraps. Worth
+   knowing before the client is written against it.
+3. **The old row is retired before the replacement is created**, inside the
+   transaction — it has to release the guard value the replacement is about to
+   claim, or the two collide on `uniq_active_patient_caretaker`.
+
+**Gate.** `php artisan test`. `tests/Feature/CustodyHardeningTest.php` covers
+the guard, the accountability stamps, reassignment atomicity and the data
+repair; the remaining Phase 5 areas are unaffected.
 
 ---
 

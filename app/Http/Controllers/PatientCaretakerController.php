@@ -18,7 +18,10 @@ class PatientCaretakerController extends Controller
     public function index(Patient $patient): AnonymousResourceCollection
     {
         return PatientCaretakerResource::collection(
-            $patient->caretakers()->latest('assigned_date')->get(),
+            $patient->caretakers()
+                ->with(['assignedBy', 'unassignedBy'])
+                ->latest('assigned_date')
+                ->get(),
         );
     }
 
@@ -27,8 +30,13 @@ class PatientCaretakerController extends Controller
      */
     public function store(StorePatientCaretakerRequest $request, Patient $patient): JsonResponse
     {
-        $record = $this->service->create(PatientCaretakerDto::fromArray($request->validated()));
+        $record = $this->service->create(
+            PatientCaretakerDto::fromArray($request->validated()),
+            $request->user(),
+        );
 
-        return PatientCaretakerResource::make($record)->response()->setStatusCode(Response::HTTP_CREATED);
+        return PatientCaretakerResource::make($record->load(['assignedBy', 'unassignedBy']))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
     }
 }

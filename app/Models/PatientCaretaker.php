@@ -18,6 +18,11 @@ class PatientCaretaker extends Model
         'assigned_date',
         'unassigned_date',
         'is_active',
+        'assigned_by',
+        'unassigned_by',
+        'reason',
+        'unassigned_reason',
+        'replaced_by_id',
     ];
 
     protected function casts(): array
@@ -37,6 +42,24 @@ class PatientCaretaker extends Model
     public function user(): BelongsTo
     {
         return $this->belongsTo(User::class);
+    }
+
+    public function assignedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'assigned_by');
+    }
+
+    public function unassignedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'unassigned_by');
+    }
+
+    /**
+     * The assignment that superseded this one, set when a handover is recorded.
+     */
+    public function replacedBy(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'replaced_by_id');
     }
 
     /**

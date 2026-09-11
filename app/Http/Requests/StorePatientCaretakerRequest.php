@@ -36,6 +36,7 @@ class StorePatientCaretakerRequest extends FormRequest
             'assigned_date' => ['required', 'date'],
             'unassigned_date' => ['nullable', 'date'],
             'is_active' => ['boolean'],
+            'reason' => ['nullable', 'string', 'max:255'],
         ];
     }
 }
