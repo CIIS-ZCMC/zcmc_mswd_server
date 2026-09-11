@@ -2,11 +2,14 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 class PatientMerge extends Model
 {
+    use Auditable;
+
     protected $fillable = [
         'source_patient_id',
         'target_patient_id',

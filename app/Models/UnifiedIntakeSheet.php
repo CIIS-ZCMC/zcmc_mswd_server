@@ -2,17 +2,17 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\LogOptions;
 use Spatie\Activitylog\Models\Activity;
-use Spatie\Activitylog\Traits\LogsActivity;
 
 class UnifiedIntakeSheet extends Model
 {
-    use LogsActivity, SoftDeletes;
+    use Auditable, SoftDeletes;
 
     public const STATUS_DRAFT = 'draft';
 
@@ -54,6 +54,11 @@ class UnifiedIntakeSheet extends Model
         ];
     }
 
+    /**
+     * Overrides {@see Auditable}: this model logs a curated field list under its
+     * own `intake` log name rather than the trait's fillable/class-name defaults.
+     * The trait is still used so the ownership stamping it carries applies here.
+     */
     public function getActivitylogOptions(): LogOptions
     {
         return LogOptions::defaults()
