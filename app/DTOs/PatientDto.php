@@ -30,8 +30,7 @@ class PatientDto
         public readonly ?string $occupation = null,
         public readonly ?string $employer = null,
         public readonly ?float $monthly_income = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

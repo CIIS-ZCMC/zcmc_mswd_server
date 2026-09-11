@@ -29,4 +29,16 @@ class DiagnosticReport extends Model
     {
         return $this->belongsTo(User::class, 'uploaded_by');
     }
+
+    /**
+     * Two hops: an uploaded report knows only its diagnostic.
+     *
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        $case = $this->auditParent('diagnostic')?->auditParent('case');
+
+        return ['patient_id' => $case?->patient_id, 'case_id' => $case?->id];
+    }
 }

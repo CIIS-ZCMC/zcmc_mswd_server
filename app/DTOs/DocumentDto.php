@@ -13,8 +13,7 @@ class DocumentDto
         public readonly ?string $file_name = null,
         public readonly ?string $file_path = null,
         public readonly ?string $file_type = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

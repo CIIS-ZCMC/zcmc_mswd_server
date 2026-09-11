@@ -10,8 +10,7 @@ class PatientAssistanceLogDto
         public readonly ?string $action = null,
         public readonly ?int $action_by = null,
         public readonly ?string $action_date = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

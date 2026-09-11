@@ -4,10 +4,9 @@ namespace App\Services;
 
 use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\CaseModelDto;
-use App\Models\Assessment;
+use App\Models\Activity;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
-use App\Models\Document;
 use App\Models\User;
 use App\Repositories\Contracts\CaseModelRepositoryInterface;
 use App\Support\ListQuery;
@@ -15,10 +14,15 @@ use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
-use Spatie\Activitylog\Models\Activity;
 
 class CaseModelService
 {
+    /**
+     * Ceiling on the unpaginated history read — see the note on
+     * {@see PatientService::HISTORY_LIMIT}.
+     */
+    private const HISTORY_LIMIT = 200;
+
     public function __construct(
         protected CaseModelRepositoryInterface $repository,
         protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
@@ -161,30 +165,22 @@ class CaseModelService
     }
 
     /**
-     * The field-level audit trail for a case and its audited child records.
+     * The case's audit trail, newest first.
+     *
+     * Reads the stamped `case_id` instead of fanning out over subject types, so
+     * this is one indexed query — and it now reaches every audited record on the
+     * episode (interventions, diagnostics, expense lines, assistance) rather
+     * than just the case, its assessments and its documents.
+     *
+     * Returns a Collection, not a paginator: `GET /cases/{case}/history` is an
+     * unpaginated array by contract, so the wider reach is capped here.
      */
     public function history(CaseModel $case): Collection
     {
-        $subjects = [
-            CaseModel::class => [$case->id],
-            Assessment::class => $case->assessments()->pluck('id')->all(),
-            Document::class => $case->documents()->pluck('id')->all(),
-        ];
-
-        return Activity::query()
-            ->where(function ($query) use ($subjects) {
-                foreach ($subjects as $type => $ids) {
-                    if ($ids === []) {
-                        continue;
-                    }
-
-                    $query->orWhere(fn ($sub) => $sub
-                        ->where('subject_type', (new $type)->getMorphClass())
-                        ->whereIn('subject_id', $ids));
-                }
-            })
+        return Activity::forCase($case->id)
             ->with('causer')
-            ->latest()
+            ->latest('id')
+            ->limit(self::HISTORY_LIMIT)
             ->get();
     }
 

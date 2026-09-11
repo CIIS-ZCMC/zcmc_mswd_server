@@ -13,8 +13,7 @@ class PatientAssistanceDto
         public readonly ?string $date_given = null,
         public readonly ?int $created_by = null,
         public readonly ?string $status = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

@@ -10,8 +10,7 @@ class UserDto
         public readonly ?string $role = null,
         public readonly ?bool $is_active = null,
         public readonly ?string $synced_at = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

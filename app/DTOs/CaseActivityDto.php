@@ -11,8 +11,7 @@ class CaseActivityDto
         public readonly ?string $activity_type = null,
         public readonly ?string $activity_date = null,
         public readonly ?string $notes = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

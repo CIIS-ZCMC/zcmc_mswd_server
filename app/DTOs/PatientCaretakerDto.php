@@ -11,8 +11,7 @@ class PatientCaretakerDto
         public readonly ?string $assigned_date = null,
         public readonly ?string $unassigned_date = null,
         public readonly ?bool $is_active = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

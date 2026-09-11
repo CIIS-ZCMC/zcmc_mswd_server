@@ -3,18 +3,13 @@
 namespace App\Services;
 
 use App\DTOs\PatientDto;
-use App\Models\Document;
+use App\Models\Activity;
 use App\Models\Patient;
-use App\Models\PatientCaretaker;
-use App\Models\PatientFamilyMember;
-use App\Models\PatientId;
-use App\Models\PatientWatcher;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Support\ListQuery;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
-use Spatie\Activitylog\Models\Activity;
 
 class PatientService
 {
@@ -24,6 +19,18 @@ class PatientService
      * @var list<string>
      */
     private const ACTIVE_CASE_STATUSES = ['open', 'ongoing'];
+
+    /**
+     * Ceiling on the unpaginated history read.
+     *
+     * Phase 1 widened audit coverage and Phase 2 widened this endpoint's reach
+     * to every record resolving to the patient, so a long-running patient can
+     * now produce far more rows than the old six-type fan-out did. The endpoint
+     * returns a flat array by contract and cannot paginate without breaking the
+     * client, so it is capped instead; the paginated read is the Phase 4
+     * `/activity-log` endpoint.
+     */
+    private const HISTORY_LIMIT = 200;
 
     public function __construct(protected PatientRepositoryInterface $repository) {}
 
@@ -103,31 +110,25 @@ class PatientService
     /**
      * The audit trail for a patient and every record it owns, newest first.
      */
+    /**
+     * The patient's audit trail, newest first.
+     *
+     * Reads the stamped `patient_id` rather than fanning out over the subject
+     * types the patient owns, so this is one indexed query whatever the reach.
+     * That reach also widens for free: every audited record that resolves to
+     * this patient now appears, including the episode-level ones the old
+     * six-type fan-out could not name.
+     *
+     * Returns a Collection, not a paginator: the client contract for
+     * `GET /patients/{patient}/history` is an unpaginated array, so the growth
+     * in reach is capped here instead.
+     */
     public function history(Patient $patient): Collection
     {
-        $subjects = [
-            Patient::class => [$patient->id],
-            PatientId::class => $patient->patientIds()->pluck('id')->all(),
-            PatientFamilyMember::class => $patient->familyMembers()->pluck('id')->all(),
-            PatientWatcher::class => $patient->watchers()->pluck('id')->all(),
-            PatientCaretaker::class => $patient->caretakers()->pluck('id')->all(),
-            Document::class => $patient->documents()->pluck('id')->all(),
-        ];
-
-        return Activity::query()
-            ->where(function ($query) use ($subjects) {
-                foreach ($subjects as $type => $ids) {
-                    if ($ids === []) {
-                        continue;
-                    }
-
-                    $query->orWhere(fn ($sub) => $sub
-                        ->where('subject_type', (new $type)->getMorphClass())
-                        ->whereIn('subject_id', $ids));
-                }
-            })
+        return Activity::forPatient($patient->id)
             ->with('causer')
-            ->latest()
+            ->latest('id')
+            ->limit(self::HISTORY_LIMIT)
             ->get();
     }
 

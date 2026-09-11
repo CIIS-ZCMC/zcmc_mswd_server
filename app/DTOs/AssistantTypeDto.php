@@ -10,8 +10,7 @@ class AssistantTypeDto
         public readonly ?string $category = null,
         public readonly ?string $description = null,
         public readonly ?bool $is_active = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

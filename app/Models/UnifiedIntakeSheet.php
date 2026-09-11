@@ -114,4 +114,15 @@ class UnifiedIntakeSheet extends Model
     {
         return $this->morphMany(Activity::class, 'subject');
     }
+
+    /**
+     * An intake carries both ids itself; either may still be null while the
+     * sheet is a draft.
+     *
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        return ['patient_id' => $this->patient_id, 'case_id' => $this->case_id];
+    }
 }

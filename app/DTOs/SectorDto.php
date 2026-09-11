@@ -7,8 +7,7 @@ class SectorDto
     public function __construct(
         public readonly ?string $name = null,
         public readonly ?string $code = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

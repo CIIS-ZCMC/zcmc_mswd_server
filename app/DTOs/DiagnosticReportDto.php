@@ -12,8 +12,7 @@ class DiagnosticReportDto
         public readonly ?string $file_path = null,
         public readonly ?string $file_type = null,
         public readonly ?string $remarks = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
