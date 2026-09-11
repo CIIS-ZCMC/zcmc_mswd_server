@@ -38,4 +38,12 @@ class PatientCaretaker extends Model
     {
         return $this->belongsTo(User::class);
     }
+
+    /**
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        return ['patient_id' => $this->patient_id, 'case_id' => null];
+    }
 }

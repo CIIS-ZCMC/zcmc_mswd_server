@@ -11,8 +11,7 @@ class PatientWatcherDto
         public readonly ?string $contact_number = null,
         public readonly ?string $address = null,
         public readonly ?bool $is_primary = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

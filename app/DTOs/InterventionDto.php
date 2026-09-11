@@ -11,8 +11,7 @@ class InterventionDto
         public readonly ?string $description = null,
         public readonly ?string $date_given = null,
         public readonly ?string $outcome = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

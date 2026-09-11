@@ -27,4 +27,16 @@ class AssessmentExpense extends Model
     {
         return $this->belongsTo(Assessment::class);
     }
+
+    /**
+     * Two hops: an expense line knows only its assessment, which knows the case.
+     *
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        $case = $this->auditParent('assessment')?->auditParent('case');
+
+        return ['patient_id' => $case?->patient_id, 'case_id' => $case?->id];
+    }
 }

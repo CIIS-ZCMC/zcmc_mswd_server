@@ -12,8 +12,7 @@ class DiagnosticDto
         public readonly ?string $diagnosis_date = null,
         public readonly ?string $attending_physician = null,
         public readonly ?string $facility_name = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

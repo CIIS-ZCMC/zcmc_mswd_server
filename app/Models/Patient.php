@@ -116,4 +116,14 @@ class Patient extends Model
     {
         return $this->morphMany(Activity::class, 'subject');
     }
+
+    /**
+     * The patient's own rows anchor to itself.
+     *
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        return ['patient_id' => $this->id, 'case_id' => null];
+    }
 }

@@ -14,7 +14,7 @@ contract. Client phase gates are listed in that document.
 | Phase | Status |
 |-------|--------|
 | 1. Audit coverage | ☑ |
-| 2. Activity ownership columns | ☐ |
+| 2. Activity ownership columns | ☑ |
 | 3. Custody hardening | ☐ |
 | 4. Read surfaces | ☐ |
 | 5. Tests | ☐ |
@@ -132,7 +132,7 @@ identity models that must not.
 
 ---
 
-## Phase 2 — Activity ownership columns ☐
+## Phase 2 — Activity ownership columns ☑
 
 The structural change the rest of the module rests on.
 
@@ -188,7 +188,7 @@ it drifts the moment a model moves.
 | `PatientAssistance` | `case.patient_id` | `case_id` |
 | `PatientAssistanceLog` | `assistance.case.patient_id` | `assistance.case_id` |
 | `PatientAssistanceReport` | `assistance.case.patient_id` | `assistance.case_id` |
-| `Document` | `patient_id ?? case.patient_id` | `case_id` |
+| `Document` | `patient_id` | `case_id` | *(see note)* |
 | `UnifiedIntakeSheet` | `patient_id` | `case_id` |
 | `Guarantor` | — | — |
 
@@ -228,6 +228,30 @@ Both endpoints currently return an unpaginated collection. Switching them to a
 paginator is a **breaking shape change** for the client, so Phase 2 keeps them
 returning `Collection` with a hard `limit`; pagination is introduced on the new
 Phase 4 endpoints only, and the old two are left as-is until the client moves.
+
+### Corrections found while building it
+
+1. **`Document` needs no fallback.** The map above specced
+   `patient_id ?? case.patient_id`. Both `documents.patient_id` and
+   `documents.case_id` are `NOT NULL` (`create_documents_table`), so a document
+   always knows both owners and the fallback branch was unreachable. The
+   resolver reads the two columns directly and costs no query. If `patient_id`
+   is ever made nullable, the hop goes back in.
+2. **The scope is `forSubjectKey`, not `forSubject`.** The package's own
+   `Activity` already defines `forSubject(Model $subject)`, which takes a
+   hydrated instance. Overriding that name with a `(string $type, int $id)`
+   signature would have broken the parent's contract, so the morph-pair scope
+   got its own name. It is the one the `/activity-log` inline filter needs,
+   since a row whose subject has been deleted cannot be hydrated.
+3. **`auditParent()` is public, not protected.** The two-hop resolvers chain it
+   across unrelated classes (`AssessmentExpense` → `Assessment` → case). PHP
+   grants protected access only within one hierarchy, and sharing a trait does
+   not create one.
+4. **Both `history()` methods are capped at 200 rows.** Phases 1 and 2 together
+   widened these endpoints from six subject types to every record resolving to
+   the patient or case, and the contract says flat array, not paginator. A cap
+   was the only way to take the reach without an unbounded response; the
+   paginated read is Phase 4's `/activity-log`.
 
 **Blast radius.** Medium — a schema change plus a backfill over the largest
 table in the system. Both `history()` methods change internals but not output

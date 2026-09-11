@@ -17,8 +17,7 @@ class PatientAssistanceReportDto
         public readonly ?int $released_by = null,
         public readonly ?string $released_at = null,
         public readonly ?bool $is_void = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

@@ -41,4 +41,15 @@ class PatientMerge extends Model
     {
         return $this->belongsTo(Patient::class, 'target_patient_id');
     }
+
+    /**
+     * A merge is attributed to the patient that survives it, so the trail stays
+     * readable on the record the user is still looking at.
+     *
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        return ['patient_id' => $this->target_patient_id, 'case_id' => null];
+    }
 }

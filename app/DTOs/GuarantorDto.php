@@ -8,8 +8,7 @@ class GuarantorDto
         public readonly ?string $name = null,
         public readonly ?string $address = null,
         public readonly ?bool $is_active = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

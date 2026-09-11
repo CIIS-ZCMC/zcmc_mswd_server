@@ -14,8 +14,7 @@ class CaseModelDto
         public readonly ?string $admission_type = null,
         public readonly ?string $date_opened = null,
         public readonly ?string $date_closed = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

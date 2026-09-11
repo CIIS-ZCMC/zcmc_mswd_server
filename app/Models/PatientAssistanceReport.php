@@ -44,4 +44,16 @@ class PatientAssistanceReport extends Model
     {
         return $this->belongsTo(User::class, 'released_by');
     }
+
+    /**
+     * Two hops, through the assistance record this disbursement reports on.
+     *
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        $case = $this->auditParent('assistance')?->auditParent('case');
+
+        return ['patient_id' => $case?->patient_id, 'case_id' => $case?->id];
+    }
 }

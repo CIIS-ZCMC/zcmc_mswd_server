@@ -11,8 +11,7 @@ class PatientIdDto
         public readonly ?string $date_issued = null,
         public readonly ?string $date_expiry = null,
         public readonly ?bool $is_verified = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {

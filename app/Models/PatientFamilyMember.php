@@ -38,4 +38,12 @@ class PatientFamilyMember extends Model
     {
         return $this->belongsTo(Patient::class);
     }
+
+    /**
+     * @return array{patient_id: int|null, case_id: int|null}
+     */
+    public function activityOwner(): array
+    {
+        return ['patient_id' => $this->patient_id, 'case_id' => null];
+    }
 }

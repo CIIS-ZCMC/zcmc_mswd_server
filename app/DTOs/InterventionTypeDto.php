@@ -8,8 +8,7 @@ class InterventionTypeDto
         public readonly ?string $name = null,
         public readonly ?string $code = null,
         public readonly ?string $description = null,
-    ) {
-    }
+    ) {}
 
     public static function fromArray(array $data): self
     {
