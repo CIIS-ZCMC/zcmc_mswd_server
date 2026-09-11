@@ -17,6 +17,7 @@ class DatabaseSeeder extends Seeder
     {
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(WatcherRelationshipTypeSeeder::class);
+        $this->call(SamplePatientSeeder::class);
 
         // User::factory(10)->create();
 

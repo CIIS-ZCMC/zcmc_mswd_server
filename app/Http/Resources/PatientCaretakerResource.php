@@ -25,6 +25,14 @@ class PatientCaretakerResource extends JsonResource
             'reason' => $this->reason,
             'unassigned_reason' => $this->unassigned_reason,
             'replaced_by_id' => $this->replaced_by_id,
+            // The holder of the assignment. Without this the client has only
+            // user_id to render, and degrades to "User #3" on every caretaker
+            // card — assigned_by/unassigned_by below were serialized from the
+            // start, but the one name the Caretake tab most needs was not.
+            'user' => $this->whenLoaded('user', fn () => [
+                'id' => $this->user?->id,
+                'name' => $this->user?->employee_name,
+            ]),
             'assigned_by' => $this->whenLoaded('assignedBy', fn () => [
                 'id' => $this->assignedBy?->id,
                 'name' => $this->assignedBy?->employee_name,
