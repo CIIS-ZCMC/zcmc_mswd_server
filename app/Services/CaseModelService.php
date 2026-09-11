@@ -4,7 +4,6 @@ namespace App\Services;
 
 use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\CaseModelDto;
-use App\Models\Activity;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
 use App\Models\User;
@@ -175,13 +174,13 @@ class CaseModelService
      * Returns a Collection, not a paginator: `GET /cases/{case}/history` is an
      * unpaginated array by contract, so the wider reach is capped here.
      */
-    public function history(CaseModel $case): Collection
+    public function history(CaseModel $case, ?User $viewer = null): Collection
     {
-        return Activity::forCase($case->id)
-            ->with('causer')
-            ->latest('id')
-            ->limit(self::HISTORY_LIMIT)
-            ->get();
+        return app(ActivityLogService::class)->collect(
+            ['case_id' => $case->id],
+            $viewer,
+            self::HISTORY_LIMIT,
+        );
     }
 
     /**

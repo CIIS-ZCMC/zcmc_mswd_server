@@ -196,22 +196,39 @@ it('reaches episode-level records the old fan-out could not name', function () {
         ->and($subjects($caseTrail))->toContain('Intervention');
 });
 
-it('keeps a patient trail to one query regardless of how many record types it spans', function () {
+it('keeps a patient trail query count flat as the number of rows grows', function () {
     Assessment::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'classification' => 'C']);
     Diagnostic::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'diagnosis_name' => 'Pneumonia', 'diagnosis_date' => now()]);
     Intervention::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'intervention_type_id' => interventionType()->id, 'description' => 'X', 'date_given' => now()]);
     PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
 
-    $queries = 0;
-    DB::listen(function () use (&$queries) {
-        $queries++;
-    });
+    $countQueries = function () {
+        $queries = 0;
+        DB::listen(function () use (&$queries) {
+            $queries++;
+        });
 
-    app(PatientService::class)->history($this->patient);
+        app(PatientService::class)->history($this->patient);
 
-    // One for the trail, one for the eager-loaded causers. The old fan-out cost
-    // one pluck per subject type before it could even build the query.
-    expect($queries)->toBeLessThanOrEqual(2);
+        return $queries;
+    };
+
+    $before = $countQueries();
+
+    for ($i = 0; $i < 10; $i++) {
+        PatientWatcher::create([
+            'patient_id' => $this->patient->id,
+            'name' => "Watcher {$i}",
+            'relationship' => 'sibling',
+        ]);
+    }
+
+    // The read costs one query for the trail, one for the eager-loaded causers,
+    // and one batched whereIn per distinct subject type on the page to build
+    // subject_label. Bounded by the number of *types*, never by the number of
+    // rows — the old fan-out grew with both, paying a pluck per relation before
+    // it could even build the query.
+    expect($countQueries())->toBe($before);
 });
 
 /** Runs the backfill migration the way `artisan migrate` would. */

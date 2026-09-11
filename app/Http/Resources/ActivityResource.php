@@ -22,6 +22,11 @@ class ActivityResource extends JsonResource
             'description' => $this->description,
             'subject_type' => class_basename((string) $this->subject_type),
             'subject_id' => $this->subject_id,
+            'patient_id' => $this->patient_id,
+            'case_id' => $this->case_id,
+            // Set by ActivityLogService in a batched lookup, never resolved per
+            // row here — that would be an N+1 across the whole page.
+            'subject_label' => $this->whenNotNull($this->subject_label ?? null),
             'causer' => $this->whenLoaded('causer', fn () => [
                 'id' => $this->causer?->id,
                 'name' => $this->causer?->employee_name,

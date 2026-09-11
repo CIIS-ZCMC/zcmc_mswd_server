@@ -58,6 +58,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'intake.update',
         'intake.finalize',
         'intake.delete',
+        // Audit trail
+        'audit.view',
+        'audit.view_protective',
         // Reports
         'reports.view',
         'reports.generate',
@@ -84,6 +87,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view', 'intake.create', 'intake.update', 'intake.finalize', 'intake.delete',
+            'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
             'settings.manage',
             'users.view',
@@ -94,6 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cases.view', 'cases.create', 'cases.update', 'cases.delete',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view', 'intake.create', 'intake.update', 'intake.finalize',
+            'audit.view',
             'reports.view', 'reports.generate',
             'panel.access',
         ],

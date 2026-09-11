@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssignCaseController;
@@ -36,6 +37,7 @@ use App\Http\Controllers\MergePatientController;
 use App\Http\Controllers\PatientAssistanceController;
 use App\Http\Controllers\PatientAssistanceLogController;
 use App\Http\Controllers\PatientAssistanceReportController;
+use App\Http\Controllers\PatientCaretakeController;
 use App\Http\Controllers\PatientCaretakerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicatesController;
@@ -124,6 +126,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('patients/{patient}/family-members', [PatientFamilyMemberController::class, 'index']);
         Route::get('patients/{patient}/watchers', [PatientWatcherController::class, 'index']);
         Route::get('patients/{patient}/caretakers', [PatientCaretakerController::class, 'index']);
+        Route::get('patients/{patient}/caretake', PatientCaretakeController::class);
         Route::get('patients/{patient}/documents', [DocumentController::class, 'index']);
 
         // Hospital (SQL Server) lookups — read-only. `find` before `{id}` so it is not shadowed.
@@ -155,6 +158,12 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('patients/{patient}/documents', [DocumentController::class, 'store']);
         Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
+    });
+
+    // The audit trail as a first-class read surface: the global log, and the
+    // inline per-record drill-down on the same endpoint with a narrower filter.
+    Route::middleware('permission:audit.view')->group(function () {
+        Route::get('activity-log', [ActivityLogController::class, 'index']);
     });
 
     // Case management (per-action permissions declared on the controller)

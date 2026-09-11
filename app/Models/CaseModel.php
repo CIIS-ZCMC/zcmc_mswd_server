@@ -36,6 +36,7 @@ class CaseModel extends Model
         'assigned_user_id',
         'case_code',
         'case_type',
+        'is_protective',
         'priority_level',
         'status',
         'admission_type',
@@ -55,6 +56,7 @@ class CaseModel extends Model
             'date_closed' => 'datetime',
             'watcher_waived_at' => 'datetime',
             'watcher_legacy_exempt' => 'boolean',
+            'is_protective' => 'boolean',
         ];
     }
 
