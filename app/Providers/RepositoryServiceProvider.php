@@ -7,11 +7,13 @@ use App\Repositories\AssessmentRepository;
 use App\Repositories\AssistantTypeRepository;
 use App\Repositories\CaseActivityRepository;
 use App\Repositories\CaseModelRepository;
+use App\Repositories\CaseProgressNoteRepository;
 use App\Repositories\Contracts\AssessmentExpenseRepositoryInterface;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use App\Repositories\Contracts\AssistantTypeRepositoryInterface;
 use App\Repositories\Contracts\CaseActivityRepositoryInterface;
 use App\Repositories\Contracts\CaseModelRepositoryInterface;
+use App\Repositories\Contracts\CaseProgressNoteRepositoryInterface;
 use App\Repositories\Contracts\DiagnosticReportRepositoryInterface;
 use App\Repositories\Contracts\DiagnosticRepositoryInterface;
 use App\Repositories\Contracts\DocumentRepositoryInterface;
@@ -76,6 +78,7 @@ class RepositoryServiceProvider extends ServiceProvider
         PatientCaretakerRepositoryInterface::class => PatientCaretakerRepository::class,
         CaseModelRepositoryInterface::class => CaseModelRepository::class,
         CaseActivityRepositoryInterface::class => CaseActivityRepository::class,
+        CaseProgressNoteRepositoryInterface::class => CaseProgressNoteRepository::class,
         DiagnosticRepositoryInterface::class => DiagnosticRepository::class,
         DiagnosticReportRepositoryInterface::class => DiagnosticReportRepository::class,
         AssessmentRepositoryInterface::class => AssessmentRepository::class,

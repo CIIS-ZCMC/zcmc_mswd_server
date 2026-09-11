@@ -14,9 +14,12 @@ use App\Http\Controllers\CaseDocumentController;
 use App\Http\Controllers\CaseHistoryController;
 use App\Http\Controllers\CaseModelController;
 use App\Http\Controllers\CaseProfileController;
+use App\Http\Controllers\CaseProgressNoteController;
+use App\Http\Controllers\CaseSummaryPdfController;
 use App\Http\Controllers\CaseWatcherController;
 use App\Http\Controllers\CaseWatcherStatusController;
 use App\Http\Controllers\CloseCaseController;
+use App\Http\Controllers\CompleteFollowUpController;
 use App\Http\Controllers\DestroyWatcherWaiverController;
 use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
@@ -37,6 +40,8 @@ use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MatchIntakePatientsController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\MergePatientController;
+use App\Http\Controllers\MyCaseloadController;
+use App\Http\Controllers\MyFollowUpsController;
 use App\Http\Controllers\PatientAssistanceController;
 use App\Http\Controllers\PatientAssistanceLogController;
 use App\Http\Controllers\PatientAssistanceReportController;
@@ -64,6 +69,8 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\SocialCaseController;
 use App\Http\Controllers\SocialCasePdfController;
+use App\Http\Controllers\SocialCaseReportController;
+use App\Http\Controllers\SocialCaseReportExportController;
 use App\Http\Controllers\StoreWatcherWaiverController;
 use App\Http\Controllers\SubmitIntakeSheetController;
 use App\Http\Controllers\SubmitSocialCaseController;
@@ -172,6 +179,11 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('activity-log', [ActivityLogController::class, 'index']);
     });
 
+    // The case manager's own worklist — see MyCaseloadController on why this
+    // is a route of its own rather than a filter on GET /cases.
+    Route::get('my-caseload', MyCaseloadController::class)->middleware('permission:cases.view');
+    Route::get('my-follow-ups', MyFollowUpsController::class)->middleware('permission:cases.view');
+
     // Case management (per-action permissions declared on the controller)
     Route::apiResource('cases', CaseModelController::class);
     Route::post('cases/{id}/restore', RestoreCaseController::class)->middleware('permission:cases.delete');
@@ -182,6 +194,9 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('cases/{case}/activities', CaseActivitiesController::class);
         Route::get('cases/{case}/watchers', [CaseWatcherController::class, 'index']);
         Route::get('cases/{case}/watcher-status', CaseWatcherStatusController::class);
+        // A case document, not a bulk extract — hence cases.view, the same
+        // reasoning that puts the intake PDF on intake.view.
+        Route::get('cases/{case}/summary-pdf', CaseSummaryPdfController::class);
     });
 
     Route::middleware('permission:cases.update')->group(function () {
@@ -247,6 +262,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::put('interventions/{intervention}', [InterventionController::class, 'update']);
     Route::delete('interventions/{intervention}', [InterventionController::class, 'destroy']);
 
+    // Progress notes — the worker's running record of case progress. No new
+    // permission: this is ordinary case work.
+    Route::get('cases/{case}/progress-notes', [CaseProgressNoteController::class, 'index']);
+    Route::post('cases/{case}/progress-notes', [CaseProgressNoteController::class, 'store']);
+    Route::put('progress-notes/{progressNote}', [CaseProgressNoteController::class, 'update']);
+    Route::delete('progress-notes/{progressNote}', [CaseProgressNoteController::class, 'destroy']);
+    Route::post('progress-notes/{progressNote}/complete-follow-up', CompleteFollowUpController::class)
+        ->middleware('permission:cases.update');
+
     Route::get('cases/{case}/documents', [CaseDocumentController::class, 'index']);
     Route::post('cases/{case}/documents', [CaseDocumentController::class, 'store']);
     Route::delete('cases/{case}/documents/{document}', [CaseDocumentController::class, 'destroy']);
@@ -265,6 +289,11 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('assistances/{assistance}/approve', ApproveAssistanceController::class)->middleware('permission:assistance.approve');
     Route::post('assistances/{assistance}/release', ReleaseAssistanceController::class)->middleware('permission:assistance.approve');
     Route::post('assistances/{assistance}/cancel', CancelAssistanceController::class)->middleware('permission:assistance.update');
+
+    // Social case reporting. The dashboard sits on reports.view; producing an
+    // extract takes reports.generate, which Case Manager does not hold.
+    Route::get('reports/social-cases', SocialCaseReportController::class)->middleware('permission:reports.view');
+    Route::get('reports/social-cases/export', SocialCaseReportExportController::class)->middleware('permission:reports.generate');
 
     // Released-aid report snapshots
     Route::get('assistances/{assistance}/reports', [PatientAssistanceReportController::class, 'forAssistance']);

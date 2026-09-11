@@ -29,6 +29,17 @@ class CaseModelResource extends JsonResource
                 'id' => $this->assignedUser?->id,
                 'name' => $this->assignedUser?->employee_name,
             ]),
+            // A flat lite shape, not SocialCaseResource: twenty narrative
+            // columns per list row is not acceptable. The full report is one
+            // GET /cases/{case}/social-case away.
+            'social_case' => $this->whenLoaded('socialCase', fn () => $this->socialCase === null ? null : [
+                'id' => $this->socialCase->id,
+                'social_case_no' => $this->socialCase->social_case_no,
+                'social_case_status' => $this->socialCase->social_case_status,
+                'revision' => $this->socialCase->revision,
+                'review_requested_at' => $this->socialCase->review_requested_at,
+                'noted_at' => $this->socialCase->noted_at,
+            ]),
             'activities_count' => $this->whenCounted('activities'),
             'assessments_count' => $this->whenCounted('assessments'),
             'diagnostics_count' => $this->whenCounted('diagnostics'),
