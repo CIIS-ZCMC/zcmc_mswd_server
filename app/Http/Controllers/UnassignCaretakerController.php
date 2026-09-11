@@ -2,10 +2,10 @@
 
 namespace App\Http\Controllers;
 
-use App\DTOs\PatientCaretakerDto;
 use App\Http\Resources\PatientCaretakerResource;
 use App\Models\PatientCaretaker;
 use App\Services\PatientCaretakerService;
+use Illuminate\Http\Request;
 
 class UnassignCaretakerController extends Controller
 {
@@ -14,11 +14,18 @@ class UnassignCaretakerController extends Controller
     /**
      * End an assignment: stamp the unassigned date and deactivate it.
      */
-    public function __invoke(PatientCaretaker $caretaker): PatientCaretakerResource
+    public function __invoke(Request $request, PatientCaretaker $caretaker): PatientCaretakerResource
     {
-        return PatientCaretakerResource::make($this->service->update($caretaker, PatientCaretakerDto::fromArray([
-            'unassigned_date' => now()->toDateTimeString(),
-            'is_active' => false,
-        ])));
+        $validated = $request->validate([
+            'unassigned_reason' => ['nullable', 'string', 'max:255'],
+        ]);
+
+        $caretaker = $this->service->unassign(
+            $caretaker,
+            $request->user(),
+            $validated['unassigned_reason'] ?? null,
+        );
+
+        return PatientCaretakerResource::make($caretaker->load(['assignedBy', 'unassignedBy']));
     }
 }

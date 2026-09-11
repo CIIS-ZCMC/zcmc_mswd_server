@@ -48,6 +48,7 @@ use App\Http\Controllers\PatientRegisterController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PromoteCaseWatcherController;
+use App\Http\Controllers\ReassignCaretakerController;
 use App\Http\Controllers\ReferCaseController;
 use App\Http\Controllers\ReleaseAssistanceController;
 use App\Http\Controllers\ReopenCaseController;
@@ -150,6 +151,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
         Route::post('patients/{patient}/caretakers', [PatientCaretakerController::class, 'store']);
         Route::patch('caretakers/{caretaker}/unassign', UnassignCaretakerController::class);
+        Route::post('caretakers/{caretaker}/reassign', ReassignCaretakerController::class);
 
         Route::post('patients/{patient}/documents', [DocumentController::class, 'store']);
         Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
