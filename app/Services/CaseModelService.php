@@ -38,6 +38,44 @@ class CaseModelService
     }
 
     /**
+     * The statuses a caseload shows unless the caller asks otherwise. Closed
+     * and referred cases are finished work and would bury the live list.
+     *
+     * @var list<string>
+     */
+    public const CASELOAD_DEFAULT_STATUSES = [CaseModel::STATUS_OPEN, CaseModel::STATUS_ONGOING];
+
+    /**
+     * Social case buckets a caseload can be filtered to. `none` means the case
+     * has no social case study at all — the bucket a worker starts from.
+     *
+     * @var list<string>
+     */
+    public const CASELOAD_SOCIAL_CASE_BUCKETS = ['none', 'draft', 'for_review', 'finalized'];
+
+    /**
+     * @param  list<string>  $statuses
+     */
+    public function caseload(User $user, array $statuses, ?string $socialCaseStatus, ListQuery $query): LengthAwarePaginator
+    {
+        return $this->repository->paginateCaseload($user->id, $statuses, $socialCaseStatus, $query);
+    }
+
+    /**
+     * Counts per social-case bucket for the same caseload, so the client can
+     * label its tabs without issuing one request per tab. Deliberately ignores
+     * the social_case_status filter — a bucket count that changed when you
+     * clicked a bucket would be useless.
+     *
+     * @param  list<string>  $statuses
+     * @return array<string, int>
+     */
+    public function caseloadBuckets(User $user, array $statuses): array
+    {
+        return $this->repository->caseloadBuckets($user->id, $statuses);
+    }
+
+    /**
      * Open a case: generate the code, apply defaults, and log the milestone.
      */
     public function create(CaseModelDto $dto, User $worker): CaseModel

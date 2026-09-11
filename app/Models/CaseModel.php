@@ -100,6 +100,11 @@ class CaseModel extends Model
         return $this->hasMany(Intervention::class, 'case_id');
     }
 
+    public function progressNotes(): HasMany
+    {
+        return $this->hasMany(CaseProgressNote::class, 'case_id');
+    }
+
     public function documents(): HasMany
     {
         return $this->hasMany(Document::class, 'case_id');

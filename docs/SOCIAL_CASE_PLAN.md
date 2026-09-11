@@ -15,9 +15,9 @@ sequencing them.
 | Phase | Side | Status |
 |-------|------|--------|
 | A. SCSR authoring, lifecycle, sign-off + PDF | server | ☑ done — 420 passed, 2026-09-11 |
-| B. Caseload queue | server | ☐ |
-| C. Progress notes / follow-ups | server | ☐ |
-| D. Reporting + case summary PDF | server | ☐ |
+| B. Caseload queue | server | ☑ done — 465 passed, 2026-09-11 |
+| C. Progress notes / follow-ups | server | ☑ done — 465 passed, 2026-09-11 |
+| D. Reporting + case summary PDF | server | ☑ done — 465 passed, 2026-09-11 |
 | E. Types, adapter, SCSR tab rewrite | client | ☐ |
 | F. Case route + caseload screen | client | ☐ blocked |
 
@@ -465,7 +465,7 @@ guard; `assertSoftDeleted`. Plus `SocialCaseStudyPdfTest.php` (mirrors
 
 ---
 
-## Phase B — Caseload queue ☐
+## Phase B — Caseload queue ☑
 
 **A dedicated `GET /my-caseload`, not `GET /cases?filter[assigned_user_id]=me`.**
 `BaseRepository::applyFilters()` passes filter values straight into `where()`, so
@@ -513,7 +513,7 @@ Spatie's permission cache).
 
 ---
 
-## Phase C — Progress notes / follow-ups ☐
+## Phase C — Progress notes / follow-ups ☑
 
 **A new `case_progress_notes` table — not `CaseActivity`, not `Intervention`.**
 
@@ -570,7 +570,7 @@ note writes exactly one `CaseActivity`; `assertSoftDeleted`; the model appears i
 
 ---
 
-## Phase D — Reporting + case summary PDF ☐
+## Phase D — Reporting + case summary PDF ☑
 
 | Route | Permission | Returns |
 |-------|-----------|---------|
@@ -588,12 +588,14 @@ mirrors `intake.finalize` and `cases.finalize_social_case`. The case summary PDF
 is a *case document*, not an extract, so it sits on `cases.view` — the same
 reasoning that puts the intake PDF on `intake.view`.
 
-**Open item, to settle before building D.** Should `is_protective` cases be
-excluded from aggregates for users without `audit.view_protective`?
-`ActivityLogService` already applies a protective `whereNotIn` for exactly that
-reason, but `cases` themselves are filtered nowhere. **Recommendation: yes,
-exclude them, and add a `protective_excluded: true` marker to the response so the
-number is never silently wrong.** This needs a decision, not a default.
+**Open item — settled 2026-09-11: exclude, with a marker.** Should
+`is_protective` cases be excluded from aggregates for users without
+`audit.view_protective`? `ActivityLogService` already applies a protective
+`whereNotIn` for exactly that reason, but `cases` themselves are filtered
+nowhere. **Decided: yes — exclude them, and carry `protective_excluded: true` in
+the response so the number is never silently wrong.** `SocialCaseReportService`
+implements this on every figure it returns, and both the JSON and the PDF export
+state the exclusion.
 
 New: `SocialCaseReportService` (one grouped query per aggregate, protective filter
 per the open item), `CaseSummaryPdfService`, three `__invoke` controllers, a
@@ -696,6 +698,28 @@ cases with a `for_review` SCSR sitting in someone's queue). Flagged, out of scop
    same case and confirm it still succeeds.
 
 ---
+
+## What shipped, and what differs from the plan as written
+
+Phases A–D are all in. Three points where the implementation departs from, or
+adds to, what the plan specified:
+
+1. **The Phase B index migration needed a `down()` fix the plan did not
+   anticipate.** Adding `['assigned_user_id', 'status']` makes MySQL drop the
+   `assigned_user_id` foreign key's auto-created index, leaving the composite as
+   the only index backing that constraint — so the rollback failed with errno
+   1553. `down()` now restores `cases_assigned_user_id_foreign` before dropping
+   the composite. **Verified on MySQL 8.0.45**: up → rollback → up restores the
+   exact baseline index set. Caught only because the rollback was exercised, not
+   just the migration.
+2. **The archived-case guards are unreachable over HTTP.** Both
+   `SocialCaseService::start()` and `CaseProgressNoteService::create()` refuse an
+   archived case, but route-model binding rejects a soft-deleted case with a 404
+   first. The guards still earn their place — Filament, artisan and any future
+   caller reach them — and the tests lock them at the service level, where they
+   are actually reachable, rather than asserting an HTTP 422 that cannot occur.
+3. **`assessment_expenses` writes fold under `cases.*`, not a new permission**,
+   matching the catalog rule the plan applies to the SCSR endpoints themselves.
 
 ## Out of scope
 

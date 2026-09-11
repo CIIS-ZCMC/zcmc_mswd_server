@@ -5,6 +5,7 @@ use App\Models\Assessment;
 use App\Models\AssessmentExpense;
 use App\Models\AssistantType;
 use App\Models\CaseModel;
+use App\Models\CaseProgressNote;
 use App\Models\CaseWatcher;
 use App\Models\Concerns\Auditable;
 use App\Models\Diagnostic;
@@ -113,6 +114,11 @@ dataset('resolvers', [
         ])->id,
         'expense_type' => 'medicine', 'amount' => 100,
     ]), true, true],
+    'CaseProgressNote' => [fn () => CaseProgressNote::create([
+        'case_id' => test()->case->id, 'author_id' => test()->worker->id,
+        'note_type' => CaseProgressNote::TYPE_PROGRESS, 'note_date' => now()->toDateString(),
+        'narrative' => 'Phoned the daughter, following up Monday.',
+    ]), true, true],
     'Intervention' => [fn () => Intervention::create([
         'case_id' => test()->case->id, 'created_by' => test()->worker->id,
         'intervention_type_id' => InterventionType::firstOrCreate(['name' => 'Counselling'])->id,
@@ -183,7 +189,7 @@ it('covers every model that declares a resolver', function () {
     // The models the dataset above exercises, one row each.
     $covered = collect([
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
-        'PatientMerge', 'CaseModel', 'CaseWatcher', 'Assessment', 'AssessmentExpense',
+        'PatientMerge', 'CaseModel', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document', 'UnifiedIntakeSheet',
     ])->sort()->values();

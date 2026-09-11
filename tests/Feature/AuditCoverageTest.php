@@ -5,6 +5,7 @@ use App\Models\AssessmentExpense;
 use App\Models\AssistantType;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
+use App\Models\CaseProgressNote;
 use App\Models\CaseWatcher;
 use App\Models\Concerns\Auditable;
 use App\Models\Diagnostic;
@@ -45,6 +46,7 @@ $audited = [
     CaseWatcher::class,
     Assessment::class,
     AssessmentExpense::class,
+    CaseProgressNote::class,
     Intervention::class,
     Diagnostic::class,
     DiagnosticReport::class,
