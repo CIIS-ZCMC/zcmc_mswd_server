@@ -16,7 +16,7 @@ contract. Client phase gates are listed in that document.
 | 1. Audit coverage | ☑ |
 | 2. Activity ownership columns | ☑ |
 | 3. Custody hardening | ☑ |
-| 4. Read surfaces | ☐ |
+| 4. Read surfaces | ☑ |
 | 5. Tests | ☐ |
 
 ---
@@ -353,7 +353,7 @@ repair; the remaining Phase 5 areas are unaffected.
 
 ---
 
-## Phase 4 — Read surfaces ☐
+## Phase 4 — Read surfaces ☑
 
 Depends on Phases 1–3.
 
@@ -417,8 +417,34 @@ rewrite; that is all.
 in `ActivityLogService` (group the page's rows by `subject_type`, one
 `whereIn` per type, ~4–6 queries per page) — never per row inside the resource.
 
-**Gate.** `php artisan test`. Manual: hit `GET /activity-log` as a user without
-`audit.view_protective` and confirm protective rows are absent.
+### Notes from building it
+
+- **Role grants.** `audit.view` went to MSS Head and Supervisor;
+  `audit.view_protective` to MSS Head only. Admin has `['*']` and picks up
+  both. Case Manager and Processor get neither — they read a patient's own
+  trail through `/patients/{patient}/history`, which is gated on
+  `patients.view`, not on `audit.*`.
+- **The protective filter is a `whereNotIn` subquery on `case_id`**, with
+  `withTrashed()` on the case lookup so a soft-deleted protective case keeps
+  hiding its rows. Rows with a null `case_id` (patient-level activity) always
+  pass — that is the documented residual, and it is asserted as a test so the
+  limitation stays visible rather than being mistaken for a bug.
+- **`subject_label` is resolved in `ActivityLogService`, never in the
+  resource.** One batched `whereIn` per distinct subject type on the page. A
+  row whose subject has been hard-deleted gets the bare type rather than a
+  fabricated name.
+- **The `subject_type` filter accepts a class basename**, because that is what
+  `ActivityResource` emits — a fully qualified name or a morph alias also work.
+- **Query cost is bounded by subject types, not rows.** The Phase 2 query-count
+  test was rewritten to assert that directly: ten times the rows, same query
+  count. The old assertion (≤ 2 queries) was correct before `subject_label`
+  existed and would otherwise have failed misleadingly.
+
+**Gate.** `php artisan test`.
+`tests/Feature/ActivityLogEndpointTest.php` covers the `audit.view` gate,
+pagination and its cap, the filters, the inline drill-down, `subject_label`,
+the protective filter on all four read surfaces (plus the residual), and the
+combined caretake read.
 
 ---
 

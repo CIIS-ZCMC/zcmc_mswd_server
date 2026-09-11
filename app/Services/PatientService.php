@@ -3,8 +3,8 @@
 namespace App\Services;
 
 use App\DTOs\PatientDto;
-use App\Models\Activity;
 use App\Models\Patient;
+use App\Models\User;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Support\ListQuery;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
@@ -123,13 +123,13 @@ class PatientService
      * `GET /patients/{patient}/history` is an unpaginated array, so the growth
      * in reach is capped here instead.
      */
-    public function history(Patient $patient): Collection
+    public function history(Patient $patient, ?User $viewer = null): Collection
     {
-        return Activity::forPatient($patient->id)
-            ->with('causer')
-            ->latest('id')
-            ->limit(self::HISTORY_LIMIT)
-            ->get();
+        return app(ActivityLogService::class)->collect(
+            ['patient_id' => $patient->id],
+            $viewer,
+            self::HISTORY_LIMIT,
+        );
     }
 
     /**
