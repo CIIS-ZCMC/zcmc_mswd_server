@@ -9,7 +9,9 @@ use App\Models\PatientFamilyMember;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Seeder;
+use Illuminate\Events\NullDispatcher;
 use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
@@ -62,19 +64,42 @@ class SamplePatientSeeder extends Seeder
             return;
         }
 
-        // The staff below are assigned real roles, which must exist first.
-        // RolesAndPermissionsSeeder is idempotent (findOrCreate throughout), so
-        // calling it here is safe whether or not it has already run.
-        $this->call(RolesAndPermissionsSeeder::class);
+        // DatabaseSeeder uses WithoutModelEvents, which mutes events for every
+        // seeder it calls — this one included. That would silently defeat the
+        // whole point: Auditable would never fire, and the History tab and the
+        // audit log would come up empty on a freshly seeded database.
+        //
+        // Model::withoutEvents() mutes by swapping in a NullDispatcher, not by
+        // nulling the dispatcher, so that wrapper is what to look for. Swap the
+        // real one back for the duration and restore the wrapper after;
+        // withoutEvents() also restores its own captured dispatcher in a
+        // finally block, so nothing leaks into the rest of the run either way.
+        $mutedDispatcher = Model::getEventDispatcher();
+        $eventsWereMuted = $mutedDispatcher instanceof NullDispatcher;
 
-        $sectors = $this->seedSectors();
-        $staff = $this->seedStaff();
-
-        foreach ($this->patients() as $definition) {
-            $this->seedPatient($definition, $sectors, $staff);
+        if ($eventsWereMuted) {
+            Model::setEventDispatcher(app('events'));
         }
 
-        Auth::forgetUser();
+        try {
+            // The staff below are assigned real roles, which must exist first.
+            // RolesAndPermissionsSeeder is idempotent (findOrCreate throughout),
+            // so calling it here is safe whether or not it has already run.
+            $this->call(RolesAndPermissionsSeeder::class);
+
+            $sectors = $this->seedSectors();
+            $staff = $this->seedStaff();
+
+            foreach ($this->patients() as $definition) {
+                $this->seedPatient($definition, $sectors, $staff);
+            }
+        } finally {
+            Auth::forgetUser();
+
+            if ($eventsWereMuted) {
+                Model::setEventDispatcher($mutedDispatcher);
+            }
+        }
     }
 
     /**
