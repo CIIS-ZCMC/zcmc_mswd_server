@@ -6,6 +6,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
+use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 use Spatie\Activitylog\Models\Activity;
@@ -83,6 +84,15 @@ class CaseModel extends Model
     public function assessments(): HasMany
     {
         return $this->hasMany(Assessment::class, 'case_id');
+    }
+
+    /**
+     * The case's Social Case Study Report — at most one, guaranteed by the
+     * uniq_case_social_case database index, not by this relation.
+     */
+    public function socialCase(): HasOne
+    {
+        return $this->hasOne(Assessment::class, 'case_id')->whereNotNull('social_case_status');
     }
 
     public function interventions(): HasMany

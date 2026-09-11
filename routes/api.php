@@ -1,8 +1,10 @@
 <?php
 
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\AmendSocialCaseController;
 use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\AssessmentExpenseController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
 use App\Http\Controllers\AssistantTypeController;
@@ -20,6 +22,7 @@ use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinalizeIntakeSheetController;
+use App\Http\Controllers\FinalizeSocialCaseController;
 use App\Http\Controllers\FindHospitalPatientController;
 use App\Http\Controllers\FindPatientRegisterController;
 use App\Http\Controllers\GuarantorController;
@@ -59,8 +62,11 @@ use App\Http\Controllers\RestorePatientController;
 use App\Http\Controllers\RevokeWatcherPassController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\SocialCaseController;
+use App\Http\Controllers\SocialCasePdfController;
 use App\Http\Controllers\StoreWatcherWaiverController;
 use App\Http\Controllers\SubmitIntakeSheetController;
+use App\Http\Controllers\SubmitSocialCaseController;
 use App\Http\Controllers\SyncUserRolesController;
 use App\Http\Controllers\UnassignCaretakerController;
 use App\Http\Controllers\UnifiedIntakeSheetController;
@@ -202,6 +208,31 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('cases/{case}/assessments', [AssessmentController::class, 'store']);
     Route::put('assessments/{assessment}', [AssessmentController::class, 'update']);
     Route::delete('assessments/{assessment}', [AssessmentController::class, 'destroy']);
+
+    // Household expense lines under an assessment — the SCSR's economic section
+    // prints these against total_family_income.
+    Route::get('assessments/{assessment}/expenses', [AssessmentExpenseController::class, 'index']);
+    Route::post('assessments/{assessment}/expenses', [AssessmentExpenseController::class, 'store']);
+    Route::put('assessment-expenses/{expense}', [AssessmentExpenseController::class, 'update']);
+    Route::delete('assessment-expenses/{expense}', [AssessmentExpenseController::class, 'destroy']);
+
+    // Social Case Study Report — one per case episode, hence the singular path.
+    Route::middleware('permission:cases.view')->group(function () {
+        Route::get('cases/{case}/social-case', [SocialCaseController::class, 'show']);
+        Route::get('cases/{case}/social-case/pdf', SocialCasePdfController::class);
+    });
+    Route::post('cases/{case}/social-case', [SocialCaseController::class, 'store'])
+        ->middleware('permission:cases.create');
+    Route::middleware('permission:cases.update')->group(function () {
+        Route::put('cases/{case}/social-case', [SocialCaseController::class, 'update']);
+        Route::post('cases/{case}/social-case/submit', SubmitSocialCaseController::class);
+    });
+
+    // Noting the report is section-head level — its own permission, like cases.waive_watcher.
+    Route::middleware('permission:cases.finalize_social_case')->group(function () {
+        Route::post('cases/{case}/social-case/finalize', FinalizeSocialCaseController::class);
+        Route::post('cases/{case}/social-case/amend', AmendSocialCaseController::class);
+    });
 
     Route::get('cases/{case}/diagnostics', [DiagnosticController::class, 'index']);
     Route::post('cases/{case}/diagnostics', [DiagnosticController::class, 'store']);

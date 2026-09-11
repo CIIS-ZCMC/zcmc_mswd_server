@@ -264,6 +264,26 @@ it('will not finalize a draft that has no assessment', function () {
     $this->postJson("/api/intake-sheets/{$id}/finalize")->assertUnprocessable();
 });
 
+it('attaches an assessment to a draft that was created without one', function () {
+    Sanctum::actingAs(intakeWorker('Supervisor'));
+    $create = $this->postJson('/api/intake-sheets', newIntakePayload($this->sector->id, $this->assistType->id, withAssessment: false))->assertCreated();
+    $id = $create->json('data.id');
+
+    // Without this path the draft is a dead end: finalize demands an
+    // assessment and nothing could ever attach one, so its 422 was
+    // unreachable advice.
+    $this->putJson("/api/intake-sheets/{$id}", [
+        'assessment' => ['classification' => 'indigent', 'presenting_problem' => 'Cannot afford medicine'],
+    ])->assertOk();
+
+    $sheet = UnifiedIntakeSheet::find($id);
+    expect($sheet->assessment_id)->not->toBeNull()
+        ->and($sheet->assessment->case_id)->toBe($sheet->case_id)
+        ->and($sheet->assessment->created_by)->toBe($sheet->intake_worker_id);
+
+    $this->postJson("/api/intake-sheets/{$id}/finalize")->assertOk();
+});
+
 it('forbids finalizing without the intake.finalize permission', function () {
     Sanctum::actingAs(intakeWorker('Processor')); // create/update but not finalize
     $create = $this->postJson('/api/intake-sheets', newIntakePayload($this->sector->id, $this->assistType->id))->assertCreated();

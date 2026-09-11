@@ -8,6 +8,7 @@ use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Validation\ValidationException;
 
 class AssessmentService
 {
@@ -38,8 +39,19 @@ class AssessmentService
         return $this->repository->update($assessment, $dto->toArray());
     }
 
+    /**
+     * Soft-deletes, since Assessment mixes in SoftDeletes. A finalized social
+     * case study is a signed document and is refused outright, mirroring
+     * UnifiedIntakeSheetService::cancel().
+     */
     public function delete(Assessment $assessment): bool
     {
+        if ($assessment->social_case_status === Assessment::SOCIAL_CASE_FINALIZED) {
+            throw ValidationException::withMessages([
+                'social_case_status' => 'A finalized social case study cannot be deleted.',
+            ]);
+        }
+
         return $this->repository->delete($assessment);
     }
 }

@@ -2,10 +2,12 @@
 
 namespace App\Providers;
 
+use App\Repositories\AssessmentExpenseRepository;
 use App\Repositories\AssessmentRepository;
 use App\Repositories\AssistantTypeRepository;
 use App\Repositories\CaseActivityRepository;
 use App\Repositories\CaseModelRepository;
+use App\Repositories\Contracts\AssessmentExpenseRepositoryInterface;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use App\Repositories\Contracts\AssistantTypeRepositoryInterface;
 use App\Repositories\Contracts\CaseActivityRepositoryInterface;
@@ -77,6 +79,7 @@ class RepositoryServiceProvider extends ServiceProvider
         DiagnosticRepositoryInterface::class => DiagnosticRepository::class,
         DiagnosticReportRepositoryInterface::class => DiagnosticReportRepository::class,
         AssessmentRepositoryInterface::class => AssessmentRepository::class,
+        AssessmentExpenseRepositoryInterface::class => AssessmentExpenseRepository::class,
         InterventionRepositoryInterface::class => InterventionRepository::class,
         DocumentRepositoryInterface::class => DocumentRepository::class,
         PatientAssistanceRepositoryInterface::class => PatientAssistanceRepository::class,
