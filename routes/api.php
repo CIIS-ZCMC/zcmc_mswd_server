@@ -8,6 +8,7 @@ use App\Http\Controllers\AssessmentExpenseController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
 use App\Http\Controllers\AssistantTypeController;
+use App\Http\Controllers\MswdClassificationMatrixController;
 use App\Http\Controllers\CancelAssistanceController;
 use App\Http\Controllers\CaseActivitiesController;
 use App\Http\Controllers\CaseDocumentController;
@@ -57,7 +58,9 @@ use App\Http\Controllers\PatientProfileController;
 use App\Http\Controllers\PatientRegisterController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
+use App\Http\Controllers\PromoteAssessmentToSocialCaseController;
 use App\Http\Controllers\PromoteCaseWatcherController;
+use App\Http\Controllers\ReassessCaseController;
 use App\Http\Controllers\ReassignCaretakerController;
 use App\Http\Controllers\ReferCaseController;
 use App\Http\Controllers\ReleaseAssistanceController;
@@ -218,11 +221,16 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('cases/{case}/watcher-waiver', DestroyWatcherWaiverController::class);
     });
 
+    // MSWD Classification Matrix
+    Route::get('mswd-classification-matrix', [MswdClassificationMatrixController::class, 'index'])->middleware('permission:cases.view');
+
     // Case clinical records (per-action permissions declared on the controllers)
     Route::get('cases/{case}/assessments', [AssessmentController::class, 'index']);
     Route::post('cases/{case}/assessments', [AssessmentController::class, 'store']);
     Route::put('assessments/{assessment}', [AssessmentController::class, 'update']);
     Route::delete('assessments/{assessment}', [AssessmentController::class, 'destroy']);
+    Route::post('cases/{case}/reassess', ReassessCaseController::class)->middleware('permission:cases.create');
+    Route::post('assessments/{assessment}/promote-to-social-case', PromoteAssessmentToSocialCaseController::class)->middleware('permission:cases.update');
 
     // Household expense lines under an assessment — the SCSR's economic section
     // prints these against total_family_income.

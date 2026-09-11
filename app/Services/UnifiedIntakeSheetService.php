@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Actions\CalculateMswdClassificationAction;
 use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\UnifiedIntakeSheetDto;
 use App\Models\Assessment;
@@ -33,6 +34,7 @@ class UnifiedIntakeSheetService
         protected AssessmentRepositoryInterface $assessments,
         protected UnifiedIntakeSheetPdfService $pdf,
         protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
+        protected CalculateMswdClassificationAction $calculateClassification,
     ) {}
 
     public function list(?ListQuery $query = null): LengthAwarePaginator
@@ -314,10 +316,31 @@ class UnifiedIntakeSheetService
             return null;
         }
 
-        return $this->assessments->create(array_merge($dto->assessment->toArray(), [
+        $data = array_merge($dto->assessment->toArray(), [
             'case_id' => $case->id,
             'created_by' => $worker->id,
-        ]));
+        ]);
+
+        $expensesSum = 0.0;
+        foreach ($dto->expenses as $expenseRow) {
+            $expensesSum += (float) ($expenseRow['amount'] ?? 0);
+        }
+
+        $metrics = $this->calculateClassification->execute(
+            totalFamilyIncome: $dto->assessment->total_family_income,
+            expensesSum: $expensesSum,
+            case: $case,
+        );
+
+        $data['net_per_capita_income'] = $metrics['net_per_capita_income'];
+        $data['calculated_classification'] = $metrics['calculated_classification'];
+        $data['calculated_discount_rate'] = $metrics['calculated_discount_rate'];
+
+        if (empty($data['classification'])) {
+            $data['classification'] = $metrics['calculated_classification'];
+        }
+
+        return $this->assessments->create($data);
     }
 
     private function createAssistances(UnifiedIntakeSheetDto $dto, CaseModel $case, User $worker): void
