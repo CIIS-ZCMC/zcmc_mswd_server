@@ -17,7 +17,7 @@ contract. Client phase gates are listed in that document.
 | 2. Activity ownership columns | ☑ |
 | 3. Custody hardening | ☑ |
 | 4. Read surfaces | ☑ |
-| 5. Tests | ☐ |
+| 5. Tests | ☑ |
 
 ---
 
@@ -448,7 +448,7 @@ combined caretake read.
 
 ---
 
-## Phase 5 — Tests ☐
+## Phase 5 — Tests ☑
 
 | Area | Cases |
 |------|-------|
@@ -460,8 +460,45 @@ combined caretake read.
 | Protective filter | a user without `audit.view_protective` sees no protective-case rows on all four reads; a user with it sees them |
 | Endpoints | `GET /patients/{patient}/caretake` shape; `/activity-log` filters, pagination, and the `audit.view` gate |
 
-**Gate.** `php artisan test` — full suite green, counts recorded in the status
-table above.
+### Where each area actually landed
+
+Every phase shipped with the tests for its own behaviour rather than deferring
+them here, so most of the table above was already covered when this phase
+started. Phase 5 audited the table against the suite and filled what was
+genuinely missing.
+
+| Area | File | Phase |
+|------|------|-------|
+| Audit coverage | `AuditCoverageTest.php` | 1 |
+| Ownership resolution (one per shape) | `ActivityOwnershipTest.php` | 2 |
+| Ownership resolution (**all 18 resolvers**) | `ActivityOwnershipResolverTest.php` | 5 |
+| Backfill — correctness, idempotency, orphans | `ActivityOwnershipTest.php` | 2 |
+| Backfill — **equals live stamping**, **fan-out equivalence** | `ActivityLogFilterTest.php` | 5 |
+| Custody guard, reassign, data repair | `CustodyHardeningTest.php` | 3 |
+| Protective filter (four read surfaces + residual) | `ActivityLogEndpointTest.php` | 4 |
+| Endpoints, pagination, `audit.view` gate | `ActivityLogEndpointTest.php` | 4 |
+| **Remaining filters** (causer, dates, log name, bad event) | `ActivityLogFilterTest.php` | 5 |
+| **Protective case soft-deleted after the fact** | `ActivityLogFilterTest.php` | 5 |
+
+The four gaps Phase 5 closed, in bold above:
+
+1. **Only 8 of the 18 resolvers had a test.** The other ten were structurally
+   similar but unproven, and a renamed parent relation would have silently
+   started stamping nulls — the audit row still writes, and nothing else fails.
+   There is now one dataset row per resolver, plus a reflection guard that fails
+   if a model gains its own `activityOwner()` without gaining a dataset row.
+2. **Nothing proved the new read returns what the old fan-out did.** The plan
+   asked for this and it is the claim the whole of Phase 2 rests on. The test
+   rebuilds the original six-type fan-out and asserts the stamped read is a
+   strict superset of it.
+3. **Nothing proved the backfill and live stamping agree.** Idempotency was
+   tested; equivalence was not. A resolver that behaved differently under
+   backfill than at write time would have gone unnoticed.
+4. **Four `/activity-log` filters were untested**, and so was the case of a
+   protective case soft-deleted after its rows were written — the path the
+   `withTrashed()` in the protective scope exists for.
+
+**Gate.** `php artisan test` — **374 passed** (1157 assertions).
 
 ---
 
