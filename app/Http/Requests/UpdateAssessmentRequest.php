@@ -17,7 +17,10 @@ class UpdateAssessmentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'classification' => ['sometimes', 'required', 'string', 'max:255'],
+            'parent_assessment_id' => ['nullable', 'integer', 'exists:assessments,id'],
+            'reassessment_reason' => ['nullable', 'string', 'max:255'],
+            'classification' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'classification_override_reason' => ['nullable', 'string'],
             'total_family_income' => ['nullable', 'numeric', 'min:0'],
             'housing_type' => ['nullable', 'string', 'max:255'],
             'utilities_access' => ['nullable', 'string', 'max:255'],

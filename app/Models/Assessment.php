@@ -46,6 +46,8 @@ class Assessment extends Model
 
     protected $fillable = [
         'case_id',
+        'parent_assessment_id',
+        'reassessment_reason',
         'created_by',
         'prepared_by',
         'prepared_at',
@@ -56,9 +58,13 @@ class Assessment extends Model
         'social_case_no',
         'revision',
         'total_family_income',
+        'net_per_capita_income',
         'housing_type',
         'utilities_access',
         'classification',
+        'calculated_classification',
+        'classification_override_reason',
+        'calculated_discount_rate',
         'referral_source',
         'reason_for_referral',
         'presenting_problem',
@@ -76,6 +82,8 @@ class Assessment extends Model
     {
         return [
             'total_family_income' => 'decimal:2',
+            'net_per_capita_income' => 'decimal:2',
+            'calculated_discount_rate' => 'decimal:2',
             'recommended_amount' => 'decimal:2',
             'revision' => 'integer',
             'prepared_at' => 'datetime',
@@ -125,9 +133,30 @@ class Assessment extends Model
         return $this->belongsTo(User::class, 'noted_by');
     }
 
+    public function parentAssessment(): BelongsTo
+    {
+        return $this->belongsTo(self::class, 'parent_assessment_id');
+    }
+
+    public function reassessments(): HasMany
+    {
+        return $this->hasMany(self::class, 'parent_assessment_id');
+    }
+
     public function expenses(): HasMany
     {
         return $this->hasMany(AssessmentExpense::class);
+    }
+
+    public function isReassessment(): bool
+    {
+        return $this->parent_assessment_id !== null;
+    }
+
+    public function hasOverride(): bool
+    {
+        return $this->classification_override_reason !== null
+            || ($this->classification !== null && $this->classification !== $this->calculated_classification);
     }
 
     /**
