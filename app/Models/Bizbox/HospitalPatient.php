@@ -44,7 +44,7 @@ class HospitalPatient extends Model
      */
     public function transactions()
     {
-        return $this->hasMany(PatientRegister::class, 'FK_emdPatients', 'PK_emdPatients');
+        return $this->hasMany(PatientTransaction::class, 'FK_emdPatients', 'PK_emdPatients');
     }
 
     /**

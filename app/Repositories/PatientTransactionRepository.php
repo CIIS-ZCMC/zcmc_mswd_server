@@ -2,15 +2,15 @@
 
 namespace App\Repositories;
 
-use App\Models\Bizbox\PatientRegister;
-use App\Repositories\Contracts\PatientRegisterRepositoryInterface;
+use App\Models\Bizbox\PatientTransaction;
+use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\Model;
 
-class PatientRegisterRepository implements PatientRegisterRepositoryInterface
+class PatientTransactionRepository implements PatientTransactionRepositoryInterface
 {
-    public function __construct(protected PatientRegister $model) {}
+    public function __construct(protected PatientTransaction $model) {}
 
     public function paginate(?string $search = null, ?string $date = null, int $perPage = 15): LengthAwarePaginator
     {
@@ -25,9 +25,16 @@ class PatientRegisterRepository implements PatientRegisterRepositoryInterface
             ->paginate($perPage);
     }
 
+    /**
+     * Guarantors are eager-loaded here and NOT in paginate()/search(): a list
+     * row never shows them, and search() feeds a typeahead where the extra
+     * SQL Server round-trips would be felt on every keystroke.
+     */
     public function find(int|string $id): ?Model
     {
-        return $this->model->newQuery()->with('patient.personalData')->find($id);
+        return $this->model->newQuery()
+            ->with(['patient.personalData', 'guarantors.account.personalData'])
+            ->find($id);
     }
 
     public function search(string $term, ?string $date = null, int $limit = 20): Collection
