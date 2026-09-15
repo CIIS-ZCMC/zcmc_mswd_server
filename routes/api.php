@@ -27,7 +27,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinalizeIntakeSheetController;
 use App\Http\Controllers\FinalizeSocialCaseController;
 use App\Http\Controllers\FindHospitalPatientController;
-use App\Http\Controllers\FindPatientRegisterController;
+use App\Http\Controllers\FindPatientTransactionController;
 use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\IntakeSheetHistoryController;
@@ -56,7 +56,7 @@ use App\Http\Controllers\PatientHistoryController;
 use App\Http\Controllers\PatientIdController;
 use App\Http\Controllers\PatientMergesController;
 use App\Http\Controllers\PatientProfileController;
-use App\Http\Controllers\PatientRegisterController;
+use App\Http\Controllers\PatientTransactionController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PromoteAssessmentToSocialCaseController;
@@ -150,10 +150,10 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('hospital-patients', [HospitalPatientController::class, 'index']);
         Route::get('hospital-patients/find', FindHospitalPatientController::class);
         Route::get('hospital-patients/{id}', [HospitalPatientController::class, 'show']);
-        Route::get('patient-registers', [PatientRegisterController::class, 'index']);
-        Route::get('patient-registers/find', FindPatientRegisterController::class);
-        Route::get('patient-registers/{id}', [PatientRegisterController::class, 'show']);
-        Route::get('patient-registers/{id}/guarantors', [PatientGuarantorController::class, 'index']);
+        Route::get('patient-transactions', [PatientTransactionController::class, 'index']);
+        Route::get('patient-transactions/find', FindPatientTransactionController::class);
+        Route::get('patient-transactions/{id}', [PatientTransactionController::class, 'show']);
+        Route::get('patient-transactions/{id}/guarantors', [PatientGuarantorController::class, 'index']);
     });
 
     // Patient records

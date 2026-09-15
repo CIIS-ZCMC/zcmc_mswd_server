@@ -36,6 +36,6 @@ class PatientGuarantors extends Model
 
     public function transaction()
     {
-        return $this->belongsTo(PatientRegister::class, 'FK_psPatRegisters', 'PK_psPatRegisters');
+        return $this->belongsTo(PatientTransaction::class, 'FK_psPatRegisters', 'PK_psPatRegisters');
     }
 }

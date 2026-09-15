@@ -3,11 +3,11 @@
 use App\Filament\Resources\UnifiedIntakeSheets\Pages\CreateUnifiedIntakeSheet;
 use App\Models\Bizbox\HospitalPatient;
 use App\Models\Bizbox\PatientPersonalData;
-use App\Models\Bizbox\PatientRegister;
+use App\Models\Bizbox\PatientTransaction;
 use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\User;
-use App\Repositories\Contracts\PatientRegisterRepositoryInterface;
+use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Livewire\Livewire;
@@ -42,9 +42,9 @@ function fakeHospitalPatient(int $key = 5, int $patid = 777): HospitalPatient
     return $hp;
 }
 
-function fakePatientRegister(int $key = 9, ?HospitalPatient $patient = null): PatientRegister
+function fakePatientTransaction(int $key = 9, ?HospitalPatient $patient = null): PatientTransaction
 {
-    $pr = (new PatientRegister)->forceFill(['PK_psPatRegisters' => $key]);
+    $pr = (new PatientTransaction)->forceFill(['PK_psPatRegisters' => $key]);
     $pr->setRelation('patient', $patient ?? fakeHospitalPatient());
 
     return $pr;
@@ -65,12 +65,12 @@ it('maps a HIS record onto patient attributes', function () {
 it('auto-fills a new intake patient from a hospital (HIS) search', function () {
     actingAs(hisPanelUser());
 
-    $this->mock(PatientRegisterRepositoryInterface::class, function ($mock) {
-        $mock->shouldReceive('find')->andReturn(fakePatientRegister());
+    $this->mock(PatientTransactionRepositoryInterface::class, function ($mock) {
+        $mock->shouldReceive('find')->andReturn(fakePatientTransaction());
     });
 
     Livewire::test(CreateUnifiedIntakeSheet::class)
-        ->set('data.hospital_patient', 9)                 // pick a HIS registration → prefill
+        ->set('data.hospital_transaction', 9)             // pick a HIS transaction → prefill
         ->set('data.patient.sector_id', $this->sector->id)
         ->set('data.case', ['case_type' => 'medical', 'priority_level' => 'high', 'admission_type' => 'ER'])
         ->set('data.assessment', ['classification' => 'indigent'])
