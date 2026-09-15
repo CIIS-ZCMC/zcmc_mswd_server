@@ -40,6 +40,14 @@ class HospitalPatient extends Model
     }
 
     /**
+     * Encounters/registrations for this patient (psPatRegisters.FK_emdPatients).
+     */
+    public function transactions()
+    {
+        return $this->hasMany(PatientRegister::class, 'FK_emdPatients', 'PK_emdPatients');
+    }
+
+    /**
      * The hospital number the wards and the HIS UI use (emdPatients.patid).
      */
     public function getHospitalNumberAttribute(): ?string

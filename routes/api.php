@@ -8,7 +8,6 @@ use App\Http\Controllers\AssessmentExpenseController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
 use App\Http\Controllers\AssistantTypeController;
-use App\Http\Controllers\MswdClassificationMatrixController;
 use App\Http\Controllers\CancelAssistanceController;
 use App\Http\Controllers\CaseActivitiesController;
 use App\Http\Controllers\CaseDocumentController;
@@ -41,6 +40,7 @@ use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MatchIntakePatientsController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\MergePatientController;
+use App\Http\Controllers\MswdClassificationMatrixController;
 use App\Http\Controllers\MyCaseloadController;
 use App\Http\Controllers\MyFollowUpsController;
 use App\Http\Controllers\PatientAssistanceController;
@@ -51,6 +51,7 @@ use App\Http\Controllers\PatientCaretakerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicatesController;
 use App\Http\Controllers\PatientFamilyMemberController;
+use App\Http\Controllers\PatientGuarantorController;
 use App\Http\Controllers\PatientHistoryController;
 use App\Http\Controllers\PatientIdController;
 use App\Http\Controllers\PatientMergesController;
@@ -152,6 +153,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('patient-registers', [PatientRegisterController::class, 'index']);
         Route::get('patient-registers/find', FindPatientRegisterController::class);
         Route::get('patient-registers/{id}', [PatientRegisterController::class, 'show']);
+        Route::get('patient-registers/{id}/guarantors', [PatientGuarantorController::class, 'index']);
     });
 
     // Patient records

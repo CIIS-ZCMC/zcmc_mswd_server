@@ -13,7 +13,14 @@ class PatientPersonalData extends Model
     protected $primaryKey = 'PK_psPersonalData';
 
     public $timestamps = false;
-
+    
+    /**
+     * Guard every attribute — this model is read-only.
+     *
+     * @var list<string>
+     */
+    protected $guarded = ['*'];
+    
     public function patient()
     {
         return $this->belongsTo(HospitalPatient::class, 'PK_emdPatients');
