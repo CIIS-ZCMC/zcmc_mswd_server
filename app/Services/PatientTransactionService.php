@@ -2,29 +2,29 @@
 
 namespace App\Services;
 
-use App\Models\Bizbox\PatientRegister;
-use App\Repositories\Contracts\PatientRegisterRepositoryInterface;
+use App\Models\Bizbox\PatientTransaction;
+use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 
-class PatientRegisterService
+class PatientTransactionService
 {
-    public function __construct(protected PatientRegisterRepositoryInterface $repository) {}
+    public function __construct(protected PatientTransactionRepositoryInterface $repository) {}
 
     public function paginate(?string $search = null, ?string $date = null, int $perPage = 15): LengthAwarePaginator
     {
         return $this->repository->paginate($search, $date, $perPage);
     }
 
-    public function find(int|string $id): PatientRegister
+    public function find(int|string $id): PatientTransaction
     {
         return $this->repository->find($id)
-            ?? throw (new ModelNotFoundException)->setModel(PatientRegister::class, [$id]);
+            ?? throw (new ModelNotFoundException)->setModel(PatientTransaction::class, [$id]);
     }
 
     /**
-     * Candidate HIS registrations for a one-box search (name or hospital number),
+     * Candidate HIS transactions for a one-box search (name or hospital number),
      * optionally narrowed to a single registration date.
      */
     public function search(string $term, ?string $date = null, int $limit = 20): Collection
@@ -33,17 +33,17 @@ class PatientRegisterService
     }
 
     /**
-     * Find registrations by name and/or hospital number (404 when none match),
+     * Find transactions by name and/or hospital number (404 when none match),
      * optionally narrowed to a single registration date.
      */
     public function findByNameAndHospitalNumber(?string $name = null, int|string|null $hospitalNumber = null, ?string $date = null): Collection
     {
-        $registrations = $this->repository->findByNameAndHospitalNumber($name, $hospitalNumber, $date);
+        $transactions = $this->repository->findByNameAndHospitalNumber($name, $hospitalNumber, $date);
 
-        if ($registrations->isEmpty()) {
-            throw (new ModelNotFoundException)->setModel(PatientRegister::class);
+        if ($transactions->isEmpty()) {
+            throw (new ModelNotFoundException)->setModel(PatientTransaction::class);
         }
 
-        return $registrations;
+        return $transactions;
     }
 }

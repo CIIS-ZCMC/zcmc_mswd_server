@@ -4,7 +4,7 @@ namespace App\Models\Bizbox;
 
 use Illuminate\Database\Eloquent\Model;
 
-class PatientRegister extends Model
+class PatientTransaction extends Model
 {
     protected $connection = 'sqlsrv';
 

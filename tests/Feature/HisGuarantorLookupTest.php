@@ -1,13 +1,17 @@
 <?php
 
 use App\Models\Bizbox\DataCenter;
+use App\Models\Bizbox\HospitalPatient;
 use App\Models\Bizbox\PatientGuarantors;
 use App\Models\Bizbox\PatientPersonalData;
+use App\Models\Bizbox\PatientTransaction;
 use App\Models\User;
 use App\Repositories\Contracts\PatientGuarantorRepositoryInterface;
+use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Pagination\LengthAwarePaginator;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
@@ -57,7 +61,7 @@ it('returns every guarantor recorded against a registration', function () {
         ]));
     });
 
-    $this->getJson('/api/patient-registers/9/guarantors')
+    $this->getJson('/api/patient-transactions/9/guarantors')
         ->assertOk()
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('data.0.id', 1)
@@ -74,7 +78,7 @@ it('returns an empty list — not a 404 — when the admission has no guarantor'
         $mock->shouldReceive('forRegistration')->andReturn(new Collection);
     });
 
-    $this->getJson('/api/patient-registers/9/guarantors')
+    $this->getJson('/api/patient-transactions/9/guarantors')
         ->assertOk()
         ->assertJsonCount(0, 'data');
 });
@@ -83,11 +87,11 @@ it('refuses a user without patients.view', function () {
     $user = User::factory()->create(['role' => 'Social Worker']);   // no role assigned → no permissions
     Sanctum::actingAs($user);
 
-    $this->getJson('/api/patient-registers/9/guarantors')->assertForbidden();
+    $this->getJson('/api/patient-transactions/9/guarantors')->assertForbidden();
 });
 
 it('refuses an unauthenticated caller', function () {
-    $this->getJson('/api/patient-registers/9/guarantors')->assertUnauthorized();
+    $this->getJson('/api/patient-transactions/9/guarantors')->assertUnauthorized();
 });
 
 it('falls back when the guarantor entity carries no name', function () {
@@ -96,4 +100,58 @@ it('falls back when the guarantor entity carries no name', function () {
     $account->setRelation('personalData', null);
 
     expect($account->displayName())->toBe('Unnamed guarantor');
+});
+
+/**
+ * A transaction with its patient and guarantors already attached, so the test
+ * never reaches the sqlsrv connection.
+ */
+function fakeTransactionWithGuarantors(int $key = 9, bool $withGuarantors = true): PatientTransaction
+{
+    $personal = (new PatientPersonalData)->forceFill([
+        'firstname' => 'Pedro', 'lastname' => 'Santos', 'middlename' => 'M',
+    ]);
+
+    $patient = (new HospitalPatient)->forceFill(['PK_emdPatients' => 5, 'patid' => 777]);
+    $patient->setRelation('personalData', $personal);
+
+    $transaction = (new PatientTransaction)->forceFill(['PK_psPatRegisters' => $key]);
+    $transaction->setRelation('patient', $patient);
+
+    if ($withGuarantors) {
+        $transaction->setRelation('guarantors', new Collection([fakeGuarantor(1, $key, 'Cruz', 'Maria')]));
+    }
+
+    return $transaction;
+}
+
+it('nests guarantors on a single transaction', function () {
+    Sanctum::actingAs(hisUser());
+
+    $this->mock(PatientTransactionRepositoryInterface::class, function ($mock) {
+        $mock->shouldReceive('find')->andReturn(fakeTransactionWithGuarantors());
+    });
+
+    $this->getJson('/api/patient-transactions/9')
+        ->assertOk()
+        ->assertJsonPath('data.id', 9)
+        ->assertJsonCount(1, 'data.guarantors')
+        ->assertJsonPath('data.guarantors.0.guarantor_name', 'Cruz, Maria');
+});
+
+it('omits guarantors from the transaction list', function () {
+    // Pins the N+1 decision: guarantors are eager-loaded in find() only, so a
+    // list row must not carry the key at all. A stray with() would break this.
+    Sanctum::actingAs(hisUser());
+
+    $this->mock(PatientTransactionRepositoryInterface::class, function ($mock) {
+        $mock->shouldReceive('paginate')->andReturn(new LengthAwarePaginator(
+            [fakeTransactionWithGuarantors(withGuarantors: false)], 1, 15,
+        ));
+    });
+
+    $this->getJson('/api/patient-transactions')
+        ->assertOk()
+        ->assertJsonPath('data.0.id', 9)
+        ->assertJsonMissingPath('data.0.guarantors');
 });
