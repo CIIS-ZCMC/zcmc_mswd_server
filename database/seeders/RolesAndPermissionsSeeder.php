@@ -41,6 +41,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'patients.update',
         'patients.delete',
         'patients.merge',
+        // Hospital (HIS) patients — read-only browse of the emdPatients master
+        'hospital-patients.view',
         // Cases
         'cases.view',
         'cases.create',
@@ -84,7 +86,7 @@ class RolesAndPermissionsSeeder extends Seeder
     public const ROLES = [
         'Admin' => ['*'],
         'MSS Head' => [
-            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge',
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view', 'intake.create', 'intake.update', 'intake.finalize', 'intake.delete',
@@ -95,7 +97,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'panel.access',
         ],
         'Supervisor' => [
-            'patients.view', 'patients.create', 'patients.update', 'patients.merge',
+            'patients.view', 'patients.create', 'patients.update', 'patients.merge', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view', 'intake.create', 'intake.update', 'intake.finalize',
@@ -104,14 +106,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'panel.access',
         ],
         'Case Manager' => [
-            'patients.view', 'patients.create', 'patients.update',
+            'patients.view', 'patients.create', 'patients.update', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update',
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view', 'intake.create', 'intake.update',
             'reports.view',
         ],
         'Processor' => [
-            'patients.view',
+            'patients.view', 'hospital-patients.view',
             'cases.view',
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view', 'intake.create', 'intake.update',

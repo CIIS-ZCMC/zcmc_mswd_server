@@ -38,7 +38,7 @@ it('seeds every default role with the expected permission counts', function () {
 
     expect(Role::findByName('Processor')->permissions->pluck('name')->all())
         ->toEqualCanonicalizing([
-            'patients.view', 'cases.view',
+            'patients.view', 'hospital-patients.view', 'cases.view',
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view', 'intake.create', 'intake.update',
             'reports.view',
