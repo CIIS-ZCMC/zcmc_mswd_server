@@ -13,7 +13,7 @@ use Illuminate\Database\Eloquent\Model;
  */
 interface HospitalPatientRepositoryInterface
 {
-    public function paginate(?string $search = null, int $perPage = 15): LengthAwarePaginator;
+    public function paginate(?string $search = null, int $perPage = 15, ?int $page = null): LengthAwarePaginator;
 
     public function find(int|string $id): ?Model;
 

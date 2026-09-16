@@ -12,7 +12,7 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
 {
     public function __construct(protected HospitalPatient $model) {}
 
-    public function paginate(?string $search = null, int $perPage = 15): LengthAwarePaginator
+    public function paginate(?string $search = null, int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
         return $this->model->newQuery()
             ->with('personalData')
@@ -21,7 +21,7 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
                     ->orWhere('firstname', 'like', "%{$search}%");
             }))
             ->orderByDesc('PK_emdPatients')
-            ->paginate($perPage);
+            ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function find(int|string $id): ?Model
