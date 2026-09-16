@@ -18,6 +18,12 @@ interface HospitalPatientRepositoryInterface
     public function find(int|string $id): ?Model;
 
     /**
+     * A single patient with personal data and transactions (+guarantors) eager
+     * loaded, for the aggregate read. Null when the id matches no HIS patient.
+     */
+    public function findWithTransactions(int|string $id): ?Model;
+
+    /**
      * One-box lookup matching a term against the hospital number OR name.
      */
     public function search(string $term, int $limit = 20): Collection;

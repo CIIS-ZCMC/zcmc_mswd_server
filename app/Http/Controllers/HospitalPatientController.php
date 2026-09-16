@@ -25,10 +25,11 @@ class HospitalPatientController extends Controller
     }
 
     /**
-     * Find a single hospital patient by its HIS key (404 when not found).
+     * Find a single hospital patient by its HIS key, with personal data and
+     * transactions (+guarantors) in one payload (404 when not found).
      */
     public function show(int|string $id): HospitalPatientResource
     {
-        return HospitalPatientResource::make($this->service->find($id));
+        return HospitalPatientResource::make($this->service->findWithTransactions($id));
     }
 }

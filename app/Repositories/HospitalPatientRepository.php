@@ -15,17 +15,25 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
     public function paginate(?string $search = null, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model->newQuery()
+            ->with('personalData')
             ->when(filled($search), fn ($query) => $query->whereHas('personalData', function ($sub) use ($search) {
                 $sub->where('lastname', 'like', "%{$search}%")
                     ->orWhere('firstname', 'like', "%{$search}%");
             }))
-            ->orderBy('last_name')
+            ->orderByDesc('PK_emdPatients')
             ->paginate($perPage);
     }
 
     public function find(int|string $id): ?Model
     {
         return $this->model->newQuery()->with('personalData')->find($id);
+    }
+
+    public function findWithTransactions(int|string $id): ?Model
+    {
+        return $this->model->newQuery()
+            ->with(['personalData', 'transactions.guarantors.account.personalData'])
+            ->find($id);
     }
 
     /**

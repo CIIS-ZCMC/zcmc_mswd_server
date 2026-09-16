@@ -24,6 +24,16 @@ class HospitalPatientService
     }
 
     /**
+     * A single HIS patient with personal data and transactions (+guarantors) in
+     * one read (404 when the id matches no patient).
+     */
+    public function findWithTransactions(int|string $id): HospitalPatient
+    {
+        return $this->repository->findWithTransactions($id)
+            ?? throw (new ModelNotFoundException)->setModel(HospitalPatient::class, [$id]);
+    }
+
+    /**
      * Candidate HIS patients for a one-box search (name or hospital number).
      */
     public function search(string $term, int $limit = 20): Collection
