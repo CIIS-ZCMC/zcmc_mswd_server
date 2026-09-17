@@ -67,4 +67,24 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
             ->when(filled($date), fn ($query) => $query->whereDate('registrydate', $date))
             ->get();
     }
+
+    /**
+     * Every transaction belonging to one HIS patient, newest first.
+     *
+     * Takes the HIS surrogate key (emdPatients.PK_emdPatients), NOT the hospital
+     * number (patid) a local patient row stores — see
+     * PatientTransactionService::forHospitalNumber() for the bridge.
+     *
+     * Guarantors are loaded down to account.personalData because that is where a
+     * guarantor's name lives; stopping at `guarantors` yields rows that cannot
+     * name themselves.
+     */
+    public function getByPatientId(int $patientId): Collection
+    {
+        return $this->model->newQuery()
+            ->with(['patient.personalData', 'guarantors.account.personalData'])
+            ->where('FK_emdPatients', $patientId)
+            ->orderByDesc('PK_psPatRegisters')
+            ->get();
+    }
 }

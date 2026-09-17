@@ -3,14 +3,19 @@
 namespace App\Services;
 
 use App\Models\Bizbox\PatientTransaction;
+use App\Repositories\Contracts\HospitalPatientRepositoryInterface;
 use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
+use Illuminate\Database\QueryException;
 
 class PatientTransactionService
 {
-    public function __construct(protected PatientTransactionRepositoryInterface $repository) {}
+    public function __construct(
+        protected PatientTransactionRepositoryInterface $repository,
+        protected HospitalPatientRepositoryInterface $hospitalPatients,
+    ) {}
 
     public function paginate(?string $search = null, ?string $date = null, int $perPage = 15): LengthAwarePaginator
     {
@@ -45,5 +50,50 @@ class PatientTransactionService
         }
 
         return $transactions;
+    }
+
+    /**
+     * Every transaction belonging to one HIS patient, newest first.
+     *
+     * Takes the HIS surrogate key (emdPatients.PK_emdPatients). Callers holding
+     * a local patient have a hospital number instead — use forHospitalNumber().
+     */
+    public function getByPatientId(int $patientId): Collection
+    {
+        return $this->repository->getByPatientId($patientId);
+    }
+
+    /**
+     * Transactions for a hospital number (emdPatients.patid) — the value a local
+     * `patients.hospital_id` row holds, which is NOT the key the transaction
+     * table joins on. Resolves the number to the HIS surrogate key first, at the
+     * cost of one extra SQL Server query.
+     *
+     * Returns an empty collection rather than throwing on every miss: an unknown
+     * number, a patient with no visits, and an unreachable HIS are all ordinary
+     * on a screen that merely displays visits alongside other patient detail.
+     */
+    public function forHospitalNumber(int|string|null $hospitalNumber): Collection
+    {
+        if (blank($hospitalNumber)) {
+            return new Collection;
+        }
+
+        try {
+            $patient = $this->hospitalPatients
+                ->findByNameAndHospitalNumber(null, $hospitalNumber)
+                ->first();
+
+            return $patient === null
+                ? new Collection
+                : $this->repository->getByPatientId($patient->getKey());
+        } catch (QueryException $e) {
+            // The hospital's SQL Server is unreachable on every development
+            // machine and can blink in production. Logged, not surfaced — a
+            // patient page must not 500 because the HIS is down.
+            report($e);
+
+            return new Collection;
+        }
     }
 }

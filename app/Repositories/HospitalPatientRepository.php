@@ -15,7 +15,7 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
     public function paginate(?string $search = null, int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
         return $this->model->newQuery()
-            ->with('personalData')
+            ->with(['personalData', 'transactions'])
             ->when(filled($search), fn ($query) => $query->whereHas('personalData', function ($sub) use ($search) {
                 $sub->where('lastname', 'like', "%{$search}%")
                     ->orWhere('firstname', 'like', "%{$search}%");

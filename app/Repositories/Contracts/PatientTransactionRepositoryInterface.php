@@ -19,6 +19,12 @@ interface PatientTransactionRepositoryInterface
     public function find(int|string $id): ?Model;
 
     /**
+     * Every transaction belonging to one HIS patient, newest first. Takes the
+     * HIS surrogate key (emdPatients.PK_emdPatients), not the hospital number.
+     */
+    public function getByPatientId(int $patientId): Collection;
+
+    /**
      * One-box lookup matching a term against the hospital number OR name, optionally
      * narrowed to a single registration date (registrydate).
      */

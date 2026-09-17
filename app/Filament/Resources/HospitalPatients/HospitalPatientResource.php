@@ -4,11 +4,11 @@ namespace App\Filament\Resources\HospitalPatients;
 
 use App\Filament\Resources\HospitalPatients\Pages\ListHospitalPatients;
 use App\Filament\Resources\HospitalPatients\Pages\ViewHospitalPatient;
+use App\Filament\Resources\HospitalPatients\RelationManagers\PatientTransactionsRelationManager;
 use App\Models\Bizbox\HospitalPatient;
 use App\Services\HospitalPatientService;
 use BackedEnum;
 use Filament\Actions\Action;
-use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
@@ -17,7 +17,6 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
-use Illuminate\Database\QueryException;
 
 /**
  * Read-only browse surface over the hospital system (HIS) patient master
@@ -54,8 +53,6 @@ class HospitalPatientResource extends Resource
                 TextEntry::make('display_name')
                     ->label('Name')
                     ->state(fn (HospitalPatient $record) => $record->displayName()),
-            ]),
-            Section::make('Personal data')->columns(2)->schema([
                 TextEntry::make('first_name')
                     ->label('First name')
                     ->state(fn (HospitalPatient $record) => $record->personalData?->firstname)
@@ -85,20 +82,8 @@ class HospitalPatientResource extends Resource
                     ->state(fn (HospitalPatient $record) => $record->toPatientAttributes()['civil_status'] ?? null)
                     ->placeholder('—'),
             ]),
-            Section::make('Transactions')
-                ->description('Encounters recorded in the hospital system (HIS), newest first.')
-                ->schema([
-                    RepeatableEntry::make('transactions')
-                        ->hiddenLabel()
-                        ->state(fn (HospitalPatient $record) => static::transactionsFor($record))
-                        ->placeholder('No transactions found in the hospital system.')
-                        ->columns(3)
-                        ->schema([
-                            TextEntry::make('transaction_no')->label('Transaction no.'),
-                            TextEntry::make('registered_at')->label('Registered')->dateTime()->placeholder('—'),
-                            TextEntry::make('guarantors')->label('Guarantors')->placeholder('None on file'),
-                        ]),
-                ]),
+            // Transactions live in a dedicated relation manager tab
+            // (PatientTransactionsRelationManager) on the view page.
         ]);
     }
 
@@ -109,11 +94,11 @@ class HospitalPatientResource extends Resource
             // a live sqlsrv query, so the list survives an unreachable HIS and
             // is testable by mocking the repository.
             ->records(fn (int $page, int $recordsPerPage, ?string $search): LengthAwarePaginator => app(HospitalPatientService::class)
-                ->paginateForPanel($search, $recordsPerPage, $page))
+            ->paginateForPanel($search, $recordsPerPage, $page))
             ->columns([
                 TextColumn::make('hospital_number')
                     ->label('Hospital number')
-                    ->state(fn (HospitalPatient $record) => $record->hospital_number),
+                    ->state(fn (HospitalPatient $record) => $record->PK_emdPatients),
                 TextColumn::make('name')
                     ->label('Name')
                     ->state(fn (HospitalPatient $record) => $record->displayName())
@@ -134,34 +119,11 @@ class HospitalPatientResource extends Resource
             ]);
     }
 
-    /**
-     * The transactions repeater rows for one HIS patient. Reads the relation
-     * eager-loaded by the view page's resolveRecord() (personal data +
-     * transactions.guarantors.account.personalData in one read), so there is no
-     * second HIS round-trip. Wrapped defensively so a lazy-load against a down
-     * HIS degrades to no rows rather than a 500. Mirrors the mapping proven on
-     * the local patient's "Hospital visits" section.
-     *
-     * @return array<int, array<string, mixed>>
-     */
-    protected static function transactionsFor(HospitalPatient $record): array
+    public static function getRelations(): array
     {
-        try {
-            return $record->transactions
-                ->map(fn ($transaction) => [
-                    'transaction_no' => $transaction->getKey(),
-                    'registered_at' => $transaction->registrydate,
-                    'guarantors' => $transaction->guarantors
-                        ->map(fn ($guarantor) => $guarantor->account?->displayName())
-                        ->filter()
-                        ->join(', '),
-                ])
-                ->all();
-        } catch (QueryException $e) {
-            report($e);
-
-            return [];
-        }
+        return [
+            PatientTransactionsRelationManager::class,
+        ];
     }
 
     public static function getPages(): array

@@ -17,11 +17,13 @@ use App\Models\Patient;
 use App\Models\Sector;
 use App\Services\PatientMergeService;
 use App\Services\PatientService;
+use App\Services\PatientTransactionService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\TextInput;
+use Filament\Infolists\Components\RepeatableEntry;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -120,6 +122,34 @@ class PatientResource extends Resource
                 TextEntry::make('employer')->placeholder('—'),
                 TextEntry::make('monthly_income')->label('Monthly income')->money('PHP')->placeholder('—'),
             ]),
+            // Read straight from the hospital system rather than a relation:
+            // `patients.hospital_id` holds emdPatients.patid, while transactions
+            // join on PK_emdPatients, so no Eloquent relation spans the two.
+            Section::make('Hospital visits')
+                ->description('Encounters recorded in the hospital system (HIS), newest first.')
+                ->visible(fn (Patient $record): bool => filled($record->hospital_id))
+                ->schema([
+                    RepeatableEntry::make('hospital_transactions')
+                        ->hiddenLabel()
+                        ->state(fn (Patient $record) => app(PatientTransactionService::class)
+                            ->forHospitalNumber($record->hospital_id)
+                            ->map(fn ($transaction) => [
+                                'transaction_no' => $transaction->getKey(),
+                                'registered_at' => $transaction->registrydate,
+                                'guarantors' => $transaction->guarantors
+                                    ->map(fn ($guarantor) => $guarantor->account?->displayName())
+                                    ->filter()
+                                    ->join(', '),
+                            ])
+                            ->all())
+                        ->placeholder('No visits found in the hospital system.')
+                        ->columns(3)
+                        ->schema([
+                            TextEntry::make('transaction_no')->label('Transaction no.'),
+                            TextEntry::make('registered_at')->label('Registered')->dateTime()->placeholder('—'),
+                            TextEntry::make('guarantors')->label('Guarantors')->placeholder('None on file'),
+                        ]),
+                ]),
         ]);
     }
 
