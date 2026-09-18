@@ -79,19 +79,27 @@ class HospitalPatient extends Model
         $data = $this->personalData;
 
         return array_filter([
-            'hospital_id' => $this->patid,
+            'id' => $data?->PK_psPersonalData,
             'first_name' => $this->clean($data?->firstname),
             'last_name' => $this->clean($data?->lastname),
             'middle_name' => $this->clean($data?->middlename),
             'extension_name' => $this->clean($data?->suffixname),
             'sex' => match (strtolower(trim((string) $data?->gender))) {
-                'male' => 'male',
-                'female' => 'female',
+                'male' => 'Male',
+                'female' => 'Female',
                 default => null,
             },
-            'birthdate' => $data?->birthdate
-                ? substr((string) $data->birthdate, 0, 10)
-                : null,
+            'birthdate' => $data?->birthdate ? substr((string) $data->birthdate, 0, 10) : null,
+            'birthplace' => $data?->birthplace,
+            'death_date' => $data?->deathdate,
+            'death_time' => $data?->deathtime,
+            'citizenship' => $data?->citizenship,
+            'nationality' => $data?->nationality,
+            'occupation' => $data?->occupation,
+            'permanent_address' => $data?->empaddress,
+            'email' => $data?->empemail,
+            'telephone' => $data?->emptelefax,
+            'birthtime' => $data?->birthtime,
             'civil_status' => static::CIVIL_STATUSES[strtoupper(trim((string) $data?->civilstatus))] ?? null,
         ], fn ($value) => filled($value));
     }
