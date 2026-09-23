@@ -90,7 +90,7 @@ class HospitalPatient extends Model
                 default => null,
             },
             'birthdate' => $data?->birthdate ? substr((string) $data->birthdate, 0, 10) : null,
-            'birthplace' => $data?->birthplace,
+            'place_of_birth' => $data?->birthplace,
             'death_date' => $data?->deathdate,
             'death_time' => $data?->deathtime,
             'citizenship' => $data?->citizenship,
@@ -98,7 +98,7 @@ class HospitalPatient extends Model
             'occupation' => $data?->occupation,
             'permanent_address' => $data?->empaddress,
             'email' => $data?->empemail,
-            'telephone' => $data?->emptelefax,
+            'contact_number' => $data?->emptelefax,
             'birthtime' => $data?->birthtime,
             'civil_status' => static::CIVIL_STATUSES[strtoupper(trim((string) $data?->civilstatus))] ?? null,
         ], fn ($value) => filled($value));

@@ -34,6 +34,11 @@ class Patient extends Model
         'municipality',
         'province',
         'contact_number',
+        'email',
+        'citizenship',
+        'death_date',
+        'death_time',
+        'birthtime',
         'religion',
         'nationality',
         'place_of_birth',
@@ -49,6 +54,7 @@ class Patient extends Model
     {
         return [
             'birthdate' => 'date',
+            'death_date' => 'date',
             'is_incapacitated' => 'boolean',
             'monthly_income' => 'decimal:2',
         ];
