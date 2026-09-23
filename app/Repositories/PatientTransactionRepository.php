@@ -15,24 +15,36 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
     public function paginate(?string $search = null, ?string $date = null, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model->newQuery()
-            ->with('patient.personalData')
-            ->when(filled($search), fn ($query) => $query->whereHas('patient.personalData', function ($sub) use ($search) {
-                $sub->where('lastname', 'like', "%{$search}%")
-                    ->orWhere('firstname', 'like', "%{$search}%");
-            }))
+            ->with(['patient.personalData',
+                    'guarantors',
+                    'hospitalPlan',
+                    'discount',
+                    'serviceType',
+                    'caseType',
+                    'membership',
+                    'transactionType',
+                    'admissionResult',
+                    ])
+            ->when(filled($search), fn ($query) => $query->where(fn ($group) => $group
+                ->whereHas('patient', fn ($sub) => $sub->where('patid', 'like', "%{$search}%"))
+                ->orWhereHas('patient.personalData', fn ($sub) => $sub
+                    ->where('lastname', 'like', "%{$search}%")
+                    ->orWhere('firstname', 'like', "%{$search}%"))))
             ->when(filled($date), fn ($query) => $query->whereDate('registrydate', $date))
             ->orderByDesc('PK_psPatRegisters')
             ->paginate($perPage);
     }
 
     /**
-     * Guarantors are eager-loaded here and NOT in paginate()/search(): a list
-     * row never shows them, and search() feeds a typeahead where the extra
-     * SQL Server round-trips would be felt on every keystroke.
+     * Guarantors and the lookup vocabularies are eager-loaded here and NOT in
+     * paginate()/search(): a list row never shows them, and search() feeds a
+     * typeahead where the extra SQL Server round-trips would be felt on every
+     * keystroke.
      */
     public function find(int|string $id): ?Model
     {
         return $this->model->newQuery()
+            ->withLookups()
             ->with(['patient.personalData', 'guarantors.account.personalData'])
             ->find($id);
     }
@@ -78,10 +90,15 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
      * Guarantors are loaded down to account.personalData because that is where a
      * guarantor's name lives; stopping at `guarantors` yields rows that cannot
      * name themselves.
+     *
+     * Lookups load here too: this feeds the patient's transactions tab, which
+     * shows per-encounter detail, and eager-loading costs one query per relation
+     * regardless of how many transactions come back.
      */
     public function getByPatientId(int $patientId): Collection
     {
         return $this->model->newQuery()
+            ->withLookups()
             ->with(['patient.personalData', 'guarantors.account.personalData'])
             ->where('FK_emdPatients', $patientId)
             ->orderByDesc('PK_psPatRegisters')

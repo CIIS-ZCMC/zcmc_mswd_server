@@ -17,10 +17,14 @@ There is no client half. Nothing in `zcmc_mswd_client` consumes these endpoints.
 |-------|------|--------|
 | A. HIS guarantor lookup | server | ☑ done — 475 passed, 2026-09-15 (#106) |
 | B. PatientTransaction rename + guarantor payload | server | ☑ done — 477 passed, 2026-09-15 (#108) |
+| C.1. FK relations to the lookup vocabularies | server | ☑ done — 542 passed, 2026-09-21 |
 | C. Verified transaction fields | server | ☐ blocked — needs the real Bizbox schema |
 
 **Phases A and B are complete. Phase C cannot start until someone dumps the
-schema from a machine that reaches the hospital's SQL Server.**
+schema from a machine that reaches the hospital's SQL Server. §C.1 is carved out
+of it as its own phase because it can ship before that dump — it wires the
+lookup relations behind a schema guard, so a wrong column name degrades to a
+missing JSON key instead of a 500.**
 
 ---
 
@@ -168,6 +172,125 @@ so a later stray `with()` cannot silently undo this decision.
 
 ---
 
+## §C.1 — FK relations to the lookup vocabularies ☐
+
+`psPatRegisters` carries eleven foreign keys beyond `FK_emdPatients`. Six of the
+tables they point at are now mapped as models with their own read stacks
+(`app/Models/Bizbox/`, `/api/hospital-*` routes); a seventh, `TransactionType`,
+is mapped but has no stack. None of them is reachable from a transaction —
+`PatientTransactionResource` already names the relations in `whenLoaded()` calls
+and they do not exist, so every one of those keys is silently absent from every
+payload.
+
+This phase declares the relations, loads them where they are wanted, and does it
+without waiting on §C.
+
+**§C.1.1 — The relation map.** Eight `belongsTo` on `PatientTransaction`, owner
+key always explicit so the mapping reads without chasing `$primaryKey`:
+
+| FK column on `psPatRegisters` | Relation | Target model | Target PK |
+|---|---|---|---|
+| `FK_emdPatients` | `patient()` | `HospitalPatient` | `PK_emdPatients` |
+| `FK_mscHospPlan` | `hospitalPlan()` | `HospitalPlan` | `PK_mscHospPlan` |
+| `FK_mscDiscounts` | `discount()` | `Discount` | `PK_mscDiscounts` |
+| `FK_mscServiceType` | `serviceType()` | `ServiceType` | `PK_mscServiceType` |
+| `FK_mscHospCaseTypes` | `caseType()` | `HospitalCaseType` | `PK_mscHospCaseTypes` |
+| `FK_mscPHICMemberships` | `membership()` | `Membership` | `PK_mscPHICMemberships` |
+| `FK_mscHospTranTypes` | `transactionType()` | `TransactionType` | `PK_mscHospTranTypes` |
+| `FK_mscAdmResults` | `admissionResult()` | `AdmissionResult` | `PK_mscAdmResults` |
+
+`patient()` already exists. Three further FK columns — `FK_mscMedSocialService`,
+`FK_mscPatientType`, `FK_ASUDischarge` — have no model and stay raw scalars on
+the resource; building stacks for them is not in this phase.
+
+**§C.1.2 — `transactionType()`, not `transaction()`.** The resource currently
+reads `$this->transaction`. On a class called `PatientTransaction` that name says
+"the transaction of this transaction", and `PatientGuarantors::transaction()`
+already uses the word for the encounter itself. Same reasoning as decision 3
+above: the qualified name is the one that survives contact with Bizbox's
+vocabulary.
+
+**§C.1.3 — Eager-loading is the part that can break.** Declaring a relation costs
+nothing; no query fires until something loads it, and `whenLoaded()` omits the
+key. `with()` is different — it selects the FK column, and a wrong column name is
+`Invalid column name` against a database no test can reach.
+
+Per the constraint above, only `PK_psPatRegisters`, `FK_emdPatients` and
+`registrydate` are proven. All eight FK names in §C.1.1 are read off Bizbox's own
+comments, not off a schema dump. So the loading goes behind a guard on the model:
+
+```php
+/** FK column => relation, for the lookup vocabularies. */
+public const LOOKUPS = ['FK_mscHospPlan' => 'hospitalPlan', /* ... */];
+
+public function scopeWithLookups($query)
+{
+    $columns = Cache::rememberForever(
+        'bizbox.psPatRegisters.columns',
+        fn () => Schema::connection('sqlsrv')->getColumnListing($this->getTable()),
+    );
+
+    return $query->with(array_values(array_intersect_key(
+        self::LOOKUPS, array_flip($columns),
+    )));
+}
+```
+
+One cached metadata query, and a wrong guess degrades to a missing JSON key
+rather than a 500 — the same net `whenHas()` gives the resources, and under the
+same rule: a net, not a licence to guess. **When §C lands, delete the scope and
+inline a plain `with([...])` of the verified names.**
+
+**§C.1.4 — Where the lookups load.** Extends the §B.3 reasoning from guarantors
+to vocabularies:
+
+| Repository method | Lookups | Why |
+|---|---|---|
+| `find()` | yes | The detail read; already loads `guarantors.account.personalData`. |
+| `getByPatientId()` | yes | Feeds the patient transactions tab, which shows per-encounter detail. Cost is per-query, not per-row. |
+| `paginate()` | no | A list row shows a name and a date. Add only when a list column needs a vocabulary. |
+| `search()` | never | Filament typeahead, one call per keystroke — where extra SQL Server round-trips are felt. |
+
+**§C.1.5 — Resource wiring fixed in the same change.** The relations make four
+existing mistakes in `PatientTransactionResource` live, so they are repaired
+here: `discounts` renders `HospitalPlanResource` (should be `DiscountResource`);
+`transaction_type` renders `HospitalCaseTypeResource` (needs the
+`TransactionTypeResource` added by §C.1.6); `admission_result` renders
+`HospitalCaseTypeResource` (should be `AdmissionResultResource`); and the key
+`sevice_type` is misspelled.
+
+**§C.1.6 — Two asymmetries closed first.** `ServiceType` has a repository,
+service, controller and route but no row in the `his_lookups` dataset in
+`tests/Feature/HisLookupTest.php` — the one HIS lookup endpoint with no coverage.
+`TransactionType` has a model and nothing else, so `transactionType()` would
+point at a model with no read stack behind it. Both are prerequisites.
+
+**§C.1.7 — Tests, all mocked.** No test touches `sqlsrv`; `forceFill()` +
+`setRelation()` per the established pattern.
+
+- One assertion per lookup that the nested resource appears on `find()`.
+- Every lookup key **absent** from `paginate()` and `search()` payloads, the way
+  the guarantor absence test locks §B.3 in — so a later stray `with()` cannot
+  silently undo §C.1.4.
+- A null FK yields a null relation, not a missing model. `whenLoaded()` alone is
+  not enough here: `Resource::make(null)` reaches `getKey()` on nothing, so the
+  resource routes every lookup through one null-safe private helper.
+
+Six tests in `HospitalPatientAggregateTest`, `HospitalPatientFilamentTest` and
+`IntakeHospitalSearchTest` fail on this branch. They fail identically at the
+merge-base (verified in a clean worktree at `a127ad0`) and are not caused by this
+phase — they turn on `hospital_number` / `hospital_id` and want their own fix.
+
+**Order of work:** §C.1.6 → relations and scope → §C.1.5 → `withLookups()` on the
+two methods → tests.
+
+**Considered and deferred:** these are small static vocabularies and each already
+has a repository and service, so caching them outright and resolving IDs in the
+resource would drop the round-trips to zero. `belongsTo` first — it is the
+conventional shape, and it is reversible.
+
+---
+
 ## §C — Verified transaction fields ☐ blocked
 
 **Blocked on schema access.** Tracked as #112.
@@ -177,7 +300,10 @@ so a later stray `with()` cannot silently undo this decision.
 ```sql
 SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, IS_NULLABLE
 FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME IN ('psPatRegisters', 'psGntrLedgers', 'psDataCenter')
+WHERE TABLE_NAME IN ('psPatRegisters', 'psGntrLedgers', 'psDataCenter',
+                     'mscAdmResults', 'mscDiscounts', 'mscHospCaseTypes',
+                     'mscHospPlan', 'mscHospTranTypes', 'mscPHICMemberships',
+                     'mscServiceType')
 ORDER BY TABLE_NAME, ORDINAL_POSITION;
 ```
 
@@ -186,6 +312,8 @@ ORDER BY TABLE_NAME, ORDINAL_POSITION;
 - Admission detail on `PatientTransactionResource`: ward, admission and discharge
   dates, disposition, attending physician — whichever of those exist.
 - Ledger detail on `PatientGuarantorResource`: amount, coverage, status.
+- Replace `PatientTransaction::scopeWithLookups()` (§C.1.3) with a plain `with()`
+  of the verified FK names, and correct any of the eight that the dump disproves.
 - Extend the existing mocked tests with the real column names.
 - Confirm no N+1 across `guarantors.account.personalData` against a live
   connection by reading the `sqlsrv` query log — the eager-loading in §B.3 is

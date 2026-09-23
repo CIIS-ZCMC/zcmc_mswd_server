@@ -1,6 +1,7 @@
 <?php
 
 use App\Http\Controllers\ActivityLogController;
+use App\Http\Controllers\AdmissionResultController;
 use App\Http\Controllers\AmendSocialCaseController;
 use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
@@ -23,13 +24,16 @@ use App\Http\Controllers\CompleteFollowUpController;
 use App\Http\Controllers\DestroyWatcherWaiverController;
 use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
+use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinalizeIntakeSheetController;
 use App\Http\Controllers\FinalizeSocialCaseController;
 use App\Http\Controllers\FindHospitalPatientController;
 use App\Http\Controllers\FindPatientTransactionController;
 use App\Http\Controllers\GuarantorController;
+use App\Http\Controllers\HospitalCaseTypeController;
 use App\Http\Controllers\HospitalPatientController;
+use App\Http\Controllers\HospitalPlanController;
 use App\Http\Controllers\IntakeSheetHistoryController;
 use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
@@ -39,6 +43,7 @@ use App\Http\Controllers\LoginController;
 use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MatchIntakePatientsController;
 use App\Http\Controllers\MeController;
+use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\MergePatientController;
 use App\Http\Controllers\MswdClassificationMatrixController;
 use App\Http\Controllers\MyCaseloadController;
@@ -71,6 +76,7 @@ use App\Http\Controllers\RestorePatientController;
 use App\Http\Controllers\RevokeWatcherPassController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
+use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\SocialCaseController;
 use App\Http\Controllers\SocialCasePdfController;
 use App\Http\Controllers\SocialCaseReportController;
@@ -79,6 +85,7 @@ use App\Http\Controllers\StoreWatcherWaiverController;
 use App\Http\Controllers\SubmitIntakeSheetController;
 use App\Http\Controllers\SubmitSocialCaseController;
 use App\Http\Controllers\SyncUserRolesController;
+use App\Http\Controllers\TransactionTypeController;
 use App\Http\Controllers\UnassignCaretakerController;
 use App\Http\Controllers\UnifiedIntakeSheetController;
 use App\Http\Controllers\UnmergePatientController;
@@ -154,6 +161,15 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('patient-transactions/find', FindPatientTransactionController::class);
         Route::get('patient-transactions/{id}', [PatientTransactionController::class, 'show']);
         Route::get('patient-transactions/{id}/guarantors', [PatientGuarantorController::class, 'index']);
+
+        // Hospital (SQL Server) lookup vocabularies — read-only.
+        Route::get('hospital-admission-results', [AdmissionResultController::class, 'index']);
+        Route::get('hospital-discounts', [DiscountController::class, 'index']);
+        Route::get('hospital-case-types', [HospitalCaseTypeController::class, 'index']);
+        Route::get('hospital-plans', [HospitalPlanController::class, 'index']);
+        Route::get('hospital-memberships', [MembershipController::class, 'index']);
+        Route::get('hospital-service-types', [ServiceTypeController::class, 'index']);
+        Route::get('hospital-transaction-types', [TransactionTypeController::class, 'index']);
     });
 
     // Patient records
