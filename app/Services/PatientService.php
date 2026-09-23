@@ -3,6 +3,7 @@
 namespace App\Services;
 
 use App\DTOs\PatientDto;
+use App\Models\Bizbox\HospitalPatient;
 use App\Models\Patient;
 use App\Models\User;
 use App\Repositories\Contracts\PatientRepositoryInterface;
@@ -55,6 +56,46 @@ class PatientService
     public function update(Patient $patient, PatientDto $dto): Patient
     {
         return $this->repository->update($patient, $dto->toArray());
+    }
+
+    /**
+     * Create or refresh the local Patient for a hospital (HIS) record, keyed on
+     * hospital_id. HIS is the source of truth for demographics, so an existing
+     * row is updated in place; blank HIS fields are already stripped by
+     * toPatientAttributes(), so they never clobber a local value.
+     *
+     * The lookup is trashed-inclusive: hospital_id is UNIQUE and a soft-deleted
+     * row still holds it, so an archived patient is restored and refreshed
+     * rather than colliding on insert.
+     */
+    public function storeFromHospitalPatient(HospitalPatient $hospitalPatient, ?int $sectorId = null): Patient
+    {
+        $attributes = $hospitalPatient->toPatientAttributes();
+
+        if ($sectorId !== null) {
+            $attributes['sector_id'] = $sectorId;
+        }
+
+        if (blank($attributes['hospital_id'] ?? null)) {
+            throw ValidationException::withMessages([
+                'hospital_id' => 'The hospital record has no hospital number to import against.',
+            ]);
+        }
+
+        $patient = Patient::withTrashed()->firstOrNew(['hospital_id' => $attributes['hospital_id']]);
+        $patient->fill($attributes);
+
+        if ($patient->trashed()) {
+            $patient->restore();
+        }
+
+        if (! $patient->exists) {
+            $patient->mswd_id ??= $this->generateMswdId();
+        }
+
+        $patient->save();
+
+        return $patient;
     }
 
     /**

@@ -34,6 +34,7 @@ use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\HospitalCaseTypeController;
 use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\HospitalPlanController;
+use App\Http\Controllers\ImportHospitalPatientController;
 use App\Http\Controllers\IntakeSheetHistoryController;
 use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
@@ -135,6 +136,10 @@ Route::middleware('auth:sanctum')->group(function () {
     // Patients (per-action permissions declared on the controller)
     Route::apiResource('patients', PatientController::class);
     Route::post('patients/{id}/restore', RestorePatientController::class)->middleware('permission:patients.delete');
+
+    // Import a hospital (HIS) patient into the local patients table (create/refresh by hospital_id).
+    Route::post('hospital-patients/{id}/import', ImportHospitalPatientController::class)
+        ->middleware('permission:patients.create');
 
     Route::middleware('permission:patients.merge')->group(function () {
         Route::post('patients/{patient}/merge', MergePatientController::class);
