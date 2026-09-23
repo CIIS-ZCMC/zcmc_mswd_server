@@ -4,6 +4,7 @@ use App\Models\Activity;
 use App\Models\Assessment;
 use App\Models\AssessmentExpense;
 use App\Models\AssistantType;
+use App\Models\CaseHospitalTransaction;
 use App\Models\CaseModel;
 use App\Models\CaseProgressNote;
 use App\Models\CaseWatcher;
@@ -101,6 +102,10 @@ dataset('resolvers', [
     ]), true, false],
 
     'CaseModel' => [fn () => test()->case, true, true],
+    'CaseHospitalTransaction' => [fn () => CaseHospitalTransaction::create([
+        'case_id' => test()->case->id, 'his_transaction_id' => 9,
+        'snapshot' => [], 'linked_by' => test()->worker->id, 'linked_at' => now(),
+    ]), true, true],
     'CaseWatcher' => [fn () => CaseWatcher::create([
         'case_id' => test()->case->id, 'name' => 'Maria', 'relationship' => 'spouse',
         'added_by' => test()->worker->id,
@@ -189,7 +194,7 @@ it('covers every model that declares a resolver', function () {
     // The models the dataset above exercises, one row each.
     $covered = collect([
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
-        'PatientMerge', 'CaseModel', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
+        'PatientMerge', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document', 'UnifiedIntakeSheet',
     ])->sort()->values();

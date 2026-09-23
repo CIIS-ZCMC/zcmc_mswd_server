@@ -13,6 +13,7 @@ use App\Http\Controllers\CancelAssistanceController;
 use App\Http\Controllers\CaseActivitiesController;
 use App\Http\Controllers\CaseDocumentController;
 use App\Http\Controllers\CaseHistoryController;
+use App\Http\Controllers\CaseHospitalTransactionController;
 use App\Http\Controllers\CaseModelController;
 use App\Http\Controllers\CaseProfileController;
 use App\Http\Controllers\CaseProgressNoteController;
@@ -221,6 +222,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Case management (per-action permissions declared on the controller)
     Route::apiResource('cases', CaseModelController::class);
     Route::post('cases/{id}/restore', RestoreCaseController::class)->middleware('permission:cases.delete');
+
+    // Hospital (HIS) encounters attached to a case (per-action permissions on the controller).
+    Route::get('cases/{case}/hospital-transactions', [CaseHospitalTransactionController::class, 'index']);
+    Route::post('cases/{case}/hospital-transactions', [CaseHospitalTransactionController::class, 'store']);
+    Route::get('case-hospital-transactions/{caseHospitalTransaction}', [CaseHospitalTransactionController::class, 'show']);
+    Route::delete('case-hospital-transactions/{caseHospitalTransaction}', [CaseHospitalTransactionController::class, 'destroy']);
 
     Route::middleware('permission:cases.view')->group(function () {
         Route::get('cases/{case}/profile', CaseProfileController::class);

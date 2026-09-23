@@ -11,6 +11,7 @@ use App\Filament\Resources\Cases\RelationManagers\AssessmentsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\DiagnosticsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\HistoryRelationManager;
+use App\Filament\Resources\Cases\RelationManagers\HospitalTransactionsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\InterventionsRelationManager;
 use App\Models\CaseModel;
 use App\Models\Patient;
@@ -146,6 +147,7 @@ class CaseResource extends Resource
             ActivitiesRelationManager::class,
             AssessmentsRelationManager::class,
             DiagnosticsRelationManager::class,
+            HospitalTransactionsRelationManager::class,
             InterventionsRelationManager::class,
             DocumentsRelationManager::class,
             HistoryRelationManager::class,

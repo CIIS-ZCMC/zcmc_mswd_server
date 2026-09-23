@@ -81,6 +81,11 @@ class CaseModel extends Model
         return $this->hasMany(Diagnostic::class, 'case_id');
     }
 
+    public function hospitalTransactions(): HasMany
+    {
+        return $this->hasMany(CaseHospitalTransaction::class, 'case_id');
+    }
+
     public function assessments(): HasMany
     {
         return $this->hasMany(Assessment::class, 'case_id');
