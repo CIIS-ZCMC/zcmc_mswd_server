@@ -5,6 +5,7 @@ use App\Http\Controllers\AdmissionResultController;
 use App\Http\Controllers\AmendSocialCaseController;
 use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
+use App\Http\Controllers\AssessPatientTransactionController;
 use App\Http\Controllers\AssessmentExpenseController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
@@ -228,6 +229,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('cases/{case}/hospital-transactions', [CaseHospitalTransactionController::class, 'store']);
     Route::get('case-hospital-transactions/{caseHospitalTransaction}', [CaseHospitalTransactionController::class, 'show']);
     Route::delete('case-hospital-transactions/{caseHospitalTransaction}', [CaseHospitalTransactionController::class, 'destroy']);
+
+    // Assess a HIS encounter from the transaction side (per-action permissions on the controller).
+    Route::get('patient-transactions/{id}/cases', [AssessPatientTransactionController::class, 'cases']);
+    Route::post('patient-transactions/{id}/assess', [AssessPatientTransactionController::class, 'assess']);
 
     Route::middleware('permission:cases.view')->group(function () {
         Route::get('cases/{case}/profile', CaseProfileController::class);

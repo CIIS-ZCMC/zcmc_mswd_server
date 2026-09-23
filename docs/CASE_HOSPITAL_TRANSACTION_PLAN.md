@@ -10,10 +10,11 @@ MSWD-side link + snapshot persist.
 
 | Phase | Side | Status |
 |-------|------|--------|
-| A. Case ↔ transaction link, snapshot, attach/detach workflow | server | ☐ |
-| B. Transaction-side "assess" action + Diagnostic prefill from HIS | server | ☐ deferred |
+| A. Case ↔ transaction link, snapshot, attach/detach workflow | server | ☑ done — 583 passed, 2026-09-23 (#140) |
+| B.1 Transaction-side "assess" action (attach to an existing case) | server | ☐ |
+| B.2 Diagnostic prefill from HIS | server | ☐ blocked on §C |
 
-**Phase A ships on its own.** Phase B is deferred and depends on
+**Phase A shipped (#140).** B.1 ships on its own. B.2 is blocked on
 `TRANSACTION_MODULE_PLAN.md` §C verifying the HIS diagnosis columns.
 
 ---
@@ -148,15 +149,71 @@ A **"Hospital encounters"** relation manager on `CaseResource`:
 
 ---
 
-## Phase B — deferred
+## Phase B.1 — Transaction-side "assess" action
 
-- **Transaction-side "assess" action**: from the HIS patient's transactions tab,
-  an action that ensures the local `Patient` exists (reusing
-  `PatientService::storeFromHospitalPatient()`), lets the worker pick/create a
-  case, then attaches — the same `attach()` service, reached from the HIS side.
-- **Diagnostic prefill from HIS**: once `TRANSACTION_MODULE_PLAN.md` §C verifies
-  `finaldiagnosis`/`impression`, prefill a local `Diagnostic` from the encounter
-  at attach time for the worker to confirm/edit.
+Reach Phase A's `attach()` from the HIS side: standing on a patient's encounter,
+a worker picks one of that patient's **existing open cases** and attaches the
+encounter to it. No new persistence — this is a second entry point onto the
+Phase A service, plus a way to list the candidate cases.
+
+**Confirmed decisions:** entry = **Filament action + API**; case choice = **pick
+an existing open case only** (creating a case stays its own flow); **no
+auto-import** — the encounter's patient must already be a local `Patient` (it is,
+whenever it owns a case).
+
+### B.1.1 — Service (extend `CaseHospitalTransactionService`)
+- `localPatientFor(PatientTransaction $transaction): ?Patient` — resolve the
+  encounter's patient number (`transaction->patient->patid`) to a local
+  `Patient` by `hospital_id` (null when not imported).
+- `assignableCasesFor(PatientTransaction $transaction): Collection` — that
+  patient's **open/ongoing** cases (`CaseModel::CASELOAD_DEFAULT_STATUSES`),
+  newest first; empty when the patient isn't local or has no open case.
+- Assessing is then just `attach($case, $transaction->getKey(), $worker)` — its
+  existing guards already enforce the patient match and single-case rule.
+
+### B.1.2 — API
+- `GET /api/patient-transactions/{id}/cases` — `cases.view`; the open cases the
+  encounter can be assessed into (`CaseModelResource` collection). Empty (200,
+  `[]`) when the patient isn't local / has no open case — a normal state the UI
+  turns into "import the patient and open a case first."
+- `POST /api/patient-transactions/{id}/assess` `{ case_id }` — `cases.update`;
+  resolves the encounter live and the case, calls `attach()`, returns
+  `CaseHospitalTransactionResource` (**201**). Validation: `case_id`
+  `required|integer|exists:cases,id`; the `attach()` guards reject a case whose
+  patient is not this encounter's patient. Single-action
+  `AssessPatientTransactionController` (or two small controllers) with
+  per-action permissions.
+
+### B.1.3 — Filament
+An **"Assess"** record action on the HIS `PatientTransactionsRelationManager`
+(the HospitalPatient view's transactions tab):
+- a `Select` of `assignableCasesFor($record)` (labelled `case_code` — patient
+  name), required;
+- on submit → `attach($case, $record->getKey(), auth()->user())`, notify, and
+  surface the integrity-guard messages;
+- visible on `cases.update`; when the patient has no open case the select is
+  empty with a helper text pointing at case creation.
+- (The case-side attach from A.6 is unchanged — this is the mirror surface.)
+
+### B.1.4 — Tests (extend `CaseHospitalTransactionTest.php`)
+- `assignableCasesFor` returns only the patient's open/ongoing cases; empty for a
+  non-local patient or one with only closed cases.
+- `GET /patient-transactions/{id}/cases` lists them; `[]` when none.
+- `POST /patient-transactions/{id}/assess` attaches (201) and is idempotent;
+  rejects a `case_id` whose patient differs; permission gate (`cases.update`).
+
+### B.1.5 — Verification
+- `php artisan test --filter=CaseHospitalTransaction` green; full suite stays green.
+- Manual: on a HIS patient whose local record has an open case, the transactions
+  tab's **Assess** action lists that case and links the encounter (visible under
+  the case's "Hospital encounters" tab).
+
+## Phase B.2 — Diagnostic prefill from HIS (blocked on §C)
+
+Once `TRANSACTION_MODULE_PLAN.md` §C verifies `finaldiagnosis`/`impression`,
+prefill a local `Diagnostic` from the encounter at attach time for the worker to
+confirm/edit. Deferred — the snapshot already carries those fields as reference
+only, so nothing is lost by waiting; the local `Diagnostic` stays authoritative.
 
 ## Non-goals
 - Copying HIS clinical data into the database (diagnosis, guarantors stay read-live).

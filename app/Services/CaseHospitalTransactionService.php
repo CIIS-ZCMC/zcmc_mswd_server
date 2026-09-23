@@ -6,7 +6,9 @@ use App\Http\Resources\PatientTransactionResource;
 use App\Models\Bizbox\PatientTransaction;
 use App\Models\CaseHospitalTransaction;
 use App\Models\CaseModel;
+use App\Models\Patient;
 use App\Models\User;
+use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
@@ -61,6 +63,42 @@ class CaseHospitalTransactionService
 
             return $link;
         });
+    }
+
+    /**
+     * The local patient a HIS encounter maps to (by hospital number), or null
+     * when that patient has not been imported.
+     */
+    public function localPatientFor(PatientTransaction $transaction): ?Patient
+    {
+        $hospitalNumber = $transaction->patient?->patid;
+
+        if (blank($hospitalNumber)) {
+            return null;
+        }
+
+        return Patient::where('hospital_id', $hospitalNumber)->first();
+    }
+
+    /**
+     * The open/ongoing cases a HIS encounter can be assessed into: the encounter
+     * patient's own live cases, newest first. Empty when the patient is not local
+     * or has no open case — a normal state, not an error.
+     *
+     * @return Collection<int, CaseModel>
+     */
+    public function assignableCasesFor(PatientTransaction $transaction): Collection
+    {
+        $patient = $this->localPatientFor($transaction);
+
+        if ($patient === null) {
+            return new Collection;
+        }
+
+        return $patient->cases()
+            ->whereIn('status', CaseModelService::CASELOAD_DEFAULT_STATUSES)
+            ->orderByDesc('date_opened')
+            ->get();
     }
 
     public function detach(CaseHospitalTransaction $link, User $worker): void

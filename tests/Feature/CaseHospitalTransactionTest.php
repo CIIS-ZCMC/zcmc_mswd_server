@@ -199,3 +199,71 @@ it('refuses to attach without cases.update', function () {
     $this->postJson("/api/cases/{$case->id}/hospital-transactions", ['his_transaction_id' => 9])
         ->assertForbidden();
 });
+
+// ---- B.1: transaction-side assess ----
+
+it('lists only the encounter patient\'s open cases as assignable', function () {
+    mockTransactionFind(chtHisTransaction());
+    $patient = patientWithHospitalId($this->sector->id);
+    $open = caseForPatient($patient, $this->worker);
+    $closed = caseForPatient($patient, $this->worker);
+    $closed->update(['status' => CaseModel::STATUS_CLOSED]);
+
+    $assignable = app(CaseHospitalTransactionService::class)
+        ->assignableCasesFor(chtHisTransaction());
+
+    expect($assignable->pluck('id')->all())->toBe([$open->id]);
+});
+
+it('returns an empty assignable list for a patient with no local record', function () {
+    // Encounter patient number 999 has no local patient.
+    $assignable = app(CaseHospitalTransactionService::class)
+        ->assignableCasesFor(chtHisTransaction(patid: 999));
+
+    expect($assignable)->toHaveCount(0);
+});
+
+it('lists assignable cases through the API', function () {
+    Sanctum::actingAs(chtUser());
+    mockTransactionFind(chtHisTransaction());
+    $case = caseForPatient(patientWithHospitalId($this->sector->id), $this->worker);
+
+    $this->getJson('/api/patient-transactions/9/cases')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.id', $case->id);
+});
+
+it('assesses a transaction into a picked case through the API', function () {
+    Sanctum::actingAs(chtUser());
+    mockTransactionFind(chtHisTransaction());
+    $case = caseForPatient(patientWithHospitalId($this->sector->id), $this->worker);
+
+    $this->postJson('/api/patient-transactions/9/assess', ['case_id' => $case->id])
+        ->assertCreated()
+        ->assertJsonPath('data.his_transaction_id', 9)
+        ->assertJsonPath('data.case_id', $case->id);
+
+    expect(CaseHospitalTransaction::where('case_id', $case->id)->where('his_transaction_id', 9)->exists())
+        ->toBeTrue();
+});
+
+it('rejects assessing into a case whose patient differs', function () {
+    Sanctum::actingAs(chtUser());
+    mockTransactionFind(chtHisTransaction(patid: 777));
+    // Case belongs to a different hospital patient (778).
+    $case = caseForPatient(patientWithHospitalId($this->sector->id, 778), $this->worker);
+
+    $this->postJson('/api/patient-transactions/9/assess', ['case_id' => $case->id])
+        ->assertStatus(422);
+
+    expect(CaseHospitalTransaction::count())->toBe(0);
+});
+
+it('refuses to assess without cases.update', function () {
+    Sanctum::actingAs(User::factory()->create(['role' => 'Social Worker'])); // no permissions
+    $case = caseForPatient(patientWithHospitalId($this->sector->id), $this->worker);
+
+    $this->postJson('/api/patient-transactions/9/assess', ['case_id' => $case->id])
+        ->assertForbidden();
+});
