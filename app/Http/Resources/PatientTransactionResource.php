@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Enums\RegistryStatus;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -37,7 +38,7 @@ class PatientTransactionResource extends JsonResource
             'patient_transaction_type' => $this->pattrantype,
             'patient_category' => $this->patientcateg,
 
-            'registration_status' => $this->registrystatus, 
+            'registration_status' => $this->registryStatus(),
             'registration_date' => $this->registrydate,
 
             // FK_ASUDischarge,
@@ -90,5 +91,21 @@ class PatientTransactionResource extends JsonResource
             $relation,
             fn () => $this->{$relation} === null ? null : $resource::make($this->{$relation}),
         );
+    }
+
+    /**
+     * The encounter status as { code, label }, or null when the HIS row carries
+     * no recognised registrystatus code.
+     *
+     * @return array{code: string, label: string}|null
+     */
+    private function registryStatus(): ?array
+    {
+        $status = RegistryStatus::tryFrom((string) $this->registrystatus);
+
+        return $status === null ? null : [
+            'code' => $status->value,
+            'label' => $status->label(),
+        ];
     }
 }
