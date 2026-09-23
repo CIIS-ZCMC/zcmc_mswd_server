@@ -36,6 +36,8 @@ use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\HospitalPlanController;
 use App\Http\Controllers\ImportHospitalPatientController;
 use App\Http\Controllers\IntakeSheetHistoryController;
+use App\Http\Controllers\ShowHospitalPatientImportBatchController;
+use App\Http\Controllers\StoreHospitalPatientImportBatchController;
 use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionTypeController;
@@ -140,6 +142,12 @@ Route::middleware('auth:sanctum')->group(function () {
     // Import a hospital (HIS) patient into the local patients table (create/refresh by hospital_id).
     Route::post('hospital-patients/{id}/import', ImportHospitalPatientController::class)
         ->middleware('permission:patients.create');
+
+    // Bulk import: queue many HIS patients, then poll the batch for per-row outcomes.
+    Route::post('hospital-patients/import-batch', StoreHospitalPatientImportBatchController::class)
+        ->middleware('permission:patients.create');
+    Route::get('hospital-patients/import-batches/{importBatch}', ShowHospitalPatientImportBatchController::class)
+        ->middleware('permission:patients.view');
 
     Route::middleware('permission:patients.merge')->group(function () {
         Route::post('patients/{patient}/merge', MergePatientController::class);

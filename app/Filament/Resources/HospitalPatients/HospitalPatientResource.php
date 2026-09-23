@@ -6,10 +6,15 @@ use App\Filament\Resources\HospitalPatients\Pages\ListHospitalPatients;
 use App\Filament\Resources\HospitalPatients\Pages\ViewHospitalPatient;
 use App\Filament\Resources\HospitalPatients\RelationManagers\PatientTransactionsRelationManager;
 use App\Models\Bizbox\HospitalPatient;
+use App\Models\Sector;
+use App\Services\HospitalPatientImportService;
 use App\Services\HospitalPatientService;
 use BackedEnum;
 use Filament\Actions\Action;
+use Filament\Actions\BulkAction;
+use Filament\Forms\Components\Select;
 use Filament\Infolists\Components\TextEntry;
+use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
 use Filament\Schemas\Components\Section;
 use Filament\Schemas\Schema;
@@ -17,6 +22,7 @@ use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Collection;
 
 /**
  * Read-only browse surface over the hospital system (HIS) patient master
@@ -116,7 +122,42 @@ class HospitalPatientResource extends Resource
                 Action::make('view')
                     ->icon(Heroicon::OutlinedEye)
                     ->url(fn (HospitalPatient $record) => static::getUrl('view', ['record' => $record->getKey()])),
+            ])
+            ->toolbarActions([
+                static::importSelectedBulkAction(),
             ]);
+    }
+
+    /**
+     * Queue a bulk import of the selected HIS patients into the local patients
+     * table. Reads the selected surrogate keys (PK_emdPatients) and hands them to
+     * the batch service; the work runs on the queue and reports per-row outcomes.
+     */
+    protected static function importSelectedBulkAction(): BulkAction
+    {
+        return BulkAction::make('importSelected')
+            ->label('Import to local patients')
+            ->icon(Heroicon::OutlinedArrowDownTray)
+            ->visible(fn (): bool => auth()->user()?->can('patients.create') ?? false)
+            ->schema([
+                Select::make('sector_id')
+                    ->label('Sector')
+                    ->helperText('Optional — applied to every imported patient.')
+                    ->options(fn () => Sector::orderBy('name')->pluck('name', 'id')),
+            ])
+            ->action(function (Collection $records, array $data): void {
+                $batch = app(HospitalPatientImportService::class)->importByIds(
+                    $records->map(fn (HospitalPatient $record) => $record->getKey())->all(),
+                    $data['sector_id'] ?? null,
+                    auth()->user(),
+                );
+
+                Notification::make()
+                    ->title("Import queued ({$batch->total} patients)")
+                    ->body('Track progress under import batch #'.$batch->id.'.')
+                    ->success()
+                    ->send();
+            });
     }
 
     public static function getRelations(): array

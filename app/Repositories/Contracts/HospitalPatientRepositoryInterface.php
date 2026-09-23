@@ -18,6 +18,14 @@ interface HospitalPatientRepositoryInterface
     public function find(int|string $id): ?Model;
 
     /**
+     * Every HIS patient in the given set of surrogate keys (PK_emdPatients),
+     * personal data eager loaded, for a bulk import.
+     *
+     * @param  list<int|string>  $ids
+     */
+    public function findManyByKeys(array $ids): Collection;
+
+    /**
      * A single patient with personal data and transactions (+guarantors) eager
      * loaded, for the aggregate read. Null when the id matches no HIS patient.
      */
