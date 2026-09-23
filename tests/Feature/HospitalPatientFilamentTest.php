@@ -56,7 +56,7 @@ function hpPanelPatient(int $key = 5, int $patid = 777, bool $withTransactions =
         ]));
 
         $guarantor = (new PatientGuarantors)->forceFill(['PK_TRXNO' => 1, 'FK_faCustomers' => 900]);
-        $guarantor->setRelation('account', $account);
+        $guarantor->setRelation('guarantor', $account);
 
         $transaction = (new PatientTransaction)->forceFill([
             'PK_psPatRegisters' => 9, 'FK_emdPatients' => $key, 'registrydate' => '2026-09-14 08:30:00',

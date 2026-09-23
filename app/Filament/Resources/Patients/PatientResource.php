@@ -137,7 +137,7 @@ class PatientResource extends Resource
                                 'transaction_no' => $transaction->getKey(),
                                 'registered_at' => $transaction->registrydate,
                                 'guarantors' => $transaction->guarantors
-                                    ->map(fn ($guarantor) => $guarantor->account?->displayName())
+                                    ->map(fn ($guarantor) => $guarantor->guarantor?->displayName())
                                     ->filter()
                                     ->join(', '),
                             ])
