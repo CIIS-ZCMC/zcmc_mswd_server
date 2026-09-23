@@ -20,13 +20,37 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
                 $sub->where('lastname', 'like', "%{$search}%")
                     ->orWhere('firstname', 'like', "%{$search}%");
             }))
-            ->orderByDesc('PK_emdPatients')
+            // Alphabetical by name, which lives on the joined HIS personal-data
+            // table; the join stays a LEFT one so nameless records still list.
+            ->leftJoin('psPersonaldata', 'psPersonaldata.PK_psPersonalData', '=', 'emdPatients.PK_emdPatients')
+            ->select('emdPatients.*')
+            ->orderBy('psPersonaldata.lastname')
+            ->orderBy('psPersonaldata.firstname')
             ->paginate($perPage, ['*'], 'page', $page);
     }
 
     public function find(int|string $id): ?Model
     {
         return $this->model->newQuery()->with('personalData')->find($id);
+    }
+
+    /**
+     * Every HIS patient in the given set of surrogate keys, personal data eager
+     * loaded, for a bulk import. Keyed lookup only — the caller reconciles which
+     * requested ids came back.
+     *
+     * @param  list<int|string>  $ids
+     */
+    public function findManyByKeys(array $ids): Collection
+    {
+        if ($ids === []) {
+            return new Collection;
+        }
+
+        return $this->model->newQuery()
+            ->with('personalData')
+            ->whereIn('PK_emdPatients', $ids)
+            ->get();
     }
 
     public function findWithTransactions(int|string $id): ?Model
