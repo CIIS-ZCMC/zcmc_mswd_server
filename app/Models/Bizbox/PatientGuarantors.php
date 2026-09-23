@@ -29,7 +29,7 @@ class PatientGuarantors extends Model
     /**
      * The psDataCenter entity standing as guarantor on this ledger row.
      */
-    public function account()
+    public function guarantor()
     {
         return $this->belongsTo(DataCenter::class, 'FK_faCustomers', 'PK_psDatacenter');
     }

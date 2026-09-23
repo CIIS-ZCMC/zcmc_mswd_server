@@ -46,7 +46,7 @@ function fakeGuarantor(int $key, int $registrationId, string $last, string $firs
         'FK_psPatRegisters' => $registrationId,
         'FK_faCustomers' => 1000 + $key,
     ]);
-    $ledger->setRelation('account', $account);
+    $ledger->setRelation('guarantor', $account);
 
     return $ledger;
 }
@@ -65,10 +65,10 @@ it('returns every guarantor recorded against a registration', function () {
         ->assertOk()
         ->assertJsonCount(2, 'data')
         ->assertJsonPath('data.0.id', 1)
-        ->assertJsonPath('data.0.registration_id', 9)
-        ->assertJsonPath('data.0.guarantor_id', 1001)
-        ->assertJsonPath('data.0.guarantor_name', 'Santos, Pedro M')
-        ->assertJsonPath('data.1.guarantor_name', 'Cruz, Maria');
+        ->assertJsonPath('data.0.transaction_id', 9)
+        ->assertJsonPath('data.0.guarantor_details.guarantor_id', 1001)
+        ->assertJsonPath('data.0.guarantor_details.guarantor_name', 'Santos, Pedro M')
+        ->assertJsonPath('data.1.guarantor_details.guarantor_name', 'Cruz, Maria');
 });
 
 it('returns an empty list — not a 404 — when the admission has no guarantor', function () {
@@ -135,8 +135,8 @@ it('nests guarantors on a single transaction', function () {
     $this->getJson('/api/patient-transactions/9')
         ->assertOk()
         ->assertJsonPath('data.id', 9)
-        ->assertJsonCount(1, 'data.guarantors')
-        ->assertJsonPath('data.guarantors.0.guarantor_name', 'Cruz, Maria');
+        ->assertJsonCount(1, 'data.patient_guarantors')
+        ->assertJsonPath('data.patient_guarantors.0.guarantor_details.guarantor_name', 'Cruz, Maria');
 });
 
 it('omits guarantors from the transaction list', function () {
@@ -153,5 +153,5 @@ it('omits guarantors from the transaction list', function () {
     $this->getJson('/api/patient-transactions')
         ->assertOk()
         ->assertJsonPath('data.0.id', 9)
-        ->assertJsonMissingPath('data.0.guarantors');
+        ->assertJsonMissingPath('data.0.patient_guarantors');
 });

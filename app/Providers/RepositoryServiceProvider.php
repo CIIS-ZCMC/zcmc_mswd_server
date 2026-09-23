@@ -2,12 +2,14 @@
 
 namespace App\Providers;
 
+use App\Repositories\AdmissionResultRepository;
 use App\Repositories\AssessmentExpenseRepository;
 use App\Repositories\AssessmentRepository;
 use App\Repositories\AssistantTypeRepository;
 use App\Repositories\CaseActivityRepository;
 use App\Repositories\CaseModelRepository;
 use App\Repositories\CaseProgressNoteRepository;
+use App\Repositories\Contracts\AdmissionResultRepositoryInterface;
 use App\Repositories\Contracts\AssessmentExpenseRepositoryInterface;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use App\Repositories\Contracts\AssistantTypeRepositoryInterface;
@@ -16,11 +18,15 @@ use App\Repositories\Contracts\CaseModelRepositoryInterface;
 use App\Repositories\Contracts\CaseProgressNoteRepositoryInterface;
 use App\Repositories\Contracts\DiagnosticReportRepositoryInterface;
 use App\Repositories\Contracts\DiagnosticRepositoryInterface;
+use App\Repositories\Contracts\DiscountRepositoryInterface;
 use App\Repositories\Contracts\DocumentRepositoryInterface;
 use App\Repositories\Contracts\GuarantorRepositoryInterface;
+use App\Repositories\Contracts\HospitalCaseTypeRepositoryInterface;
 use App\Repositories\Contracts\HospitalPatientRepositoryInterface;
+use App\Repositories\Contracts\HospitalPlanRepositoryInterface;
 use App\Repositories\Contracts\InterventionRepositoryInterface;
 use App\Repositories\Contracts\InterventionTypeRepositoryInterface;
+use App\Repositories\Contracts\MembershipRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceLogRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceReportRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceRepositoryInterface;
@@ -34,15 +40,21 @@ use App\Repositories\Contracts\PatientWatcherRepositoryInterface;
 use App\Repositories\Contracts\PermissionRepositoryInterface;
 use App\Repositories\Contracts\RoleRepositoryInterface;
 use App\Repositories\Contracts\SectorRepositoryInterface;
+use App\Repositories\Contracts\ServiceTypeRepositoryInterface;
+use App\Repositories\Contracts\TransactionTypeRepositoryInterface;
 use App\Repositories\Contracts\UnifiedIntakeSheetRepositoryInterface;
 use App\Repositories\Contracts\UserRepositoryInterface;
 use App\Repositories\DiagnosticReportRepository;
 use App\Repositories\DiagnosticRepository;
+use App\Repositories\DiscountRepository;
 use App\Repositories\DocumentRepository;
 use App\Repositories\GuarantorRepository;
+use App\Repositories\HospitalCaseTypeRepository;
 use App\Repositories\HospitalPatientRepository;
+use App\Repositories\HospitalPlanRepository;
 use App\Repositories\InterventionRepository;
 use App\Repositories\InterventionTypeRepository;
+use App\Repositories\MembershipRepository;
 use App\Repositories\PatientAssistanceLogRepository;
 use App\Repositories\PatientAssistanceReportRepository;
 use App\Repositories\PatientAssistanceRepository;
@@ -56,6 +68,8 @@ use App\Repositories\PatientWatcherRepository;
 use App\Repositories\PermissionRepository;
 use App\Repositories\RoleRepository;
 use App\Repositories\SectorRepository;
+use App\Repositories\ServiceTypeRepository;
+use App\Repositories\TransactionTypeRepository;
 use App\Repositories\UnifiedIntakeSheetRepository;
 use App\Repositories\UserRepository;
 use Illuminate\Support\ServiceProvider;
@@ -94,6 +108,13 @@ class RepositoryServiceProvider extends ServiceProvider
         HospitalPatientRepositoryInterface::class => HospitalPatientRepository::class,
         PatientTransactionRepositoryInterface::class => PatientTransactionRepository::class,
         PatientGuarantorRepositoryInterface::class => PatientGuarantorRepository::class,
+        AdmissionResultRepositoryInterface::class => AdmissionResultRepository::class,
+        DiscountRepositoryInterface::class => DiscountRepository::class,
+        HospitalCaseTypeRepositoryInterface::class => HospitalCaseTypeRepository::class,
+        HospitalPlanRepositoryInterface::class => HospitalPlanRepository::class,
+        MembershipRepositoryInterface::class => MembershipRepository::class,
+        ServiceTypeRepositoryInterface::class => ServiceTypeRepository::class,
+        TransactionTypeRepositoryInterface::class => TransactionTypeRepository::class,
     ];
 
     /**
