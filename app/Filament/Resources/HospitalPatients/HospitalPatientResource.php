@@ -98,7 +98,7 @@ class HospitalPatientResource extends Resource
             ->columns([
                 TextColumn::make('hospital_number')
                     ->label('Hospital number')
-                    ->state(fn (HospitalPatient $record) => $record->PK_emdPatients),
+                    ->state(fn (HospitalPatient $record) => $record->hospital_number),
                 TextColumn::make('name')
                     ->label('Name')
                     ->state(fn (HospitalPatient $record) => $record->displayName())
