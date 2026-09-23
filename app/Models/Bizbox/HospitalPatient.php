@@ -79,14 +79,14 @@ class HospitalPatient extends Model
         $data = $this->personalData;
 
         return array_filter([
-            'id' => $data?->PK_psPersonalData,
+            'hospital_id' => $this->patid,
             'first_name' => $this->clean($data?->firstname),
             'last_name' => $this->clean($data?->lastname),
             'middle_name' => $this->clean($data?->middlename),
             'extension_name' => $this->clean($data?->suffixname),
             'sex' => match (strtolower(trim((string) $data?->gender))) {
-                'male' => 'Male',
-                'female' => 'Female',
+                'male' => 'male',
+                'female' => 'female',
                 default => null,
             },
             'birthdate' => $data?->birthdate ? substr((string) $data->birthdate, 0, 10) : null,
