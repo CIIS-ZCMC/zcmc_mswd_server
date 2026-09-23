@@ -29,7 +29,7 @@ class PatientTransactionsRelationManager extends RelationManager
         return $table
             // Eager-load the guarantor chain so the Guarantors column is one
             // query, not one per row.
-            ->modifyQueryUsing(fn (Builder $query) => $query->with('guarantors.account.personalData'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->with('guarantors.guarantor.personalData'))
             ->columns([
                 TextColumn::make('PK_psPatRegisters')
                     ->label('Transaction no.'),
@@ -41,7 +41,7 @@ class PatientTransactionsRelationManager extends RelationManager
                 TextColumn::make('guarantors')
                     ->label('Guarantors')
                     ->state(fn (PatientTransaction $record) => $record->guarantors
-                        ->map(fn ($guarantor) => $guarantor->account?->displayName())
+                        ->map(fn ($guarantor) => $guarantor->guarantor?->displayName())
                         ->filter()
                         ->join(', '))
                     ->placeholder('None on file'),

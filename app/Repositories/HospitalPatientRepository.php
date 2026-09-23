@@ -32,7 +32,7 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
     public function findWithTransactions(int|string $id): ?Model
     {
         return $this->model->newQuery()
-            ->with(['personalData', 'transactions.guarantors.account.personalData'])
+            ->with(['personalData', 'transactions.guarantors.guarantor.personalData'])
             ->find($id);
     }
 

@@ -32,7 +32,7 @@ function hisTransaction(int $key, int $patientKey): PatientTransaction
     ]));
 
     $guarantor = (new PatientGuarantors)->forceFill(['PK_TRXNO' => 1, 'FK_faCustomers' => 900]);
-    $guarantor->setRelation('account', $account);
+    $guarantor->setRelation('guarantor', $account);
 
     $transaction = (new PatientTransaction)->forceFill([
         'PK_psPatRegisters' => $key,
@@ -63,7 +63,7 @@ it('resolves a hospital number to the HIS key before fetching transactions', fun
 
     expect($transactions)->toHaveCount(2)
         ->and($transactions->first()->getKey())->toBe(9)
-        ->and($transactions->first()->guarantors->first()->account->displayName())->toBe('Cruz, Maria');
+        ->and($transactions->first()->guarantors->first()->guarantor->displayName())->toBe('Cruz, Maria');
 });
 
 it('returns nothing when the hospital number matches no HIS patient', function () {

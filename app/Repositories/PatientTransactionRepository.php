@@ -15,16 +15,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
     public function paginate(?string $search = null, ?string $date = null, int $perPage = 15): LengthAwarePaginator
     {
         return $this->model->newQuery()
-            ->with(['patient.personalData',
-                    'guarantors',
-                    'hospitalPlan',
-                    'discount',
-                    'serviceType',
-                    'caseType',
-                    'membership',
-                    'transactionType',
-                    'admissionResult',
-                    ])
+            ->with('patient.personalData')
             ->when(filled($search), fn ($query) => $query->where(fn ($group) => $group
                 ->whereHas('patient', fn ($sub) => $sub->where('patid', 'like', "%{$search}%"))
                 ->orWhereHas('patient.personalData', fn ($sub) => $sub
@@ -45,7 +36,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
     {
         return $this->model->newQuery()
             ->withLookups()
-            ->with(['patient.personalData', 'guarantors.account.personalData'])
+            ->with(['patient.personalData', 'guarantors.guarantor.personalData'])
             ->find($id);
     }
 
@@ -87,8 +78,8 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
      * number (patid) a local patient row stores — see
      * PatientTransactionService::forHospitalNumber() for the bridge.
      *
-     * Guarantors are loaded down to account.personalData because that is where a
-     * guarantor's name lives; stopping at `guarantors` yields rows that cannot
+     * Guarantors are loaded down to guarantor.personalData because that is where
+     * a guarantor's name lives; stopping at `guarantors` yields rows that cannot
      * name themselves.
      *
      * Lookups load here too: this feeds the patient's transactions tab, which
@@ -99,7 +90,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
     {
         return $this->model->newQuery()
             ->withLookups()
-            ->with(['patient.personalData', 'guarantors.account.personalData'])
+            ->with(['patient.personalData', 'guarantors.guarantor.personalData'])
             ->where('FK_emdPatients', $patientId)
             ->orderByDesc('PK_psPatRegisters')
             ->get();
