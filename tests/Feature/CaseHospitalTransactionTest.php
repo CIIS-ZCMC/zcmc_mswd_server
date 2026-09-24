@@ -62,7 +62,7 @@ function caseForPatient(Patient $patient, User $worker): CaseModel
 }
 
 /** A HIS transaction fixture with patient + one guarantor (no sqlsrv). */
-function chtHisTransaction(int $key = 9, int $patid = 777): PatientTransaction
+function chtHisTransaction(int $key = 9, int $patid = 777, ?string $finalDiagnosis = 'Pneumonia'): PatientTransaction
 {
     $hp = (new HospitalPatient)->forceFill(['PK_emdPatients' => 5, 'patid' => $patid]);
 
@@ -73,6 +73,7 @@ function chtHisTransaction(int $key = 9, int $patid = 777): PatientTransaction
         'registrydate' => '2026-09-14 08:30:00',
         'dischargeno' => 'D-1',
         'impression' => 'For observation',
+        'finaldiagnosis' => $finalDiagnosis,
     ]);
     $transaction->setRelation('patient', $hp);
 
@@ -266,4 +267,48 @@ it('refuses to assess without cases.update', function () {
 
     $this->postJson('/api/patient-transactions/9/assess', ['case_id' => $case->id])
         ->assertForbidden();
+});
+
+// ---- B.2: prefill a local Diagnostic from the HIS final diagnosis ----
+
+it('prefills a local diagnostic from the HIS final diagnosis on attach', function () {
+    mockTransactionFind(chtHisTransaction()); // finaldiagnosis = 'Pneumonia'
+    $case = caseForPatient(patientWithHospitalId($this->sector->id), $this->worker);
+
+    app(CaseHospitalTransactionService::class)->attach($case, 9, $this->worker);
+
+    $diagnostic = App\Models\Diagnostic::where('case_id', $case->id)->first();
+
+    expect($diagnostic)->not->toBeNull()
+        ->and($diagnostic->diagnosis_name)->toBe('Pneumonia')
+        ->and($diagnostic->diagnosis_description)->toBe('For observation')
+        ->and($diagnostic->created_by)->toBe($this->worker->id);
+
+    expect(CaseActivity::where('case_id', $case->id)
+        ->where('activity_type', 'diagnosis_added')->exists())->toBeTrue();
+});
+
+it('does not prefill a diagnostic when the encounter has no final diagnosis', function () {
+    mockTransactionFind(chtHisTransaction(finalDiagnosis: null));
+    $case = caseForPatient(patientWithHospitalId($this->sector->id), $this->worker);
+
+    app(CaseHospitalTransactionService::class)->attach($case, 9, $this->worker);
+
+    expect(App\Models\Diagnostic::where('case_id', $case->id)->count())->toBe(0);
+});
+
+it('does not duplicate a diagnostic of the same name across encounters', function () {
+    // Two different encounters for the same patient, same final diagnosis.
+    $this->mock(PatientTransactionRepositoryInterface::class, function ($mock) {
+        $mock->shouldReceive('find')->andReturnUsing(
+            fn ($id) => chtHisTransaction(key: (int) $id, patid: 777, finalDiagnosis: 'Pneumonia'),
+        );
+    });
+    $case = caseForPatient(patientWithHospitalId($this->sector->id), $this->worker);
+    $service = app(CaseHospitalTransactionService::class);
+
+    $service->attach($case, 9, $this->worker);
+    $service->attach($case, 10, $this->worker);
+
+    expect(App\Models\Diagnostic::where('case_id', $case->id)->count())->toBe(1);
 });

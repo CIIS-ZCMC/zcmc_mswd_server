@@ -295,6 +295,14 @@ conventional shape, and it is reversible.
 
 **Blocked on schema access.** Tracked as #112.
 
+**Partial verification (2026-09-24):** the `psPatRegisters` **column names** were
+confirmed against the live database (the resource's mapping matches). The
+diagnosis columns `finaldiagnosis` and `impression` are real and are now consumed
+by `CASE_HOSPITAL_TRANSACTION_PLAN.md` Phase B.2. Still outstanding for §C: the
+column **data types / nullability**, and the `psGntrLedgers` and `msc*` lookup
+tables — so the scope below and the `scopeWithLookups()` guard remain until a full
+dump lands.
+
 **Unblocking step** — run against a machine that reaches the Bizbox HIS:
 
 ```sql

@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\DTOs\DiagnosticDto;
 use App\Http\Resources\PatientTransactionResource;
 use App\Models\Bizbox\PatientTransaction;
 use App\Models\CaseHospitalTransaction;
@@ -17,6 +18,7 @@ class CaseHospitalTransactionService
     public function __construct(
         protected PatientTransactionService $transactions,
         protected CaseModelService $cases,
+        protected DiagnosticService $diagnostics,
     ) {}
 
     /**
@@ -61,8 +63,50 @@ class CaseHospitalTransactionService
                 "Hospital encounter #{$transaction->getKey()} attached",
             );
 
+            $this->prefillDiagnostic($case, $transaction, $worker);
+
             return $link;
         });
+    }
+
+    /**
+     * Seed a local Diagnostic from the encounter's verified HIS diagnosis
+     * (psPatRegisters.finaldiagnosis), so the worker starts from the hospital's
+     * final diagnosis rather than retyping it. Runs only on a fresh attach.
+     *
+     * Skipped when the encounter carries no final diagnosis, or when the case
+     * already has a diagnostic of that name — the local Diagnostic stays
+     * authoritative and is never overwritten; the worker confirms/edits from here.
+     */
+    private function prefillDiagnostic(CaseModel $case, PatientTransaction $transaction, User $worker): void
+    {
+        $name = $this->clean($transaction->finaldiagnosis);
+
+        if ($name === null || $case->diagnostics()->where('diagnosis_name', $name)->exists()) {
+            return;
+        }
+
+        $this->diagnostics->create(DiagnosticDto::fromArray([
+            'case_id' => $case->id,
+            'created_by' => $worker->id,
+            'diagnosis_name' => $name,
+            'diagnosis_description' => $this->clean($transaction->impression),
+            'diagnosis_date' => $transaction->dischdate ?: ($transaction->registrydate ?: now()->toDateTimeString()),
+        ]));
+
+        $this->cases->logMilestone(
+            $case,
+            $worker,
+            'diagnosis_added',
+            "Diagnosis prefilled from hospital encounter #{$transaction->getKey()}: {$name}",
+        );
+    }
+
+    private function clean(?string $value): ?string
+    {
+        $value = trim((string) $value);
+
+        return $value === '' ? null : $value;
     }
 
     /**
