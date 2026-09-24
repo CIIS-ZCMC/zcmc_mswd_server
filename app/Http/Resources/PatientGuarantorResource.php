@@ -27,11 +27,11 @@ class PatientGuarantorResource extends JsonResource
                 'guarantor_name' => $this->guarantor?->displayName(),
             ]),
 
-            'post_date' => $this->postdate,
-            'amount' => $this->amount,
+            'post_date' => $this->whenHas('postdate'),
+            'amount' => $this->whenHas('amount'),
 
-            'isGlPost' => $this->glpostflag,
-            'gl_post_date' => $this->glpostdate,
+            'isGlPost' => $this->whenHas('glpostflag'),
+            'gl_post_date' => $this->whenHas('glpostdate'),
         ];
     }
 }

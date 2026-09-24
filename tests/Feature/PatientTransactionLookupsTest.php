@@ -87,7 +87,7 @@ it('renders a loaded but empty lookup as null rather than failing', function (st
 })->with('transaction_lookups');
 
 it('omits every lookup key from the paginated list', function (string $key) {
-    // Locks §C.1.4 in: a later stray withLookups() on paginate() would add
+    // Locks §C.1.4 in: a later stray with(...LOOKUPS) on paginate() would add
     // round-trips to a list row that shows none of this.
     Sanctum::actingAs(lookupUser());
 

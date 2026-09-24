@@ -21,9 +21,7 @@ class AdmissionResultResource extends JsonResource
     {
         return [
             'id' => $this->getKey(),
-            // Label columns are unproven until the Bizbox schema is dumped:
-            // 'code' => $this->whenHas('...'),
-            // 'description' => $this->whenHas('...'),
+            'description' => $this->whenHas('description'),
         ];
     }
 }

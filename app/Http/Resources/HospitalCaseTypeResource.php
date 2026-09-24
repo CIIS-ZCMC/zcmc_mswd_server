@@ -21,7 +21,7 @@ class HospitalCaseTypeResource extends JsonResource
     {
         return [
             'id' => $this->getKey(),
-            'description' => $this->description,
+            'description' => $this->whenHas('description'),
         ];
     }
 }

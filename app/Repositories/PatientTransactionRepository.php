@@ -35,8 +35,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
     public function find(int|string $id): ?Model
     {
         return $this->model->newQuery()
-            ->withLookups()
-            ->with(['patient.personalData', 'guarantors.guarantor.personalData'])
+            ->with(['patient.personalData', 'guarantors.guarantor.personalData', ...PatientTransaction::LOOKUPS])
             ->find($id);
     }
 
@@ -89,8 +88,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
     public function getByPatientId(int $patientId): Collection
     {
         return $this->model->newQuery()
-            ->withLookups()
-            ->with(['patient.personalData', 'guarantors.guarantor.personalData'])
+            ->with(['patient.personalData', 'guarantors.guarantor.personalData', ...PatientTransaction::LOOKUPS])
             ->where('FK_emdPatients', $patientId)
             ->orderByDesc('PK_psPatRegisters')
             ->get();
