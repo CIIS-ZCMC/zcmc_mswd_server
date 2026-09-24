@@ -66,6 +66,20 @@ it('lists the lookup rows', function (string $url, string $interface, string $mo
         ->assertJsonPath('data.0.id', 1);
 })->with('his_lookups');
 
+it('exposes the description label when the row carries it', function (string $url, string $interface, string $model, string $pk) {
+    Sanctum::actingAs(hisLookupUser());
+
+    $row = (new $model)->forceFill([$pk => 1, 'description' => 'Sample label']);
+
+    $this->mock($interface, function ($mock) use ($row) {
+        $mock->shouldReceive('all')->andReturn(new Collection([$row]));
+    });
+
+    $this->getJson($url)
+        ->assertOk()
+        ->assertJsonPath('data.0.description', 'Sample label');
+})->with('his_lookups');
+
 it('returns an empty list rather than a 500 when the HIS is unreachable', function (string $url, string $interface) {
     Sanctum::actingAs(hisLookupUser());
 

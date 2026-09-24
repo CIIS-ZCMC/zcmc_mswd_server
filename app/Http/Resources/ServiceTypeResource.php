@@ -21,9 +21,9 @@ class ServiceTypeResource extends JsonResource
     {
         return [
             'id' => $this->getKey(),
-            'description' => $this->description,
-            'sub_description' => $this->remarks,
-            'is_active' => $this->isActive,
+            'description' => $this->whenHas('description'),
+            'sub_description' => $this->whenHas('remarks'),
+            'is_active' => $this->whenHas('isActive'),
         ];
     }
 }

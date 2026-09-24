@@ -54,7 +54,7 @@ class PatientTransactionResource extends JsonResource
 
             'patient_number' => $this->patientno,
             'doctors_impression' => $this->impression,
-            'discharge_daignosis' => $this->dischdiagnosis,
+            'discharge_diagnosis' => $this->dischdiagnosis,
             'final_diagnosis_code' => $this->finaldiagcode,
             'final_diagnosis' => $this->finaldiagnosis,
 
@@ -62,7 +62,7 @@ class PatientTransactionResource extends JsonResource
 
             'isCancel' => $this->cancelflag,
             'cancel_date' => $this->canceldate,
-            'cancel_remakrs' => $this->cancelremarks,
+            'cancel_remarks' => $this->cancelremarks,
 
             'isHemodialysis' => $this->isHemodialysis,
             'mss_classification' => $this->FK_mscMedSocialService, // Patient Socioeconomic Classification System

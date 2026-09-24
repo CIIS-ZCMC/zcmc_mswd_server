@@ -21,8 +21,8 @@ class HospitalPlanResource extends JsonResource
     {
         return [
             'id' => $this->getKey(),
-            'description' => $this->description,
-            'is_active' => $this->isActive,
+            'description' => $this->whenHas('description'),
+            'is_active' => $this->whenHas('isActive'),
         ];
     }
 }

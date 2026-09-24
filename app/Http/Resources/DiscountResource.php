@@ -21,8 +21,8 @@ class DiscountResource extends JsonResource
     {
         return [
             'id' => $this->getKey(),
-            'description' => $this->description,
-            'is_active' => $this->active,
+            'description' => $this->whenHas('description'),
+            'is_active' => $this->whenHas('active'),
         ];
     }
 }

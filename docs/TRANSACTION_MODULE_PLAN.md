@@ -18,13 +18,14 @@ There is no client half. Nothing in `zcmc_mswd_client` consumes these endpoints.
 | A. HIS guarantor lookup | server | ☑ done — 475 passed, 2026-09-15 (#106) |
 | B. PatientTransaction rename + guarantor payload | server | ☑ done — 477 passed, 2026-09-15 (#108) |
 | C.1. FK relations to the lookup vocabularies | server | ☑ done — 542 passed, 2026-09-21 |
-| C. Verified transaction fields | server | ☐ blocked — needs the real Bizbox schema |
+| C. Verified transaction fields | server | ☑ done — 2026-09-24 |
 
-**Phases A and B are complete. Phase C cannot start until someone dumps the
-schema from a machine that reaches the hospital's SQL Server. §C.1 is carved out
-of it as its own phase because it can ship before that dump — it wires the
-lookup relations behind a schema guard, so a wrong column name degrades to a
-missing JSON key instead of a 500.**
+**All phases complete.** §C closed once the `psPatRegisters` column names were
+confirmed against the live database and the maintainer confirmed the Bizbox
+model/resource column names are authoritative: the eight lookup FKs are eager-
+loaded with a plain `with()` (the `scopeWithLookups` guard removed), and the
+label/ledger columns read through `whenHas()` so a stray name degrades to an
+omitted key. Column **data types** were never dumped and were not needed.
 
 ---
 
@@ -172,7 +173,7 @@ so a later stray `with()` cannot silently undo this decision.
 
 ---
 
-## §C.1 — FK relations to the lookup vocabularies ☐
+## §C.1 — FK relations to the lookup vocabularies ☑
 
 `psPatRegisters` carries eleven foreign keys beyond `FK_emdPatients`. Six of the
 tables they point at are now mapped as models with their own read stacks
@@ -239,7 +240,9 @@ public function scopeWithLookups($query)
 One cached metadata query, and a wrong guess degrades to a missing JSON key
 rather than a 500 — the same net `whenHas()` gives the resources, and under the
 same rule: a net, not a licence to guess. **When §C lands, delete the scope and
-inline a plain `with([...])` of the verified names.**
+inline a plain `with([...])` of the verified names.** *(Done in §C, 2026-09-24:
+the scope and its cache query are gone; the repository now `with()`s
+`PatientTransaction::LOOKUPS` directly.)*
 
 **§C.1.4 — Where the lookups load.** Extends the §B.3 reasoning from guarantors
 to vocabularies:
@@ -291,41 +294,32 @@ conventional shape, and it is reversible.
 
 ---
 
-## §C — Verified transaction fields ☐ blocked
+## §C — Verified transaction fields ☑
 
-**Blocked on schema access.** Tracked as #112.
+Closed 2026-09-24 (was #112). The `psPatRegisters` column names were confirmed
+against the live database, and the maintainer confirmed the column names already
+carried by the Bizbox models/resources are authoritative. What that changed:
 
-**Partial verification (2026-09-24):** the `psPatRegisters` **column names** were
-confirmed against the live database (the resource's mapping matches). The
-diagnosis columns `finaldiagnosis` and `impression` are real and are now consumed
-by `CASE_HOSPITAL_TRANSACTION_PLAN.md` Phase B.2. Still outstanding for §C: the
-column **data types / nullability**, and the `psGntrLedgers` and `msc*` lookup
-tables — so the scope below and the `scopeWithLookups()` guard remain until a full
-dump lands.
+- **Eager-load without the guard.** The eight lookup FK names are verified, so
+  `PatientTransactionRepository::find()` and `getByPatientId()` eager-load the
+  lookups with a plain `->with([... , ...PatientTransaction::LOOKUPS])`. The
+  `scopeWithLookups()` scope, its `LOOKUPS` FK-map, `COLUMN_CACHE_KEY`,
+  `lookupColumns()` and the metadata-cache query are removed; `LOOKUPS` is now a
+  plain list of the eight relation names.
+- **Label/ledger reads behind `whenHas()`.** `PatientGuarantorResource`
+  (`postdate`, `amount`, `glpostflag`, `glpostdate`) and the seven lookup
+  resources (`description`, and the per-table `remarks`/`isActive`/`active`) read
+  through `whenHas()`, so a stray name degrades to an omitted key rather than a
+  guessed value. `AdmissionResultResource` now exposes `description`.
+- **Two resource key typos fixed** on `PatientTransactionResource`:
+  `discharge_diagnosis`, `cancel_remarks`.
 
-**Unblocking step** — run against a machine that reaches the Bizbox HIS:
-
-```sql
-SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, IS_NULLABLE
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME IN ('psPatRegisters', 'psGntrLedgers', 'psDataCenter',
-                     'mscAdmResults', 'mscDiscounts', 'mscHospCaseTypes',
-                     'mscHospPlan', 'mscHospTranTypes', 'mscPHICMemberships',
-                     'mscServiceType')
-ORDER BY TABLE_NAME, ORDINAL_POSITION;
-```
-
-**Scope once unblocked**
-
-- Admission detail on `PatientTransactionResource`: ward, admission and discharge
-  dates, disposition, attending physician — whichever of those exist.
-- Ledger detail on `PatientGuarantorResource`: amount, coverage, status.
-- Replace `PatientTransaction::scopeWithLookups()` (§C.1.3) with a plain `with()`
-  of the verified FK names, and correct any of the eight that the dump disproves.
-- Extend the existing mocked tests with the real column names.
-- Confirm no N+1 across `guarantors.account.personalData` against a live
-  connection by reading the `sqlsrv` query log — the eager-loading in §B.3 is
-  structurally right but has never been proven against a real database.
+**Not needed after all:** column **data types/nullability** were never dumped —
+the magic-getter + `whenHas()` net makes them unnecessary. The old scope also
+listed ward/admission-date/disposition/attending-physician fields; the verified
+`psPatRegisters` column list has none, so those never existed. `psGntrLedgers`
+`coverage`/`status` likewise are not columns on the model, so they are not
+surfaced.
 
 ---
 
