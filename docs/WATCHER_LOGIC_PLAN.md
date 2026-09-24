@@ -20,9 +20,16 @@ one) and the real plan adapts around that:
 | 3. Endpoints, resources, DTOs | server | ☑ done — 247 passed, 2026-09-09 |
 | 4. Enforcement at transitions | server | ☑ done — 260 passed, 2026-09-09 |
 | 5. Backfill + legacy flag | server | ☑ done — 268 passed, 2026-09-09 |
-| 6. Types + adapter + API layer | client | ☐ |
-| 7. Case-scoped Watchers tab | client | ☐ |
-| 8. Requirement banner, waiver dialog, worklist filter | client | ☐ |
+| 6. Types + adapter + API layer | client | ☑ done (client repo) |
+| 7. Case-scoped Watchers tab | client | ☑ done (client repo) |
+| 8. Requirement banner, waiver dialog, worklist filter | client | ☑ done (client repo) |
+
+**Follow-up (2026-09-24):** `WatcherRequirementService::status()` now carries a
+`waiver` block — `{ reason, note, waived_by (resolved name), waived_by_id,
+waived_at }`, or `null` when there is no explicit waiver — so the client's Phase 8
+"waived by X on Y" banner has its data (previously only the raw columns existed,
+exposed nowhere). Flows through every `watcher_status` consumer (the status
+endpoint, the case profile, the enforcement-error payload) via the one seam.
 
 Phases 1–5 ship independently; the client keeps working unchanged because the
 existing `patient_watchers` endpoints stay live throughout. Phase 6 must not

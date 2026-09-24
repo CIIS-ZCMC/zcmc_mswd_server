@@ -127,6 +127,25 @@ use OpenApi\Attributes as OA;
     schema: 'WatcherStatus',
     description: 'The watcher-requirement status banner for a case.',
     type: 'object',
+    properties: [
+        new OA\Property(property: 'requirement', type: 'string', enum: ['required', 'recommended', 'optional', 'waived']),
+        new OA\Property(property: 'has_primary', type: 'boolean'),
+        new OA\Property(property: 'satisfied', type: 'boolean'),
+        new OA\Property(property: 'blocking', type: 'boolean'),
+        new OA\Property(
+            property: 'waiver',
+            description: 'The filed-waiver detail, or null when the case has no explicit waiver (a legacy-exempt case is waived but carries no waiver record).',
+            type: 'object',
+            nullable: true,
+            properties: [
+                new OA\Property(property: 'reason', type: 'string'),
+                new OA\Property(property: 'note', type: 'string', nullable: true),
+                new OA\Property(property: 'waived_by', type: 'string', nullable: true, description: 'Resolved name of the section head who filed the waiver.'),
+                new OA\Property(property: 'waived_by_id', type: 'integer', nullable: true),
+                new OA\Property(property: 'waived_at', type: 'string', format: 'date-time', nullable: true),
+            ],
+        ),
+    ],
     additionalProperties: true,
 )]
 #[OA\Schema(

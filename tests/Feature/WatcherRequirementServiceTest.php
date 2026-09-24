@@ -105,6 +105,7 @@ it('derives has_primary, satisfied and blocking from the requirement and current
         'has_primary' => false,
         'satisfied' => false,
         'blocking' => true,
+        'waiver' => null,
     ]);
 
     $case->watchers()->create(['name' => 'Maria', 'relationship' => 'spouse', 'is_primary' => true, 'added_by' => $this->user->id]);
@@ -114,7 +115,39 @@ it('derives has_primary, satisfied and blocking from the requirement and current
         'has_primary' => true,
         'satisfied' => true,
         'blocking' => false,
+        'waiver' => null,
     ]);
+});
+
+it('exposes the filed-waiver detail in the status for the client banner', function () {
+    $case = requirementCase(requirementPatient(), [
+        'admission_type' => 'inpatient',
+        'watcher_waiver_reason' => 'unaccompanied minor, no kin located',
+        'watcher_waiver_note' => 'escalated to social services',
+        'watcher_waived_by' => $this->user->id,
+        'watcher_waived_at' => now(),
+    ]);
+
+    $waiver = $this->service->status($case)['waiver'];
+
+    expect($waiver)->not->toBeNull()
+        ->and($waiver['reason'])->toBe('unaccompanied minor, no kin located')
+        ->and($waiver['note'])->toBe('escalated to social services')
+        ->and($waiver['waived_by'])->toBe($this->user->getFilamentName())
+        ->and($waiver['waived_by_id'])->toBe($this->user->id)
+        ->and($waiver['waived_at'])->not->toBeNull();
+});
+
+it('carries a null waiver for a legacy-exempt case even though it resolves to waived', function () {
+    $case = requirementCase(requirementPatient(), [
+        'admission_type' => 'inpatient',
+        'watcher_legacy_exempt' => true,
+    ]);
+
+    $status = $this->service->status($case);
+
+    expect($status['requirement'])->toBe('waived')
+        ->and($status['waiver'])->toBeNull();
 });
 
 it('is never blocking for an OPD case even with no watcher', function () {

@@ -249,14 +249,18 @@ it('gates the waiver endpoints on cases.waive_watcher, not cases.update', functi
     $this->postJson("/api/cases/{$case->id}/watcher-waiver", ['watcher_waiver_reason' => 'unaccompanied'])
         ->assertForbidden();
 
-    Sanctum::actingAs(watcherApiUser('MSS Head'));
+    $head = watcherApiUser('MSS Head');
+    Sanctum::actingAs($head);
     $this->postJson("/api/cases/{$case->id}/watcher-waiver", ['watcher_waiver_reason' => 'unaccompanied'])
         ->assertOk()
         ->assertJsonPath('data.watcher_status', null); // CaseModelResource without watchers loaded
 
     $this->getJson("/api/cases/{$case->id}/watcher-status")
         ->assertOk()
-        ->assertJsonPath('data.requirement', 'waived');
+        ->assertJsonPath('data.requirement', 'waived')
+        ->assertJsonPath('data.waiver.reason', 'unaccompanied')
+        ->assertJsonPath('data.waiver.waived_by', $head->getFilamentName())
+        ->assertJsonPath('data.waiver.waived_at', fn ($value) => $value !== null);
 
     $this->deleteJson("/api/cases/{$case->id}/watcher-waiver")->assertOk();
     $this->getJson("/api/cases/{$case->id}/watcher-status")
