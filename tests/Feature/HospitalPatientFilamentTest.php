@@ -100,6 +100,29 @@ it('lists HIS patients through the resilient service', function () {
         ->assertSee('777');
 });
 
+it('passes a hospital-number search term through to the resilient service', function () {
+    // The patid match itself is SQL against sqlsrv (untestable here per the
+    // module constraint); this locks in that a browse-list search term reaches
+    // the service that runs it.
+    actingAs(hpPanelActor());
+
+    $this->mock(HospitalPatientRepositoryInterface::class, function ($mock) {
+        // No term (initial render) → empty; the hospital-number term → the match.
+        // Seeing the record therefore proves the term reached the service.
+        $mock->shouldReceive('paginate')
+            ->with(null, Mockery::any(), Mockery::any())
+            ->andReturn(new LengthAwarePaginator([], 0, 15, 1));
+        $mock->shouldReceive('paginate')
+            ->with('777', Mockery::any(), Mockery::any())
+            ->andReturn(new LengthAwarePaginator([hpPanelPatient()], 1, 15, 1));
+    });
+
+    Livewire::test(ListHospitalPatients::class)
+        ->searchTable('777')
+        ->assertOk()
+        ->assertCanSeeTableRecords([hpPanelPatient()]);
+});
+
 it('renders an empty list — not a 500 — when the HIS is unreachable', function () {
     actingAs(hpPanelActor());
 
