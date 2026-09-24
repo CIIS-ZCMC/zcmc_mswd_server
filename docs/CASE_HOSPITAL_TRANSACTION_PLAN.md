@@ -11,11 +11,12 @@ MSWD-side link + snapshot persist.
 | Phase | Side | Status |
 |-------|------|--------|
 | A. Case ↔ transaction link, snapshot, attach/detach workflow | server | ☑ done — 583 passed, 2026-09-23 (#140) |
-| B.1 Transaction-side "assess" action (attach to an existing case) | server | ☐ |
-| B.2 Diagnostic prefill from HIS | server | ☐ blocked on §C |
+| B.1 Transaction-side "assess" action (attach to an existing case) | server | ☑ done — #142 |
+| B.2 Diagnostic prefill from HIS | server | ☑ done — 2026-09-24 |
 
-**Phase A shipped (#140).** B.1 ships on its own. B.2 is blocked on
-`TRANSACTION_MODULE_PLAN.md` §C verifying the HIS diagnosis columns.
+**Phases A, B.1, B.2 shipped.** B.2 unblocked once the HIS diagnosis columns on
+`psPatRegisters` (`finaldiagnosis`, `impression`) were verified against the live
+database (see `TRANSACTION_MODULE_PLAN.md` §C).
 
 ---
 
@@ -208,12 +209,25 @@ An **"Assess"** record action on the HIS `PatientTransactionsRelationManager`
   tab's **Assess** action lists that case and links the encounter (visible under
   the case's "Hospital encounters" tab).
 
-## Phase B.2 — Diagnostic prefill from HIS (blocked on §C)
+## Phase B.2 — Diagnostic prefill from HIS ☑
 
-Once `TRANSACTION_MODULE_PLAN.md` §C verifies `finaldiagnosis`/`impression`,
-prefill a local `Diagnostic` from the encounter at attach time for the worker to
-confirm/edit. Deferred — the snapshot already carries those fields as reference
-only, so nothing is lost by waiting; the local `Diagnostic` stays authoritative.
+The `psPatRegisters` diagnosis columns were verified against the live database
+(2026-09-24): `finaldiagnosis` (authoritative diagnosis) and `impression`
+(description) exist; there is no attending-physician or facility column on the
+transaction table.
+
+`CaseHospitalTransactionService::attach()` now seeds a local `Diagnostic` (via
+`DiagnosticService`) from the encounter on a fresh attach:
+- `diagnosis_name` ← `finaldiagnosis` (prefill skipped when blank);
+- `diagnosis_description` ← `impression`;
+- `diagnosis_date` ← `dischdate` ?? `registrydate` ?? now;
+- `attending_physician` / `facility_name` ← null (no such columns).
+
+Guards: skipped when the encounter has no final diagnosis, and when the case
+already has a `Diagnostic` of that name (no duplicates, no overwrite) — the local
+`Diagnostic` stays authoritative and the worker confirms/edits from there. A
+`diagnosis_added` case milestone is logged. Runs only on a fresh attach, so an
+idempotent re-attach never double-seeds.
 
 ## Non-goals
 - Copying HIS clinical data into the database (diagnosis, guarantors stay read-live).
