@@ -71,6 +71,14 @@ class CaseModel extends Model
         return $this->belongsTo(User::class, 'assigned_user_id');
     }
 
+    /**
+     * The section head who filed the watcher waiver (if any).
+     */
+    public function waivedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'watcher_waived_by');
+    }
+
     public function activities(): HasMany
     {
         return $this->hasMany(CaseActivity::class, 'case_id');
