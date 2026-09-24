@@ -21,11 +21,12 @@ yet.
 |-------|------|--------|
 | A. Aggregate read — patient + personal data + transactions | server (API) | ☑ done — 487 passed, 2026-09-16 (#115) |
 | B. Read-only Filament `HospitalPatientResource` (browse) | server (Filament) | ☑ done — 492 passed, 2026-09-16 (#117) |
-| C. Verified HIS columns | server | ☐ blocked — needs the real Bizbox schema |
+| C. Verified HIS columns | server | ☑ done — 2026-09-24 |
 
-**Phases A and B are complete. Phase C cannot start until someone dumps the
-schema from a machine that reaches the hospital's SQL Server** — the same
-blocker the transaction module carries.
+**All phases complete.** §C closed on the same basis as the transaction module's
+§C: the `psPatRegisters` names were confirmed against the live database and the
+maintainer confirmed the Bizbox model/resource column names are authoritative, so
+no full schema dump was needed.
 
 ---
 
@@ -161,29 +162,31 @@ patient. `RolesAndPermissionsTest` updated for the new Processor ability.
 
 ---
 
-## §C — Verified HIS columns ☐ blocked
+## §C — Verified HIS columns ☑
 
-**Blocked on schema access** — the same blocker as the transaction module's §C.
+Closed 2026-09-24, on the same footing as the transaction module's §C (the
+`psPatRegisters` names confirmed live; the Bizbox model/resource column names
+taken as authoritative by the maintainer). What each scope item came to:
 
-**Unblocking step** — run against a machine that reaches the Bizbox HIS:
+- **Personal-data fields** — already surfaced. `HospitalPatient::toPatientAttributes()`
+  maps address (`empaddress`→`permanent_address`), contact number
+  (`emptelefax`→`contact_number`), occupation, email, citizenship, nationality,
+  place of birth and more (added during the HIS→Patient import work). These read
+  through the mapper's null-tolerant `array_filter`, the same net `whenHas()` gives
+  elsewhere.
+- **Admission detail on transaction rows** — folded into the transaction module's
+  §C (now complete). The fields that exist on `psPatRegisters` are surfaced;
+  ward/admission-date/disposition were never columns.
+- **Hospital-number search in the browse list** — **added here.**
+  `HospitalPatientRepository::paginate()` now matches `patid` OR the
+  personal-data name columns, so the "Hospital Patients (HIS)" list finds a
+  patient by hospital number, not just by name.
+- **Tests** — a mocked Filament test locks that a hospital-number search term
+  reaches the resilient service. The `patid` SQL match itself runs only against
+  `sqlsrv`, which the module's constraint keeps out of the suite.
 
-```sql
-SELECT TABLE_NAME, COLUMN_NAME, DATA_TYPE, IS_NULLABLE
-FROM INFORMATION_SCHEMA.COLUMNS
-WHERE TABLE_NAME IN ('emdPatients', 'psPersonaldata', 'psPatRegisters', 'psGntrLedgers', 'psDataCenter')
-ORDER BY TABLE_NAME, ORDINAL_POSITION;
-```
-
-**Scope once unblocked**
-
-- Verified personal-data fields on the resource and the API payload: address,
-  contact number, occupation — whichever exist beyond the proven names/sex/
-  birthdate/civil status.
-- Admission detail on the transaction rows: ward, admission and discharge dates,
-  disposition (folds into the transaction module's §C).
-- Hospital-number search in the browse list (today the list searches names only;
-  the hospital-number typeahead lives on the intake picker).
-- Extend the mocked tests with the real column names.
+**Not needed after all:** column data types were never dumped — the mapper's
+`array_filter` + the resources' `whenHas()`/`whenLoaded()` make them unnecessary.
 
 ---
 

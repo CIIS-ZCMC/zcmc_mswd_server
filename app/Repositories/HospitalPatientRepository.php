@@ -16,10 +16,11 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
     {
         return $this->model->newQuery()
             ->with(['personalData', 'transactions'])
-            ->when(filled($search), fn ($query) => $query->whereHas('personalData', function ($sub) use ($search) {
-                $sub->where('lastname', 'like', "%{$search}%")
-                    ->orWhere('firstname', 'like', "%{$search}%");
-            }))
+            ->when(filled($search), fn ($query) => $query->where(fn ($group) => $group
+                ->where('patid', 'like', "%{$search}%")
+                ->orWhereHas('personalData', fn ($sub) => $sub
+                    ->where('lastname', 'like', "%{$search}%")
+                    ->orWhere('firstname', 'like', "%{$search}%"))))
             // Alphabetical by name, which lives on the joined HIS personal-data
             // table; the join stays a LEFT one so nameless records still list.
             ->leftJoin('psPersonaldata', 'psPersonaldata.PK_psPersonalData', '=', 'emdPatients.PK_emdPatients')
