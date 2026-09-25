@@ -77,7 +77,7 @@ function chtHisTransaction(int $key = 9, int $patid = 777, ?string $finalDiagnos
     ]);
     $transaction->setRelation('patient', $hp);
 
-    $account = (new DataCenter)->forceFill(['PK_psDatacenter' => 900]);
+    $account = (new DataCenter)->forceFill(['PK_psDatacenter' => 900, 'fullname' => 'Maria Cruz']);
     $account->setRelation('personalData', (new PatientPersonalData)->forceFill([
         'firstname' => 'Maria', 'lastname' => 'Cruz',
     ]));
@@ -106,7 +106,7 @@ it('attaches an encounter with a curated snapshot and logs a milestone', functio
         ->and($link->hospital_id)->toBe(777)
         ->and($link->snapshot['registration_status']['code'])->toBe('A')
         ->and($link->snapshot['registration_status']['label'])->toBe('Active')
-        ->and($link->snapshot['guarantors'][0]['name'])->toBe('Cruz, Maria')
+        ->and($link->snapshot['guarantors'][0]['name'])->toBe('Maria Cruz')
         ->and((float) $link->snapshot['guarantor_total'])->toBe(1500.0)
         ->and($link->snapshot['impression'])->toBe('For observation');
 
