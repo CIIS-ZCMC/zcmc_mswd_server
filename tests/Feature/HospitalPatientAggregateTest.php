@@ -35,7 +35,7 @@ function aggregatePatient(bool $withTransactions = true): HospitalPatient
     $transactions = new Collection;
 
     if ($withTransactions) {
-        $account = (new DataCenter)->forceFill(['PK_psDatacenter' => 900]);
+        $account = (new DataCenter)->forceFill(['PK_psDatacenter' => 900, 'fullname' => 'Maria Cruz']);
         $account->setRelation('personalData', (new PatientPersonalData)->forceFill([
             'firstname' => 'Maria', 'lastname' => 'Cruz',
         ]));
@@ -84,7 +84,7 @@ it('returns personal data and transactions in one payload', function () {
         ->assertJsonPath('data.personal_data.civil_status', 'Single')
         ->assertJsonCount(1, 'data.transactions')
         ->assertJsonPath('data.transactions.0.id', 9)
-        ->assertJsonPath('data.transactions.0.patient_guarantors.0.guarantor_details.guarantor_name', 'Cruz, Maria');
+        ->assertJsonPath('data.transactions.0.patient_guarantors.0.guarantor_details.guarantor_name', 'Maria Cruz');
 });
 
 it('returns an empty transactions array for a patient with no visits', function () {

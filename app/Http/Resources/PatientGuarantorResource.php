@@ -24,7 +24,7 @@ class PatientGuarantorResource extends JsonResource
 
             'guarantor_details' => $this->whenHas('FK_faCustomers', fn () => [
                 'guarantor_id' => $this->whenHas('FK_faCustomers'),
-                'guarantor_name' => $this->guarantor?->displayName(),
+                'guarantor_name' => $this->guarantor?->fullname,
             ]),
 
             'post_date' => $this->whenHas('postdate'),
