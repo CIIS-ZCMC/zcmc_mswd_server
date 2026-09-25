@@ -7880,6 +7880,10 @@
                         "type": "integer",
                         "nullable": true
                     },
+                    "created_by": {
+                        "type": "integer",
+                        "nullable": true
+                    },
                     "case_type": {
                         "type": "string"
                     },
@@ -7890,7 +7894,28 @@
                         "type": "string"
                     },
                     "admission_type": {
-                        "type": "string"
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "transaction_id": {
+                        "description": "HIS encounter (psPatRegisters PK) this case was opened for.",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "transaction_type": {
+                        "description": "Encounter transaction-type label, snapshotted at open.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "card_color": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "white",
+                            "green",
+                            "orange",
+                            "pink"
+                        ]
                     },
                     "date_opened": {
                         "type": "string",
@@ -7911,6 +7936,18 @@
                         "nullable": true
                     },
                     "assigned_user": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_by_user": {
                         "properties": {
                             "id": {
                                 "type": "integer"
@@ -7976,8 +8013,7 @@
                 "required": [
                     "patient_id",
                     "case_type",
-                    "priority_level",
-                    "admission_type"
+                    "priority_level"
                 ],
                 "properties": {
                     "patient_id": {
@@ -7996,8 +8032,30 @@
                         "maxLength": 255
                     },
                     "admission_type": {
+                        "description": "Required unless transaction_id is given, from which it is snapshotted.",
                         "type": "string",
+                        "nullable": true,
                         "maxLength": 255
+                    },
+                    "transaction_id": {
+                        "description": "HIS encounter (psPatRegisters PK) to open the case for.",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "transaction_type": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "card_color": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "white",
+                            "green",
+                            "orange",
+                            "pink"
+                        ]
                     },
                     "status": {
                         "type": "string",
@@ -8211,6 +8269,54 @@
             },
             "WatcherStatus": {
                 "description": "The watcher-requirement status banner for a case.",
+                "properties": {
+                    "requirement": {
+                        "type": "string",
+                        "enum": [
+                            "required",
+                            "recommended",
+                            "optional",
+                            "waived"
+                        ]
+                    },
+                    "has_primary": {
+                        "type": "boolean"
+                    },
+                    "satisfied": {
+                        "type": "boolean"
+                    },
+                    "blocking": {
+                        "type": "boolean"
+                    },
+                    "waiver": {
+                        "description": "The filed-waiver detail, or null when the case has no explicit waiver (a legacy-exempt case is waived but carries no waiver record).",
+                        "properties": {
+                            "reason": {
+                                "type": "string"
+                            },
+                            "note": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "waived_by": {
+                                "description": "Resolved name of the section head who filed the waiver.",
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "waived_by_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "waived_at": {
+                                "type": "string",
+                                "format": "date-time",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
                 "type": "object",
                 "additionalProperties": true
             },

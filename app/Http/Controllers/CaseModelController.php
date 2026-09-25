@@ -46,7 +46,7 @@ class CaseModelController extends Controller implements HasMiddleware
 
     public function show(CaseModel $case): CaseModelResource
     {
-        return CaseModelResource::make($case->load('patient', 'assignedUser'));
+        return CaseModelResource::make($case->load('patient', 'assignedUser', 'createdBy'));
     }
 
     public function update(UpdateCaseModelRequest $request, CaseModel $case): CaseModelResource

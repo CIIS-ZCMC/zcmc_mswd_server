@@ -13,10 +13,12 @@ use App\Filament\Resources\Cases\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\HistoryRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\HospitalTransactionsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\InterventionsRelationManager;
+use App\Enums\CardColor;
 use App\Models\CaseModel;
 use App\Models\Patient;
 use App\Models\User;
 use App\Services\CaseModelService;
+use App\Services\PatientTransactionService;
 use BackedEnum;
 use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
@@ -52,6 +54,16 @@ class CaseResource extends Resource
 
     private const ADMISSION_TYPES = ['OPD' => 'OPD', 'ER' => 'ER', 'inpatient' => 'Inpatient'];
 
+    /**
+     * @return array<string, string>
+     */
+    private static function cardColorOptions(): array
+    {
+        return collect(CardColor::cases())
+            ->mapWithKeys(fn (CardColor $c) => [$c->value => $c->label()])
+            ->all();
+    }
+
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
@@ -60,6 +72,7 @@ class CaseResource extends Resource
                     ->label('Patient')
                     ->searchable()
                     ->required()
+                    ->live()
                     ->getSearchResultsUsing(fn (string $search) => Patient::query()
                         ->where('last_name', 'like', "%{$search}%")
                         ->orWhere('first_name', 'like', "%{$search}%")
@@ -73,10 +86,46 @@ class CaseResource extends Resource
                     ->helperText('Defaults to you if left blank.'),
                 Select::make('case_type')->options(self::CASE_TYPES)->required(),
                 Select::make('priority_level')->options(self::PRIORITIES)->required(),
-                Select::make('admission_type')->options(self::ADMISSION_TYPES)->required(),
+                Select::make('admission_type')->options(self::ADMISSION_TYPES)
+                    ->helperText('Filled from the hospital encounter when one is selected.'),
+                Select::make('transaction_id')
+                    ->label('Hospital encounter')
+                    ->searchable()
+                    ->options(fn (callable $get) => self::encounterOptions($get('patient_id')))
+                    ->getOptionLabelUsing(fn ($value): ?string => $value === null ? null : "#{$value}")
+                    ->helperText('Optional. Lists the selected patient\'s HIS encounters; admission and transaction type are snapshotted on open.'),
+                Select::make('card_color')
+                    ->options(self::cardColorOptions())
+                    ->default(CardColor::White->value),
                 DatePicker::make('date_opened')->default(now()),
             ]),
         ]);
+    }
+
+    /**
+     * The selected patient's HIS encounters as { id => label }, or empty when the
+     * patient is not chosen / not HIS-linked / the HIS is unreachable.
+     *
+     * @return array<int|string, string>
+     */
+    private static function encounterOptions(mixed $patientId): array
+    {
+        if (blank($patientId)) {
+            return [];
+        }
+
+        $hospitalId = Patient::find($patientId)?->hospital_id;
+
+        if (blank($hospitalId)) {
+            return [];
+        }
+
+        return app(PatientTransactionService::class)
+            ->forHospitalNumber($hospitalId)
+            ->mapWithKeys(fn ($t) => [
+                $t->getKey() => trim('#'.$t->getKey().' — '.($t->registrydate ?? '')),
+            ])
+            ->all();
     }
 
     public static function infolist(Schema $schema): Schema
@@ -88,7 +137,12 @@ class CaseResource extends Resource
                 TextEntry::make('priority_level')->badge(),
                 TextEntry::make('case_type'),
                 TextEntry::make('admission_type'),
+                TextEntry::make('transaction_type')->label('Transaction type')->placeholder('—'),
+                TextEntry::make('transaction_id')->label('Hospital encounter')->placeholder('—'),
+                TextEntry::make('card_color')->label('Card')->badge()
+                    ->formatStateUsing(fn (CardColor $state): string => $state->label()),
                 TextEntry::make('assignedUser.employee_name')->label('Assigned worker'),
+                TextEntry::make('createdBy.employee_name')->label('Opened by')->placeholder('—'),
                 TextEntry::make('date_opened')->date(),
                 TextEntry::make('date_closed')->date()->placeholder('—'),
             ]),
@@ -117,6 +171,15 @@ class CaseResource extends Resource
                     'success' => 'open', 'warning' => 'ongoing', 'gray' => 'closed', 'info' => 'referred',
                 ]),
                 TextColumn::make('assignedUser.employee_name')->label('Worker')->toggleable(),
+                TextColumn::make('card_color')->label('Card')->badge()
+                    ->formatStateUsing(fn (CardColor $state): string => $state->label())
+                    ->color(fn (CardColor $state): string => match ($state) {
+                        CardColor::White => 'gray',
+                        CardColor::Green => 'success',
+                        CardColor::Orange => 'warning',
+                        CardColor::Pink => 'danger',
+                    })
+                    ->toggleable(),
                 TextColumn::make('date_opened')->date()->sortable(),
             ])
             ->filters([
