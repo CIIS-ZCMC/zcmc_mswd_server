@@ -14,10 +14,10 @@ open flow; the join table remains for multi-encounter linking.
 
 | Phase | Side | Status |
 |-------|------|--------|
-| A. Schema — new columns on `cases` + `CardColor` enum | server | ☐ |
-| B. Model / DTO / service — populate + snapshot on open | server | ☐ |
-| C. API + Filament surfaces | server | ☐ |
-| D. Tests + verification | server | ☐ |
+| A. Schema — new columns on `cases` + `CardColor` enum | server | ☑ done |
+| B. Model / DTO / service — populate + snapshot on open | server | ☑ done |
+| C. API + Filament surfaces | server | ☑ done |
+| D. Tests + verification | server | ☑ done — 612 passed, 2026-09-25 |
 
 ---
 
