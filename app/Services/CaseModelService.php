@@ -4,6 +4,8 @@ namespace App\Services;
 
 use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\CaseModelDto;
+use App\Enums\CardColor;
+use App\Http\Resources\PatientTransactionResource;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
 use App\Models\User;
@@ -25,6 +27,7 @@ class CaseModelService
     public function __construct(
         protected CaseModelRepositoryInterface $repository,
         protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
+        protected PatientTransactionService $transactions,
     ) {}
 
     public function list(?ListQuery $query = null): LengthAwarePaginator
@@ -84,8 +87,14 @@ class CaseModelService
             $attributes = $dto->toArray();
             $attributes['case_code'] ??= $this->nextCaseCode();
             $attributes['assigned_user_id'] ??= $worker->id;
+            $attributes['created_by'] ??= $worker->id;
             $attributes['status'] ??= CaseModel::STATUS_OPEN;
+            $attributes['card_color'] ??= CardColor::White->value;
             $attributes['date_opened'] ??= now();
+
+            if (! blank($attributes['transaction_id'] ?? null)) {
+                $this->applyEncounterSnapshot($attributes);
+            }
 
             /** @var CaseModel $case */
             $case = $this->repository->create($attributes);
@@ -94,6 +103,78 @@ class CaseModelService
 
             return $case;
         });
+    }
+
+    /**
+     * Freeze the HIS encounter's admission and transaction labels onto a case
+     * being opened for it. The encounter is read live and never copied wholesale;
+     * only these two label snapshots persist. Explicit values from the caller are
+     * left untouched — the snapshot only fills what was omitted.
+     *
+     * Guards that no other live case already carries this encounter (one case per
+     * encounter), mirroring CaseHospitalTransactionService's single-case rule.
+     *
+     * @param  array<string, mixed>  $attributes
+     */
+    private function applyEncounterSnapshot(array &$attributes): void
+    {
+        $transactionId = $attributes['transaction_id'];
+
+        $clash = CaseModel::where('transaction_id', $transactionId)->exists();
+
+        if ($clash) {
+            throw ValidationException::withMessages([
+                'transaction_id' => 'This hospital encounter already has a case.',
+            ]);
+        }
+
+        // 404 (unknown encounter) or an unreachable HIS surfaces as a validation
+        // error rather than a 500 — opening a case must not hang on the HIS.
+        try {
+            $transaction = $this->transactions->find($transactionId);
+        } catch (\Throwable $e) {
+            report($e);
+
+            throw ValidationException::withMessages([
+                'transaction_id' => 'This hospital encounter could not be found.',
+            ]);
+        }
+
+        $payload = json_decode(json_encode(new PatientTransactionResource($transaction)), true) ?? [];
+
+        $attributes['admission_type'] ??= $this->encounterLabel($payload['admission_case_type'] ?? null);
+        $attributes['transaction_type'] ??= $this->encounterLabel($payload['transaction_type'] ?? null);
+
+        // Drop keys the snapshot could not fill, so a null does not overwrite a
+        // column default and array_filter's intent (omit nulls) is preserved.
+        foreach (['admission_type', 'transaction_type'] as $key) {
+            if ($attributes[$key] === null) {
+                unset($attributes[$key]);
+            }
+        }
+    }
+
+    /**
+     * The human label of a HIS lookup ({ id, description }) as stored on the
+     * case. Prefers the description; falls back to the id so the field carries a
+     * reference even where the label column is unavailable (the label columns are
+     * unverified — see docs/TRANSACTION_MODULE_PLAN.md §C).
+     *
+     * @param  array<string, mixed>|null  $lookup
+     */
+    private function encounterLabel(?array $lookup): ?string
+    {
+        if ($lookup === null) {
+            return null;
+        }
+
+        $label = trim((string) ($lookup['description'] ?? ''));
+
+        if ($label !== '') {
+            return $label;
+        }
+
+        return isset($lookup['id']) ? (string) $lookup['id'] : null;
     }
 
     public function update(CaseModel $case, CaseModelDto $dto): CaseModel
@@ -197,7 +278,7 @@ class CaseModelService
      */
     public function profile(CaseModel $case): CaseModel
     {
-        return $case->load(['patient', 'assignedUser', 'watchers.addedBy'])
+        return $case->load(['patient', 'assignedUser', 'createdBy', 'watchers.addedBy'])
             ->loadCount(['activities', 'assessments', 'diagnostics', 'interventions', 'documents', 'patientAssistances']);
     }
 

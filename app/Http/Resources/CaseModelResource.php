@@ -18,16 +18,24 @@ class CaseModelResource extends JsonResource
             'case_code' => $this->case_code,
             'patient_id' => $this->patient_id,
             'assigned_user_id' => $this->assigned_user_id,
+            'created_by' => $this->created_by,
             'case_type' => $this->case_type,
             'priority_level' => $this->priority_level,
             'status' => $this->status,
             'admission_type' => $this->admission_type,
+            'transaction_id' => $this->transaction_id,
+            'transaction_type' => $this->transaction_type,
+            'card_color' => $this->card_color?->value,
             'date_opened' => $this->date_opened,
             'date_closed' => $this->date_closed,
             'patient' => PatientResource::make($this->whenLoaded('patient')),
             'assigned_user' => $this->whenLoaded('assignedUser', fn () => [
                 'id' => $this->assignedUser?->id,
                 'name' => $this->assignedUser?->employee_name,
+            ]),
+            'created_by_user' => $this->whenLoaded('createdBy', fn () => [
+                'id' => $this->createdBy?->id,
+                'name' => $this->createdBy?->employee_name,
             ]),
             // A flat lite shape, not SocialCaseResource: twenty narrative
             // columns per list row is not acceptable. The full report is one

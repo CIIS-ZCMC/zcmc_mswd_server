@@ -2,13 +2,18 @@
 
 namespace App\Models;
 
+use App\Enums\CardColor;
+use App\Models\Bizbox\PatientTransaction;
 use App\Models\Concerns\Auditable;
+use App\Services\PatientTransactionService;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\Relations\HasOne;
 use Illuminate\Database\Eloquent\Relations\MorphMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
+use Illuminate\Database\QueryException;
 use Spatie\Activitylog\Models\Activity;
 
 class CaseModel extends Model
@@ -35,12 +40,16 @@ class CaseModel extends Model
     protected $fillable = [
         'patient_id',
         'assigned_user_id',
+        'created_by',
         'case_code',
         'case_type',
         'is_protective',
         'priority_level',
         'status',
         'admission_type',
+        'transaction_id',
+        'transaction_type',
+        'card_color',
         'date_opened',
         'date_closed',
         'watcher_waiver_reason',
@@ -58,6 +67,7 @@ class CaseModel extends Model
             'watcher_waived_at' => 'datetime',
             'watcher_legacy_exempt' => 'boolean',
             'is_protective' => 'boolean',
+            'card_color' => CardColor::class,
         ];
     }
 
@@ -69,6 +79,36 @@ class CaseModel extends Model
     public function assignedUser(): BelongsTo
     {
         return $this->belongsTo(User::class, 'assigned_user_id');
+    }
+
+    /**
+     * The worker who opened the case. Set once at open and never rewritten on
+     * reassignment — distinct from assignedUser(), the current handler.
+     */
+    public function createdBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'created_by');
+    }
+
+    /**
+     * The live HIS encounter this case was opened for, or null when the case has
+     * no transaction_id or the HIS cannot be reached. Not an Eloquent relation:
+     * the encounter lives on the read-only `sqlsrv` connection, so it is resolved
+     * on demand rather than joined.
+     */
+    public function hisTransaction(): ?PatientTransaction
+    {
+        if (blank($this->transaction_id)) {
+            return null;
+        }
+
+        try {
+            return app(PatientTransactionService::class)->find($this->transaction_id);
+        } catch (ModelNotFoundException|QueryException $e) {
+            report($e);
+
+            return null;
+        }
     }
 
     /**
