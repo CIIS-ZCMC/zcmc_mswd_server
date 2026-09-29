@@ -21,6 +21,7 @@ class UnifiedIntakeSheetPdfService
         'case.assignedUser',
         'case.patientAssistances.assistantType',
         'assessment',
+        'assessment.expenses',
         'intakeWorker',
         'finalizer',
     ];

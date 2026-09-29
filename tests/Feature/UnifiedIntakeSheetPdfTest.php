@@ -62,15 +62,25 @@ it('prints family demographics on the intake sheet', function () {
     $html = view('pdf.unified-intake-sheet', [
         'sheet' => $sheet->loadMissing([
             'patient.patientIds', 'patient.familyMembers', 'patient.sector',
-            'case.patientAssistances.assistantType', 'assessment', 'intakeWorker',
+            'case.patientAssistances.assistantType', 'assessment', 'assessment.expenses',
+            'intakeWorker',
         ]),
     ])->render();
 
-    expect($html)->toContain('Educational Attainment')
+    // The template reproduces the official ANNEX B government form.
+    expect($html)->toContain('UNIFIED INTAKE SHEET')
+        ->and($html)->toContain('ANNEX B')
+        ->and($html)->toContain('IDENTIFYING INFORMATION')
+        ->and($html)->toContain('FAMILY COMPOSITION')
+        ->and($html)->toContain('LIST OF EXPENSES')
+        ->and($html)->toContain('PROBLEM PRESENTED')
+        ->and($html)->toContain('RECOMMENDATION')
+        // Family demographics still render, in the ANNEX B YY/MM/DD format.
+        ->and($html)->toContain('Maria Dela Cruz')
         ->and($html)->toContain('College graduate')
         ->and($html)->toContain('Vendor')
-        ->and($html)->toContain('female')
-        ->and($html)->toContain('03/02/1985');
+        ->and($html)->toContain('Female')
+        ->and($html)->toContain('85/03/02');
 });
 
 it('streams a PDF for a finalized intake', function () {
