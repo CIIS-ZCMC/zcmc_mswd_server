@@ -4,6 +4,12 @@ The Social Case Study Report (SCSR) as the case manager's centrepiece document,
 and the caseload workflow built around it. Four server phases, each independently
 verifiable and revertable.
 
+> **Superseded in part:** the `UnifiedIntakeSheet` record this plan refers to
+> (intake service/controllers, `intake.update`/`intake.finalize`, the referral seed
+> from an intake sheet, `IntakeSheetPdfController` as the PDF template) has been
+> removed — the UIS is now only a printable with a print history. See
+> `UIS_PRINT_HISTORY_PLAN.md`. Treat those references below as history.
+
 The client half lives in `zcmc_mswd_client/docs/SOCIAL_CASE_PLAN.md` (Phases E–F).
 **Phase A ships on its own** and is consumable by the client's existing
 `social-case-tab.tsx` immediately. Phases B and C ship as API-only surfaces —

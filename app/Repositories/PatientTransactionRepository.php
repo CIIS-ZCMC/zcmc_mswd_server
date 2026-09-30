@@ -22,6 +22,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
                     ->where('lastname', 'like', "%{$search}%")
                     ->orWhere('firstname', 'like', "%{$search}%"))))
             ->when(filled($date), fn ($query) => $query->whereDate('registrydate', $date))
+            ->orderByDesc('registrydate')
             ->orderByDesc('PK_psPatRegisters')
             ->paginate($perPage);
     }
@@ -50,6 +51,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
                     ->orWhere('firstname', 'like', "%{$term}%")
                     ->orWhere('middlename', 'like', "%{$term}%")))
             ->when(filled($date), fn ($query) => $query->whereDate('registrydate', $date))
+            ->orderByDesc('registrydate')
             ->orderByDesc('PK_psPatRegisters')
             ->limit($limit)
             ->get();
@@ -67,6 +69,8 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
                     ->orWhere('firstname', 'like', "%{$name}%");
             }))
             ->when(filled($date), fn ($query) => $query->whereDate('registrydate', $date))
+            ->orderByDesc('registrydate')
+            ->orderByDesc('PK_psPatRegisters')
             ->get();
     }
 
@@ -90,6 +94,7 @@ class PatientTransactionRepository implements PatientTransactionRepositoryInterf
         return $this->model->newQuery()
             ->with(['patient.personalData', 'guarantors.guarantor.personalData', ...PatientTransaction::LOOKUPS])
             ->where('FK_emdPatients', $patientId)
+            ->orderByDesc('registrydate')
             ->orderByDesc('PK_psPatRegisters')
             ->get();
     }

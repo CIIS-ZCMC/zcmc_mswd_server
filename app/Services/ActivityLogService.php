@@ -188,7 +188,7 @@ class ActivityLogService
      */
     private function describe(object $subject): string
     {
-        foreach (['name', 'employee_name', 'case_code', 'file_name', 'diagnosis_name', 'intake_no'] as $field) {
+        foreach (['name', 'employee_name', 'case_code', 'file_name', 'diagnosis_name'] as $field) {
             if (! empty($subject->{$field})) {
                 return (string) $subject->{$field};
             }

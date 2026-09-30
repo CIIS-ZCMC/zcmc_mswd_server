@@ -24,7 +24,6 @@ use App\Models\PatientId;
 use App\Models\PatientMerge;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
-use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -157,11 +156,6 @@ dataset('resolvers', [
         'uploaded_by' => test()->worker->id, 'document_type' => 'consent',
         'file_name' => 'c.pdf', 'file_path' => 'd/c.pdf', 'file_type' => 'pdf',
     ]), true, true],
-    'UnifiedIntakeSheet' => [fn () => UnifiedIntakeSheet::create([
-        'intake_no' => 'INT-0001', 'patient_id' => test()->patient->id, 'case_id' => test()->case->id,
-        'intake_worker_id' => test()->worker->id, 'date_of_intake' => now(),
-        'status' => UnifiedIntakeSheet::STATUS_DRAFT,
-    ]), true, true],
 ]);
 
 it('resolves ownership for every audited model', function (Closure $make, bool $hasPatient, bool $hasCase) {
@@ -196,7 +190,7 @@ it('covers every model that declares a resolver', function () {
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
         'PatientMerge', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
-        'PatientAssistanceLog', 'PatientAssistanceReport', 'Document', 'UnifiedIntakeSheet',
+        'PatientAssistanceLog', 'PatientAssistanceReport', 'Document',
     ])->sort()->values();
 
     // If a model gains its own activityOwner(), it must gain a dataset row too.

@@ -15,9 +15,16 @@ return new class extends Migration
             $table->foreignId('case_id')->nullable()->constrained('cases');
             $table->foreignId('assessment_id')->nullable()->constrained('assessments');
             $table->foreignId('intake_worker_id')->constrained('users');
-            $table->string('referral_source')->nullable();       // walk_in, ward_referral, mswdo, others
-            $table->text('referral_details')->nullable();
+            
             $table->dateTime('date_of_intake');
+            $table->string('informant_name');
+            $table->string('informant_address');
+            $table->string('informant_contact_number');
+            $table->string('relationship_to_patient');
+            
+            $table->string('other_source_of_family_income')->default("NONE");
+            $table->integer('other_source_amount')->default(0);
+  
             $table->string('status')->default('draft');          // draft, submitted, finalized, cancelled
             $table->dateTime('submitted_at')->nullable();
             $table->dateTime('finalized_at')->nullable();

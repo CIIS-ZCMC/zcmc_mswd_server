@@ -21,12 +21,8 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
                 ->orWhereHas('personalData', fn ($sub) => $sub
                     ->where('lastname', 'like', "%{$search}%")
                     ->orWhere('firstname', 'like', "%{$search}%"))))
-            // Alphabetical by name, which lives on the joined HIS personal-data
-            // table; the join stays a LEFT one so nameless records still list.
-            ->leftJoin('psPersonaldata', 'psPersonaldata.PK_psPersonalData', '=', 'emdPatients.PK_emdPatients')
-            ->select('emdPatients.*')
-            ->orderBy('psPersonaldata.lastname')
-            ->orderBy('psPersonaldata.firstname')
+            // Newest registered first (highest surrogate key).
+            ->orderByDesc('PK_emdPatients')
             ->paginate($perPage, ['*'], 'page', $page);
     }
 

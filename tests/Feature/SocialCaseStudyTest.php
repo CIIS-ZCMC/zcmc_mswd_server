@@ -7,7 +7,6 @@ use App\Models\CaseWatcher;
 use App\Models\Document;
 use App\Models\Patient;
 use App\Models\Sector;
-use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Database\QueryException;
@@ -181,42 +180,11 @@ it('frees the guard when the social case study is soft-deleted', function () {
     expect($replacement->exists)->toBeTrue();
 });
 
-// ------------------------------------------------------- referral seeding
+// ------------------------------------------------------- referral fields
 
-it('seeds referral fields from the latest finalized intake', function () {
+it('stores the referral fields when they are supplied', function () {
     $worker = scsrUser('Case Manager');
-    $assessment = makeAssessment($this->case, $worker);
-
-    UnifiedIntakeSheet::create([
-        'intake_no' => 'UIS-1', 'patient_id' => $this->patient->id, 'case_id' => $this->case->id,
-        'assessment_id' => $assessment->id, 'intake_worker_id' => $worker->id,
-        'referral_source' => 'walk_in', 'referral_details' => 'Came in unaccompanied',
-        'date_of_intake' => now(), 'status' => UnifiedIntakeSheet::STATUS_DRAFT,
-    ]);
-    UnifiedIntakeSheet::create([
-        'intake_no' => 'UIS-2', 'patient_id' => $this->patient->id, 'case_id' => $this->case->id,
-        'assessment_id' => $assessment->id, 'intake_worker_id' => $worker->id,
-        'referral_source' => 'ward_referral', 'referral_details' => 'Endorsed by Ward 3',
-        'date_of_intake' => now(), 'status' => UnifiedIntakeSheet::STATUS_FINALIZED,
-    ]);
-
-    Sanctum::actingAs($worker);
-    $response = $this->postJson("/api/cases/{$this->case->id}/social-case", [])->assertCreated();
-
-    expect($response->json('data.referral_source'))->toBe('ward_referral')
-        ->and($response->json('data.reason_for_referral'))->toBe('Endorsed by Ward 3');
-});
-
-it('prefers the supplied referral fields over the intake snapshot', function () {
-    $worker = scsrUser('Case Manager');
-    $assessment = makeAssessment($this->case, $worker);
-
-    UnifiedIntakeSheet::create([
-        'intake_no' => 'UIS-3', 'patient_id' => $this->patient->id, 'case_id' => $this->case->id,
-        'assessment_id' => $assessment->id, 'intake_worker_id' => $worker->id,
-        'referral_source' => 'walk_in', 'referral_details' => 'Came in unaccompanied',
-        'date_of_intake' => now(), 'status' => UnifiedIntakeSheet::STATUS_FINALIZED,
-    ]);
+    makeAssessment($this->case, $worker);
 
     Sanctum::actingAs($worker);
     $response = $this->postJson("/api/cases/{$this->case->id}/social-case", [
@@ -228,7 +196,7 @@ it('prefers the supplied referral fields over the intake snapshot', function () 
         ->and($response->json('data.reason_for_referral'))->toBe('Referred for financial assistance');
 });
 
-it('leaves referral fields null when the case has no intake', function () {
+it('leaves referral fields null when none are supplied', function () {
     $worker = scsrUser('Case Manager');
     makeAssessment($this->case, $worker);
 

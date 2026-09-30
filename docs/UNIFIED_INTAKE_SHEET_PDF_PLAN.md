@@ -1,7 +1,14 @@
 # Unified Intake Sheet (UIS) — Printable ANNEX B
 
-**Status:** shipped
-**Scope:** template-only (no schema, model, Filament, or route/controller change)
+**Status:** shipped (template) — **historical.** The record-based pipeline described
+below (`IntakeSheetPdfController`, `GET /api/intake-sheets/{id}/pdf`, the Filament
+Print action, finalize-time archiving) has since been removed. The UIS is now only a
+printable rendered from a case, with a print history — see
+[`UIS_PRINT_HISTORY_PLAN.md`](UIS_PRINT_HISTORY_PLAN.md). The ANNEX B **layout and the
+field → source mapping below still apply**, except that "sheet" fields now come from
+the case (printing user = "Interviewed by", print time = interview date/time).
+
+**Scope (at the time):** template-only (no schema, model, Filament, or route/controller change)
 
 ## Purpose
 

@@ -71,10 +71,8 @@ class FamilyMembersRelationManager extends RelationManager
                 TextColumn::make('name')->searchable(),
                 TextColumn::make('relationship'),
                 TextColumn::make('sex')->placeholder('—'),
+                TextColumn::make('birthdate')->date()->placeholder('—')->sortable(),
                 TextColumn::make('age')->placeholder('—'),
-                // `age` already conveys this at a glance, so keep it off by default.
-                TextColumn::make('birthdate')->date()->placeholder('—')
-                    ->toggleable(isToggledHiddenByDefault: true),
                 TextColumn::make('educational_attainment')->label('Education')->placeholder('—')
                     ->toggleable(),
                 TextColumn::make('occupation')->placeholder('—'),

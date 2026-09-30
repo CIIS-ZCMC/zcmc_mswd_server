@@ -40,7 +40,7 @@ it('seeds every default role with the expected permission counts', function () {
         ->toEqualCanonicalizing([
             'patients.view', 'hospital-patients.view', 'cases.view',
             'assistance.view', 'assistance.create', 'assistance.update',
-            'intake.view', 'intake.create', 'intake.update',
+            'intake.view',
             'reports.view',
         ]);
 });

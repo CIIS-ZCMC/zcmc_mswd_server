@@ -6,8 +6,7 @@ use App\Models\CaseWatcher;
 
 /**
  * Sequential, never-reused ward pass numbers — same count-based control
- * number pattern as UnifiedIntakeSheetService::nextIntakeNumber() and
- * ::nextCaseCode().
+ * number pattern as CaseModelService::nextCaseCode().
  */
 class WatcherPassNumberService
 {

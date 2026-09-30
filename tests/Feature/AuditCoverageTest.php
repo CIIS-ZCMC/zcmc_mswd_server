@@ -24,7 +24,6 @@ use App\Models\PatientId;
 use App\Models\PatientMerge;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
-use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
 use App\Models\WatcherRelationshipType;
 
@@ -54,7 +53,6 @@ $audited = [
     PatientAssistanceLog::class,
     PatientAssistanceReport::class,
     Document::class,
-    UnifiedIntakeSheet::class,
     Guarantor::class,
 ];
 
@@ -68,14 +66,6 @@ it('logs only dirty attributes and skips empty logs', function (string $model) {
     expect($options->logOnlyDirty)->toBeTrue()
         ->and($options->submitEmptyLogs)->toBeFalse();
 })->with($audited);
-
-it('keeps the unified intake sheet on its curated field list and log name', function () {
-    $options = (new UnifiedIntakeSheet)->getActivitylogOptions();
-
-    expect($options->logName)->toBe('intake')
-        ->and($options->logFillable)->toBeFalse()
-        ->and($options->logAttributes)->not->toContain('submitted_at', 'finalized_at');
-});
 
 it('leaves master data and identity models out of the trail', function (string $model) {
     expect(class_uses_recursive($model))->not->toContain(Auditable::class);

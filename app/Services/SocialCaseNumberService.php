@@ -7,7 +7,7 @@ use Illuminate\Database\QueryException;
 
 /**
  * Sequential SCSR control numbers — the same count-based pattern as
- * WatcherPassNumberService and UnifiedIntakeSheetService::nextIntakeNumber().
+ * WatcherPassNumberService and CaseModelService::nextCaseCode().
  *
  * That pattern races: two concurrent finalizations can COUNT the same value.
  * `assessments.social_case_no` is uniquely indexed, so the race surfaces as a

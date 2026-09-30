@@ -35,7 +35,6 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Cases', description: 'Case management and lifecycle.')]
 #[OA\Tag(name: 'Case Clinical', description: 'Assessments, social case studies, diagnostics, interventions and progress notes.')]
 #[OA\Tag(name: 'Assistance', description: 'Case-scoped financial assistance and its lifecycle.')]
-#[OA\Tag(name: 'Intake Sheets', description: 'Unified intake sheet workflow.')]
 #[OA\Tag(name: 'Reference', description: 'Read-only reference lookups backing select inputs.')]
 #[OA\Tag(name: 'Users & Roles', description: 'Users, roles and permissions.')]
 #[OA\Tag(name: 'Reports', description: 'Reporting and exports.')]

@@ -10,7 +10,6 @@ use App\Models\PatientFamilyMember;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
 use App\Models\PatientWatcher;
-use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -30,7 +29,6 @@ class PatientMergeService
         'watchers' => PatientWatcher::class,
         'caretakers' => PatientCaretaker::class,
         'documents' => Document::class,
-        'intake_sheets' => UnifiedIntakeSheet::class,
     ];
 
     /**
