@@ -2,7 +2,9 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Assessment;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdateAssessmentRequest extends FormRequest
 {
@@ -25,6 +27,14 @@ class UpdateAssessmentRequest extends FormRequest
             'housing_type' => ['nullable', 'string', 'max:255'],
             'utilities_access' => ['nullable', 'string', 'max:255'],
             'presenting_problem' => ['nullable', 'string'],
+            'problem_categories' => ['nullable', 'array'],
+            'problem_categories.*' => ['string', Rule::in(Assessment::PROBLEM_CATEGORIES)],
+            'problem_specify' => ['nullable', 'string'],
+            'house_tenure' => ['nullable', 'string', Rule::in(Assessment::HOUSE_TENURES)],
+            'light_source' => ['nullable', 'array'],
+            'light_source.*' => ['string', Rule::in(Assessment::LIGHT_SOURCES)],
+            'water_source' => ['nullable', 'array'],
+            'water_source.*' => ['string', Rule::in(Assessment::WATER_SOURCES)],
             'family_background' => ['nullable', 'string'],
             'social_functioning' => ['nullable', 'string'],
             'assessment_notes' => ['nullable', 'string'],

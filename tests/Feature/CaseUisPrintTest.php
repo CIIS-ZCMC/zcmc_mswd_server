@@ -191,3 +191,33 @@ it('forbids printing and history without intake.view', function () {
 it('requires authentication', function () {
     $this->getJson("/api/cases/{$this->case->id}/uis/prints")->assertUnauthorized();
 });
+
+it('ticks the stored house, utility and problem checkboxes on the printable', function () {
+    $assessment = uisIntakeAssessment($this->case, $this->worker);
+    $assessment->update([
+        'house_tenure' => 'owned',
+        'light_source' => ['electricity'],
+        'water_source' => ['artesian_well'],
+        'problem_categories' => ['health'],
+        'problem_specify' => 'Dialysis',
+    ]);
+
+    $html = app(UnifiedIntakeSheetPdfService::class)->renderForCase($this->case, $this->worker)
+        ->getDomPDF()->outputHtml();
+
+    // Exactly one X per single-choice group: 1 tenure + 1 light + 1 water + 1 problem
+    // (the other sections use their own markup for ticked boxes).
+    expect(substr_count($html, '<span class="cb">X</span>'))->toBeGreaterThanOrEqual(4)
+        ->and($html)->toContain('Dialysis');
+});
+
+it('rejects unknown UIS checkbox values on assessment create', function () {
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'house_tenure' => 'squatting',
+        'light_source' => ['lava'],
+        'problem_categories' => ['boredom'],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['house_tenure', 'light_source.0', 'problem_categories.0']);
+});

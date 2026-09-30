@@ -46,8 +46,9 @@
     $edu = strtolower((string) $p?->educational_attainment);
 
     // Section III amounts come from the generic assessment_expenses key/value rows,
-    // matched to the form's fixed slots by keyword. Categorical fields (ownership,
-    // light, water source) are not stored and print as blank boxes.
+    // matched to the form's fixed slots by keyword. The checkbox fields (tenure,
+    // light/water source, problem categories) are stored on the assessment.
+    $has = fn ($list, $value) => in_array($value, (array) $list, true);
     $expenses = $a?->expenses ?? collect();
     $expenseAmount = function (array $keywords) use ($expenses) {
         foreach ($expenses as $e) {
@@ -306,26 +307,26 @@
     <tr><td class="section">III. LIST OF EXPENSES <i>(Talaan ng mga Gastusin)</i></td></tr>
     <tr><td>
         <table class="plain"><tr>
-            {{-- left: home/utilities (categorical, blank) --}}
+            {{-- left: home/utilities checkboxes --}}
             <td style="width:52%; padding:0">
                 <table class="plain">
                     <tr>
                         <td style="width:24%"><b>House/Lot:</b></td>
-                        <td style="width:26%">{!! $optR(false, 'Owned/Sarili') !!}</td>
-                        <td style="width:28%">{!! $optR(false, 'Rented/Inuupahan') !!}</td>
+                        <td style="width:26%">{!! $optR($a?->house_tenure === 'owned', 'Owned/Sarili') !!}</td>
+                        <td style="width:28%">{!! $optR($a?->house_tenure === 'rented', 'Rented/Inuupahan') !!}</td>
                         <td>How much/Magkano: {{ $num($expenseAmount(['rent', 'house', 'lot', 'inuupahan'])) }}</td>
                     </tr>
                     <tr>
                         <td><b>Light Source</b><br><i>(Pinagmumulan ng ilaw)</i>:</td>
-                        <td>{!! $optL(false, 'Electricity') !!}</td>
-                        <td>{!! $optL(false, 'Kerosene') !!}</td>
-                        <td>{!! $optL(false, 'candle') !!}</td>
+                        <td>{!! $optL($has($a?->light_source, 'electricity'), 'Electricity') !!}</td>
+                        <td>{!! $optL($has($a?->light_source, 'kerosene'), 'Kerosene') !!}</td>
+                        <td>{!! $optL($has($a?->light_source, 'candle'), 'candle') !!}</td>
                     </tr>
                     <tr>
                         <td><b>Water Source</b><br><i>(Pinagmumulan ng Tubig)</i>:</td>
-                        <td>{!! $optL(false, 'Owned') !!}</td>
-                        <td>{!! $optL(false, 'Public') !!}</td>
-                        <td>{!! $optL(false, 'Artesian Well') !!}</td>
+                        <td>{!! $optL($has($a?->water_source, 'owned'), 'Owned') !!}</td>
+                        <td>{!! $optL($has($a?->water_source, 'public'), 'Public') !!}</td>
+                        <td>{!! $optL($has($a?->water_source, 'artesian_well'), 'Artesian Well') !!}</td>
                     </tr>
                 </table>
             </td>
@@ -348,16 +349,18 @@
             <td style="width:70%; padding:0">
                 <table class="plain">
                     <tr>
-                        <td>{!! $optL(false, 'Health Condition of Patient (Specify)') !!}</td>
-                        <td>{!! $optL(false, 'Economic Resources(specify)') !!}</td>
-                        <td>{!! $optL(false, 'Housing (Specify)') !!}</td>
+                        <td>{!! $optL($has($a?->problem_categories, 'health'), 'Health Condition of Patient (Specify)') !!}</td>
+                        <td>{!! $optL($has($a?->problem_categories, 'economic'), 'Economic Resources(specify)') !!}</td>
+                        <td>{!! $optL($has($a?->problem_categories, 'housing'), 'Housing (Specify)') !!}</td>
                     </tr>
                     <tr>
-                        <td>{!! $optL(false, 'Food/Nutrition (Specify)') !!}</td>
-                        <td>{!! $optL(false, 'Employment (Specify)') !!}</td>
-                        <td>{!! $optL(false, 'Other (Specify)') !!}</td>
+                        <td>{!! $optL($has($a?->problem_categories, 'food_nutrition'), 'Food/Nutrition (Specify)') !!}</td>
+                        <td>{!! $optL($has($a?->problem_categories, 'employment'), 'Employment (Specify)') !!}</td>
+                        <td>{!! $optL($has($a?->problem_categories, 'other'), 'Other (Specify)') !!}</td>
                     </tr>
-                    <tr><td colspan="3" class="center">{!! filled($a?->presenting_problem) ? nl2br(e($a->presenting_problem)) : '&nbsp;' !!}</td></tr>
+                    @php $specify = $a?->problem_specify ?: $a?->presenting_problem; @endphp
+                    <tr><td colspan="3" class="center">{!! filled($specify) ? nl2br(e($specify)) : '&nbsp;' !!}</td></tr>
+                    <tr><td colspan="3" class="center"><u>{{ $assistances->map(fn ($x) => strtoupper((string) $x->assistantType?->name))->filter()->unique()->implode(', ') }}</u></td></tr>
                 </table>
                 <div class="cert">*AKO AY NAGPAPATUNAY ANG IMPORMASYONG NAKASULAT SA IBABAW AY TOTOO AT TAMA</div>
                 <div class="clientname">{!! filled($fullName) ? e($fullName) : '&nbsp;' !!}</div>
