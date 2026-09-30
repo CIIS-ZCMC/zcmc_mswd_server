@@ -68,6 +68,11 @@ class Assessment extends Model
         'referral_source',
         'reason_for_referral',
         'presenting_problem',
+        'problem_categories',
+        'problem_specify',
+        'house_tenure',
+        'light_source',
+        'water_source',
         'family_background',
         'medical_history',
         'social_functioning',
@@ -78,6 +83,15 @@ class Assessment extends Model
         'intervention_plan',
     ];
 
+    /** UIS form III/IV checkbox vocabularies (validated in the requests, printed by the UIS PDF). */
+    public const HOUSE_TENURES = ['owned', 'rented'];
+
+    public const LIGHT_SOURCES = ['electricity', 'kerosene', 'candle'];
+
+    public const WATER_SOURCES = ['owned', 'public', 'artesian_well'];
+
+    public const PROBLEM_CATEGORIES = ['health', 'economic', 'housing', 'food_nutrition', 'employment', 'other'];
+
     protected function casts(): array
     {
         return [
@@ -86,6 +100,9 @@ class Assessment extends Model
             'calculated_discount_rate' => 'decimal:2',
             'recommended_amount' => 'decimal:2',
             'revision' => 'integer',
+            'problem_categories' => 'array',
+            'light_source' => 'array',
+            'water_source' => 'array',
             'prepared_at' => 'datetime',
             'noted_at' => 'datetime',
             'review_requested_at' => 'datetime',

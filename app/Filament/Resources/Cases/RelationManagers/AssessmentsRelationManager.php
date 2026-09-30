@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Cases\RelationManagers;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
+use App\Models\Assessment;
+use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
@@ -20,6 +22,12 @@ class AssessmentsRelationManager extends RelationManager
     protected static string $relationship = 'assessments';
 
     protected static ?string $title = 'Assessments';
+
+    /** @param array<int, string> $keys */
+    private static function labels(array $keys): array
+    {
+        return collect($keys)->mapWithKeys(fn ($k) => [$k => ucfirst(str_replace('_', ' ', $k))])->all();
+    }
 
     private const CLASSIFICATIONS = [
         'indigent' => 'Indigent',
@@ -59,6 +67,11 @@ class AssessmentsRelationManager extends RelationManager
             Select::make('classification')->options(self::CLASSIFICATIONS)->required(),
             TextInput::make('total_family_income')->numeric()->prefix('₱'),
             Textarea::make('presenting_problem')->columnSpanFull(),
+            CheckboxList::make('problem_categories')->options(self::labels(Assessment::PROBLEM_CATEGORIES))->columns(3)->columnSpanFull(),
+            Textarea::make('problem_specify')->columnSpanFull(),
+            Select::make('house_tenure')->options(self::labels(Assessment::HOUSE_TENURES)),
+            CheckboxList::make('light_source')->options(self::labels(Assessment::LIGHT_SOURCES))->columns(3),
+            CheckboxList::make('water_source')->options(self::labels(Assessment::WATER_SOURCES))->columns(3),
             Textarea::make('family_background')->columnSpanFull(),
             Textarea::make('intervention_plan')->columnSpanFull(),
         ]);
