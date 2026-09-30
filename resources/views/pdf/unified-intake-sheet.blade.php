@@ -1,18 +1,18 @@
 @php
     use Illuminate\Support\Carbon;
 
-    $p = $sheet->patient;
-    $case = $sheet->case;
-    $a = $sheet->assessment;
-    $isFinal = $sheet->status === \App\Models\UnifiedIntakeSheet::STATUS_FINALIZED;
+    // The UIS is a printable of the case's data, not a stored record. Inputs:
+    //   $patient, $case, $assessment (nullable), $printedBy (nullable User), $printedAt (Carbon).
+    // See UnifiedIntakeSheetPdfService::renderForCase().
+    $p = $patient;
+    $a = $assessment;
 
     $fullName = collect([$p?->last_name, $p?->first_name, $p?->middle_name, $p?->extension_name])
         ->filter()->join(', ');
 
-    // Age as of the interview date (not today) — an intake sheet records the age
-    // the client was when interviewed, so a reprint years later stays accurate.
+    // Age as of the print date, which is the interview date on the form.
     $age = $p?->birthdate
-        ? (int) Carbon::parse($p->birthdate)->diffInYears($sheet->date_of_intake ?? now())
+        ? (int) Carbon::parse($p->birthdate)->diffInYears($printedAt ?? now())
         : $p?->estimated_age;
 
     $composedAddress = collect([$p?->address, $p?->barangay, $p?->municipality, $p?->province])
@@ -122,16 +122,9 @@
 
         .signame { text-align: center; font-weight: bold; text-decoration: underline; padding-top: 14px; }
         .sigcap { text-align: center; font-size: 7px; }
-
-        .watermark { position: fixed; top: 42%; left: 16%; font-size: 100px; color: #000;
-                     opacity: 0.06; transform: rotate(-35deg); font-weight: bold; }
     </style>
 </head>
 <body>
-
-@unless($isFinal)
-    <div class="watermark">{{ strtoupper($sheet->status) }}</div>
-@endunless
 
 {{-- ── Letterhead ─────────────────────────────────────────────── --}}
 <table class="head">
@@ -163,8 +156,8 @@
     <tr><td>
         <table class="plain">
             <tr>
-                <td style="width:55%"><b>Date of Intake/Interview</b> <i>(Petsa ng Panayam)</i>: {!! $u(optional($sheet->date_of_intake)->format('m/d/Y g:i:s A')) !!}</td>
-                <td><b>Time of Interview</b> <i>(Oras ng Panayam)</i>: {!! $u(optional($sheet->date_of_intake)->format('g:i:s A')) !!}</td>
+                <td style="width:55%"><b>Date of Intake/Interview</b> <i>(Petsa ng Panayam)</i>: {!! $u(optional($printedAt)->format('m/d/Y g:i:s A')) !!}</td>
+                <td><b>Time of Interview</b> <i>(Oras ng Panayam)</i>: {!! $u(optional($printedAt)->format('g:i:s A')) !!}</td>
             </tr>
             <tr>
                 <td><b>Name of Informant</b> <i>(Pangalan ng impormante)</i>: {!! $u(null) !!}</td>
@@ -417,9 +410,9 @@
     <tr><td>
         <table class="cells"><tr>
             <td style="width:15%">Interviewed by:</td>
-            <td style="width:35%"><div class="signame">{!! filled($sheet->intakeWorker?->employee_name) ? e($sheet->intakeWorker->employee_name) : '&nbsp;' !!}</div><div class="sigcap">Signature over Name of Medical Social Worker</div></td>
+            <td style="width:35%"><div class="signame">{!! filled($printedBy?->employee_name) ? e($printedBy->employee_name) : '&nbsp;' !!}</div><div class="sigcap">Signature over Name of Medical Social Worker</div></td>
             <td style="width:15%">Reviewed and<br>Approved by:</td>
-            <td><div class="signame">{!! $isFinal && filled($sheet->finalizer?->employee_name) ? e($sheet->finalizer->employee_name) : '&nbsp;' !!}</div><div class="sigcap">Signature over Name</div></td>
+            <td><div class="signame">&nbsp;</div><div class="sigcap">Signature over Name</div></td>
         </tr></table>
     </td></tr>
 

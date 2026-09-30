@@ -5,8 +5,8 @@ use App\Http\Controllers\AdmissionResultController;
 use App\Http\Controllers\AmendSocialCaseController;
 use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
-use App\Http\Controllers\AssessPatientTransactionController;
 use App\Http\Controllers\AssessmentExpenseController;
+use App\Http\Controllers\AssessPatientTransactionController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
 use App\Http\Controllers\AssistantTypeController;
@@ -15,10 +15,12 @@ use App\Http\Controllers\CaseActivitiesController;
 use App\Http\Controllers\CaseDocumentController;
 use App\Http\Controllers\CaseHistoryController;
 use App\Http\Controllers\CaseHospitalTransactionController;
+use App\Http\Controllers\CaseIntakeSheetPdfController;
 use App\Http\Controllers\CaseModelController;
 use App\Http\Controllers\CaseProfileController;
 use App\Http\Controllers\CaseProgressNoteController;
 use App\Http\Controllers\CaseSummaryPdfController;
+use App\Http\Controllers\CaseUisPrintHistoryController;
 use App\Http\Controllers\CaseWatcherController;
 use App\Http\Controllers\CaseWatcherStatusController;
 use App\Http\Controllers\CloseCaseController;
@@ -28,7 +30,6 @@ use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
 use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\DocumentController;
-use App\Http\Controllers\FinalizeIntakeSheetController;
 use App\Http\Controllers\FinalizeSocialCaseController;
 use App\Http\Controllers\FindHospitalPatientController;
 use App\Http\Controllers\FindPatientTransactionController;
@@ -37,16 +38,11 @@ use App\Http\Controllers\HospitalCaseTypeController;
 use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\HospitalPlanController;
 use App\Http\Controllers\ImportHospitalPatientController;
-use App\Http\Controllers\IntakeSheetHistoryController;
-use App\Http\Controllers\ShowHospitalPatientImportBatchController;
-use App\Http\Controllers\StoreHospitalPatientImportBatchController;
-use App\Http\Controllers\IntakeSheetPdfController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionTypeController;
 use App\Http\Controllers\IssueWatcherPassController;
 use App\Http\Controllers\LoginController;
 use App\Http\Controllers\LogoutController;
-use App\Http\Controllers\MatchIntakePatientsController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\MergePatientController;
@@ -82,17 +78,17 @@ use App\Http\Controllers\RevokeWatcherPassController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\ServiceTypeController;
+use App\Http\Controllers\ShowHospitalPatientImportBatchController;
 use App\Http\Controllers\SocialCaseController;
 use App\Http\Controllers\SocialCasePdfController;
 use App\Http\Controllers\SocialCaseReportController;
 use App\Http\Controllers\SocialCaseReportExportController;
+use App\Http\Controllers\StoreHospitalPatientImportBatchController;
 use App\Http\Controllers\StoreWatcherWaiverController;
-use App\Http\Controllers\SubmitIntakeSheetController;
 use App\Http\Controllers\SubmitSocialCaseController;
 use App\Http\Controllers\SyncUserRolesController;
 use App\Http\Controllers\TransactionTypeController;
 use App\Http\Controllers\UnassignCaretakerController;
-use App\Http\Controllers\UnifiedIntakeSheetController;
 use App\Http\Controllers\UnmergePatientController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WatcherRelationshipTypeController;
@@ -124,18 +120,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::apiResource('roles', RoleController::class);
         Route::apiResource('permissions', PermissionController::class);
     });
-
-    // Unified Intake Sheet (per-action permissions declared on the controller)
-    Route::apiResource('intake-sheets', UnifiedIntakeSheetController::class)->parameters(['intake-sheets' => 'intakeSheet']);
-
-    Route::middleware('permission:intake.view')->group(function () {
-        Route::post('intake-sheets/match-patients', MatchIntakePatientsController::class);
-        Route::get('intake-sheets/{intakeSheet}/history', IntakeSheetHistoryController::class);
-        Route::get('intake-sheets/{intakeSheet}/pdf', IntakeSheetPdfController::class);
-    });
-
-    Route::post('intake-sheets/{intakeSheet}/submit', SubmitIntakeSheetController::class)->middleware('permission:intake.update');
-    Route::post('intake-sheets/{intakeSheet}/finalize', FinalizeIntakeSheetController::class)->middleware('permission:intake.finalize');
 
     // Patients (per-action permissions declared on the controller)
     Route::apiResource('patients', PatientController::class);
@@ -244,6 +228,12 @@ Route::middleware('auth:sanctum')->group(function () {
         // reasoning that puts the intake PDF on intake.view.
         Route::get('cases/{case}/summary-pdf', CaseSummaryPdfController::class);
     });
+
+    // Unified Intake Sheet (ANNEX B) as a printable of the case's data — no intake
+    // record. The pdf route logs each print; permission (intake.view) is declared
+    // on the controllers.
+    Route::get('cases/{case}/uis/pdf', CaseIntakeSheetPdfController::class);
+    Route::get('cases/{case}/uis/prints', CaseUisPrintHistoryController::class);
 
     Route::middleware('permission:cases.update')->group(function () {
         Route::post('cases/{case}/assign', AssignCaseController::class);

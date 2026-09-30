@@ -111,8 +111,7 @@ class AssessmentService
 
     /**
      * Soft-deletes, since Assessment mixes in SoftDeletes. A finalized social
-     * case study is a signed document and is refused outright, mirroring
-     * UnifiedIntakeSheetService::cancel().
+     * case study is a signed document and is refused outright.
      */
     public function delete(Assessment $assessment): bool
     {

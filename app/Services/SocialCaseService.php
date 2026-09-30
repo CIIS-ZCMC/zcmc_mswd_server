@@ -8,7 +8,6 @@ use App\Models\Assessment;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
 use App\Models\Document;
-use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
@@ -60,7 +59,6 @@ class SocialCaseService
             $assessment = $this->resolveAssessment($case, $author, $dto, $assessmentId);
 
             $attributes = array_merge(
-                $this->seedReferralFields($case, $dto),
                 $dto->toArray(),
                 [
                     'social_case_status' => Assessment::SOCIAL_CASE_DRAFT,
@@ -203,38 +201,6 @@ class SocialCaseService
             'created_by' => $author->id,
             'classification' => $dto->classification,
         ]);
-    }
-
-    /**
-     * A snapshot, never a live join: a case can open with no intake at all, and
-     * a case with three appended intakes has three referral sources of which
-     * only one opened the episode. The same reasoning case_watchers uses for
-     * `name` / `relationship`.
-     *
-     * @return array<string, mixed>
-     */
-    private function seedReferralFields(CaseModel $case, SocialCaseDto $dto): array
-    {
-        $supplied = $dto->toArray();
-
-        if (array_key_exists('referral_source', $supplied) && array_key_exists('reason_for_referral', $supplied)) {
-            return [];
-        }
-
-        $sheet = UnifiedIntakeSheet::query()
-            ->where('case_id', $case->id)
-            ->orderByRaw('CASE WHEN status = ? THEN 0 ELSE 1 END', [UnifiedIntakeSheet::STATUS_FINALIZED])
-            ->latest('id')
-            ->first();
-
-        if ($sheet === null) {
-            return [];
-        }
-
-        return [
-            'referral_source' => $sheet->referral_source,
-            'reason_for_referral' => $sheet->referral_details,
-        ];
     }
 
     /**

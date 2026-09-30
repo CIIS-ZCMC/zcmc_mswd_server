@@ -3,7 +3,6 @@
 use App\Models\CaseModel;
 use App\Models\Patient;
 use App\Models\Sector;
-use App\Models\UnifiedIntakeSheet;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -58,10 +57,6 @@ it('merges a source patient into a target, reassigning records', function () {
         'admission_type' => 'ER', 'date_opened' => now(),
     ]);
     $source->patientIds()->create(['id_type' => 'philhealth', 'id_number' => 'PH-1']);
-    UnifiedIntakeSheet::create([
-        'intake_no' => 'UIS-TEST-1', 'patient_id' => $source->id, 'case_id' => $case->id,
-        'intake_worker_id' => $user->id, 'date_of_intake' => now(), 'status' => 'draft',
-    ]);
 
     $this->postJson("/api/patients/{$source->id}/merge", ['target_id' => $target->id])
         ->assertOk()
@@ -71,8 +66,7 @@ it('merges a source patient into a target, reassigning records', function () {
     expect(Patient::find($source->id))->toBeNull()
         ->and(Patient::withTrashed()->find($source->id)->trashed())->toBeTrue()
         ->and($case->fresh()->patient_id)->toBe($target->id)
-        ->and($target->patientIds()->count())->toBe(1)
-        ->and(UnifiedIntakeSheet::where('intake_no', 'UIS-TEST-1')->first()->patient_id)->toBe($target->id);
+        ->and($target->patientIds()->count())->toBe(1);
 
     // Merge is audited on the target
     expect(Activity::where('description', 'patient_merged')

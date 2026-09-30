@@ -174,6 +174,15 @@ class CaseModel extends Model
     }
 
     /**
+     * History of Unified Intake Sheet (ANNEX B) prints for this case. The UIS is
+     * a printable of the case's data, not a stored record — see UisPrintLog.
+     */
+    public function uisPrintLogs(): HasMany
+    {
+        return $this->hasMany(UisPrintLog::class, 'case_id');
+    }
+
+    /**
      * Automatic field-level audit trail (from the Auditable trait). Distinct
      * from activities(), which is the CaseActivity milestone timeline.
      */

@@ -42,6 +42,8 @@ class HospitalTransactionsRelationManager extends RelationManager
                 TextColumn::make('snapshot.guarantor_total')->label('Guarantor total')->placeholder('—'),
                 TextColumn::make('linked_at')->label('Attached')->dateTime()->placeholder('—'),
             ])
+            ->modifyQueryUsing(fn ($query) => $query->orderByDesc('snapshot->registration_date')->orderByDesc('linked_at'))
+            ->defaultSort(null)
             ->headerActions([
                 $this->attachEncounterAction(),
             ])

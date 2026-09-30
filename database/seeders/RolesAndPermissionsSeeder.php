@@ -55,12 +55,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'assistance.create',
         'assistance.update',
         'assistance.approve',
-        // Unified Intake Sheet
+        // Unified Intake Sheet (ANNEX B) — a printable, not a record: this one
+        // permission guards printing it and reading its print history.
         'intake.view',
-        'intake.create',
-        'intake.update',
-        'intake.finalize',
-        'intake.delete',
         // Audit trail
         'audit.view',
         'audit.view_protective',
@@ -89,7 +86,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
-            'intake.view', 'intake.create', 'intake.update', 'intake.finalize', 'intake.delete',
+            'intake.view',
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
             'settings.manage',
@@ -100,7 +97,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update', 'patients.merge', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
-            'intake.view', 'intake.create', 'intake.update', 'intake.finalize',
+            'intake.view',
             'audit.view',
             'reports.view', 'reports.generate',
             'panel.access',
@@ -109,14 +106,14 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update',
             'assistance.view', 'assistance.create', 'assistance.update',
-            'intake.view', 'intake.create', 'intake.update',
+            'intake.view',
             'reports.view',
         ],
         'Processor' => [
             'patients.view', 'hospital-patients.view',
             'cases.view',
             'assistance.view', 'assistance.create', 'assistance.update',
-            'intake.view', 'intake.create', 'intake.update',
+            'intake.view',
             'reports.view',
         ],
     ];

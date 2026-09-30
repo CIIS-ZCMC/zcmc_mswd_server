@@ -148,52 +148,6 @@ it('allows storing a standalone assessment once a primary watcher is registered'
     $this->postJson("/api/cases/{$case->id}/assessments", ['classification' => 'indigent'])->assertCreated();
 });
 
-// --- Submit / finalize intake sheet ----------------------------------------
-
-it('blocks submitting an intake sheet whose case is inpatient with no registered watcher', function () {
-    $worker = enforcementUser();
-    Sanctum::actingAs($worker);
-    $intakeId = $this->postJson('/api/intake-sheets', enforcementIntakePayload($this->sector->id, 'inpatient'))
-        ->assertCreated()->json('data.id');
-
-    $this->postJson("/api/intake-sheets/{$intakeId}/submit")->assertStatus(422);
-});
-
-it('blocks finalizing an intake sheet whose case is inpatient with no registered watcher', function () {
-    $worker = enforcementUser();
-    Sanctum::actingAs($worker);
-    $intakeId = $this->postJson('/api/intake-sheets', enforcementIntakePayload($this->sector->id, 'inpatient'))
-        ->assertCreated()->json('data.id');
-
-    $this->postJson("/api/intake-sheets/{$intakeId}/finalize")->assertStatus(422);
-});
-
-it('allows submitting and finalizing an intake sheet once a primary watcher is registered', function () {
-    $worker = enforcementUser();
-    Sanctum::actingAs($worker);
-    $response = $this->postJson('/api/intake-sheets', enforcementIntakePayload($this->sector->id, 'inpatient'))->assertCreated();
-    $intakeId = $response->json('data.id');
-    $caseId = $response->json('data.case_id');
-    registerPrimaryWatcher(CaseModel::find($caseId), $worker);
-
-    $this->postJson("/api/intake-sheets/{$intakeId}/submit")->assertOk();
-    $this->postJson("/api/intake-sheets/{$intakeId}/finalize")->assertOk();
-});
-
-function enforcementIntakePayload(int $sectorId, string $admissionType): array
-{
-    return [
-        'referral_source' => 'walk_in',
-        'date_of_intake' => now()->toDateString(),
-        'patient' => [
-            'sector_id' => $sectorId, 'first_name' => 'Juan', 'last_name' => 'Dela Cruz',
-            'sex' => 'male', 'birthdate' => '1980-05-01',
-        ],
-        'case' => ['case_type' => 'medical', 'priority_level' => 'high', 'admission_type' => $admissionType],
-        'assessment' => ['classification' => 'indigent'],
-    ];
-}
-
 // --- Transitions that must never block --------------------------------------
 
 it('never blocks reopening a case, even with an unmet watcher requirement', function () {

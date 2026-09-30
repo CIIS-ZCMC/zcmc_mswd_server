@@ -102,12 +102,13 @@
 @if($p?->familyMembers?->isNotEmpty())
     <table class="grid family">
         <thead><tr>
-            <th style="width:24%">Name</th>
-            <th style="width:13%">Relationship</th>
-            <th style="width:7%">Age</th>
-            <th style="width:8%">Sex</th>
-            <th style="width:18%">Education</th>
-            <th style="width:16%">Occupation</th>
+            <th style="width:20%">Name</th>
+            <th style="width:12%">Relationship</th>
+            <th style="width:11%">Birthdate</th>
+            <th style="width:6%">Age</th>
+            <th style="width:7%">Sex</th>
+            <th style="width:15%">Education</th>
+            <th style="width:15%">Occupation</th>
             <th style="width:14%">Monthly Income</th>
         </tr></thead>
         <tbody>
@@ -115,6 +116,7 @@
             <tr>
                 <td>{{ $val($m->name) }}</td>
                 <td>{{ $val($m->relationship) }}</td>
+                <td>{{ $m->birthdate ? $m->birthdate->format('M d, Y') : '—' }}</td>
                 <td>{{ $memberAge($m) ?? '—' }}</td>
                 <td>{{ $val($m->sex) }}</td>
                 <td>{{ $val($m->educational_attainment) }}</td>
