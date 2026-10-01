@@ -107,3 +107,52 @@ it('gates create/edit/delete on cases.update', function () {
     expect((new AssessmentsRelationManager)->canCreate())->toBeTrue()
         ->and((new InterventionsRelationManager)->canCreate())->toBeTrue();
 });
+
+it('saves the UIS intake fields from the assessment form', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = recRmCase($worker, $this->patient);
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('create', data: [
+            'classification' => 'indigent',
+            'informant_name' => 'Maria Reyes',
+            'informant_relationship' => 'Daughter',
+            'referral_source' => 'Ward 3',
+            'other_income_sources' => [
+                ['source' => 'Remittance', 'amount' => 1500],
+                ['source' => 'Store', 'amount' => 500],
+            ],
+            'medical_history' => 'Hypertension',
+            'recommendation' => 'Medicine assistance',
+            'recommendation_mode' => 'Guarantee Letter',
+            'fund_source' => 'MSWD Fund',
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $assessment = Assessment::sole();
+    expect($assessment->informant_name)->toBe('Maria Reyes')
+        ->and($assessment->informant_relationship)->toBe('Daughter')
+        ->and($assessment->referral_source)->toBe('Ward 3')
+        ->and($assessment->other_income_sources)->toHaveCount(2)
+        ->and($assessment->other_income_sources[0]['source'])->toBe('Remittance')
+        ->and($assessment->medical_history)->toBe('Hypertension')
+        ->and($assessment->recommendation)->toBe('Medicine assistance')
+        ->and($assessment->recommendation_mode)->toBe('Guarantee Letter')
+        ->and($assessment->fund_source)->toBe('MSWD Fund');
+});
+
+it('requires a source on each other-income row', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = recRmCase($worker, $this->patient);
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('create', data: [
+            'classification' => 'indigent',
+            'other_income_sources' => [['amount' => 100]],
+        ])
+        ->assertHasTableActionErrors();
+
+    expect(Assessment::count())->toBe(0);
+});
