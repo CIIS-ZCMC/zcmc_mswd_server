@@ -122,3 +122,42 @@ it('requires the case permissions', function () {
         'expense_type' => 'food', 'amount' => 100,
     ])->assertForbidden();
 });
+
+it('reclassifies the assessment as expense lines are added, edited and removed', function () {
+    // Income 10000, no expenses yet → B (net 10000, one person).
+    $this->assessment->update(['classification' => 'B', 'calculated_classification' => 'B']);
+
+    $expenseId = $this->postJson("/api/assessments/{$this->assessment->id}/expenses", [
+        'expense_type' => 'food', 'amount' => 6000,
+    ])->assertCreated()->json('data.id');
+
+    // Net 4000 → C2, and the (non-overridden) classification follows.
+    expect($this->assessment->fresh())
+        ->calculated_classification->toBe('C2')
+        ->classification->toBe('C2')
+        ->net_per_capita_income->toBe('4000.00')
+        ->calculated_discount_rate->toBe('75.00');
+
+    $this->putJson("/api/assessment-expenses/{$expenseId}", ['amount' => 8000])->assertOk();
+    expect($this->assessment->fresh()->calculated_classification)->toBe('C3');
+
+    $this->deleteJson("/api/assessment-expenses/{$expenseId}")->assertNoContent();
+    expect($this->assessment->fresh())
+        ->calculated_classification->toBe('B')
+        ->classification->toBe('B');
+});
+
+it('keeps a manual classification override when expenses change', function () {
+    $this->assessment->update([
+        'classification' => 'C3', 'calculated_classification' => 'B',
+        'classification_override_reason' => 'Catastrophic illness',
+    ]);
+
+    $this->postJson("/api/assessments/{$this->assessment->id}/expenses", [
+        'expense_type' => 'food', 'amount' => 6000,
+    ])->assertCreated();
+
+    expect($this->assessment->fresh())
+        ->classification->toBe('C3')
+        ->calculated_classification->toBe('C2');
+});

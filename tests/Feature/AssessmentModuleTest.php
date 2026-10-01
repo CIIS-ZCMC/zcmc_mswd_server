@@ -121,3 +121,29 @@ it('promotes an intake assessment to a social case study report draft', function
     expect($assessment->fresh()->social_case_status)->toBe('draft');
 });
 
+
+it('keeps the whole re-assessment chain append-only and linked', function () {
+    $first = Assessment::create([
+        'case_id' => $this->case->id, 'created_by' => $this->worker->id,
+        'classification' => 'B', 'total_family_income' => 9000,
+    ]);
+
+    $secondId = $this->postJson("/api/cases/{$this->case->id}/reassess", [
+        'total_family_income' => 6000, 'reassessment_reason' => 'Reduced hours',
+    ])->assertCreated()->json('data.id');
+
+    $thirdId = $this->postJson("/api/cases/{$this->case->id}/reassess", [
+        'total_family_income' => 2000, 'reassessment_reason' => 'Lost job',
+    ])->assertCreated()->json('data.id');
+
+    $second = Assessment::findOrFail($secondId);
+    $third = Assessment::findOrFail($thirdId);
+
+    // Each re-assessment points at the one before it; nothing is rewritten.
+    expect($second->parent_assessment_id)->toBe($first->id)
+        ->and($third->parent_assessment_id)->toBe($second->id)
+        ->and($this->case->assessments()->count())->toBe(3)
+        ->and($first->fresh()->total_family_income)->toBe('9000.00')
+        ->and($first->fresh()->classification)->toBe('B')
+        ->and($second->fresh()->total_family_income)->toBe('6000.00');
+});

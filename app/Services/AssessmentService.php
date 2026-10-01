@@ -81,9 +81,42 @@ class AssessmentService
         return $this->repository->update($assessment, $data);
     }
 
+    /**
+     * Re-derives the classification metrics from the current income and expense
+     * lines. Expenses are added after the assessment exists, so create() can only
+     * classify against zero expenses; the expense writes call this to catch up.
+     *
+     * A manual override is respected: when the worker's classification already
+     * differs from the previous calculation (or carries an override reason) it is
+     * left alone and only the calculated_* columns move.
+     */
+    public function recalculateClassification(Assessment $assessment): Assessment
+    {
+        $hadOverride = $assessment->hasOverride();
+        $case = $assessment->case()->with(['patient.familyMembers'])->first();
+
+        $metrics = $this->calculateClassification->execute(
+            totalFamilyIncome: (float) $assessment->total_family_income,
+            expensesSum: (float) $assessment->expenses()->sum('amount'),
+            case: $case,
+        );
+
+        $data = [
+            'net_per_capita_income' => $metrics['net_per_capita_income'],
+            'calculated_classification' => $metrics['calculated_classification'],
+            'calculated_discount_rate' => $metrics['calculated_discount_rate'],
+        ];
+
+        if (! $hadOverride) {
+            $data['classification'] = $metrics['calculated_classification'];
+        }
+
+        return $this->repository->update($assessment, $data);
+    }
+
     public function createReassessment(CaseModel $case, AssessmentDto $dto, string $reason): Assessment
     {
-        $parent = $case->assessments()->latest()->first();
+        $parent = $case->assessments()->latest()->latest('id')->first();
 
         $data = array_merge($dto->toArray(), [
             'case_id' => $case->id,
