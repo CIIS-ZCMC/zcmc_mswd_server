@@ -2,6 +2,7 @@
 
 namespace App\Services;
 
+use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -27,17 +28,24 @@ class UnifiedIntakeSheetPdfService
         'patientAssistances.assistantType',
     ];
 
+    /**
+     * The intake-time socioeconomic snapshot (social_case_status IS NULL); the
+     * SCSR assessment is deliberately excluded. See the Assessment model.
+     */
+    public function intakeAssessment(CaseModel $case): ?Assessment
+    {
+        return $case->assessments()
+            ->whereNull('social_case_status')
+            ->latest()
+            ->latest('id')
+            ->first();
+    }
+
     public function renderForCase(CaseModel $case, ?User $printedBy = null): PdfInstance
     {
         $case->loadMissing(self::CASE_RELATIONS);
 
-        // The intake-time socioeconomic snapshot (social_case_status IS NULL);
-        // the SCSR assessment is deliberately excluded. See the Assessment model.
-        $assessment = $case->assessments()
-            ->whereNull('social_case_status')
-            ->latest()
-            ->first();
-
+        $assessment = $this->intakeAssessment($case);
         $assessment?->loadMissing('expenses');
 
         return Pdf::loadView('pdf.unified-intake-sheet', [
