@@ -8,6 +8,7 @@ use Filament\Actions\EditAction;
 use App\Models\Assessment;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
+use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -65,18 +66,31 @@ class AssessmentsRelationManager extends RelationManager
         return $schema->components([
             Hidden::make('created_by')->default(fn () => auth()->id()),
             Select::make('classification')->options(self::CLASSIFICATIONS)->required(),
+            TextInput::make('informant_name'),
+            TextInput::make('informant_relationship'),
+            TextInput::make('referral_source'),
             TextInput::make('total_family_income')->numeric()->prefix('₱'),
+            Repeater::make('other_income_sources')
+                ->label('Other sources of family income')
+                ->schema([
+                    TextInput::make('source')->required(),
+                    TextInput::make('amount')->numeric()->minValue(0)->prefix('₱'),
+                ])
+                ->columns(2)
+                ->defaultItems(0)
+                ->addActionLabel('Add income source')
+                ->columnSpanFull(),
             Textarea::make('presenting_problem')->columnSpanFull(),
             CheckboxList::make('problem_categories')->options(self::labels(Assessment::PROBLEM_CATEGORIES))->columns(3)->columnSpanFull(),
             Textarea::make('problem_specify')->columnSpanFull(),
-            TextInput::make('informant_name'),
-            TextInput::make('informant_relationship'),
-            TextInput::make('recommendation_mode'),
-            TextInput::make('fund_source'),
             Select::make('house_tenure')->options(self::labels(Assessment::HOUSE_TENURES)),
             CheckboxList::make('light_source')->options(self::labels(Assessment::LIGHT_SOURCES))->columns(3),
             CheckboxList::make('water_source')->options(self::labels(Assessment::WATER_SOURCES))->columns(3),
             Textarea::make('family_background')->columnSpanFull(),
+            Textarea::make('medical_history')->columnSpanFull(),
+            Textarea::make('recommendation')->columnSpanFull(),
+            TextInput::make('recommendation_mode')->label('Mode of assistance'),
+            TextInput::make('fund_source'),
             Textarea::make('intervention_plan')->columnSpanFull(),
         ]);
     }

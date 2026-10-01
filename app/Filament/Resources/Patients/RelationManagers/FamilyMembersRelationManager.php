@@ -72,6 +72,7 @@ class FamilyMembersRelationManager extends RelationManager
                 TextColumn::make('name')->searchable(),
                 TextColumn::make('relationship'),
                 TextColumn::make('sex')->placeholder('—'),
+                TextColumn::make('civil_status')->label('Civil status')->placeholder('—')->toggleable(),
                 TextColumn::make('birthdate')->date()->placeholder('—')->sortable(),
                 TextColumn::make('age')->placeholder('—'),
                 TextColumn::make('educational_attainment')->label('Education')->placeholder('—')

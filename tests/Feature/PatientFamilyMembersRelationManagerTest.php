@@ -91,3 +91,14 @@ it('gates create/edit/delete on patients.update', function () {
         ->and($manager->canEdit($member))->toBeTrue()
         ->and($manager->canDelete($member))->toBeTrue();
 });
+
+it('saves a family member civil status from the form', function () {
+    actingAs(familyRmUser());
+    $member = familyMemberFor($this->patient);
+
+    familyRm($this->patient)
+        ->callTableAction('edit', $member, data: ['name' => 'Maria', 'civil_status' => 'Widowed'])
+        ->assertHasNoTableActionErrors();
+
+    expect($member->fresh()->civil_status)->toBe('Widowed');
+});
