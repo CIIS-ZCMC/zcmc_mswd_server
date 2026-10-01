@@ -11,8 +11,8 @@ return new class extends Migration
         Schema::create('patient_assistance_reports', function (Blueprint $table) {
             $table->id();
             $table->foreignId('assistance_id')->constrained('patient_assistance');
-            $table->string('hospital_id')->unique();
-            $table->string('mswd_id')->unique();
+            $table->string('hospital_id')->nullable();
+            $table->string('mswd_id')->nullable();
             $table->string('patient_name');
             $table->string('patient_address')->nullable();
             $table->string('assistant_type');
