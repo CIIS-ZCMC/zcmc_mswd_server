@@ -13,7 +13,7 @@ class UisPrintLogService
      * Record one UIS print for a case. `transaction_id` is denormalized from the
      * case so the history is queryable per hospital encounter.
      */
-    public function record(CaseModel $case, User $user, int $copies = 1): UisPrintLog
+    public function record(CaseModel $case, User $user, int $copies = 1, ?string $remarks = null): UisPrintLog
     {
         return UisPrintLog::create([
             'case_id' => $case->id,
@@ -22,6 +22,7 @@ class UisPrintLogService
             'printed_by' => $user->id,
             'printed_at' => now(),
             'copies' => max(1, $copies),
+            'remarks' => $remarks,
         ]);
     }
 

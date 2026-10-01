@@ -21,6 +21,7 @@ use App\Http\Controllers\CaseProfileController;
 use App\Http\Controllers\CaseProgressNoteController;
 use App\Http\Controllers\CaseSummaryPdfController;
 use App\Http\Controllers\CaseUisPrintHistoryController;
+use App\Http\Controllers\CaseUisReadinessController;
 use App\Http\Controllers\CaseWatcherController;
 use App\Http\Controllers\CaseWatcherStatusController;
 use App\Http\Controllers\CloseCaseController;
@@ -232,6 +233,7 @@ Route::middleware('auth:sanctum')->group(function () {
     // Unified Intake Sheet (ANNEX B) as a printable of the case's data — no intake
     // record. The pdf route logs each print; permission (intake.view) is declared
     // on the controllers.
+    Route::get('cases/{case}/uis', CaseUisReadinessController::class);
     Route::get('cases/{case}/uis/pdf', CaseIntakeSheetPdfController::class);
     Route::get('cases/{case}/uis/prints', CaseUisPrintHistoryController::class);
 

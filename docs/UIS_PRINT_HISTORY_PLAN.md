@@ -37,7 +37,8 @@ case whose `transaction_id = X`".
 | Renderer | `app/Services/UnifiedIntakeSheetPdfService.php` — `renderForCase()`, `filenameForCase()` |
 | Print log service | `app/Services/UisPrintLogService.php` — `record()`, `history()` |
 | Print log model / table | `app/Models/UisPrintLog.php`, `uis_print_logs` |
-| Print endpoint | `GET /api/cases/{case}/uis/pdf` → `CaseIntakeSheetPdfController` |
+| Print endpoint | `GET /api/cases/{case}/uis/pdf` → `CaseIntakeSheetPdfController` (409 `uis_no_assessment` unless `?blank=1`; `copies`, `remarks`) |
+| Readiness endpoint | `GET /api/cases/{case}/uis` → `CaseUisReadinessController` |
 | History endpoint | `GET /api/cases/{case}/uis/prints` → `CaseUisPrintHistoryController` |
 | History payload | `app/Http/Resources/UisPrintLogResource.php` |
 | Permission | `intake.view` (the only remaining `intake.*` permission) |

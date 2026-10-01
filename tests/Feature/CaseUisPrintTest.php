@@ -53,6 +53,7 @@ function uisIntakeAssessment(CaseModel $case, User $author): Assessment
 
 it('streams the ANNEX B PDF for a case and logs the print', function () {
     Sanctum::actingAs($this->worker);
+    uisIntakeAssessment($this->case, $this->worker);
 
     $response = $this->get("/api/cases/{$this->case->id}/uis/pdf")
         ->assertOk()
@@ -70,6 +71,7 @@ it('streams the ANNEX B PDF for a case and logs the print', function () {
 
 it('has no stored intake sheet record or CRUD — the UIS is only a printable', function () {
     Sanctum::actingAs($this->worker);
+    uisIntakeAssessment($this->case, $this->worker);
 
     $this->get("/api/cases/{$this->case->id}/uis/pdf")->assertOk();
 
@@ -81,6 +83,7 @@ it('has no stored intake sheet record or CRUD — the UIS is only a printable', 
 
 it('forces an attachment download named after the case with ?download=1', function () {
     Sanctum::actingAs($this->worker);
+    uisIntakeAssessment($this->case, $this->worker);
 
     $this->get("/api/cases/{$this->case->id}/uis/pdf?download=1")
         ->assertOk()
@@ -89,6 +92,7 @@ it('forces an attachment download named after the case with ?download=1', functi
 
 it('does not log a print for ?preview=1', function () {
     Sanctum::actingAs($this->worker);
+    uisIntakeAssessment($this->case, $this->worker);
 
     $this->get("/api/cases/{$this->case->id}/uis/pdf?preview=1")->assertOk();
 
@@ -97,6 +101,7 @@ it('does not log a print for ?preview=1', function () {
 
 it('logs one row per print', function () {
     Sanctum::actingAs($this->worker);
+    uisIntakeAssessment($this->case, $this->worker);
 
     $this->get("/api/cases/{$this->case->id}/uis/pdf")->assertOk();
     $this->get("/api/cases/{$this->case->id}/uis/pdf")->assertOk();
@@ -135,11 +140,97 @@ it('renders the case patient, family and intake assessment into the ANNEX B view
         ->and($html)->not->toContain('DRAFT');
 });
 
-it('prints a case that has no assessment yet', function () {
+it('refuses to print a case with no intake assessment unless blank=1', function () {
     Sanctum::actingAs($this->worker);
 
-    // A fillable printable: missing data is blank, not an error.
+    $this->getJson("/api/cases/{$this->case->id}/uis/pdf")
+        ->assertStatus(409)
+        ->assertJsonPath('code', 'uis_no_assessment');
+    $this->getJson("/api/cases/{$this->case->id}/uis/pdf?preview=1")->assertStatus(409);
+    expect(UisPrintLog::count())->toBe(0);
+
+    // The blank fillable form stays available on request, and is logged.
+    $this->get("/api/cases/{$this->case->id}/uis/pdf?blank=1")->assertOk();
+    expect(UisPrintLog::count())->toBe(1);
+});
+
+it('does not count the social case study as the intake assessment', function () {
+    Sanctum::actingAs($this->worker);
+    Assessment::create([
+        'case_id' => $this->case->id, 'created_by' => $this->worker->id, 'classification' => 'B',
+        'social_case_status' => Assessment::SOCIAL_CASE_DRAFT,
+    ]);
+
+    $this->getJson("/api/cases/{$this->case->id}/uis/pdf")->assertStatus(409);
+});
+
+it('stores copies and remarks on the print row', function () {
+    Sanctum::actingAs($this->worker);
+    uisIntakeAssessment($this->case, $this->worker);
+
+    $this->get("/api/cases/{$this->case->id}/uis/pdf?copies=3&remarks=For+PCSO+filing")->assertOk();
+
+    $log = UisPrintLog::sole();
+    expect($log->copies)->toBe(3)->and($log->remarks)->toBe('For PCSO filing');
+
+    $this->getJson("/api/cases/{$this->case->id}/uis/prints")
+        ->assertJsonPath('data.0.copies', 3)
+        ->assertJsonPath('data.0.remarks', 'For PCSO filing');
+});
+
+it('validates the print options', function () {
+    Sanctum::actingAs($this->worker);
+    uisIntakeAssessment($this->case, $this->worker);
+
+    $this->getJson("/api/cases/{$this->case->id}/uis/pdf?copies=0")
+        ->assertUnprocessable()->assertJsonValidationErrors('copies');
+    $this->getJson("/api/cases/{$this->case->id}/uis/pdf?copies=99")
+        ->assertUnprocessable()->assertJsonValidationErrors('copies');
+    expect(UisPrintLog::count())->toBe(0);
+});
+
+it('reports readiness: no assessment, then what is still missing, then ready', function () {
+    Sanctum::actingAs($this->worker);
+
+    $this->getJson("/api/cases/{$this->case->id}/uis")
+        ->assertOk()
+        ->assertJsonPath('data.has_assessment', false)
+        ->assertJsonPath('data.ready', false)
+        ->assertJsonPath('data.missing', ['assessment'])
+        ->assertJsonPath('data.classification', null)
+        ->assertJsonPath('data.print_count', 0);
+
+    $assessment = Assessment::create([
+        'case_id' => $this->case->id, 'created_by' => $this->worker->id, 'classification' => 'C2',
+        'calculated_classification' => 'C2', 'calculated_discount_rate' => 75, 'total_family_income' => 4500,
+    ]);
+
+    // The patient already has a family member from beforeEach.
+    $this->getJson("/api/cases/{$this->case->id}/uis")
+        ->assertJsonPath('data.has_assessment', true)
+        ->assertJsonPath('data.assessment_id', $assessment->id)
+        ->assertJsonPath('data.missing', ['informant', 'problem_presented', 'recommendation'])
+        ->assertJsonPath('data.classification.classification', 'C2')
+        ->assertJsonPath('data.classification.has_override', false);
+
+    $assessment->update([
+        'informant_name' => 'Maria', 'presenting_problem' => 'Cannot afford medicine',
+        'recommendation' => 'Medicine assistance',
+    ]);
     $this->get("/api/cases/{$this->case->id}/uis/pdf")->assertOk();
+
+    $this->getJson("/api/cases/{$this->case->id}/uis")
+        ->assertJsonPath('data.ready', true)
+        ->assertJsonPath('data.missing', [])
+        ->assertJsonPath('data.print_count', 1)
+        ->assertJsonStructure(['data' => ['last_printed_at']]);
+});
+
+it('forbids the readiness summary without intake.view', function () {
+    $outsider = User::factory()->create();
+    Sanctum::actingAs($outsider);
+
+    $this->getJson("/api/cases/{$this->case->id}/uis")->assertForbidden();
 });
 
 it('lists the print history newest first with the printer', function () {
