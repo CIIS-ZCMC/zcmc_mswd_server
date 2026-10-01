@@ -2,21 +2,27 @@
 
 namespace App\Filament\Resources\Cases\RelationManagers;
 
+use App\DTOs\AssessmentDto;
+use App\Exceptions\WatcherRequirementNotSatisfiedException;
+use App\Models\Assessment;
+use App\Services\AssessmentService;
+use App\Services\CaseModelService;
 use Filament\Actions\CreateAction;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\EditAction;
-use App\Models\Assessment;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Hidden;
 use Filament\Forms\Components\Repeater;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
+use Filament\Notifications\Notification;
 use Filament\Resources\RelationManagers\RelationManager;
 use Filament\Schemas\Schema;
 use Filament\Tables\Columns\TextColumn;
 use Filament\Tables\Table;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Validation\ValidationException;
 
 class AssessmentsRelationManager extends RelationManager
 {
@@ -31,6 +37,12 @@ class AssessmentsRelationManager extends RelationManager
     }
 
     private const CLASSIFICATIONS = [
+        'A' => 'A — Full pay',
+        'B' => 'B — 25% discount',
+        'C1' => 'C1 — 50% discount',
+        'C2' => 'C2 — 75% discount',
+        'C3' => 'C3 — 100% discount',
+        'D' => 'D — No income',
         'indigent' => 'Indigent',
         'low_income' => 'Low income',
         'self_sufficient' => 'Self-sufficient',
@@ -65,7 +77,12 @@ class AssessmentsRelationManager extends RelationManager
     {
         return $schema->components([
             Hidden::make('created_by')->default(fn () => auth()->id()),
-            Select::make('classification')->options(self::CLASSIFICATIONS)->required(),
+            Select::make('classification')
+                ->options(self::CLASSIFICATIONS)
+                ->helperText('Leave blank to use the MSWD classification calculated from income, expenses and household size.'),
+            Textarea::make('classification_override_reason')
+                ->helperText('Why the classification differs from the calculated one.')
+                ->columnSpanFull(),
             TextInput::make('informant_name'),
             TextInput::make('informant_relationship'),
             TextInput::make('referral_source'),
@@ -95,6 +112,26 @@ class AssessmentsRelationManager extends RelationManager
         ]);
     }
 
+    /**
+     * Runs a service call, turning its domain refusals (unmet watcher
+     * requirement, a locked finalized report) into a notification instead of a
+     * 500, and halting the action.
+     */
+    private static function guarded(CreateAction|EditAction $action, \Closure $callback): ?Model
+    {
+        try {
+            return $callback();
+        } catch (WatcherRequirementNotSatisfiedException|ValidationException $e) {
+            Notification::make()->danger()->title('Could not save the assessment')
+                ->body($e instanceof ValidationException ? collect($e->errors())->flatten()->implode(' ') : $e->getMessage())
+                ->send();
+
+            $action->halt();
+
+            return null;
+        }
+    }
+
     public function table(Table $table): Table
     {
         return $table
@@ -107,10 +144,30 @@ class AssessmentsRelationManager extends RelationManager
             ])
             ->defaultSort('created_at', 'desc')
             ->headerActions([
-                CreateAction::make(),
+                // Through AssessmentService, like the API: it enforces the watcher
+                // requirement and calculates the MSWD classification.
+                CreateAction::make()->using(function (array $data, CreateAction $action): ?Model {
+                    $case = $this->getOwnerRecord();
+
+                    return self::guarded($action, function () use ($data, $case) {
+                        $assessment = app(AssessmentService::class)->create(AssessmentDto::fromArray(array_merge($data, [
+                            'case_id' => $case->id,
+                            'created_by' => auth()->id(),
+                        ])));
+
+                        app(CaseModelService::class)->logMilestone(
+                            $case, auth()->user(), 'assessment_completed', "Assessment #{$assessment->id} recorded",
+                        );
+
+                        return $assessment;
+                    });
+                }),
             ])
             ->recordActions([
-                EditAction::make(),
+                EditAction::make()->using(fn (Model $record, array $data, EditAction $action): Model => self::guarded(
+                    $action,
+                    fn () => app(AssessmentService::class)->update($record, AssessmentDto::fromArray($data)),
+                ) ?? $record),
                 DeleteAction::make(),
             ]);
     }

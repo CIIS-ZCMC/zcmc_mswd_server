@@ -156,3 +156,56 @@ it('requires a source on each other-income row', function () {
 
     expect(Assessment::count())->toBe(0);
 });
+
+it('calculates the MSWD classification when the form leaves it blank, like the API', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = recRmCase($worker, $this->patient);
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('create', data: ['total_family_income' => 4500])
+        ->assertHasNoTableActionErrors();
+
+    $assessment = Assessment::sole();
+    expect($assessment->classification)->toBe('C2')
+        ->and($assessment->calculated_classification)->toBe('C2')
+        ->and($assessment->calculated_discount_rate)->toBe('75.00')
+        ->and($assessment->net_per_capita_income)->toBe('4500.00')
+        ->and($assessment->hasOverride())->toBeFalse();
+
+    // Editing the income recalculates the metrics.
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('edit', $assessment, data: ['total_family_income' => 15000])
+        ->assertHasNoTableActionErrors();
+
+    expect($assessment->fresh()->calculated_classification)->toBe('A');
+});
+
+it('records the assessment_completed milestone on create', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = recRmCase($worker, $this->patient);
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('create', data: ['total_family_income' => 1000])
+        ->assertHasNoTableActionErrors();
+
+    expect(App\Models\CaseActivity::where('case_id', $case->id)->where('activity_type', 'assessment_completed')->exists())->toBeTrue();
+});
+
+it('refuses to assess an inpatient case that has no watcher yet', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = app(CaseModelService::class)->create(
+        CaseModelDto::fromArray([
+            'patient_id' => $this->patient->id, 'case_type' => 'medical',
+            'priority_level' => 'high', 'admission_type' => 'inpatient',
+        ]),
+        $worker,
+    );
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('create', data: ['total_family_income' => 1000]);
+
+    expect(Assessment::count())->toBe(0);
+});
