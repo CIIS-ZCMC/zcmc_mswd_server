@@ -17,29 +17,45 @@ use Illuminate\Validation\ValidationException;
  */
 class AssessmentExpenseService
 {
-    public function __construct(protected AssessmentExpenseRepositoryInterface $repository) {}
+    public function __construct(
+        protected AssessmentExpenseRepositoryInterface $repository,
+        protected AssessmentService $assessments,
+    ) {}
 
     public function create(Assessment $assessment, AssessmentExpenseDto $dto): AssessmentExpense
     {
         $this->assertParentEditable($assessment);
 
-        return $this->repository->create(array_merge($dto->toArray(), [
+        $expense = $this->repository->create(array_merge($dto->toArray(), [
             'assessment_id' => $assessment->id,
         ]));
+
+        $this->assessments->recalculateClassification($assessment);
+
+        return $expense;
     }
 
     public function update(AssessmentExpense $expense, AssessmentExpenseDto $dto): AssessmentExpense
     {
         $this->assertParentEditable($expense->assessment);
 
-        return $this->repository->update($expense, $dto->toArray());
+        $expense = $this->repository->update($expense, $dto->toArray());
+
+        $this->assessments->recalculateClassification($expense->assessment);
+
+        return $expense;
     }
 
     public function delete(AssessmentExpense $expense): bool
     {
         $this->assertParentEditable($expense->assessment);
 
-        return $this->repository->delete($expense);
+        $assessment = $expense->assessment;
+        $deleted = $this->repository->delete($expense);
+
+        $this->assessments->recalculateClassification($assessment);
+
+        return $deleted;
     }
 
     private function assertParentEditable(?Assessment $assessment): void

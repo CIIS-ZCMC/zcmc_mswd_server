@@ -11,7 +11,7 @@ rendered on demand from a case (see `UIS_PRINT_HISTORY_PLAN.md`).
 |-------|-----------|--------|
 | 0. Squash prerequisites (assessment columns, test diffs) — shipped as #160 / #161 | — | ☑ done |
 | 1. Store the missing UIS fields (#162) | 0 | ☑ done |
-| 2. Assessing correctness (reclassify on expense change, tests) | 0 | ☐ |
+| 2. Assessing correctness (reclassify on expense change, tests) (#164) | 0 | ☑ done |
 | 3. Assess → print flow (409 / readiness / copies+remarks) | 1, 2 | ☐ |
 | 4. Cleanup (stale permissions, stale docs) | 3 | ☐ |
 
