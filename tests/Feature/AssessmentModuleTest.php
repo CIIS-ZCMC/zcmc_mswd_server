@@ -147,3 +147,15 @@ it('keeps the whole re-assessment chain append-only and linked', function () {
         ->and($first->fresh()->classification)->toBe('B')
         ->and($second->fresh()->total_family_income)->toBe('6000.00');
 });
+
+it('falls back to the calculated classification when it is cleared on update', function () {
+    $assessment = Assessment::create([
+        'case_id' => $this->case->id, 'created_by' => $this->worker->id,
+        'classification' => 'indigent', 'total_family_income' => 4500,
+    ]);
+
+    $this->putJson("/api/assessments/{$assessment->id}", ['classification' => null])
+        ->assertOk()
+        ->assertJsonPath('data.classification', 'C2')
+        ->assertJsonPath('data.calculated_classification', 'C2');
+});

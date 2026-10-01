@@ -74,7 +74,10 @@ class AssessmentService
         $data['calculated_classification'] = $metrics['calculated_classification'];
         $data['calculated_discount_rate'] = $metrics['calculated_discount_rate'];
 
-        if (! isset($data['classification']) && empty($assessment->classification)) {
+        // The column is NOT NULL: a missing classification, or one explicitly
+        // cleared by the client, falls back to the calculated one.
+        if ((! isset($data['classification']) && empty($assessment->classification))
+            || (array_key_exists('classification', $data) && blank($data['classification']))) {
             $data['classification'] = $metrics['calculated_classification'];
         }
 
