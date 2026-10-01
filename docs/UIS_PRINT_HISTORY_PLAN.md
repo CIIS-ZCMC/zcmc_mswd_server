@@ -88,8 +88,9 @@ Behaviour changes to know about:
   they are stored only when supplied.
 - `PatientMergeService` no longer reassigns intake sheets. Old merge manifests that
   still carry an `intake_sheets` key are harmless (reversal reads only known keys).
-- Production databases keep the stale `intake.create/update/finalize/delete`
-  permission rows until pruned; nothing references them.
+- Production databases kept the stale `intake.create/update/finalize/delete`
+  permission rows; the `2026_10_01_010000_prune_stale_intake_permissions` migration
+  removes them (and their role grants).
 
 ## Verification
 

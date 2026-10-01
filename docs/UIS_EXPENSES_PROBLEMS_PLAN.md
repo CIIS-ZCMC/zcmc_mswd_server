@@ -17,7 +17,7 @@ six problem categories were hard-coded blank boxes because nothing stored them.
 ## What exists
 | Piece | Location |
 |---|---|
-| Columns `house_tenure`, `light_source[]`, `water_source[]`, `problem_categories[]`, `problem_specify` | `2026_09_30_010000_add_uis_expense_problem_columns_to_assessments_table` |
+| Columns `house_tenure`, `light_source[]`, `water_source[]`, `problem_categories[]`, `problem_specify` | `2026_07_07_082057_create_assessments_table` (folded in by the migration squash, #160; originally a separate `add_uis_expense_problem_columns` migration) |
 | Allowed values | `Assessment::HOUSE_TENURES / LIGHT_SOURCES / WATER_SOURCES / PROBLEM_CATEGORIES` |
 | Validation | `StoreAssessmentRequest`, `UpdateAssessmentRequest` |
 | Expense amounts | unchanged: `assessment_expenses`, keyword-matched in the Blade |

@@ -13,7 +13,7 @@ rendered on demand from a case (see `UIS_PRINT_HISTORY_PLAN.md`).
 | 1. Store the missing UIS fields (#162) | 0 | ☑ done |
 | 2. Assessing correctness (reclassify on expense change, tests) (#164) | 0 | ☑ done |
 | 3. Assess → print flow (409 / readiness / copies+remarks) (#166) | 1, 2 | ☑ done |
-| 4. Cleanup (stale permissions, stale docs) | 3 | ☐ |
+| 4. Cleanup (stale permissions, stale docs) (#168) | 3 | ☑ done |
 
 ---
 
