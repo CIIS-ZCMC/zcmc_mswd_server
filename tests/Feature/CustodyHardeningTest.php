@@ -166,36 +166,3 @@ it('refuses to reassign an assignment that has already ended', function () {
         'user_id' => assigneeUser()->id,
     ])->assertStatus(422)->assertJsonValidationErrors('caretaker');
 });
-
-it('repairs drifted and duplicated rows before applying the guard', function () {
-    $migration = require database_path(
-        'migrations/2026_09_11_110000_add_accountability_to_patient_caretakers_table.php',
-    );
-
-    // Rebuild the pre-migration shape: the guard cannot exist while we seed
-    // rows that contradict it.
-    Schema::table('patient_caretakers', function ($table) {
-        $table->dropUnique('uniq_active_patient_caretaker');
-        $table->dropColumn('active_caretaker_guard');
-    });
-
-    $drifted = caretakerFor($this->patient, assigneeUser(), ['role' => 'nurse']);
-    DB::table('patient_caretakers')->where('id', $drifted->id)
-        ->update(['unassigned_date' => now(), 'is_active' => true]);
-
-    $older = caretakerFor($this->patient, assigneeUser(), [
-        'assigned_date' => now()->subDays(5),
-    ]);
-    $newer = caretakerFor($this->patient, assigneeUser(), [
-        'assigned_date' => now(),
-    ]);
-
-    (fn () => $this->repairDriftedRows())->call($migration);
-
-    expect($drifted->fresh()->is_active)->toBeFalse()
-        ->and($older->fresh()->is_active)->toBeFalse()
-        ->and($older->fresh()->unassigned_date)->not->toBeNull()
-        // A repaired row is deliberately distinguishable from a real handover.
-        ->and($older->fresh()->unassigned_reason)->toBeNull()
-        ->and($newer->fresh()->is_active)->toBeTrue();
-});

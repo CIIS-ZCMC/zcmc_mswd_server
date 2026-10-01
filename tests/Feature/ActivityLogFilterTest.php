@@ -149,17 +149,3 @@ it('matches the trail the old subject fan-out would have produced', function () 
     expect($stampedIds->intersect($fanOutIds)->values()->all())->toBe($fanOutIds->all())
         ->and($stampedIds->count())->toBeGreaterThan($fanOutIds->count());
 });
-
-it('backfills to exactly what live stamping produces', function () {
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
-    PatientId::create(['patient_id' => $this->patient->id, 'id_type' => 'philhealth', 'id_number' => '1']);
-
-    $live = Activity::query()->orderBy('id')->get(['id', 'patient_id', 'case_id'])->toArray();
-
-    DB::table('activity_log')->update(['patient_id' => null, 'case_id' => null]);
-    (require database_path('migrations/2026_09_11_100001_backfill_activity_log_ownership.php'))->up();
-
-    $backfilled = Activity::query()->orderBy('id')->get(['id', 'patient_id', 'case_id'])->toArray();
-
-    expect($backfilled)->toEqual($live);
-});

@@ -13,10 +13,12 @@ return new class extends Migration
             $table->foreignId('patient_id')->constrained('patients');
             $table->string('name');
             $table->string('relationship')->nullable();
+            $table->date('birthdate')->nullable();   // exact date when known; `age` is the fallback
+            $table->string('sex')->nullable();
             $table->integer('age')->nullable();
             $table->string('occupation')->nullable();
             $table->decimal('monthly_income', 12, 2)->nullable();
-            $table->string('education')->nullable();
+            $table->string('educational_attainment')->nullable();
             $table->string('contact_number')->nullable();
             $table->boolean('is_living_with_patient')->default(true);
             $table->timestamps();
