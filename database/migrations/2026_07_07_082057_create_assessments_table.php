@@ -54,6 +54,9 @@ return new class extends Migration
             $table->text('presenting_problem')->nullable();
             $table->json('problem_categories')->nullable(); // health|economic|housing|food_nutrition|employment|other
             $table->text('problem_specify')->nullable();
+            $table->string('informant_name')->nullable();         // UIS: who was interviewed
+            $table->string('informant_relationship')->nullable(); // UIS: informant's relation to the patient
+            $table->json('other_income_sources')->nullable();     // UIS II: [{source, amount}]
             $table->string('referral_source')->nullable();
             $table->text('reason_for_referral')->nullable();
             $table->text('family_background')->nullable();
@@ -63,6 +66,8 @@ return new class extends Migration
             $table->text('recommendation')->nullable();
             $table->string('recommended_assistance')->nullable();
             $table->decimal('recommended_amount', 12, 2)->nullable();
+            $table->string('recommendation_mode')->nullable(); // UIS V mode of assistance
+            $table->string('fund_source')->nullable();         // UIS V fund source
             $table->text('intervention_plan')->nullable();
             $table->timestamps();
             $table->softDeletes();

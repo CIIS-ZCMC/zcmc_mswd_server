@@ -15,6 +15,7 @@ return new class extends Migration
             $table->string('relationship')->nullable();
             $table->date('birthdate')->nullable();   // exact date when known; `age` is the fallback
             $table->string('sex')->nullable();
+            $table->string('civil_status', 50)->nullable();
             $table->integer('age')->nullable();
             $table->string('occupation')->nullable();
             $table->decimal('monthly_income', 12, 2)->nullable();

@@ -21,6 +21,7 @@ class PatientFamilyMemberDto
         // date, and both callers (JSON API, Filament DatePicker) supply strings.
         public readonly ?string $birthdate = null,
         public readonly ?string $sex = null,
+        public readonly ?string $civil_status = null,
         public readonly ?int $age = null,
         public readonly ?string $occupation = null,
         public readonly ?float $monthly_income = null,
@@ -37,6 +38,7 @@ class PatientFamilyMemberDto
             relationship: $data['relationship'] ?? null,
             birthdate: $data['birthdate'] ?? null,
             sex: $data['sex'] ?? null,
+            civil_status: $data['civil_status'] ?? null,
             age: $data['age'] ?? null,
             occupation: $data['occupation'] ?? null,
             monthly_income: $data['monthly_income'] ?? null,
@@ -74,6 +76,7 @@ class PatientFamilyMemberDto
             'relationship' => $this->relationship,
             'birthdate' => $this->birthdate,
             'sex' => $this->sex,
+            'civil_status' => $this->civil_status,
             'age' => $this->age,
             'occupation' => $this->occupation,
             'monthly_income' => $this->monthly_income,

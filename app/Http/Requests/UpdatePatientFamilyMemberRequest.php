@@ -28,6 +28,7 @@ class UpdatePatientFamilyMemberRequest extends FormRequest
             'relationship' => ['nullable', 'string', 'max:255'],
             'birthdate' => ['nullable', 'date'],
             'sex' => ['nullable', 'string', 'max:20'],
+            'civil_status' => ['nullable', 'string', 'max:50'],
             'age' => ['nullable', 'integer'],
             'occupation' => ['nullable', 'string', 'max:255'],
             'monthly_income' => ['nullable', 'numeric'],
