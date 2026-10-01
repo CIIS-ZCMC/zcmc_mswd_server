@@ -78,7 +78,11 @@ class AssessmentsRelationManager extends RelationManager
         return $schema->components([
             Hidden::make('created_by')->default(fn () => auth()->id()),
             Select::make('classification')
-                ->options(self::CLASSIFICATIONS)
+                // Pre-MSWD rows hold a legacy value (indigent, low_income, …) that is
+                // not in the list; keep it selectable so editing never blanks it.
+                ->options(fn (?Model $record): array => $record?->classification && ! isset(self::CLASSIFICATIONS[$record->classification])
+                    ? [$record->classification => ucfirst(str_replace('_', ' ', $record->classification)).' (legacy)'] + self::CLASSIFICATIONS
+                    : self::CLASSIFICATIONS)
                 ->helperText('Leave blank to use the MSWD classification calculated from income, expenses and household size.'),
             Textarea::make('classification_override_reason')
                 ->helperText('Why the classification differs from the calculated one.')

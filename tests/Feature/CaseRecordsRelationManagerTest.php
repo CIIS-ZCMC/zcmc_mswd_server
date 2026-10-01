@@ -209,3 +209,39 @@ it('refuses to assess an inpatient case that has no watcher yet', function () {
 
     expect(Assessment::count())->toBe(0);
 });
+
+it('keeps a legacy classification selectable and unchanged when editing other fields', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = recRmCase($worker, $this->patient);
+    $assessment = Assessment::create([
+        'case_id' => $case->id, 'created_by' => $worker->id,
+        'classification' => 'indigent', 'total_family_income' => 4500,
+    ]);
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->mountTableAction('edit', $assessment)
+        ->assertTableActionDataSet(['classification' => 'indigent'])
+        ->setTableActionData(['presenting_problem' => 'Needs meds'])
+        ->callMountedTableAction()
+        ->assertHasNoTableActionErrors();
+
+    expect($assessment->fresh()->classification)->toBe('indigent')
+        ->and($assessment->fresh()->presenting_problem)->toBe('Needs meds');
+});
+
+it('reverts to the calculated classification when the select is cleared', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = recRmCase($worker, $this->patient);
+    $assessment = Assessment::create([
+        'case_id' => $case->id, 'created_by' => $worker->id,
+        'classification' => 'indigent', 'total_family_income' => 4500,
+    ]);
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('edit', $assessment, data: ['classification' => null])
+        ->assertHasNoTableActionErrors();
+
+    expect($assessment->fresh()->classification)->toBe('C2');
+});
