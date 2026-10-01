@@ -68,12 +68,15 @@ after printing — matching how the paper form is used.
 | Interviewed by | `sheet.intakeWorker.employee_name` |
 | Reviewed & Approved by | `sheet.finalizer.employee_name` (blank until finalized) |
 
-## Known blanks (not stored — printed as fill-in lines / unchecked boxes)
+## Known blanks (historical)
 
-Informant (name, relation, address, contact); family-member civil status; other
-sources of family income + amount; house/lot owned-vs-rented flag; light source;
-water source; problem-presented category checkboxes; recommendation Mode of
-Assistance and Fund Source.
+At the time of this plan the following were not stored and printed as fill-in lines /
+unchecked boxes: informant; family-member civil status; other sources of family income +
+amount; house/lot owned-vs-rented; light source; water source; problem-presented
+checkboxes; recommendation mode of assistance and fund source.
 
-These are candidates for a future data-capture change (migrations + Filament intake
-wizard + service fan-out) if the fields need to print with real data.
+**Since stored** (see [`UIS_MODULE_PLAN.md`](UIS_MODULE_PLAN.md)): house tenure, light/water
+source and problem categories (`UIS_EXPENSES_PROBLEMS_PLAN.md`); informant name and
+relation, other income sources, family civil status, mode of assistance and fund source
+(UIS module phase 1). Still blank by design: informant address/contact (the printable
+reuses the patient's present address) and the signature / thumb-mark boxes.

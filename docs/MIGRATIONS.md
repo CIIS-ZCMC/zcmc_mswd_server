@@ -1,5 +1,11 @@
 # MSWD — Database Migrations
 
+> **Historical design draft.** This is the original schema design and no longer matches
+> the code: the migrations were squashed into one create-table migration per table
+> (#160), and many tables and columns were added since (assessments, case watchers,
+> HIS imports, `uis_print_logs`, …). The source of truth is `database/migrations/` — read
+> that, not the blocks below.
+
 Laravel migrations for the full MSWD schema, in dependency order. Copy each block into its own file under `database/migrations/`, keeping the suggested filename prefixes so Laravel runs them in order (it sorts by the `YYYY_MM_DD_HHMMSS_` timestamp).
 
 **Conventions used here**
