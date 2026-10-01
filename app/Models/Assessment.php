@@ -65,6 +65,9 @@ class Assessment extends Model
         'calculated_classification',
         'classification_override_reason',
         'calculated_discount_rate',
+        'informant_name',
+        'informant_relationship',
+        'other_income_sources',
         'referral_source',
         'reason_for_referral',
         'presenting_problem',
@@ -80,6 +83,8 @@ class Assessment extends Model
         'recommendation',
         'recommended_assistance',
         'recommended_amount',
+        'recommendation_mode',
+        'fund_source',
         'intervention_plan',
     ];
 
@@ -103,6 +108,7 @@ class Assessment extends Model
             'problem_categories' => 'array',
             'light_source' => 'array',
             'water_source' => 'array',
+            'other_income_sources' => 'array',
             'prepared_at' => 'datetime',
             'noted_at' => 'datetime',
             'review_requested_at' => 'datetime',

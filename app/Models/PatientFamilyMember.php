@@ -17,6 +17,7 @@ class PatientFamilyMember extends Model
         'relationship',
         'birthdate',
         'sex',
+        'civil_status',
         'age',
         'occupation',
         'monthly_income',

@@ -56,6 +56,7 @@ class FamilyMembersRelationManager extends RelationManager
                 ->options(['male' => 'Male', 'female' => 'Female'])
                 ->native(false),
             TextInput::make('age')->numeric()->helperText('When the birthdate is unknown.'),
+            TextInput::make('civil_status')->label('Civil status'),
             TextInput::make('educational_attainment')->label('Educational attainment'),
             TextInput::make('occupation'),
             TextInput::make('contact_number'),

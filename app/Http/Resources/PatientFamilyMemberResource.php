@@ -21,6 +21,7 @@ class PatientFamilyMemberResource extends JsonResource
             'relationship' => $this->relationship,
             'birthdate' => $this->birthdate,
             'sex' => $this->sex,
+            'civil_status' => $this->civil_status,
             'age' => $this->age,
             'occupation' => $this->occupation,
             'monthly_income' => $this->monthly_income,

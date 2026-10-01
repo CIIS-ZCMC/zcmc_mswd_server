@@ -221,3 +221,69 @@ it('rejects unknown UIS checkbox values on assessment create', function () {
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['house_tenure', 'light_source.0', 'problem_categories.0']);
 });
+
+it('stores the UIS informant, other income and recommendation fields through the API', function () {
+    Sanctum::actingAs($this->worker);
+
+    $response = $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'informant_name' => 'Maria Reyes',
+        'informant_relationship' => 'Daughter',
+        'other_income_sources' => [
+            ['source' => 'Remittance', 'amount' => 1500],
+            ['source' => 'Sari-sari store', 'amount' => 500],
+        ],
+        'referral_source' => 'Ward 3',
+        'medical_history' => 'Hypertension',
+        'recommendation' => 'Provide medicine assistance',
+        'recommendation_mode' => 'Guarantee Letter',
+        'fund_source' => 'MSWD Fund',
+    ])->assertCreated()
+        ->assertJsonPath('data.informant_name', 'Maria Reyes')
+        ->assertJsonPath('data.other_income_sources.1.source', 'Sari-sari store')
+        ->assertJsonPath('data.referral_source', 'Ward 3')
+        ->assertJsonPath('data.recommendation_mode', 'Guarantee Letter');
+
+    $this->putJson('/api/assessments/'.$response->json('data.id'), ['fund_source' => 'PCSO'])
+        ->assertOk()
+        ->assertJsonPath('data.fund_source', 'PCSO')
+        ->assertJsonPath('data.informant_name', 'Maria Reyes');
+});
+
+it('rejects an other-income entry without a source', function () {
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'other_income_sources' => [['amount' => 100]],
+    ])->assertUnprocessable()->assertJsonValidationErrors(['other_income_sources.0.source']);
+});
+
+it('prints the stored informant, other income, family civil status and recommendation mode', function () {
+    $assessment = uisIntakeAssessment($this->case, $this->worker);
+    $assessment->update([
+        'informant_name' => 'Maria Reyes',
+        'informant_relationship' => 'Daughter',
+        'other_income_sources' => [['source' => 'Remittance', 'amount' => 1500], ['source' => 'Store', 'amount' => 500]],
+        'recommendation_mode' => 'Guarantee Letter',
+        'fund_source' => 'MSWD Fund',
+    ]);
+    $this->patient->familyMembers()->update(['civil_status' => 'widowed']);
+
+    $html = app(UnifiedIntakeSheetPdfService::class)->renderForCase($this->case, $this->worker)
+        ->getDomPDF()->outputHtml();
+
+    expect($html)->toContain('Maria Reyes')
+        ->and($html)->toContain('Daughter')
+        ->and($html)->toContain('Remittance, Store')
+        ->and($html)->toContain('2000')
+        ->and($html)->toContain('Widowed')
+        ->and($html)->toContain('Guarantee Letter')
+        ->and($html)->toContain('MSWD Fund');
+});
+
+it('accepts a family member civil status', function () {
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson("/api/patients/{$this->patient->id}/family-members", [
+        'name' => 'Lola Reyes', 'civil_status' => 'widowed',
+    ])->assertCreated()->assertJsonPath('data.civil_status', 'widowed');
+});

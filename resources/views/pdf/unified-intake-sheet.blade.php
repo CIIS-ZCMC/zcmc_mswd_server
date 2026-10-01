@@ -43,6 +43,11 @@
     $optR = fn ($checked, $label) => '<span class="opt"><span'.($checked ? ' class="b"' : '').'>'.$label.'</span> <span class="cb">'.($checked ? 'X' : '&nbsp;').'</span></span>';
 
     $civil = strtolower((string) $p?->civil_status);
+
+    // Other family income: stored as [{source, amount}]; the form has one line.
+    $otherIncome = collect($a?->other_income_sources ?? []);
+    $otherIncomeLabel = $otherIncome->pluck('source')->filter()->implode(', ');
+    $otherIncomeTotal = $otherIncome->isEmpty() ? null : $otherIncome->sum(fn ($i) => (float) ($i['amount'] ?? 0));
     $edu = strtolower((string) $p?->educational_attainment);
 
     // Section III amounts come from the generic assessment_expenses key/value rows,
@@ -161,8 +166,8 @@
                 <td><b>Time of Interview</b> <i>(Oras ng Panayam)</i>: {!! $u(optional($printedAt)->format('g:i:s A')) !!}</td>
             </tr>
             <tr>
-                <td><b>Name of Informant</b> <i>(Pangalan ng impormante)</i>: {!! $u(null) !!}</td>
-                <td><b>Relation to Patient</b> <i>(Relasyon sa Pasyente)</i>: {!! $u(null) !!}</td>
+                <td><b>Name of Informant</b> <i>(Pangalan ng impormante)</i>: {!! $u($a?->informant_name) !!}</td>
+                <td><b>Relation to Patient</b> <i>(Relasyon sa Pasyente)</i>: {!! $u($a?->informant_relationship) !!}</td>
             </tr>
             <tr>
                 <td class="center">
@@ -282,7 +287,7 @@
                     <td>{{ $m->name }}</td>
                     <td class="center">{{ $m->birthdate ? $m->birthdate->format('y/m/d') : '' }}</td>
                     <td>{{ $m->sex ? ucfirst($m->sex) : '' }}</td>
-                    <td></td>
+                    <td>{{ $m->civil_status ? ucfirst($m->civil_status) : '' }}</td>
                     <td>{{ $m->relationship }}</td>
                     <td>{{ $m->educational_attainment }}</td>
                     <td>{{ $m->occupation }}</td>
@@ -296,7 +301,7 @@
     </td></tr>
     <tr><td>
         <table class="plain"><tr>
-            <td style="width:55%"><b>Other source/s of Family Income</b><br><i>(Ibang Pinagkakakitaan ng Pamilya)</i> &nbsp; Amount: {!! $u(null) !!}</td>
+            <td style="width:55%"><b>Other source/s of Family Income</b><br><i>(Ibang Pinagkakakitaan ng Pamilya)</i>: {!! $u($otherIncomeLabel) !!} &nbsp; Amount: {!! $u($num($otherIncomeTotal)) !!}</td>
             <td class="right"><b>Total Family Income</b><br><i>(Kabuuang Kita ng Pamilya)</i> &nbsp; {!! $u($num($a?->total_family_income)) !!}</td>
         </tr></table>
     </td></tr>
@@ -395,15 +400,15 @@
                 <tr>
                     <td>{{ $aid->assistantType?->name }}</td>
                     <td class="center">{{ $num($aid->amount) }}</td>
-                    <td></td>
-                    <td></td>
+                    <td>{{ $a?->recommendation_mode }}</td>
+                    <td>{{ $a?->fund_source }}</td>
                 </tr>
             @empty
                 <tr>
                     <td>{{ $a?->recommended_assistance }}</td>
                     <td class="center">{{ $num($a?->recommended_amount) }}</td>
-                    <td></td>
-                    <td></td>
+                    <td>{{ $a?->recommendation_mode }}</td>
+                    <td>{{ $a?->fund_source }}</td>
                 </tr>
             @endforelse
         </table>
