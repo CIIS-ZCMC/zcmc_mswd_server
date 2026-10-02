@@ -326,17 +326,17 @@ it('stores the UIS informant, other income and recommendation fields through the
         'referral_source' => 'Ward 3',
         'medical_history' => 'Hypertension',
         'recommendation' => 'Provide medicine assistance',
-        'recommendation_mode' => 'Guarantee Letter',
-        'fund_source' => 'MSWD Fund',
+        'recommendation_mode' => 'financial_assistance',
+        'fund_source' => 'mswd',
     ])->assertCreated()
         ->assertJsonPath('data.informant_name', 'Maria Reyes')
         ->assertJsonPath('data.other_income_sources.1.source', 'Sari-sari store')
         ->assertJsonPath('data.referral_source', 'Ward 3')
-        ->assertJsonPath('data.recommendation_mode', 'Guarantee Letter');
+        ->assertJsonPath('data.recommendation_mode', 'financial_assistance');
 
-    $this->putJson('/api/assessments/'.$response->json('data.id'), ['fund_source' => 'PCSO'])
+    $this->putJson('/api/assessments/'.$response->json('data.id'), ['fund_source' => 'pcso'])
         ->assertOk()
-        ->assertJsonPath('data.fund_source', 'PCSO')
+        ->assertJsonPath('data.fund_source', 'pcso')
         ->assertJsonPath('data.informant_name', 'Maria Reyes');
 });
 
@@ -354,8 +354,8 @@ it('prints the stored informant, other income, family civil status and recommend
         'informant_name' => 'Maria Reyes',
         'informant_relationship' => 'Daughter',
         'other_income_sources' => [['source' => 'Remittance', 'amount' => 1500], ['source' => 'Store', 'amount' => 500]],
-        'recommendation_mode' => 'Guarantee Letter',
-        'fund_source' => 'MSWD Fund',
+        'recommendation_mode' => 'financial_assistance',
+        'fund_source' => 'mswd',
     ]);
     $this->patient->familyMembers()->update(['civil_status' => 'widowed']);
 
@@ -367,8 +367,8 @@ it('prints the stored informant, other income, family civil status and recommend
         ->and($html)->toContain('Remittance, Store')
         ->and($html)->toContain('2000')
         ->and($html)->toContain('Widowed')
-        ->and($html)->toContain('Guarantee Letter')
-        ->and($html)->toContain('MSWD Fund');
+        ->and($html)->toContain('Financial Assistance')
+        ->and($html)->toContain('MSWD');
 });
 
 it('accepts a family member civil status', function () {
@@ -377,4 +377,52 @@ it('accepts a family member civil status', function () {
     $this->postJson("/api/patients/{$this->patient->id}/family-members", [
         'name' => 'Lola Reyes', 'civil_status' => 'widowed',
     ])->assertCreated()->assertJsonPath('data.civil_status', 'widowed');
+});
+
+it('prints the informant address and contact, falling back to the patient', function () {
+    $assessment = uisIntakeAssessment($this->case, $this->worker);
+    $this->patient->update(['contact_number' => '09170000001']);
+
+    $html = fn () => app(UnifiedIntakeSheetPdfService::class)->renderForCase($this->case->fresh(), $this->worker)
+        ->getDomPDF()->outputHtml();
+
+    // No informant details recorded: the patient contact number prints.
+    expect($html())->toContain('09170000001')->not->toContain('Informant Street');
+
+    $assessment->update(['informant_address' => 'Informant Street 5', 'informant_contact_number' => '09175550000']);
+
+    expect($html())->toContain('Informant Street 5')->toContain('09175550000');
+});
+
+it('keeps House help out of House/Lot and sums several Others lines', function () {
+    $assessment = uisIntakeAssessment($this->case, $this->worker); // food 3500
+    $assessment->expenses()->createMany([
+        ['expense_type' => 'House Rent', 'amount' => 1200],
+        ['expense_type' => 'House help', 'amount' => 777],
+        ['expense_type' => 'Clothing', 'amount' => 321],
+        ['expense_type' => 'Others: School fees', 'amount' => 100],
+        ['expense_type' => 'Others', 'amount' => 50],
+    ]);
+
+    $html = app(UnifiedIntakeSheetPdfService::class)->renderForCase($this->case, $this->worker)
+        ->getDomPDF()->outputHtml();
+
+    // House/Lot gets only the rent: not House help, and not Clothing ("clothing" contains "lot").
+    expect($html)->toContain('How much/Magkano: 1200')
+        ->and($html)->toContain('HouseHelp (Kasambahay): <span class="u">777</span>')
+        ->and($html)->toContain('Clothing(Kasuotan): <span class="u">321</span>')
+        // Both Others lines add up; the School fees line is not also counted as Education.
+        ->and($html)->toContain('Others(Iba pa): <span class="u">150</span>')
+        ->and($html)->toContain('Education (Edukasyon): <span class="u">&nbsp;</span>');
+});
+
+it('prints the mode of assistance and fund source as labels', function () {
+    $assessment = uisIntakeAssessment($this->case, $this->worker);
+    $assessment->update(['recommendation_mode' => 'hospital_discount', 'fund_source' => 'maip']);
+
+    $html = app(UnifiedIntakeSheetPdfService::class)->renderForCase($this->case, $this->worker)
+        ->getDomPDF()->outputHtml();
+
+    expect($html)->toContain('Hospital Discount')->toContain('MAIP')
+        ->and($html)->not->toContain('hospital_discount');
 });

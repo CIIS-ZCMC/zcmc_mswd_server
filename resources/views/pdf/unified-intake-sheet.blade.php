@@ -20,6 +20,11 @@
     $permanentAddress = filled($p?->permanent_address) ? $p->permanent_address : $composedAddress;
     $presentAddress = filled($p?->present_address) ? $p->present_address : $composedAddress;
 
+    // The informant's own address/contact when the worker recorded them; the
+    // patient's otherwise (the informant is usually the patient or a relative).
+    $informantAddress = filled($a?->informant_address) ? $a->informant_address : $presentAddress;
+    $informantContact = filled($a?->informant_contact_number) ? $a->informant_contact_number : $p?->contact_number;
+
     $philhealthNo = optional($p?->patientIds?->first(
         fn ($id) => str_contains(strtolower((string) $id->id_type), 'philhealth')
     ))->id_number;
@@ -55,20 +60,35 @@
     // light/water source, problem categories) are stored on the assessment.
     $has = fn ($list, $value) => in_array($value, (array) $list, true);
     $expenses = $a?->expenses ?? collect();
+    // A slot sums every expense line that matches one of its keywords (a worker may
+    // enter several "Others" or "Food" lines). A line labelled "Others: ..." belongs
+    // to the Others slot only, even when its detail text names another category.
     $expenseAmount = function (array $keywords) use ($expenses) {
+        $isOthersSlot = in_array('other', $keywords, true);
+        $total = null;
+
         foreach ($expenses as $e) {
             $type = strtolower((string) $e->expense_type);
+            if (! $isOthersSlot && str_starts_with($type, 'other')) {
+                continue;
+            }
             foreach ($keywords as $k) {
                 if (str_contains($type, $k)) {
-                    return $e->amount;
+                    $total = ($total ?? 0) + (float) $e->amount;
+                    break;
                 }
             }
         }
 
-        return null;
+        return $total;
     };
 
     $assistances = $case?->patientAssistances ?? collect();
+
+    // §V mode of assistance / fund source print their label; a legacy free-text
+    // value (entered before these became fixed lists) prints as typed.
+    $modeLabel = \App\Models\Assessment::RECOMMENDATION_MODES[$a?->recommendation_mode] ?? $a?->recommendation_mode;
+    $fundLabel = \App\Models\Assessment::FUND_SOURCES[$a?->fund_source] ?? $a?->fund_source;
 
     $logo = fn ($name) => public_path("images/intake/{$name}.png");
 @endphp
@@ -171,11 +191,11 @@
             </tr>
             <tr>
                 <td class="center">
-                    <span class="u uwide">{!! filled($presentAddress) ? e($presentAddress) : '&nbsp;' !!}</span>
+                    <span class="u uwide">{!! filled($informantAddress) ? e($informantAddress) : '&nbsp;' !!}</span>
                     <div class="sub"><b>Address</b> (Tirahan)</div>
                 </td>
                 <td class="center">
-                    <span class="u">{!! filled($p?->contact_number) ? e($p->contact_number) : '&nbsp;' !!}</span>
+                    <span class="u">{!! filled($informantContact) ? e($informantContact) : '&nbsp;' !!}</span>
                     <div class="sub"><b>Contact Number</b> (Telepono Bilang)</div>
                 </td>
             </tr>
@@ -319,7 +339,7 @@
                         <td style="width:24%"><b>House/Lot:</b></td>
                         <td style="width:26%">{!! $optR($a?->house_tenure === 'owned', 'Owned/Sarili') !!}</td>
                         <td style="width:28%">{!! $optR($a?->house_tenure === 'rented', 'Rented/Inuupahan') !!}</td>
-                        <td>How much/Magkano: {{ $num($expenseAmount(['rent', 'house', 'lot', 'inuupahan'])) }}</td>
+                        <td>How much/Magkano: {{ $num($expenseAmount(['house rent', 'house tenure', 'rent', 'inuupahan'])) }}</td>
                     </tr>
                     <tr>
                         <td><b>Light Source</b><br><i>(Pinagmumulan ng ilaw)</i>:</td>
@@ -340,7 +360,7 @@
                 <table class="plain">
                     <tr><td>Food(Pagkain): {!! $u($num($expenseAmount(['food', 'pagkain']))) !!}</td><td>Education (Edukasyon): {!! $u($num($expenseAmount(['educ', 'edukasyon', 'school', 'tuition']))) !!}</td></tr>
                     <tr><td>Transportation(Pamasahe): {!! $u($num($expenseAmount(['transport', 'pamasahe', 'fare']))) !!}</td><td>Clothing(Kasuotan): {!! $u($num($expenseAmount(['cloth', 'kasuot']))) !!}</td></tr>
-                    <tr><td>Medikal(Medikal): {!! $u($num($expenseAmount(['medic', 'medik', 'medicine']))) !!}</td><td>HouseHelp (Kasambahay): {!! $u($num($expenseAmount(['househelp', 'kasambahay', 'helper']))) !!}</td></tr>
+                    <tr><td>Medikal(Medikal): {!! $u($num($expenseAmount(['medic', 'medik', 'medicine']))) !!}</td><td>HouseHelp (Kasambahay): {!! $u($num($expenseAmount(['house help', 'househelp', 'kasambahay', 'helper']))) !!}</td></tr>
                     <tr><td>Insurance Premium: {!! $u($num($expenseAmount(['insurance', 'premium']))) !!}</td><td>Others(Iba pa): {!! $u($num($expenseAmount(['other', 'iba']))) !!}</td></tr>
                 </table>
             </td>
@@ -400,15 +420,15 @@
                 <tr>
                     <td>{{ $aid->assistantType?->name }}</td>
                     <td class="center">{{ $num($aid->amount) }}</td>
-                    <td>{{ $a?->recommendation_mode }}</td>
-                    <td>{{ $a?->fund_source }}</td>
+                    <td>{{ $modeLabel }}</td>
+                    <td>{{ $fundLabel }}</td>
                 </tr>
             @empty
                 <tr>
                     <td>{{ $a?->recommended_assistance }}</td>
                     <td class="center">{{ $num($a?->recommended_amount) }}</td>
-                    <td>{{ $a?->recommendation_mode }}</td>
-                    <td>{{ $a?->fund_source }}</td>
+                    <td>{{ $modeLabel }}</td>
+                    <td>{{ $fundLabel }}</td>
                 </tr>
             @endforelse
         </table>

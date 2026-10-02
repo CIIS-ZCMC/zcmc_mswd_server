@@ -159,3 +159,87 @@ it('falls back to the calculated classification when it is cleared on update', f
         ->assertJsonPath('data.classification', 'C2')
         ->assertJsonPath('data.calculated_classification', 'C2');
 });
+
+it('stores the informant name parts, address and contact, accepting the legacy contact alias', function () {
+    $response = $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'informant_name' => 'Reyes, Ana M.',
+        'informant_last_name' => 'Reyes',
+        'informant_first_name' => 'Ana',
+        'informant_middle_name' => 'M.',
+        'informant_relationship' => 'Mother',
+        'informant_address' => 'Sta. Maria, Zamboanga City',
+        'informant_contact' => '09171234567', // the form also sends informant_contact_number
+        'total_family_income' => 4500,
+    ])->assertCreated()
+        ->assertJsonPath('data.informant_last_name', 'Reyes')
+        ->assertJsonPath('data.informant_first_name', 'Ana')
+        ->assertJsonPath('data.informant_middle_name', 'M.')
+        ->assertJsonPath('data.informant_address', 'Sta. Maria, Zamboanga City')
+        ->assertJsonPath('data.informant_contact_number', '09171234567');
+
+    $this->putJson('/api/assessments/'.$response->json('data.id'), [
+        'informant_contact_number' => '09999999999', 'informant_contact' => '09999999999',
+    ])->assertOk()->assertJsonPath('data.informant_contact_number', '09999999999');
+});
+
+it('creates the nested expense lines with the assessment and classifies against them in one request', function () {
+    $response = $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'total_family_income' => 10000,
+        'expenses' => [
+            ['expense_type' => 'Food', 'amount' => 3000],
+            ['expense_type' => 'House Rent', 'amount' => 3000],
+        ],
+    ])->assertCreated()
+        ->assertJsonCount(2, 'data.expenses')
+        // Net 4000 for a household of one is C2; with no expenses counted it would be B.
+        ->assertJsonPath('data.net_per_capita_income', '4000.00')
+        ->assertJsonPath('data.calculated_classification', 'C2')
+        ->assertJsonPath('data.classification', 'C2');
+
+    expect(Assessment::findOrFail($response->json('data.id'))->expenses()->sum('amount'))->toEqual(6000);
+});
+
+it('creates nested expense lines on a re-assessment too', function () {
+    Assessment::create([
+        'case_id' => $this->case->id, 'created_by' => $this->worker->id,
+        'classification' => 'B', 'total_family_income' => 9000,
+    ]);
+
+    $this->postJson("/api/cases/{$this->case->id}/reassess", [
+        'total_family_income' => 6000, 'reassessment_reason' => 'Lost job',
+        'expenses' => [['expense_type' => 'Medical', 'amount' => 3500]],
+    ])->assertCreated()
+        ->assertJsonCount(1, 'data.expenses')
+        ->assertJsonPath('data.calculated_classification', 'C3'); // net 2500
+});
+
+it('rejects an invalid nested expense line and writes nothing', function () {
+    $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'total_family_income' => 1000,
+        'expenses' => [['expense_type' => 'Food', 'amount' => 100], ['amount' => -5]],
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrors(['expenses.1.expense_type', 'expenses.1.amount']);
+
+    expect(Assessment::count())->toBe(0);
+});
+
+it('validates the mode of assistance and fund source vocabularies', function () {
+    $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'recommendation_mode' => 'Guarantee Letter', 'fund_source' => 'my pocket',
+    ])->assertUnprocessable()->assertJsonValidationErrors(['recommendation_mode', 'fund_source']);
+
+    $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'recommendation_mode' => 'hospital_discount', 'fund_source' => 'maip',
+    ])->assertCreated();
+});
+
+it('lists assessments newest first even when created in the same second', function () {
+    $this->freezeTime();
+    $first = Assessment::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'classification' => 'B']);
+    $second = Assessment::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'classification' => 'C1']);
+
+    $this->getJson("/api/cases/{$this->case->id}/assessments")
+        ->assertOk()
+        ->assertJsonPath('data.0.id', $second->id)
+        ->assertJsonPath('data.1.id', $first->id);
+});

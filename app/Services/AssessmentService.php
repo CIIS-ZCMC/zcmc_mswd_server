@@ -9,6 +9,7 @@ use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
+use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 class AssessmentService
@@ -35,11 +36,13 @@ class AssessmentService
         ($this->ensureWatcherRequirement)($case, 'have an assessment recorded');
 
         $data = $dto->toArray();
+        $expenses = $dto->expenses ?? [];
 
-        // Calculate socio-economic metrics
+        // Calculate socio-economic metrics against the expense lines being created
+        // with the assessment, so one request yields the final classification.
         $metrics = $this->calculateClassification->execute(
             totalFamilyIncome: $dto->total_family_income,
-            expensesSum: 0.0,
+            expensesSum: (float) collect($expenses)->sum(fn (array $line) => (float) ($line['amount'] ?? 0)),
             case: $case,
         );
 
@@ -51,9 +54,18 @@ class AssessmentService
             $data['classification'] = $metrics['calculated_classification'];
         }
 
-        $assessment = $this->repository->create($data);
+        return DB::transaction(function () use ($data, $expenses) {
+            $assessment = $this->repository->create($data);
 
-        return $assessment;
+            foreach ($expenses as $line) {
+                $assessment->expenses()->create([
+                    'expense_type' => $line['expense_type'],
+                    'amount' => $line['amount'],
+                ]);
+            }
+
+            return $assessment->load('expenses');
+        });
     }
 
     public function update(Assessment $assessment, AssessmentDto $dto): Assessment
@@ -125,6 +137,8 @@ class AssessmentService
             'case_id' => $case->id,
             'parent_assessment_id' => $parent?->id,
             'reassessment_reason' => $reason,
+            // toArray() leaves expense lines out (not a column); carry them to create().
+            'expenses' => $dto->expenses,
         ]);
 
         return $this->create(AssessmentDto::fromArray($data));

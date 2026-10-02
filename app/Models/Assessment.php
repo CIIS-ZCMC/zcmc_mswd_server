@@ -66,7 +66,12 @@ class Assessment extends Model
         'classification_override_reason',
         'calculated_discount_rate',
         'informant_name',
+        'informant_last_name',
+        'informant_first_name',
+        'informant_middle_name',
         'informant_relationship',
+        'informant_address',
+        'informant_contact_number',
         'other_income_sources',
         'referral_source',
         'reason_for_referral',
@@ -96,6 +101,27 @@ class Assessment extends Model
     public const WATER_SOURCES = ['owned', 'public', 'artesian_well'];
 
     public const PROBLEM_CATEGORIES = ['health', 'economic', 'housing', 'food_nutrition', 'employment', 'other'];
+
+    /** UIS §V mode of assistance and fund source, value => label (the label is what the form prints). */
+    public const RECOMMENDATION_MODES = [
+        'financial_assistance' => 'Financial Assistance',
+        'medical_assistance' => 'Medical Assistance',
+        'counseling' => 'Counseling',
+        'referral' => 'Referral',
+        'hospital_discount' => 'Hospital Discount',
+        'other' => 'Other',
+    ];
+
+    public const FUND_SOURCES = [
+        'mswd' => 'MSWD',
+        'maip' => 'MAIP',
+        'malasakit' => 'Malasakit',
+        'pcso' => 'PCSO',
+        'lgu_dswd' => 'LGU-DSWD',
+        'ngo' => 'NGO',
+        'philhealth' => 'PhilHealth',
+        'personal' => 'Personal',
+    ];
 
     protected function casts(): array
     {
