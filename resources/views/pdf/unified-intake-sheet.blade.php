@@ -59,29 +59,8 @@
     // matched to the form's fixed slots by keyword. The checkbox fields (tenure,
     // light/water source, problem categories) are stored on the assessment.
     $has = fn ($list, $value) => in_array($value, (array) $list, true);
-    $expenses = $a?->expenses ?? collect();
-    // A slot sums every expense line that matches one of its keywords (a worker may
-    // enter several "Others" or "Food" lines). A line labelled "Others: ..." belongs
-    // to the Others slot only, even when its detail text names another category.
-    $expenseAmount = function (array $keywords) use ($expenses) {
-        $isOthersSlot = in_array('other', $keywords, true);
-        $total = null;
-
-        foreach ($expenses as $e) {
-            $type = strtolower((string) $e->expense_type);
-            if (! $isOthersSlot && str_starts_with($type, 'other')) {
-                continue;
-            }
-            foreach ($keywords as $k) {
-                if (str_contains($type, $k)) {
-                    $total = ($total ?? 0) + (float) $e->amount;
-                    break;
-                }
-            }
-        }
-
-        return $total;
-    };
+    // The keyword matching lives in UisExpenseSlots, shared with the patient UIS API.
+    $slots = \App\Support\UisExpenseSlots::slots($a?->expenses ?? collect());
 
     $assistances = $case?->patientAssistances ?? collect();
 
@@ -339,7 +318,7 @@
                         <td style="width:24%"><b>House/Lot:</b></td>
                         <td style="width:26%">{!! $optR($a?->house_tenure === 'owned', 'Owned/Sarili') !!}</td>
                         <td style="width:28%">{!! $optR($a?->house_tenure === 'rented', 'Rented/Inuupahan') !!}</td>
-                        <td>How much/Magkano: {{ $num($expenseAmount(['house rent', 'house tenure', 'rent', 'inuupahan'])) }}</td>
+                        <td>How much/Magkano: {{ $num($slots['housing']) }}</td>
                     </tr>
                     <tr>
                         <td><b>Light Source</b><br><i>(Pinagmumulan ng ilaw)</i>:</td>
@@ -358,10 +337,10 @@
             {{-- right: itemised amounts --}}
             <td style="padding:0">
                 <table class="plain">
-                    <tr><td>Food(Pagkain): {!! $u($num($expenseAmount(['food', 'pagkain']))) !!}</td><td>Education (Edukasyon): {!! $u($num($expenseAmount(['educ', 'edukasyon', 'school', 'tuition']))) !!}</td></tr>
-                    <tr><td>Transportation(Pamasahe): {!! $u($num($expenseAmount(['transport', 'pamasahe', 'fare']))) !!}</td><td>Clothing(Kasuotan): {!! $u($num($expenseAmount(['cloth', 'kasuot']))) !!}</td></tr>
-                    <tr><td>Medikal(Medikal): {!! $u($num($expenseAmount(['medic', 'medik', 'medicine']))) !!}</td><td>HouseHelp (Kasambahay): {!! $u($num($expenseAmount(['house help', 'househelp', 'kasambahay', 'helper']))) !!}</td></tr>
-                    <tr><td>Insurance Premium: {!! $u($num($expenseAmount(['insurance', 'premium']))) !!}</td><td>Others(Iba pa): {!! $u($num($expenseAmount(['other', 'iba']))) !!}</td></tr>
+                    <tr><td>Food(Pagkain): {!! $u($num($slots['food'])) !!}</td><td>Education (Edukasyon): {!! $u($num($slots['education'])) !!}</td></tr>
+                    <tr><td>Transportation(Pamasahe): {!! $u($num($slots['transport'])) !!}</td><td>Clothing(Kasuotan): {!! $u($num($slots['clothing'])) !!}</td></tr>
+                    <tr><td>Medikal(Medikal): {!! $u($num($slots['medical'])) !!}</td><td>HouseHelp (Kasambahay): {!! $u($num($slots['house_help'])) !!}</td></tr>
+                    <tr><td>Insurance Premium: {!! $u($num($slots['insurance'])) !!}</td><td>Others(Iba pa): {!! $u($num($slots['others'])) !!}</td></tr>
                 </table>
             </td>
         </tr></table>

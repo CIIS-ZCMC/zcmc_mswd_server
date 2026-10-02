@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Resources\AssessmentResource;
 use App\Models\Patient;
 use App\Services\UisReadinessService;
+use App\Support\UisExpenseSlots;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -28,7 +29,11 @@ class PatientUisController extends Controller implements HasMiddleware
 
     public function __invoke(Request $request, Patient $patient, UisReadinessService $readiness): JsonResponse
     {
-        $hasFamily = $patient->familyMembers()->exists();
+        // Household size as the MSWD classification counts it (CalculateMswdClassificationAction):
+        // the patient plus every family member. One query for the patient, not one per case.
+        $familyCount = $patient->familyMembers()->count();
+        $hasFamily = $familyCount > 0;
+        $householdSize = $familyCount + 1;
 
         $cases = $patient->cases()
             ->with(['assessments' => fn ($query) => $query
@@ -41,7 +46,7 @@ class PatientUisController extends Controller implements HasMiddleware
             ->latest('date_opened')->latest('id')
             ->get();
 
-        $rows = $cases->map(function ($case) use ($readiness, $hasFamily, $request) {
+        $rows = $cases->map(function ($case) use ($readiness, $hasFamily, $householdSize, $request) {
             $assessment = $case->assessments->first();
 
             return [
@@ -61,7 +66,12 @@ class PatientUisController extends Controller implements HasMiddleware
                     lastPrintedAt: $case->uis_print_logs_max_printed_at,
                 ) + [
                     'has_social_case' => (bool) $case->social_case_exists,
-                    'assessment' => $assessment === null ? null : AssessmentResource::make($assessment)->resolve($request),
+                    'household_size' => $householdSize,
+                    // ANNEX B section III amounts, matched by the same code the PDF uses.
+                    'expense_slots' => $assessment === null ? null : UisExpenseSlots::slots($assessment->expenses),
+                    'assessment' => $assessment === null
+                        ? null
+                        : AssessmentResource::make($assessment)->resolve($request) + ['household_size' => $householdSize],
                 ],
             ];
         });

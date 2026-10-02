@@ -106,6 +106,10 @@ has_social_case, assessment}}`. `assessment` is the case's newest intake-time as
 (`social_case_status IS NULL`) with its expenses; `has_social_case` flags a case whose assessment was promoted
 to the SCSR (it no longer prints as a UIS). Built without a query per case (`UisReadinessService::build`).
 Backs the client patient-page UIS tab (create/update/delete go through the existing assessment endpoints).
+Each row's `uis` also carries `household_size` (family members + 1, as the classification counts it) and
+`expense_slots` (ANNEX B section III amounts from `UisExpenseSlots` in `app/Support`, the same code the PDF
+uses; `null` when the case has no assessment, and `null` per slot with no matching line). See
+`UIS_PATIENT_TAB_PLAN.md`.
 
 ## Decisions
 
