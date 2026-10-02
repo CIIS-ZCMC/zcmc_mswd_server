@@ -15,6 +15,7 @@ rendered on demand from a case (see `UIS_PRINT_HISTORY_PLAN.md`).
 | 3. Assess → print flow (409 / readiness / copies+remarks) (#166) | 1, 2 | ☑ done |
 | 4. Cleanup (stale permissions, stale docs) (#168) | 3 | ☑ done |
 | 5. Match the client's New Intake Assessment modal (#176) | 1–3 | ☑ done |
+| 6. `GET /patients/{patient}/uis` for the client patient-page UIS tab (#178) | 1–5 | ☑ done |
 
 ---
 
@@ -95,6 +96,16 @@ The client's New Intake Assessment dialog posts more than the server accepted:
 - `GET /cases/{case}/assessments` orders by `created_at` then `id`.
 - Not done server-side: the modal omits `other_income_sources` when empty, so it cannot be cleared on edit
   (the client must send `[]`); override justification is enforced by the UI only.
+
+## Phase 6 — Patient UIS list (#178)
+
+`GET /api/patients/{patient}/uis` (`intake.view`, with the `patients.view` route group) returns every case of the
+patient, newest first, as `{case{id, case_code, status, transaction_id, transaction_type, date_opened},
+uis{has_assessment, assessment_id, ready, missing[], classification, print_count, last_printed_at,
+has_social_case, assessment}}`. `assessment` is the case's newest intake-time assessment
+(`social_case_status IS NULL`) with its expenses; `has_social_case` flags a case whose assessment was promoted
+to the SCSR (it no longer prints as a UIS). Built without a query per case (`UisReadinessService::build`).
+Backs the client patient-page UIS tab (create/update/delete go through the existing assessment endpoints).
 
 ## Decisions
 
