@@ -22,6 +22,7 @@ use App\Http\Controllers\CaseProgressNoteController;
 use App\Http\Controllers\CaseSummaryPdfController;
 use App\Http\Controllers\CaseUisPrintHistoryController;
 use App\Http\Controllers\CaseUisReadinessController;
+use App\Http\Controllers\PatientUisController;
 use App\Http\Controllers\CaseWatcherController;
 use App\Http\Controllers\CaseWatcherStatusController;
 use App\Http\Controllers\CloseCaseController;
@@ -143,6 +144,7 @@ Route::middleware('auth:sanctum')->group(function () {
 
     Route::middleware('permission:patients.view')->group(function () {
         Route::get('patients/{patient}/profile', PatientProfileController::class);
+        Route::get('patients/{patient}/uis', PatientUisController::class);
         Route::get('patients/{patient}/history', PatientHistoryController::class);
         Route::get('patients/{patient}/duplicates', PatientDuplicatesController::class);
         Route::get('patients/{patient}/merges', PatientMergesController::class);

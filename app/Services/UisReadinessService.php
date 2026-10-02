@@ -19,9 +19,29 @@ class UisReadinessService
      */
     public function summary(CaseModel $case): array
     {
-        $assessment = $this->sheet->intakeAssessment($case);
+        return $this->build(
+            assessment: $this->sheet->intakeAssessment($case),
+            hasFamily: (bool) $case->patient?->familyMembers()->exists(),
+            hasAssistance: $case->patientAssistances()->exists(),
+            printCount: $case->uisPrintLogs()->count(),
+            lastPrintedAt: $case->uisPrintLogs()->max('printed_at'),
+        );
+    }
 
-        $missing = $assessment === null ? ['assessment'] : $this->missingSections($case, $assessment);
+    /**
+     * The same summary from values the caller already loaded — lets a list of
+     * cases (a patient's UIS tab) be built without a query per case.
+     *
+     * @return array<string, mixed>
+     */
+    public function build(
+        ?Assessment $assessment,
+        bool $hasFamily,
+        bool $hasAssistance,
+        int $printCount,
+        ?string $lastPrintedAt,
+    ): array {
+        $missing = $assessment === null ? ['assessment'] : $this->missingSections($assessment, $hasFamily, $hasAssistance);
 
         return [
             'has_assessment' => $assessment !== null,
@@ -35,8 +55,8 @@ class UisReadinessService
                 'net_per_capita_income' => $assessment->net_per_capita_income,
                 'has_override' => $assessment->hasOverride(),
             ],
-            'print_count' => $case->uisPrintLogs()->count(),
-            'last_printed_at' => $case->uisPrintLogs()->max('printed_at'),
+            'print_count' => $printCount,
+            'last_printed_at' => $lastPrintedAt,
         ];
     }
 
@@ -46,14 +66,14 @@ class UisReadinessService
      *
      * @return list<string>
      */
-    private function missingSections(CaseModel $case, Assessment $assessment): array
+    private function missingSections(Assessment $assessment, bool $hasFamily, bool $hasAssistance): array
     {
         $missing = [];
 
         if (! filled($assessment->informant_name)) {
             $missing[] = 'informant';
         }
-        if (! $case->patient?->familyMembers()->exists()) {
+        if (! $hasFamily) {
             $missing[] = 'family_composition';
         }
         if ($assessment->total_family_income === null) {
@@ -64,7 +84,7 @@ class UisReadinessService
         }
         if (! filled($assessment->recommendation)
             && ! filled($assessment->recommended_assistance)
-            && ! $case->patientAssistances()->exists()) {
+            && ! $hasAssistance) {
             $missing[] = 'recommendation';
         }
 
