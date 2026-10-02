@@ -125,8 +125,8 @@ it('saves the UIS intake fields from the assessment form', function () {
             ],
             'medical_history' => 'Hypertension',
             'recommendation' => 'Medicine assistance',
-            'recommendation_mode' => 'Guarantee Letter',
-            'fund_source' => 'MSWD Fund',
+            'recommendation_mode' => 'financial_assistance',
+            'fund_source' => 'mswd',
         ])
         ->assertHasNoTableActionErrors();
 
@@ -138,8 +138,8 @@ it('saves the UIS intake fields from the assessment form', function () {
         ->and($assessment->other_income_sources[0]['source'])->toBe('Remittance')
         ->and($assessment->medical_history)->toBe('Hypertension')
         ->and($assessment->recommendation)->toBe('Medicine assistance')
-        ->and($assessment->recommendation_mode)->toBe('Guarantee Letter')
-        ->and($assessment->fund_source)->toBe('MSWD Fund');
+        ->and($assessment->recommendation_mode)->toBe('financial_assistance')
+        ->and($assessment->fund_source)->toBe('mswd');
 });
 
 it('requires a source on each other-income row', function () {
@@ -244,4 +244,34 @@ it('reverts to the calculated classification when the select is cleared', functi
         ->assertHasNoTableActionErrors();
 
     expect($assessment->fresh()->classification)->toBe('C2');
+});
+
+it('saves the informant details and mode/fund selects from the assessment form', function () {
+    $worker = recRmUser();
+    actingAs($worker);
+    $case = recRmCase($worker, $this->patient);
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('create', data: [
+            'informant_name' => 'Reyes, Ana M.',
+            'informant_last_name' => 'Reyes',
+            'informant_first_name' => 'Ana',
+            'informant_middle_name' => 'M.',
+            'informant_address' => 'Sta. Maria',
+            'informant_contact_number' => '09171234567',
+            'recommendation_mode' => 'hospital_discount',
+            'fund_source' => 'maip',
+        ])
+        ->assertHasNoTableActionErrors();
+
+    $assessment = Assessment::sole();
+    expect($assessment->informant_last_name)->toBe('Reyes')
+        ->and($assessment->informant_address)->toBe('Sta. Maria')
+        ->and($assessment->informant_contact_number)->toBe('09171234567')
+        ->and($assessment->recommendation_mode)->toBe('hospital_discount')
+        ->and($assessment->fund_source)->toBe('maip');
+
+    recRm(AssessmentsRelationManager::class, $case)
+        ->callTableAction('edit', $assessment, data: ['fund_source' => 'not-a-source'])
+        ->assertHasTableActionErrors(['fund_source']);
 });

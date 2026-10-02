@@ -55,7 +55,12 @@ return new class extends Migration
             $table->json('problem_categories')->nullable(); // health|economic|housing|food_nutrition|employment|other
             $table->text('problem_specify')->nullable();
             $table->string('informant_name')->nullable();         // UIS: who was interviewed
+            $table->string('informant_last_name')->nullable();
+            $table->string('informant_first_name')->nullable();
+            $table->string('informant_middle_name')->nullable();
             $table->string('informant_relationship')->nullable(); // UIS: informant's relation to the patient
+            $table->string('informant_address', 500)->nullable();
+            $table->string('informant_contact_number', 50)->nullable();
             $table->json('other_income_sources')->nullable();     // UIS II: [{source, amount}]
             $table->string('referral_source')->nullable();
             $table->text('reason_for_referral')->nullable();

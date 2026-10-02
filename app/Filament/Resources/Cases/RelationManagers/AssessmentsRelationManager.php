@@ -87,8 +87,13 @@ class AssessmentsRelationManager extends RelationManager
             Textarea::make('classification_override_reason')
                 ->helperText('Why the classification differs from the calculated one.')
                 ->columnSpanFull(),
-            TextInput::make('informant_name'),
+            TextInput::make('informant_name')->helperText('Full name as printed, e.g. "Reyes, Ana M."'),
+            TextInput::make('informant_last_name'),
+            TextInput::make('informant_first_name'),
+            TextInput::make('informant_middle_name'),
             TextInput::make('informant_relationship'),
+            TextInput::make('informant_contact_number'),
+            TextInput::make('informant_address')->columnSpanFull(),
             TextInput::make('referral_source'),
             TextInput::make('total_family_income')->numeric()->prefix('₱'),
             Repeater::make('other_income_sources')
@@ -110,8 +115,8 @@ class AssessmentsRelationManager extends RelationManager
             Textarea::make('family_background')->columnSpanFull(),
             Textarea::make('medical_history')->columnSpanFull(),
             Textarea::make('recommendation')->columnSpanFull(),
-            TextInput::make('recommendation_mode')->label('Mode of assistance'),
-            TextInput::make('fund_source'),
+            Select::make('recommendation_mode')->label('Mode of assistance')->options(Assessment::RECOMMENDATION_MODES),
+            Select::make('fund_source')->options(Assessment::FUND_SOURCES),
             Textarea::make('intervention_plan')->columnSpanFull(),
         ]);
     }
