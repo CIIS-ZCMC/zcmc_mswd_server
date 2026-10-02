@@ -129,3 +129,58 @@ it('requires intake.view and authentication', function () {
     Sanctum::actingAs($outsider);
     $this->getJson("/api/patients/{$this->patient->id}/uis")->assertForbidden();
 });
+
+it('returns the household size and the section III expense slots per case', function () {
+    Sanctum::actingAs($this->worker);
+    foreach (['Pedro', 'Luz'] as $name) {
+        PatientFamilyMember::create(['patient_id' => $this->patient->id, 'name' => $name]);
+    }
+
+    $assessed = uisCase($this->patient, $this->worker, 'CASE-SLOTS', ['date_opened' => now()->subDay()]);
+    uisCase($this->patient, $this->worker, 'CASE-EMPTY');
+    $assessment = Assessment::create([
+        'case_id' => $assessed->id, 'created_by' => $this->worker->id, 'classification' => 'C2', 'total_family_income' => 9000,
+    ]);
+    $assessment->expenses()->createMany([
+        ['expense_type' => 'House Rent', 'amount' => 1200],
+        ['expense_type' => 'House help', 'amount' => 777],
+        ['expense_type' => 'Others: School fees', 'amount' => 100],
+        ['expense_type' => 'Others', 'amount' => 50],
+    ]);
+
+    $data = $this->getJson("/api/patients/{$this->patient->id}/uis")->assertOk()->json('data');
+
+    // Two family members + the patient, the same count the classification uses; identical on every row.
+    expect($data[0]['uis']['household_size'])->toBe(3)
+        ->and($data[1]['uis']['household_size'])->toBe(3)
+        // No assessment: no slots and no embedded assessment.
+        ->and($data[0]['uis']['expense_slots'])->toBeNull()
+        ->and($data[0]['uis']['assessment'])->toBeNull()
+        // House help is not housing; the two Others lines add up.
+        ->and($data[1]['uis']['expense_slots']['housing'])->toBe(1200)
+        ->and($data[1]['uis']['expense_slots']['house_help'])->toBe(777)
+        ->and($data[1]['uis']['expense_slots']['others'])->toBe(150)
+        ->and($data[1]['uis']['expense_slots']['food'])->toBeNull()
+        ->and($data[1]['uis']['assessment']['household_size'])->toBe(3);
+});
+
+it('counts a patient without family members as a household of one', function () {
+    Sanctum::actingAs($this->worker);
+    uisCase($this->patient, $this->worker, 'CASE-ALONE');
+
+    $this->getJson("/api/patients/{$this->patient->id}/uis")->assertJsonPath('data.0.uis.household_size', 1);
+});
+
+it('matches the classification household for the same patient', function () {
+    Sanctum::actingAs($this->worker);
+    PatientFamilyMember::create(['patient_id' => $this->patient->id, 'name' => 'Pedro']);
+    $case = uisCase($this->patient, $this->worker, 'CASE-HH');
+
+    // 9000 across a household of 2 is 4500 each (C2); the endpoint must report that same household.
+    $created = $this->postJson("/api/cases/{$case->id}/assessments", ['total_family_income' => 9000])
+        ->assertCreated()->assertJsonPath('data.net_per_capita_income', '4500.00');
+
+    $this->getJson("/api/patients/{$this->patient->id}/uis")
+        ->assertJsonPath('data.0.uis.household_size', 2)
+        ->assertJsonPath('data.0.uis.assessment.id', $created->json('data.id'));
+});
