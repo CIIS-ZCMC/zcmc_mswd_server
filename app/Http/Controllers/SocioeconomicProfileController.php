@@ -14,7 +14,7 @@ use Illuminate\Routing\Controllers\HasMiddleware;
 use Illuminate\Routing\Controllers\Middleware;
 
 /**
- * Dated socio-economic records of a patient. Independent of cases and the UIS.
+ * Dated List of Expenses records of a patient. Independent of cases and the UIS.
  */
 class SocioeconomicProfileController extends Controller implements HasMiddleware
 {
@@ -35,7 +35,7 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
 
     public function show(PatientSocioeconomicProfile $profile): JsonResponse
     {
-        return response()->json(['data' => $this->presenter->present($profile, $this->liveSize($profile))]);
+        return response()->json(['data' => $this->presenter->present($profile)]);
     }
 
     public function store(StoreSocioeconomicProfileRequest $request, Patient $patient): JsonResponse
@@ -43,7 +43,7 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
         $profile = $this->service->create($patient, $request->validated(), (int) $request->user()->id);
 
         return response()->json(
-            ['data' => $this->presenter->present($profile, $this->liveSize($profile))],
+            ['data' => $this->presenter->present($profile)],
             Response::HTTP_CREATED,
         );
     }
@@ -52,7 +52,7 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
     {
         $profile = $this->service->update($profile, $request->validated());
 
-        return response()->json(['data' => $this->presenter->present($profile, $this->liveSize($profile))]);
+        return response()->json(['data' => $this->presenter->present($profile)]);
     }
 
     public function destroy(PatientSocioeconomicProfile $profile): Response
@@ -60,10 +60,5 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
         $this->service->delete($profile);
 
         return response()->noContent();
-    }
-
-    private function liveSize(PatientSocioeconomicProfile $profile): int
-    {
-        return $profile->patient()->withTrashed()->first()->familyMembers()->count() + 1;
     }
 }

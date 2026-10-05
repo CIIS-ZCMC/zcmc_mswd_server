@@ -22,7 +22,6 @@ use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
-use App\Models\PatientSocioeconomicExpense;
 use App\Models\PatientSocioeconomicProfile;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
@@ -82,7 +81,7 @@ function socioeconomicProfileFor(Patient $patient, User $worker): PatientSocioec
 {
     return PatientSocioeconomicProfile::create([
         'patient_id' => $patient->id, 'recorded_on' => now()->toDateString(),
-        'recorded_by' => $worker->id, 'household_size' => 1,
+        'recorded_by' => $worker->id,
     ]);
 }
 
@@ -111,10 +110,6 @@ dataset('resolvers', [
     ]), true, false],
 
     'PatientSocioeconomicProfile' => [fn () => socioeconomicProfileFor(test()->patient, test()->worker), true, false],
-    'PatientSocioeconomicExpense (one hop)' => [fn () => PatientSocioeconomicExpense::create([
-        'profile_id' => socioeconomicProfileFor(test()->patient, test()->worker)->id,
-        'expense_type' => 'Food', 'amount' => 100,
-    ]), true, false],
 
     'CaseModel' => [fn () => test()->case, true, true],
     'CaseHospitalTransaction' => [fn () => CaseHospitalTransaction::create([
@@ -204,7 +199,7 @@ it('covers every model that declares a resolver', function () {
     // The models the dataset above exercises, one row each.
     $covered = collect([
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
-        'PatientMerge', 'PatientSocioeconomicProfile', 'PatientSocioeconomicExpense', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
+        'PatientMerge', 'PatientSocioeconomicProfile', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document',
     ])->sort()->values();

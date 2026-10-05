@@ -16,30 +16,34 @@ class StoreSocioeconomicProfileRequest extends FormRequest
     }
 
     /**
-     * `recorded_by` and `household_size` are never taken from the body: the first is
-     * the signed-in user, the second is the household at record time.
+     * The List of Expenses form (ANNEX B section III). `recorded_by` is never taken
+     * from the body — it is the signed-in user. `house_rent_amount` is dropped by the
+     * service unless the house is rented.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
+        $amount = ['nullable', 'numeric', 'min:0'];
+
         return [
             'recorded_on' => ['required', 'date', 'before_or_equal:today'],
-            'total_family_income' => ['nullable', 'numeric', 'min:0'],
-            'other_income_sources' => ['nullable', 'array'],
-            'other_income_sources.*.source' => ['required', 'string', 'max:255'],
-            'other_income_sources.*.amount' => ['nullable', 'numeric', 'min:0'],
             'house_tenure' => ['nullable', 'string', Rule::in(SocioeconomicVocabulary::HOUSE_TENURES)],
-            'housing_type' => ['nullable', 'string', 'max:255'],
+            'house_rent_amount' => $amount,
             'light_source' => ['nullable', 'array'],
             'light_source.*' => ['string', Rule::in(SocioeconomicVocabulary::LIGHT_SOURCES)],
             'water_source' => ['nullable', 'array'],
             'water_source.*' => ['string', Rule::in(SocioeconomicVocabulary::WATER_SOURCES)],
-            'utilities_access' => ['nullable', 'string', 'max:255'],
+            'food' => $amount,
+            'transport' => $amount,
+            'medical' => $amount,
+            'insurance' => $amount,
+            'education' => $amount,
+            'clothing' => $amount,
+            'house_help' => $amount,
+            'others' => $amount,
+            'others_specify' => ['nullable', 'string', 'max:255'],
             'remarks' => ['nullable', 'string'],
-            'expenses' => ['nullable', 'array'],
-            'expenses.*.expense_type' => ['required', 'string', 'max:255'],
-            'expenses.*.amount' => ['required', 'numeric', 'min:0'],
         ];
     }
 }

@@ -4,12 +4,10 @@ namespace App\Services;
 
 use App\Models\Patient;
 use App\Models\PatientSocioeconomicProfile;
-use App\Support\UisExpenseSlots;
 
 /**
- * Read model behind the patient-page Socio-Economic tab: the patient's live
- * household, their current profile (the newest dated record) with its expense list,
- * and a short history for the trend.
+ * Read model behind the patient-page List of Expenses tab: the patient's current
+ * record (the newest dated one) and a short history for the trend.
  *
  * The module is patient-level and independent of cases, assessments and the UIS —
  * nothing here reads them (docs/PATIENT_SOCIOECONOMIC_PLAN.md).
@@ -20,72 +18,43 @@ class PatientSocioeconomicService
     public const HISTORY_LIMIT = 10;
 
     /**
-     * @return array<string, mixed>
+     * @return array{current: array<string, mixed>|null, history: list<array<string, mixed>>}
      */
     public function overview(Patient $patient): array
     {
-        $members = $patient->familyMembers()->orderBy('id')->get();
-        $householdSize = $members->count() + 1;
-
         $records = $patient->socioeconomicProfiles()
             ->with('recordedBy:id,displayName')
-            ->withSum('expenses', 'amount')
             ->orderByDesc('recorded_on')->orderByDesc('id')
             ->limit(self::HISTORY_LIMIT)
             ->get();
 
         $current = $records->first();
-        $current?->load('expenses');
 
         return [
-            'patient' => [
-                'occupation' => $patient->occupation,
-                'monthly_income' => $this->money($patient->monthly_income),
-                'educational_attainment' => $patient->educational_attainment,
-                'civil_status' => $patient->civil_status,
-            ],
-            'household' => [
-                'size' => $householdSize,
-                'members_count' => $members->count(),
-                'earners_count' => $members->filter(fn ($m) => (float) $m->monthly_income > 0)->count()
-                    + ((float) $patient->monthly_income > 0 ? 1 : 0),
-                'members_income_total' => round((float) $members->sum('monthly_income'), 2),
-                'members' => $members->map(fn ($m) => [
-                    'id' => $m->id,
-                    'name' => $m->name,
-                    'relationship' => $m->relationship,
-                    'age' => $m->age,
-                    'occupation' => $m->occupation,
-                    'monthly_income' => $this->money($m->monthly_income),
-                    'educational_attainment' => $m->educational_attainment,
-                    'is_living_with_patient' => (bool) $m->is_living_with_patient,
-                ])->values()->all(),
-            ],
-            'current' => $current === null ? null : $this->present($current, $householdSize),
+            'current' => $current === null ? null : $this->present($current),
             'history' => $records->map(fn (PatientSocioeconomicProfile $r) => [
                 'id' => $r->id,
                 'recorded_on' => $r->recorded_on?->toDateString(),
-                'total_family_income' => $this->money($r->total_family_income),
-                'net_per_capita_income' => $this->money($r->net_per_capita_income),
-                'expenses_total' => round((float) $r->expenses_sum_amount, 2),
-                'household_size' => $r->household_size,
                 'house_tenure' => $r->house_tenure,
+                'total' => $r->total(),
             ])->values()->all(),
         ];
     }
 
     /**
-     * One record in full. `$liveHouseholdSize` is today's family members + 1; when
-     * given, `household_changed` says whether the record's snapshot is out of date.
+     * One record in full — the shape of `current`, and of every show/store/update response.
      *
      * @return array<string, mixed>
      */
-    public function present(PatientSocioeconomicProfile $profile, ?int $liveHouseholdSize = null): array
+    public function present(PatientSocioeconomicProfile $profile): array
     {
-        $profile->loadMissing(['expenses', 'recordedBy:id,displayName']);
+        $profile->loadMissing('recordedBy:id,displayName');
 
-        $income = $profile->total_family_income;
-        $total = round((float) $profile->expenses->sum('amount'), 2);
+        $expenses = [];
+        foreach (PatientSocioeconomicProfile::EXPENSE_ITEMS as $item) {
+            $expenses[$item] = $this->money($profile->{$item});
+        }
+        $expenses['others_specify'] = $profile->others_specify;
 
         return [
             'id' => $profile->id,
@@ -95,31 +64,15 @@ class PatientSocioeconomicService
                 'id' => $profile->recordedBy->id,
                 'name' => $profile->recordedBy->displayName,
             ],
-            'income' => [
-                'total_family_income' => $this->money($income),
-                'net_per_capita_income' => $this->money($profile->net_per_capita_income),
-                'other_income_sources' => $profile->other_income_sources ?? [],
-            ],
-            'living' => [
-                'housing_type' => $profile->housing_type,
-                'house_tenure' => $profile->house_tenure,
-                'light_source' => $profile->light_source ?? [],
-                'water_source' => $profile->water_source ?? [],
-                'utilities_access' => $profile->utilities_access,
-            ],
             'remarks' => $profile->remarks,
-            'household_size' => $profile->household_size,
-            'household_changed' => $liveHouseholdSize !== null && $liveHouseholdSize !== $profile->household_size,
-            'expenses' => [
-                'lines' => $profile->expenses->map(fn ($e) => [
-                    'id' => $e->id,
-                    'expense_type' => $e->expense_type,
-                    'amount' => $this->money($e->amount),
-                ])->values()->all(),
-                'slots' => UisExpenseSlots::slots($profile->expenses),
-                'total' => $total,
-                'expense_to_income_ratio' => (float) $income > 0 ? round($total / (float) $income, 2) : null,
+            'house' => [
+                'tenure' => $profile->house_tenure,
+                'rent_amount' => $profile->house_tenure === 'rented' ? $this->money($profile->house_rent_amount) : null,
             ],
+            'light_source' => $profile->light_source ?? [],
+            'water_source' => $profile->water_source ?? [],
+            'expenses' => $expenses,
+            'total' => $profile->total(),
             'created_at' => $profile->created_at,
             'updated_at' => $profile->updated_at,
         ];

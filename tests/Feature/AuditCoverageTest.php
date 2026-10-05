@@ -22,7 +22,6 @@ use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
-use App\Models\PatientSocioeconomicExpense;
 use App\Models\PatientSocioeconomicProfile;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
@@ -43,7 +42,6 @@ $audited = [
     PatientCaretaker::class,
     PatientMerge::class,
     PatientSocioeconomicProfile::class,
-    PatientSocioeconomicExpense::class,
     // Episode-level
     CaseModel::class,
     CaseWatcher::class,

@@ -4,63 +4,34 @@ namespace App\Services;
 
 use App\Models\Patient;
 use App\Models\PatientSocioeconomicProfile;
-use Illuminate\Support\Facades\DB;
 
 /**
- * Writes for the patient-level Socio-Economic module. Each record is a dated
- * snapshot: it stores the household size at record time and its own per-capita
- * income, so history stays interpretable after the family changes.
+ * Writes for the patient-level List of Expenses module. Each record is a dated
+ * snapshot; a changed situation is recorded as a new dated record rather than by
+ * rewriting history (corrections use update).
  */
 class SocioeconomicProfileService
 {
     /**
-     * @param  array<string, mixed>  $data  validated request data (may carry `expenses`)
+     * @param  array<string, mixed>  $data  validated request data
      */
     public function create(Patient $patient, array $data, int $recordedBy): PatientSocioeconomicProfile
     {
-        $expenses = $data['expenses'] ?? [];
-        unset($data['expenses']);
+        $data = $this->withRentRule($data, $data['house_tenure'] ?? null);
 
-        return DB::transaction(function () use ($patient, $data, $expenses, $recordedBy) {
-            $profile = $patient->socioeconomicProfiles()->create($data + [
-                'recorded_by' => $recordedBy,
-                'household_size' => $patient->familyMembers()->count() + 1,
-            ]);
-
-            foreach ($expenses as $line) {
-                $profile->expenses()->create(['expense_type' => $line['expense_type'], 'amount' => $line['amount']]);
-            }
-
-            return $this->refreshPerCapita($profile);
-        });
+        return $patient->socioeconomicProfiles()->create($data + ['recorded_by' => $recordedBy])->refresh();
     }
 
     /**
-     * Corrects a record. The household-size snapshot is kept: a household that has
-     * changed since is recorded as a new dated profile, not by rewriting history.
-     * When `expenses` is present it replaces every line.
-     *
      * @param  array<string, mixed>  $data
      */
     public function update(PatientSocioeconomicProfile $profile, array $data): PatientSocioeconomicProfile
     {
-        $replaceExpenses = array_key_exists('expenses', $data);
-        $expenses = $data['expenses'] ?? [];
-        unset($data['expenses']);
+        $tenure = array_key_exists('house_tenure', $data) ? $data['house_tenure'] : $profile->house_tenure;
 
-        return DB::transaction(function () use ($profile, $data, $replaceExpenses, $expenses) {
-            $profile->update($data);
+        $profile->update($this->withRentRule($data, $tenure));
 
-            if ($replaceExpenses) {
-                $profile->expenses()->get()->each->delete();
-
-                foreach ($expenses as $line) {
-                    $profile->expenses()->create(['expense_type' => $line['expense_type'], 'amount' => $line['amount']]);
-                }
-            }
-
-            return $this->refreshPerCapita($profile);
-        });
+        return $profile->refresh();
     }
 
     public function delete(PatientSocioeconomicProfile $profile): bool
@@ -69,20 +40,17 @@ class SocioeconomicProfileService
     }
 
     /**
-     * Per-capita income is (income − expenses) / household size, floored at zero —
-     * a plain figure, not an MSWD classification.
+     * The rent amount belongs to a rented house only: any other tenure clears it.
+     *
+     * @param  array<string, mixed>  $data
+     * @return array<string, mixed>
      */
-    private function refreshPerCapita(PatientSocioeconomicProfile $profile): PatientSocioeconomicProfile
+    private function withRentRule(array $data, ?string $tenure): array
     {
-        $profile->load('expenses');
+        if ($tenure !== 'rented') {
+            $data['house_rent_amount'] = null;
+        }
 
-        $perCapita = $profile->total_family_income === null
-            ? null
-            : round(max(0, (float) $profile->total_family_income - (float) $profile->expenses->sum('amount'))
-                / max(1, $profile->household_size), 2);
-
-        $profile->update(['net_per_capita_income' => $perCapita]);
-
-        return $profile->refresh();
+        return $data;
     }
 }
