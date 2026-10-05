@@ -5,7 +5,8 @@ namespace App\Http\Requests;
 use Illuminate\Contracts\Validation\ValidationRule;
 
 /**
- * Same fields as a create, all optional. `expenses`, when sent, replaces every line.
+ * Same fields as a create, all optional, plus `refresh_income`: re-read the patient's and
+ * family members' income into the record's snapshot (otherwise the snapshot is kept).
  */
 class UpdateSocioeconomicProfileRequest extends StoreSocioeconomicProfileRequest
 {
@@ -16,6 +17,7 @@ class UpdateSocioeconomicProfileRequest extends StoreSocioeconomicProfileRequest
     {
         $rules = parent::rules();
         $rules['recorded_on'] = ['sometimes', 'date', 'before_or_equal:today'];
+        $rules['refresh_income'] = ['sometimes', 'boolean'];
 
         return $rules;
     }

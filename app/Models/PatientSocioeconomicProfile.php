@@ -9,8 +9,8 @@ use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
  * One dated "List of Expenses" record (ANNEX B section III) for a patient: house/lot
- * tenure (with the rent amount when rented), light and water sources, and one amount
- * per expense item. The newest (recorded_on, id) is the patient's current record;
+ * tenure (with the rent amount when rented), light and water sources, one amount per
+ * expense item, and the family's income (patient + family members + other sources). The newest (recorded_on, id) is the patient's current record;
  * earlier ones are the history.
  *
  * Patient-level and independent of cases, assessments and the UIS — nothing here
@@ -42,6 +42,10 @@ class PatientSocioeconomicProfile extends Model
         'house_help',
         'others',
         'others_specify',
+        'patient_income',
+        'income_members',
+        'other_income_sources',
+        'total_family_income',
         'remarks',
     ];
 
@@ -58,6 +62,10 @@ class PatientSocioeconomicProfile extends Model
             'clothing' => 'decimal:2',
             'house_help' => 'decimal:2',
             'others' => 'decimal:2',
+            'patient_income' => 'decimal:2',
+            'total_family_income' => 'decimal:2',
+            'income_members' => 'array',
+            'other_income_sources' => 'array',
             'light_source' => 'array',
             'water_source' => 'array',
         ];
@@ -86,6 +94,29 @@ class PatientSocioeconomicProfile extends Model
         }
 
         return round($total, 2);
+    }
+
+    /** The "other family income" typed in the module, summed. */
+    public function otherIncomeTotal(): float
+    {
+        return round(array_sum(array_map(
+            fn ($source) => (float) ($source['amount'] ?? 0),
+            $this->other_income_sources ?? [],
+        )), 2);
+    }
+
+    /**
+     * Total family income: the patient's income and the family members' incomes as they
+     * were when the record was made, plus the other family income typed in the module.
+     */
+    public function incomeTotal(): float
+    {
+        $members = array_sum(array_map(
+            fn ($member) => (float) ($member['monthly_income'] ?? 0),
+            $this->income_members ?? [],
+        ));
+
+        return round((float) $this->patient_income + $members + $this->otherIncomeTotal(), 2);
     }
 
     /**
