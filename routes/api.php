@@ -22,7 +22,6 @@ use App\Http\Controllers\CaseProgressNoteController;
 use App\Http\Controllers\CaseSummaryPdfController;
 use App\Http\Controllers\CaseUisPrintHistoryController;
 use App\Http\Controllers\CaseUisReadinessController;
-use App\Http\Controllers\PatientUisController;
 use App\Http\Controllers\CaseWatcherController;
 use App\Http\Controllers\CaseWatcherStatusController;
 use App\Http\Controllers\CloseCaseController;
@@ -64,7 +63,9 @@ use App\Http\Controllers\PatientHistoryController;
 use App\Http\Controllers\PatientIdController;
 use App\Http\Controllers\PatientMergesController;
 use App\Http\Controllers\PatientProfileController;
+use App\Http\Controllers\PatientSocioeconomicController;
 use App\Http\Controllers\PatientTransactionController;
+use App\Http\Controllers\PatientUisController;
 use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PromoteAssessmentToSocialCaseController;
@@ -145,6 +146,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:patients.view')->group(function () {
         Route::get('patients/{patient}/profile', PatientProfileController::class);
         Route::get('patients/{patient}/uis', PatientUisController::class);
+        Route::get('patients/{patient}/socioeconomic', PatientSocioeconomicController::class);
         Route::get('patients/{patient}/history', PatientHistoryController::class);
         Route::get('patients/{patient}/duplicates', PatientDuplicatesController::class);
         Route::get('patients/{patient}/merges', PatientMergesController::class);
