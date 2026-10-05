@@ -1,159 +1,122 @@
-# Patient Socio-Economic Module — Server Plan (zcmc_mswd_server)
+# Patient List of Expenses Module — Server Plan (zcmc_mswd_server)
 
-Backend of the patient-page **Socio-Economic** tab: a **standalone, patient-level** module (socio-economic profile,
-living conditions, list of expenses). The client half is `zcmc_mswd_client/docs/PATIENT_SOCIOECONOMIC_PLAN.md`; client
-phases are gated on the server phases here.
+Backend of the patient-page **List of Expenses** tab (ANNEX B section III): a **standalone, patient-level** module,
+independent of cases and the UIS. Internally it keeps the names `socioeconomic` (routes, `socioeconomic.*` permissions,
+tables, classes) so nothing already merged or seeded breaks; only the staff-facing label is "List of Expenses". The
+client half is `zcmc_mswd_client/docs/PATIENT_SOCIOECONOMIC_PLAN.md`.
 
 **Status legend:** ☐ not started · ◐ in progress · ☑ done
 
 | Phase | Depends on | Status |
 |-------|-----------|--------|
-| S1. Schema: `patient_socioeconomic_profiles` + `patient_socioeconomic_expenses` | — | ☑ done |
-| S2. Models, audit ownership, patient-merge support, permissions | S1 | ☑ done |
-| S3. API: overview, show, store, update, destroy (+ OpenAPI) | S2 | ☑ done |
-| S4. Tests incl. the independence guard | S3 | ☑ done |
-| S5. Docs (`CLAUDE.md`, this file) | S4 | ☑ done |
+| S1. Schema: `patient_socioeconomic_profiles` + `patient_socioeconomic_expenses` (free-text lines) | — | ☑ done (#185) |
+| S2. Models, audit ownership, patient-merge support, permissions | S1 | ☑ done (#185) |
+| S3. API: overview, show, store, update, destroy | S2 | ☑ done (#185) |
+| S4. Tests incl. the independence guard | S3 | ☑ done (#185) |
+| S5. Docs | S4 | ☑ done (#185) |
+| S6. Rework schema to the fixed List of Expenses form | S5 | ☑ done |
+| S7. Model, service, requests, API reshaped to the form | S6 | ☑ done |
+| S8. Tests rewritten; docs | S7 | ☑ done |
 
-## Background — why this is a rework
+S1–S5 shipped the first design (free-text expense lines, income, per-capita). S6–S8 replace it with the fixed form.
 
-The first cut (#183) made `GET /patients/{patient}/socioeconomic` a read model over the intake `Assessment` and its
-`assessment_expenses`, with writes going through the assessment endpoints. That makes the module depend on cases: a
-patient with no case has no profile, and edits ride on UIS data. The module must instead be its own patient-level
-store. #183's endpoint has no consumers (the client tab is not built), so it is **replaced**, not versioned.
+## Background
+
+The first design recorded income, a household snapshot, per-capita income and free-text expense lines. The module is
+really the **List of Expenses** of the Unified Intake Sheet: a fixed set of items, not free text. This rework makes the
+data match that form exactly. It stays patient-level and independent of cases/assessments/UIS (no FK or read either
+way), dated and append-only (newest `recorded_on, id` = current; the rest = history), audited, soft-deleted, merged with
+the patient, and gated by its own `socioeconomic.*` permissions (Admin has all via `'*'` and `Gate::before`).
 
 ## Decisions
 
-1. **Own tables, patient-scoped.** Data lives in new tables keyed by `patient_id`. Existing tables are unchanged.
-2. **Dated, append-only records.** Each "update" is a new record (`recorded_on`); the newest by
-   `recorded_on desc, id desc` is *current*; the rest are history/trend. Typo corrections use `PUT` on a record.
-3. **Fully independent of the UIS/assessment.** No FK or read in either direction. The UIS keeps its own snapshot and
-   its own MSWD classification. A later opt-in "prefill the UIS from the profile" is out of scope.
-4. **No classification here.** MSWD classification is a case/UIS concept. The module computes only per-capita income
-   `(income − expenses) / household_size`.
-5. **No "Problem Presented".** That is a per-encounter UIS section.
-6. **Own permissions** `socioeconomic.view | create | update | delete`.
+1. **Expenses form only.** Dropped: family income, other income sources, housing-type text, utilities text,
+   per-capita income, household-size snapshot, and the live-household block in the overview.
+2. **One column per item** on the profile row; the free-text expense-lines table is removed.
+3. **Label-only rename.** Routes, permissions, tables, models and the client folder keep their `socioeconomic` names.
+4. **Independence rules unchanged** (enforced by a test): no `case_id` / `assessment_id`, no FK to cases or assessments,
+   and the module's sources never reference `Assessment`, `CaseModel` or the classification action.
 
-## Boundary rules (enforced by a test)
+## The form
 
-- No table or column references `cases`, `assessments` or `assessment_expenses`.
-- The module's source files do not import `Assessment`, `AssessmentExpense`, `CaseModel`,
-  `CalculateMswdClassificationAction` or any assessment service.
-- Allowed shared helper, because it is case-agnostic: `App\Support\UisExpenseSlots` (ANNEX B expense slots).
-  Vocabulary constants for tenure/light/water are **duplicated** in `App\Support\SocioeconomicVocabulary`, not imported
-  from `Assessment`.
-
-## Phase S1 — Schema
-
-New create-table migrations only (the repo's one-create-per-table style).
-
-`patient_socioeconomic_profiles`
-
-| Column | Notes |
-|---|---|
-| `id`, `timestamps`, `softDeletes` | |
-| `patient_id` | FK `patients`, RESTRICT |
-| `recorded_on` | date |
-| `recorded_by` | FK `users` |
-| `total_family_income` | decimal(12,2) null |
-| `other_income_sources` | json null |
-| `house_tenure` | string null (`owned` \| `rented`) |
-| `housing_type`, `utilities_access` | string null, free text |
-| `light_source`, `water_source` | json null (vocabulary arrays) |
-| `remarks` | text null |
-| `household_size` | unsigned smallint — family members + 1 **at record time** |
-| `net_per_capita_income` | decimal(12,2) null — computed on write |
-| index | `(patient_id, recorded_on, id)` |
-
-`patient_socioeconomic_expenses`: `id`, `profile_id` FK RESTRICT, `expense_type` string(255), `amount` decimal(12,2),
-`timestamps`.
-
-## Phase S2 — Models, audit, merge, permissions
-
-- `App\Models\PatientSocioeconomicProfile` (`Auditable`, `SoftDeletes`; `belongsTo patient`; `hasMany expenses`;
-  decimal/array/date casts) and `PatientSocioeconomicExpense` (`Auditable`). `Patient::socioeconomicProfiles()`.
-- `activityOwner()`: profile → `['patient_id' => patient_id, 'case_id' => null]`; expense → one hop via its profile.
-  Update the two locked tests: `AuditCoverageTest` (model lists) and `ActivityOwnershipResolverTest` (a dataset row per
-  resolver — its reflection guard fails otherwise).
-- `PatientMergeService::REASSIGNABLE` gains `'socioeconomic_profiles' => PatientSocioeconomicProfile::class`, so a merge
-  moves the records and an unmerge reverses it.
-- `RolesAndPermissionsSeeder`: add `socioeconomic.view|create|update|delete`; grant `view` wherever `intake.view` is
-  granted, `create|update` wherever `patients.update` is, `delete` to MSS Head (Admin has `*`).
-
-## Phase S3 — API (patient-scoped; no case in any URL)
-
-| Route | Permission | Purpose |
+| Item | Input | Stored as |
 |---|---|---|
-| `GET /patients/{patient}/socioeconomic` | `socioeconomic.view` | overview (below) |
-| `GET /socioeconomic-profiles/{profile}` | `socioeconomic.view` | one record in full (history row) |
-| `POST /patients/{patient}/socioeconomic-profiles` | `socioeconomic.create` | new dated record, nested `expenses[]` |
-| `PUT /socioeconomic-profiles/{profile}` | `socioeconomic.update` | correct a record; `expenses[]`, when present, **replaces** the lines in one transaction |
-| `DELETE /socioeconomic-profiles/{profile}` | `socioeconomic.delete` | soft delete |
+| House/Lot | option **Owned / Rented**; if Rented, show **Amount** | `house_tenure` (`owned`\|`rented`), `house_rent_amount` |
+| Light Source | Electricity, Kerosene, Candle (checkboxes) | `light_source` json |
+| Water Source | Owned, Public, Artesian Well (checkboxes) | `water_source` json |
+| Food, Transpo, Medikal, Insurance, Education, Clothing, House Help | amount each | `food`, `transport`, `medical`, `insurance`, `education`, `clothing`, `house_help` |
+| Others | amount + what it is | `others`, `others_specify` |
+| Record | date, remarks | `recorded_on`, `remarks` |
 
-Files: `PatientSocioeconomicController` (overview, rewritten), `SocioeconomicProfileController`
-(show/store/update/destroy), `SocioeconomicProfileService` (transaction, household snapshot, per-capita),
-`StoreSocioeconomicProfileRequest` / `UpdateSocioeconomicProfileRequest`, `SocioeconomicProfileResource`,
-`SocioeconomicProfileDto`, `PatientSocioeconomicDocs` + schema. Routes go next to `patients/{patient}/uis` in
-`routes/api.php`.
+Amounts are monthly pesos, `decimal(12,2)` nullable (blank = none / unknown). **Total expenses** = rent amount (only
+when rented) + the eight amounts, computed and not stored. `house_rent_amount` is kept only when
+`house_tenure = 'rented'` — the service clears it otherwise. Staff-facing labels, exactly: "House/Lot", "Light Source",
+"Water Source", "Food", "Transpo", "Medikal", "Insurance", "Education", "Clothing", "House Help", "Others".
 
-Validation: `recorded_on` date, not in the future; `total_family_income` numeric ≥ 0; `house_tenure` /
-`light_source.*` / `water_source.*` `Rule::in` the vocabulary; `expenses.*.expense_type` string max 255,
-`expenses.*.amount` numeric ≥ 0; `recorded_by` is the authenticated user (never from the body).
+## Phase S6 — Schema (new alter migration)
 
-Overview response `{ data }`:
+`database/migrations/2026_10_06_010000_rework_socioeconomic_to_list_of_expenses.php` — an alter migration, not an
+in-place edit, so it is safe whether or not #185 has run somewhere.
 
-```
-patient   { occupation, monthly_income, educational_attainment, civil_status }
-household { size, members_count, earners_count, members_income_total, members[…] }      // live, from family members
-current   { id, recorded_on, recorded_by{id,name}, income{ total_family_income, net_per_capita_income,
-            other_income_sources[] }, living{ housing_type, house_tenure, light_source[], water_source[],
-            utilities_access }, remarks, household_size, household_changed,
-            expenses{ lines[{id,expense_type,amount}], slots{…UisExpenseSlots keys}, total,
-                      expense_to_income_ratio } } | null
-history[] { id, recorded_on, total_family_income, net_per_capita_income, expenses_total, household_size,
-            house_tenure }                                                             // newest first, max 10
-```
+- On `patient_socioeconomic_profiles`: **add** `house_rent_amount`, `food`, `transport`, `medical`, `insurance`,
+  `education`, `clothing`, `house_help`, `others` (all `decimal(12,2)` null) and `others_specify` (string 255 null);
+  **drop** `total_family_income`, `other_income_sources`, `housing_type`, `utilities_access`, `household_size`,
+  `net_per_capita_income`. Kept: `patient_id`, `recorded_on`, `recorded_by`, `house_tenure`, `light_source`,
+  `water_source`, `remarks`, timestamps, soft deletes, the `(patient_id, recorded_on, id)` index.
+- **Drop** `patient_socioeconomic_expenses`.
+- `down()` recreates the dropped table and columns (data is not restored). No data migration: the module has no
+  consumers or production data yet (the client tab is not built).
 
-`household_changed` = the current record's `household_size` ≠ today's live size (informational). `expenses.total` sums
-every line (unmatched lines are not lost); the ratio is `null` when income is null/0. Constant query count
-(patient members; profiles limited to 10 with `withSum`; current record's lines).
+## Phase S7 — Model, service, requests, API
 
-## Phase S4 — Tests (`tests/Feature/SocioeconomicProfileTest.php`, replacing `PatientSocioeconomicTest`)
+- `PatientSocioeconomicProfile`: new `$fillable` and `decimal:2` casts for the nine amounts; `EXPENSE_ITEMS` lists the
+  eight plain items; `total()` = rent (rented only) + the eight items. The `expenses()` relation is removed and
+  `PatientSocioeconomicExpense` is **deleted**. `activityOwner()` is unchanged.
+- `SocioeconomicProfileService`: `create` / `update` take the flat fields; any tenure other than `rented` clears
+  `house_rent_amount` (an update that leaves the tenure alone keeps it); `delete` unchanged.
+- `PatientSocioeconomicService::overview()` — the `patient{}` and `household{}` blocks are removed:
+  ```
+  current   { id, patient_id, recorded_on, recorded_by{id,name}, remarks,
+              house{ tenure, rent_amount }, light_source[], water_source[],
+              expenses{ food, transport, medical, insurance, education, clothing, house_help,
+                        others, others_specify },
+              total, created_at, updated_at } | null
+  history[] { id, recorded_on, house_tenure, total }        // newest first, max 10
+  ```
+  `GET /socioeconomic-profiles/{profile}`, `POST` and `PUT` return the same `current`-shaped record.
+- `StoreSocioeconomicProfileRequest`: `recorded_on` required date ≤ today; `house_tenure` in
+  `SocioeconomicVocabulary::HOUSE_TENURES`; `house_rent_amount`, the eight amounts and `others` numeric ≥ 0, nullable;
+  `light_source.*` / `water_source.*` `Rule::in` the vocabulary; `others_specify` string ≤ 255; `remarks` string.
+  `UpdateSocioeconomicProfileRequest` keeps its shape (all optional).
+- Routes and permissions are **unchanged**. OpenAPI docs reworded to "List of Expenses".
+- `App\Support\UisExpenseSlots` is no longer used by the module (the UIS still uses it); `SocioeconomicVocabulary` stays.
+- Locked tests `AuditCoverageTest` and `ActivityOwnershipResolverTest` drop `PatientSocioeconomicExpense`.
 
-A patient with **no cases at all** can create, read, edit and delete (headline test); create → current + history order
-and cap; household snapshot and `household_changed` after adding a family member; nested expenses create / replace /
-clear; slots equal `UisExpenseSlots`, total counts unmatched lines, ratio null without income; per-capita math;
-validation (bad vocab, negative amount, future date); soft delete drops the record from current/history; patient
-isolation; 401/403 per permission; query-count guard; merge moves profiles; audit rows carry `patient_id` with null
-`case_id`; **independence guard** (module sources contain no `Assessment`/`CaseModel` references).
-Existing `AssessmentExpenseApiTest`, `PatientUisTest`, `CaseUisPrintTest` stay untouched and green; full
-`php artisan test` green.
+## Phase S8 — Tests and docs
 
-## Phase S5 — Docs
-
-This file. Do not commit a regenerated
-`storage/api-docs/api-docs.json` (the committed file has drifted; regenerating rewrites ~1,200 unrelated lines).
+`tests/Feature/SocioeconomicProfileTest.php` is rewritten. **Kept:** a patient with no cases end to end; history order,
+cap and same-day tie-break; soft delete; patient isolation; the permission matrix; `socioeconomic.view` without
+`patients.view`; 401/404; query-count guard; merge and unmerge; audit ownership (`patient_id` set, `case_id` null);
+the independence guard (also asserts the dropped table and columns are gone).
+**Replaced** (income / slots / household tests) with: total = rent (rented) + the eight amounts; rent kept when
+rented and cleared when owned or unset, including on update; an update that leaves the tenure alone keeps the rent;
+blank amounts count as zero; validation (bad tenure / light / water, negative or non-numeric amount, over-long specify,
+future or missing date); the payload carries no income / household / classification.
 
 ## Notes from building it
 
-- **Services return arrays, not DTO/Resource classes.** `PatientSocioeconomicService::present()` shapes one record
-  (the same payload for `current`, `show`, `store` and `update`) and `overview()` the tab; there is no
-  `SocioeconomicProfileDto` / `SocioeconomicProfileResource`, matching `PatientUisController`'s style.
-- **`other_income_sources` is a list of `{source, amount}`** (the shape the UIS already uses), not plain strings.
-- **A `PUT` keeps the household-size snapshot.** A changed household is recorded as a new dated profile, so the old
-  record stays interpretable; `household_changed` tells the client when to offer one.
-- **Routes sit outside the `patients.*` groups** so access depends only on `socioeconomic.*`. A user with
-  `socioeconomic.view` but no `patients.view` can read the overview.
-- **Existing databases need the permissions seeded** (`php artisan db:seed --class=RolesAndPermissionsSeeder`); view is
-  granted with `intake.view`, create/update with `patients.update`, delete to MSS Head (and Admin via `*`).
-- **No `CLAUDE.md` exists in the server repo**, so that part of S5 does not apply.
-- Final state: 678 tests passing (2314 assertions); the independence guard lives in `SocioeconomicProfileTest`.
+- **Total is computed, not stored**, so it can never drift from the amounts; `history[].total` uses the same method.
+- **Switching owned → rented through an update needs the rent sent again**, because switching to owned clears it.
+- **`house.rent_amount` is `null` unless rented** in every response, even if a legacy value were present.
+- The shipped tables from #185 are altered in place by an additive migration; existing databases just run `migrate`.
+- Final state: 675 tests passing (2302 assertions).
 
 ## Verification
 
-`php artisan test`; with a patient who has **zero cases**, exercise all five endpoints; check an `activity_log` row for
-a profile write has `patient_id` set and `case_id` null; merge two patients and confirm their profiles follow.
+`php artisan test`; with a patient who has zero cases exercise all five endpoints; an Admin and a view-only Processor
+behave as before; the Rented/Owned amount rule works through the API.
 
 ## Non-goals
 
-Linking to or prefilling the UIS; MSWD classification; Problem Presented; Filament admin screens; a profile PDF; a
-master expense list (`expense_type` stays free text); changing the UIS/assessment endpoints.
+Income, per-capita and household figures; free-text expense lines; MSWD classification; Problem Presented; linking to
+or prefilling the UIS; renaming routes, permissions or tables; Filament screens; a PDF.
