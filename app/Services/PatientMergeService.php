@@ -9,6 +9,7 @@ use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
+use App\Models\PatientSocioeconomicProfile;
 use App\Models\PatientWatcher;
 use App\Models\User;
 use Illuminate\Support\Facades\DB;
@@ -29,6 +30,7 @@ class PatientMergeService
         'watchers' => PatientWatcher::class,
         'caretakers' => PatientCaretaker::class,
         'documents' => Document::class,
+        'socioeconomic_profiles' => PatientSocioeconomicProfile::class,
     ];
 
     /**

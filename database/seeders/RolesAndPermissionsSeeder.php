@@ -58,6 +58,11 @@ class RolesAndPermissionsSeeder extends Seeder
         // Unified Intake Sheet (ANNEX B) — a printable, not a record: this one
         // permission guards printing it and reading its print history.
         'intake.view',
+        // Socio-Economic profile (patient-level; independent of cases and the UIS)
+        'socioeconomic.view',
+        'socioeconomic.create',
+        'socioeconomic.update',
+        'socioeconomic.delete',
         // Audit trail
         'audit.view',
         'audit.view_protective',
@@ -87,6 +92,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
             'settings.manage',
@@ -98,6 +104,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
             'audit.view',
             'reports.view', 'reports.generate',
             'panel.access',
@@ -107,6 +114,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cases.view', 'cases.create', 'cases.update',
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
             'reports.view',
         ],
         'Processor' => [
@@ -114,6 +122,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'cases.view',
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view',
+            'socioeconomic.view',
             'reports.view',
         ],
     ];

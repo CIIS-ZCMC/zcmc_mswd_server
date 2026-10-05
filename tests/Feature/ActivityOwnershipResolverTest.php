@@ -22,6 +22,8 @@ use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
+use App\Models\PatientSocioeconomicExpense;
+use App\Models\PatientSocioeconomicProfile;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
 use App\Models\User;
@@ -76,6 +78,14 @@ function assistanceFor(CaseModel $case, User $worker): PatientAssistance
     ]);
 }
 
+function socioeconomicProfileFor(Patient $patient, User $worker): PatientSocioeconomicProfile
+{
+    return PatientSocioeconomicProfile::create([
+        'patient_id' => $patient->id, 'recorded_on' => now()->toDateString(),
+        'recorded_by' => $worker->id, 'household_size' => 1,
+    ]);
+}
+
 dataset('resolvers', [
     'Patient (itself)' => [fn () => test()->patient, true, false],
     'PatientId' => [fn () => PatientId::create([
@@ -98,6 +108,12 @@ dataset('resolvers', [
         'target_patient_id' => test()->patient->id,
         'manifest' => ['cases' => []],
         'performed_by' => test()->worker->id,
+    ]), true, false],
+
+    'PatientSocioeconomicProfile' => [fn () => socioeconomicProfileFor(test()->patient, test()->worker), true, false],
+    'PatientSocioeconomicExpense (one hop)' => [fn () => PatientSocioeconomicExpense::create([
+        'profile_id' => socioeconomicProfileFor(test()->patient, test()->worker)->id,
+        'expense_type' => 'Food', 'amount' => 100,
     ]), true, false],
 
     'CaseModel' => [fn () => test()->case, true, true],
@@ -188,7 +204,7 @@ it('covers every model that declares a resolver', function () {
     // The models the dataset above exercises, one row each.
     $covered = collect([
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
-        'PatientMerge', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
+        'PatientMerge', 'PatientSocioeconomicProfile', 'PatientSocioeconomicExpense', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document',
     ])->sort()->values();
