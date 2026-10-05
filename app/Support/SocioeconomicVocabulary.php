@@ -6,8 +6,8 @@ namespace App\Support;
  * Checkbox vocabularies of the Socio-Economic module's living conditions.
  *
  * The values match ANNEX B section III so a worker sees the same choices everywhere,
- * but they are declared here rather than read from `Assessment`: the module has no
- * dependency on cases or assessments (docs/PATIENT_SOCIOECONOMIC_PLAN.md).
+ * but they are declared here rather than borrowed from the intake model: the module has
+ * no dependency on cases or the UIS (docs/PATIENT_SOCIOECONOMIC_PLAN.md).
  */
 final class SocioeconomicVocabulary
 {
