@@ -17,9 +17,9 @@ client half is `zcmc_mswd_client/docs/PATIENT_SOCIOECONOMIC_PLAN.md`.
 | S6. Rework schema to the fixed List of Expenses form | S5 | ☑ done |
 | S7. Model, service, requests, API reshaped to the form | S6 | ☑ done |
 | S8. Tests rewritten; docs | S7 | ☑ done |
-| S9. Schema: family-income snapshot columns (alter migration) | S8 (#187 merged) | ☐ |
-| S10. `FamilyIncome` support class; model, service, request, API, OpenAPI | S9 | ☐ |
-| S11. Tests; docs | S10 | ☐ |
+| S9. Schema: family-income snapshot columns (alter migration) | S8 (#187 merged) | ☑ done |
+| S10. `FamilyIncome` support class; model, service, request, API, OpenAPI | S9 | ☑ done |
+| S11. Tests; docs | S10 | ☑ done |
 
 S1–S5 shipped the first design (free-text expense lines, income, per-capita). S6–S8 replace it with the fixed form.
 S9–S11 add the **family income** half back (patient + family members + other family sources → total family income),
@@ -170,6 +170,14 @@ doc's notes and contract. Do not commit a regenerated `storage/api-docs/api-docs
 - **`house.rent_amount` is `null` unless rented** in every response, even if a legacy value were present.
 - The shipped tables from #185 are altered in place by an additive migration; existing databases just run `migrate`.
 - Final state: 675 tests passing (2302 assertions).
+- **S9–S11 build notes.** Only family members **with income** are snapshotted (and listed in `live_income`), so a member
+  with no income never shows as a zero line; the snapshot lines carry no `id` (they are history), `live_income` lines do.
+  A record made before the income columns existed has no snapshot: its `total_family_income` stays `null`, it is never
+  `income_changed`, and a `PUT` leaves its total alone unless `other_income_sources` or `refresh_income` is sent.
+  `income_changed` is computed in the overview and in show/store/update, from `FamilyIncome::snapshot()` against the
+  stored snapshot. `balance = total_family_income − total` (negative when expenses exceed income); the ratio is `null` for
+  zero/unknown income. No new routes or permissions; deploy with `php artisan migrate` only.
+- Final state: 690 tests passing (2384 assertions), 43 of them for this module.
 
 ## Verification
 

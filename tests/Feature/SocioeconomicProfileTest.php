@@ -1,6 +1,7 @@
 <?php
 
 use App\Models\Patient;
+use App\Models\PatientFamilyMember;
 use App\Models\PatientSocioeconomicProfile;
 use App\Models\Sector;
 use App\Models\User;
@@ -166,14 +167,183 @@ it('breaks a same-day tie by the newest id', function () {
         ->assertJsonPath('data.history.1.id', $first->id);
 });
 
-it('has no income, household or classification in the payload', function () {
+it('carries family income but no household size, per-capita or classification', function () {
     $id = $this->postJson(seStore($this->patient), sePayload())->assertCreated()->json('data.id');
 
     $overview = $this->getJson(seOverview($this->patient))->assertOk()->json('data');
 
-    expect(array_keys($overview))->toBe(['current', 'history'])
-        ->and($overview['current'])->not->toHaveKeys(['income', 'household_size', 'classification'])
-        ->and($this->getJson("/api/socioeconomic-profiles/{$id}")->json('data'))->not->toHaveKeys(['income', 'household_size']);
+    expect(array_keys($overview))->toBe(['current', 'live_income', 'history'])
+        ->and($overview['current'])->toHaveKey('income')
+        ->and($overview['current'])->not->toHaveKeys(['household_size', 'classification', 'net_per_capita_income'])
+        ->and($overview['current']['income'])->not->toHaveKeys(['net_per_capita_income', 'household_size'])
+        ->and($this->getJson("/api/socioeconomic-profiles/{$id}")->json('data'))->toHaveKey('income');
+});
+
+/** A patient with a monthly income and three family members, two of whom earn. */
+function seFamily(Patient $patient): array
+{
+    $patient->update(['monthly_income' => 3000]);
+
+    return [
+        PatientFamilyMember::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship' => 'Spouse', 'monthly_income' => 5000]),
+        PatientFamilyMember::create(['patient_id' => $patient->id, 'name' => 'Lita', 'relationship' => 'Daughter']), // no income
+        PatientFamilyMember::create(['patient_id' => $patient->id, 'name' => 'Juan', 'relationship' => 'Son',
+            'monthly_income' => 2000, 'is_living_with_patient' => false]),
+    ];
+}
+
+it('totals the family income from the patient, every family member and the other sources', function () {
+    seFamily($this->patient);
+
+    $data = $this->postJson(seStore($this->patient), sePayload([
+        'other_income_sources' => [['source' => 'Remittance', 'amount' => 1500], ['source' => 'Pension', 'amount' => 500]],
+    ]))->assertCreated()->json('data');
+
+    expect($data['income']['patient_income'])->toEqual(3000)
+        ->and($data['income']['family_members'])->toEqual([
+            ['name' => 'Pedro', 'relationship' => 'Spouse', 'monthly_income' => 5000],
+            ['name' => 'Juan', 'relationship' => 'Son', 'monthly_income' => 2000], // not living with the patient, still counts
+        ])
+        ->and($data['income']['family_members_total'])->toEqual(7000)
+        ->and($data['income']['other_sources'])->toEqual([
+            ['source' => 'Remittance', 'amount' => 1500], ['source' => 'Pension', 'amount' => 500],
+        ])
+        ->and($data['income']['other_sources_total'])->toEqual(2000)
+        ->and($data['income']['total_family_income'])->toEqual(12000)
+        ->and($data['total'])->toEqual(10300)
+        ->and($data['income']['balance'])->toEqual(1700)
+        ->and($data['income']['expense_to_income_ratio'])->toEqual(0.86)
+        ->and($data['income']['income_changed'])->toBeFalse();
+});
+
+it('has a zero total and no ratio for a patient with no income and no family', function () {
+    $data = $this->postJson(seStore($this->patient), sePayload())->assertCreated()->json('data');
+
+    expect($data['income']['patient_income'])->toBeNull()
+        ->and($data['income']['family_members'])->toBe([])
+        ->and($data['income']['total_family_income'])->toEqual(0)
+        ->and($data['income']['balance'])->toEqual(-10300)
+        ->and($data['income']['expense_to_income_ratio'])->toBeNull();
+});
+
+it('returns the live family income for the form to pre-fill', function () {
+    [$pedro] = seFamily($this->patient);
+
+    $live = $this->getJson(seOverview($this->patient))->assertOk()->json('data.live_income');
+
+    expect($live['patient_income'])->toEqual(3000)
+        ->and($live['family_members'])->toHaveCount(2)
+        ->and($live['family_members'][0])->toMatchArray(['id' => $pedro->id, 'name' => 'Pedro'])
+        ->and($live['family_members_total'])->toEqual(7000)
+        ->and($live['total'])->toEqual(10000);
+});
+
+it('never takes the income snapshot or the total from the body', function () {
+    seFamily($this->patient);
+
+    $data = $this->postJson(seStore($this->patient), sePayload([
+        'total_family_income' => 999999, 'patient_income' => 1, 'income_members' => [['name' => 'X', 'monthly_income' => 1]],
+    ]))->assertCreated()->json('data');
+
+    expect($data['income']['total_family_income'])->toEqual(10000)
+        ->and($data['income']['patient_income'])->toEqual(3000)
+        ->and($data['income']['family_members'])->toHaveCount(2);
+});
+
+it('rejects invalid other family income', function (array $sources, string $field) {
+    $this->postJson(seStore($this->patient), sePayload(['other_income_sources' => $sources]))
+        ->assertUnprocessable()->assertJsonValidationErrors($field);
+})->with([
+    'blank source' => [[['source' => '', 'amount' => 10]], 'other_income_sources.0.source'],
+    'missing source' => [[['amount' => 10]], 'other_income_sources.0.source'],
+    'missing amount' => [[['source' => 'Pension']], 'other_income_sources.0.amount'],
+    'negative amount' => [[['source' => 'Pension', 'amount' => -5]], 'other_income_sources.0.amount'],
+    'over-long source' => [[['source' => str_repeat('x', 256), 'amount' => 5]], 'other_income_sources.0.source'],
+]);
+
+it('keeps the snapshot on update and recomputes the total when other income changes', function () {
+    [$pedro] = seFamily($this->patient);
+    $id = $this->postJson(seStore($this->patient), sePayload())->assertCreated()->json('data.id'); // 10000
+
+    $pedro->update(['monthly_income' => 9000]); // the family changes afterwards
+
+    $kept = $this->putJson("/api/socioeconomic-profiles/{$id}", ['remarks' => 'Same snapshot'])->assertOk()->json('data');
+    expect($kept['income']['total_family_income'])->toEqual(10000)
+        ->and($kept['income']['income_changed'])->toBeTrue();
+
+    $recomputed = $this->putJson("/api/socioeconomic-profiles/{$id}", [
+        'other_income_sources' => [['source' => 'Remittance', 'amount' => 1000]],
+    ])->assertOk()->json('data');
+    expect($recomputed['income']['total_family_income'])->toEqual(11000) // the old snapshot + 1000
+        ->and($recomputed['income']['family_members'][0]['monthly_income'])->toEqual(5000);
+});
+
+it('re-reads the live family on refresh_income', function () {
+    [$pedro] = seFamily($this->patient);
+    $id = $this->postJson(seStore($this->patient), sePayload())->assertCreated()->json('data.id');
+
+    $pedro->update(['monthly_income' => 9000]);
+
+    $data = $this->putJson("/api/socioeconomic-profiles/{$id}", ['refresh_income' => true])->assertOk()->json('data');
+
+    expect($data['income']['family_members'][0]['monthly_income'])->toEqual(9000)
+        ->and($data['income']['total_family_income'])->toEqual(14000) // 3000 + 9000 + 2000
+        ->and($data['income']['income_changed'])->toBeFalse();
+});
+
+it('flags income_changed when a family income changes and clears it on a new record', function () {
+    [$pedro] = seFamily($this->patient);
+    $this->postJson(seStore($this->patient), sePayload())->assertCreated();
+
+    expect($this->getJson(seOverview($this->patient))->json('data.current.income.income_changed'))->toBeFalse();
+
+    $pedro->update(['monthly_income' => 6000]);
+    expect($this->getJson(seOverview($this->patient))->json('data.current.income.income_changed'))->toBeTrue();
+
+    $this->patient->update(['monthly_income' => 3500]);
+    $this->postJson(seStore($this->patient), sePayload())->assertCreated();
+    expect($this->getJson(seOverview($this->patient))->json('data.current.income.income_changed'))->toBeFalse();
+});
+
+it('flags income_changed when a member with income is added or removed', function () {
+    $this->postJson(seStore($this->patient), sePayload())->assertCreated();
+
+    $member = PatientFamilyMember::create(['patient_id' => $this->patient->id, 'name' => 'Pedro', 'monthly_income' => 4000]);
+    expect($this->getJson(seOverview($this->patient))->json('data.current.income.income_changed'))->toBeTrue();
+
+    // A member without income does not change the family income.
+    $member->delete();
+    PatientFamilyMember::create(['patient_id' => $this->patient->id, 'name' => 'Lita']);
+    expect($this->getJson(seOverview($this->patient))->json('data.current.income.income_changed'))->toBeFalse();
+});
+
+it('puts the family income and the balance on every history row', function () {
+    seFamily($this->patient);
+    $this->postJson(seStore($this->patient), sePayload(['recorded_on' => now()->subDays(3)->toDateString()]))->assertCreated();
+    $this->postJson(seStore($this->patient), sePayload(['food' => 0]))->assertCreated();
+
+    $history = $this->getJson(seOverview($this->patient))->json('data.history');
+
+    expect($history)->toHaveCount(2)
+        ->and($history[0]['total_family_income'])->toEqual(10000)
+        ->and($history[0]['total'])->toEqual(7300)
+        ->and($history[0]['balance'])->toEqual(2700)
+        ->and($history[1]['balance'])->toEqual(-300); // 10000 - 10300
+});
+
+it('leaves a record from before the income columns alone', function () {
+    $legacy = seProfile($this->patient, $this->worker); // no snapshot, no total
+
+    $data = $this->getJson("/api/socioeconomic-profiles/{$legacy->id}")->assertOk()->json('data');
+    expect($data['income']['total_family_income'])->toBeNull()
+        ->and($data['income']['balance'])->toBeNull()
+        ->and($data['income']['income_changed'])->toBeFalse();
+
+    seFamily($this->patient);
+
+    $after = $this->putJson("/api/socioeconomic-profiles/{$legacy->id}", ['remarks' => 'Touched'])->assertOk()->json('data');
+    expect($after['income']['total_family_income'])->toBeNull()
+        ->and($after['income']['income_changed'])->toBeFalse();
 });
 
 it('rejects invalid input', function (array $override, string $field) {
@@ -322,9 +492,10 @@ it('stays independent of cases, assessments and the UIS', function () {
     $referenced = collect(Schema::getForeignKeys('patient_socioeconomic_profiles'))->pluck('foreign_table')->all();
     expect($referenced)->not->toContain('cases')->not->toContain('assessments');
 
-    // The List of Expenses rework removed the free-text lines and the income columns.
+    // The List of Expenses rework removed the free-text lines, the household and the per-capita figures
+    // (the family income columns came back with the family-income phase).
     expect(Schema::hasTable('patient_socioeconomic_expenses'))->toBeFalse();
-    foreach (['total_family_income', 'other_income_sources', 'housing_type', 'utilities_access', 'household_size', 'net_per_capita_income'] as $gone) {
+    foreach (['housing_type', 'utilities_access', 'household_size', 'net_per_capita_income'] as $gone) {
         expect(Schema::hasColumn('patient_socioeconomic_profiles', $gone))->toBeFalse();
     }
 
@@ -332,7 +503,7 @@ it('stays independent of cases, assessments and the UIS', function () {
     $files = array_merge(
         [app_path('Models/PatientSocioeconomicProfile.php'),
             app_path('Services/PatientSocioeconomicService.php'), app_path('Services/SocioeconomicProfileService.php'),
-            app_path('Support/SocioeconomicVocabulary.php'),
+            app_path('Support/SocioeconomicVocabulary.php'), app_path('Support/FamilyIncome.php'),
             app_path('Http/Controllers/PatientSocioeconomicController.php'),
             app_path('Http/Controllers/SocioeconomicProfileController.php')],
         glob(app_path('Http/Requests/*SocioeconomicProfileRequest.php')),
