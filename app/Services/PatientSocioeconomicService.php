@@ -25,7 +25,7 @@ class PatientSocioeconomicService
     public function overview(Patient $patient): array
     {
         $records = $patient->socioeconomicProfiles()
-            ->with('recordedBy:id,displayName')
+            ->with('recordedBy:id,employee_name')
             ->orderByDesc('recorded_on')->orderByDesc('id')
             ->limit(self::HISTORY_LIMIT)
             ->get();
@@ -57,7 +57,7 @@ class PatientSocioeconomicService
      */
     public function present(PatientSocioeconomicProfile $profile, ?array $live = null): array
     {
-        $profile->loadMissing('recordedBy:id,displayName');
+        $profile->loadMissing('recordedBy:id,employee_name');
 
         $expenses = [];
         foreach (PatientSocioeconomicProfile::EXPENSE_ITEMS as $item) {
@@ -75,7 +75,7 @@ class PatientSocioeconomicService
             'recorded_on' => $profile->recorded_on?->toDateString(),
             'recorded_by' => $profile->recordedBy === null ? null : [
                 'id' => $profile->recordedBy->id,
-                'name' => $profile->recordedBy->displayName,
+                'name' => $profile->recordedBy->employee_name,
             ],
             'remarks' => $profile->remarks,
             'house' => [

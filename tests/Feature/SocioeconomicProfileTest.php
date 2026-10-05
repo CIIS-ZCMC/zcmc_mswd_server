@@ -370,6 +370,20 @@ it('ignores recorded_by from the body', function () {
     expect($data['recorded_by']['id'])->toBe($this->worker->id);
 });
 
+// The users table names a person `employee_name`. SQLite quietly reads an unknown quoted column as a
+// string literal, so a wrong column here only fails on MySQL — assert the name itself.
+it('names the author of a record by their employee_name everywhere it is returned', function () {
+    $author = ['id' => $this->worker->id, 'name' => $this->worker->employee_name];
+
+    $created = $this->postJson(seStore($this->patient), sePayload())->assertCreated()->json('data');
+    expect($created['recorded_by'])->toBe($author);
+
+    $id = $created['id'];
+    expect($this->getJson("/api/socioeconomic-profiles/{$id}")->json('data.recorded_by'))->toBe($author)
+        ->and($this->putJson("/api/socioeconomic-profiles/{$id}", ['remarks' => 'x'])->json('data.recorded_by'))->toBe($author)
+        ->and($this->getJson(seOverview($this->patient))->json('data.current.recorded_by'))->toBe($author);
+});
+
 it('drops a soft-deleted record from the current record and the history', function () {
     $older = seProfile($this->patient, $this->worker, ['recorded_on' => now()->subDays(5)->toDateString()]);
     $newer = seProfile($this->patient, $this->worker);
