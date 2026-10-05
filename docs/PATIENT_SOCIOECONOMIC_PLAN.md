@@ -8,11 +8,11 @@ phases are gated on the server phases here.
 
 | Phase | Depends on | Status |
 |-------|-----------|--------|
-| S1. Schema: `patient_socioeconomic_profiles` + `patient_socioeconomic_expenses` | — | ☐ |
-| S2. Models, audit ownership, patient-merge support, permissions | S1 | ☐ |
-| S3. API: overview, show, store, update, destroy (+ OpenAPI) | S2 | ☐ |
-| S4. Tests incl. the independence guard | S3 | ☐ |
-| S5. Docs (`CLAUDE.md`, this file) | S4 | ☐ |
+| S1. Schema: `patient_socioeconomic_profiles` + `patient_socioeconomic_expenses` | — | ☑ done |
+| S2. Models, audit ownership, patient-merge support, permissions | S1 | ☑ done |
+| S3. API: overview, show, store, update, destroy (+ OpenAPI) | S2 | ☑ done |
+| S4. Tests incl. the independence guard | S3 | ☑ done |
+| S5. Docs (`CLAUDE.md`, this file) | S4 | ☑ done |
 
 ## Background — why this is a rework
 
@@ -130,8 +130,23 @@ Existing `AssessmentExpenseApiTest`, `PatientUisTest`, `CaseUisPrintTest` stay u
 
 ## Phase S5 — Docs
 
-This file and a "Socio-Economic module" line in `CLAUDE.md`. Do not commit a regenerated
+This file. Do not commit a regenerated
 `storage/api-docs/api-docs.json` (the committed file has drifted; regenerating rewrites ~1,200 unrelated lines).
+
+## Notes from building it
+
+- **Services return arrays, not DTO/Resource classes.** `PatientSocioeconomicService::present()` shapes one record
+  (the same payload for `current`, `show`, `store` and `update`) and `overview()` the tab; there is no
+  `SocioeconomicProfileDto` / `SocioeconomicProfileResource`, matching `PatientUisController`'s style.
+- **`other_income_sources` is a list of `{source, amount}`** (the shape the UIS already uses), not plain strings.
+- **A `PUT` keeps the household-size snapshot.** A changed household is recorded as a new dated profile, so the old
+  record stays interpretable; `household_changed` tells the client when to offer one.
+- **Routes sit outside the `patients.*` groups** so access depends only on `socioeconomic.*`. A user with
+  `socioeconomic.view` but no `patients.view` can read the overview.
+- **Existing databases need the permissions seeded** (`php artisan db:seed --class=RolesAndPermissionsSeeder`); view is
+  granted with `intake.view`, create/update with `patients.update`, delete to MSS Head (and Admin via `*`).
+- **No `CLAUDE.md` exists in the server repo**, so that part of S5 does not apply.
+- Final state: 678 tests passing (2314 assertions); the independence guard lives in `SocioeconomicProfileTest`.
 
 ## Verification
 
