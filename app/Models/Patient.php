@@ -80,6 +80,11 @@ class Patient extends Model
         return $this->hasMany(PatientFamilyMember::class);
     }
 
+    public function socioeconomicProfiles(): HasMany
+    {
+        return $this->hasMany(PatientSocioeconomicProfile::class);
+    }
+
     public function caretakers(): HasMany
     {
         return $this->hasMany(PatientCaretaker::class);

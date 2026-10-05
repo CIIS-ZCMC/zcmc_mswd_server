@@ -41,6 +41,7 @@ it('seeds every default role with the expected permission counts', function () {
             'patients.view', 'hospital-patients.view', 'cases.view',
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view',
+            'socioeconomic.view',
             'reports.view',
         ]);
 });

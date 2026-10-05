@@ -86,6 +86,7 @@ use App\Http\Controllers\SocialCaseController;
 use App\Http\Controllers\SocialCasePdfController;
 use App\Http\Controllers\SocialCaseReportController;
 use App\Http\Controllers\SocialCaseReportExportController;
+use App\Http\Controllers\SocioeconomicProfileController;
 use App\Http\Controllers\StoreHospitalPatientImportBatchController;
 use App\Http\Controllers\StoreWatcherWaiverController;
 use App\Http\Controllers\SubmitSocialCaseController;
@@ -146,7 +147,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::middleware('permission:patients.view')->group(function () {
         Route::get('patients/{patient}/profile', PatientProfileController::class);
         Route::get('patients/{patient}/uis', PatientUisController::class);
-        Route::get('patients/{patient}/socioeconomic', PatientSocioeconomicController::class);
         Route::get('patients/{patient}/history', PatientHistoryController::class);
         Route::get('patients/{patient}/duplicates', PatientDuplicatesController::class);
         Route::get('patients/{patient}/merges', PatientMergesController::class);
@@ -175,6 +175,14 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('hospital-service-types', [ServiceTypeController::class, 'index']);
         Route::get('hospital-transaction-types', [TransactionTypeController::class, 'index']);
     });
+
+    // Socio-Economic module: patient-level, independent of cases and the UIS. Gated by its own
+    // socioeconomic.* permissions (set in the controllers), not by patients.*.
+    Route::get('patients/{patient}/socioeconomic', PatientSocioeconomicController::class);
+    Route::post('patients/{patient}/socioeconomic-profiles', [SocioeconomicProfileController::class, 'store']);
+    Route::get('socioeconomic-profiles/{profile}', [SocioeconomicProfileController::class, 'show']);
+    Route::put('socioeconomic-profiles/{profile}', [SocioeconomicProfileController::class, 'update']);
+    Route::delete('socioeconomic-profiles/{profile}', [SocioeconomicProfileController::class, 'destroy']);
 
     // Patient records
     Route::middleware('permission:patients.update')->group(function () {

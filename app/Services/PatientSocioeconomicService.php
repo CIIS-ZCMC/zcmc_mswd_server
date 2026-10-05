@@ -2,41 +2,40 @@
 
 namespace App\Services;
 
-use App\Models\Assessment;
 use App\Models\Patient;
+use App\Models\PatientSocioeconomicProfile;
 use App\Support\UisExpenseSlots;
 
 /**
- * Read model behind the patient-page Socio-Economic tab: the patient's household,
- * the newest intake assessment's income / living conditions / expense list, and a
- * short history of earlier intake assessments for the trend.
+ * Read model behind the patient-page Socio-Economic tab: the patient's live
+ * household, their current profile (the newest dated record) with its expense list,
+ * and a short history for the trend.
  *
- * "Intake assessment" is the same row the UIS uses (social_case_status IS NULL); a
- * case promoted to the SCSR no longer contributes. Nothing here writes.
+ * The module is patient-level and independent of cases, assessments and the UIS —
+ * nothing here reads them (docs/PATIENT_SOCIOECONOMIC_PLAN.md).
  */
 class PatientSocioeconomicService
 {
-    /** Earlier assessments listed in `history` (the current one included). */
+    /** Records listed in `history` (the current one included). */
     public const HISTORY_LIMIT = 10;
 
     /**
      * @return array<string, mixed>
      */
-    public function build(Patient $patient): array
+    public function overview(Patient $patient): array
     {
         $members = $patient->familyMembers()->orderBy('id')->get();
         $householdSize = $members->count() + 1;
 
-        $assessments = Assessment::query()
-            ->whereNull('social_case_status')
-            ->whereHas('case', fn ($query) => $query->where('patient_id', $patient->id))
-            ->with('case:id,case_code,date_opened')
+        $records = $patient->socioeconomicProfiles()
+            ->with('recordedBy:id,displayName')
             ->withSum('expenses', 'amount')
-            ->latest()->latest('id')
+            ->orderByDesc('recorded_on')->orderByDesc('id')
             ->limit(self::HISTORY_LIMIT)
             ->get();
 
-        $current = $assessments->first();
+        $current = $records->first();
+        $current?->load('expenses');
 
         return [
             'patient' => [
@@ -62,79 +61,67 @@ class PatientSocioeconomicService
                     'is_living_with_patient' => (bool) $m->is_living_with_patient,
                 ])->values()->all(),
             ],
-            'current' => $current === null ? null : $this->current($current, $householdSize),
-            'history' => $assessments->map(fn (Assessment $a) => [
-                'assessment_id' => $a->id,
-                'case_id' => $a->case_id,
-                'case_code' => $a->case?->case_code,
-                'assessed_at' => $a->created_at,
-                'total_family_income' => $this->money($a->total_family_income),
-                'net_per_capita_income' => $this->money($a->net_per_capita_income),
-                'classification' => $a->classification,
-                'expenses_total' => round((float) $a->expenses_sum_amount, 2),
-                'house_tenure' => $a->house_tenure,
+            'current' => $current === null ? null : $this->present($current, $householdSize),
+            'history' => $records->map(fn (PatientSocioeconomicProfile $r) => [
+                'id' => $r->id,
+                'recorded_on' => $r->recorded_on?->toDateString(),
+                'total_family_income' => $this->money($r->total_family_income),
+                'net_per_capita_income' => $this->money($r->net_per_capita_income),
+                'expenses_total' => round((float) $r->expenses_sum_amount, 2),
+                'household_size' => $r->household_size,
+                'house_tenure' => $r->house_tenure,
             ])->values()->all(),
         ];
     }
 
     /**
+     * One record in full. `$liveHouseholdSize` is today's family members + 1; when
+     * given, `household_changed` says whether the record's snapshot is out of date.
+     *
      * @return array<string, mixed>
      */
-    private function current(Assessment $assessment, int $householdSize): array
+    public function present(PatientSocioeconomicProfile $profile, ?int $liveHouseholdSize = null): array
     {
-        $assessment->load('expenses');
+        $profile->loadMissing(['expenses', 'recordedBy:id,displayName']);
 
-        $income = (float) $assessment->total_family_income;
-        $expensesTotal = round((float) $assessment->expenses->sum('amount'), 2);
-
-        // The classification divides (income - expenses) by the household at the
-        // time of the last assessment/expense write; family edits do not recalculate
-        // it, so compare against today's household to flag a drifted figure.
-        $expected = round(max(0, $income - $expensesTotal) / $householdSize, 2);
-        $stale = abs((float) $assessment->net_per_capita_income - $expected) > 0.005;
+        $income = $profile->total_family_income;
+        $total = round((float) $profile->expenses->sum('amount'), 2);
 
         return [
-            'case' => [
-                'id' => $assessment->case_id,
-                'case_code' => $assessment->case?->case_code,
-                'date_opened' => $assessment->case?->date_opened,
+            'id' => $profile->id,
+            'patient_id' => $profile->patient_id,
+            'recorded_on' => $profile->recorded_on?->toDateString(),
+            'recorded_by' => $profile->recordedBy === null ? null : [
+                'id' => $profile->recordedBy->id,
+                'name' => $profile->recordedBy->displayName,
             ],
-            'assessment_id' => $assessment->id,
-            'assessed_at' => $assessment->created_at,
             'income' => [
-                'total_family_income' => $this->money($assessment->total_family_income),
-                'net_per_capita_income' => $this->money($assessment->net_per_capita_income),
-                'other_income_sources' => $assessment->other_income_sources ?? [],
-            ],
-            'classification' => [
-                'calculated' => $assessment->calculated_classification,
-                'final' => $assessment->classification,
-                'discount_rate' => $this->money($assessment->calculated_discount_rate),
-                'has_override' => $assessment->hasOverride(),
-                'stale' => $stale,
+                'total_family_income' => $this->money($income),
+                'net_per_capita_income' => $this->money($profile->net_per_capita_income),
+                'other_income_sources' => $profile->other_income_sources ?? [],
             ],
             'living' => [
-                'housing_type' => $assessment->housing_type,
-                'house_tenure' => $assessment->house_tenure,
-                'light_source' => $assessment->light_source ?? [],
-                'water_source' => $assessment->water_source ?? [],
-                'utilities_access' => $assessment->utilities_access,
+                'housing_type' => $profile->housing_type,
+                'house_tenure' => $profile->house_tenure,
+                'light_source' => $profile->light_source ?? [],
+                'water_source' => $profile->water_source ?? [],
+                'utilities_access' => $profile->utilities_access,
             ],
-            'problems' => [
-                'categories' => $assessment->problem_categories ?? [],
-                'specify' => $assessment->problem_specify,
-                'presenting' => $assessment->presenting_problem,
-            ],
+            'remarks' => $profile->remarks,
+            'household_size' => $profile->household_size,
+            'household_changed' => $liveHouseholdSize !== null && $liveHouseholdSize !== $profile->household_size,
             'expenses' => [
-                'lines' => $assessment->expenses->map(fn ($e) => [
+                'lines' => $profile->expenses->map(fn ($e) => [
                     'id' => $e->id,
                     'expense_type' => $e->expense_type,
                     'amount' => $this->money($e->amount),
                 ])->values()->all(),
-                'slots' => UisExpenseSlots::slots($assessment->expenses),
-                'total' => $expensesTotal,
-                'expense_to_income_ratio' => $income > 0 ? round($expensesTotal / $income, 2) : null,
+                'slots' => UisExpenseSlots::slots($profile->expenses),
+                'total' => $total,
+                'expense_to_income_ratio' => (float) $income > 0 ? round($total / (float) $income, 2) : null,
             ],
+            'created_at' => $profile->created_at,
+            'updated_at' => $profile->updated_at,
         ];
     }
 
