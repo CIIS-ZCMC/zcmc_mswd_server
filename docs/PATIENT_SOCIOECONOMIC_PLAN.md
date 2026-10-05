@@ -1,82 +1,144 @@
-# Patient Socio-Economic Profile — Server Plan (zcmc_mswd_server)
+# Patient Socio-Economic Module — Server Plan (zcmc_mswd_server)
 
-Backend half of the patient-page **Socio-Economic** tab (profile, living conditions, list of expenses). The client half
-is `zcmc_mswd_client/docs/PATIENT_SOCIOECONOMIC_PLAN.md`; client phases are gated on the server phases here.
+Backend of the patient-page **Socio-Economic** tab: a **standalone, patient-level** module (socio-economic profile,
+living conditions, list of expenses). The client half is `zcmc_mswd_client/docs/PATIENT_SOCIOECONOMIC_PLAN.md`; client
+phases are gated on the server phases here.
 
 **Status legend:** ☐ not started · ◐ in progress · ☑ done
 
 | Phase | Depends on | Status |
 |-------|-----------|--------|
-| B1. `GET /patients/{patient}/socioeconomic` read endpoint (service, controller, route, OpenAPI) | — | ☑ done |
-| B2. Tests, incl. stale-classification and edit-path consistency | B1 | ☑ done |
+| S1. Schema: `patient_socioeconomic_profiles` + `patient_socioeconomic_expenses` | — | ☐ |
+| S2. Models, audit ownership, patient-merge support, permissions | S1 | ☐ |
+| S3. API: overview, show, store, update, destroy (+ OpenAPI) | S2 | ☐ |
+| S4. Tests incl. the independence guard | S3 | ☐ |
+| S5. Docs (`CLAUDE.md`, this file) | S4 | ☐ |
 
-## Background
+## Background — why this is a rework
 
-The socio-economic data already exists but is only visible inside the UIS tab, one encounter at a time: ANNEX B
-sections II–IV on the intake `Assessment` row (`house_tenure`, `light_source[]`, `water_source[]`, `housing_type`,
-`utilities_access`, `total_family_income`, `net_per_capita_income`, `other_income_sources[]`, `problem_categories[]`,
-`AssessmentExpense` lines) plus patient-level facts (`Patient.occupation / monthly_income / educational_attainment`,
-`PatientFamilyMember.*`). The tab needs "the patient's current standing and how it changed" in one request.
+The first cut (#183) made `GET /patients/{patient}/socioeconomic` a read model over the intake `Assessment` and its
+`assessment_expenses`, with writes going through the assessment endpoints. That makes the module depend on cases: a
+patient with no case has no profile, and edits ride on UIS data. The module must instead be its own patient-level
+store. #183's endpoint has no consumers (the client tab is not built), so it is **replaced**, not versioned.
 
 ## Decisions
 
-1. **No new tables, no migration.** The assessment row stays the source of truth; the endpoint is a read model.
-2. **"Current" = the newest intake assessment** (`social_case_status IS NULL`, `latest()->latest('id')`) across the
-   patient's cases — the same row the UIS endpoint and PDF use. Older ones feed `history`.
-3. **Permission `intake.view`**, same as `GET /patients/{patient}/uis`.
-4. **No new write endpoints.** Edits go through `PUT /assessments/{id}`, the expense routes, `PUT /patients/{id}` and
-   `PUT /family-members/{id}`.
-5. **Stale classification is surfaced, not auto-fixed.** `AssessmentService::recalculateClassification` runs on
-   assessment/expense writes only; family-member writes do not trigger it, yet the classification divides by
-   `familyMembers()->count() + 1`. The endpoint returns `classification.stale` so the client can offer a reassess.
-   Recalculating on family writes is a non-goal (it would silently re-classify patients).
+1. **Own tables, patient-scoped.** Data lives in new tables keyed by `patient_id`. Existing tables are unchanged.
+2. **Dated, append-only records.** Each "update" is a new record (`recorded_on`); the newest by
+   `recorded_on desc, id desc` is *current*; the rest are history/trend. Typo corrections use `PUT` on a record.
+3. **Fully independent of the UIS/assessment.** No FK or read in either direction. The UIS keeps its own snapshot and
+   its own MSWD classification. A later opt-in "prefill the UIS from the profile" is out of scope.
+4. **No classification here.** MSWD classification is a case/UIS concept. The module computes only per-capita income
+   `(income − expenses) / household_size`.
+5. **No "Problem Presented".** That is a per-encounter UIS section.
+6. **Own permissions** `socioeconomic.view | create | update | delete`.
 
-## Phase B1 — The endpoint
+## Boundary rules (enforced by a test)
 
-`GET /api/patients/{patient}/socioeconomic` → `PatientSocioeconomicController` (invokable, `permission:intake.view`) →
-`PatientSocioeconomicService::build(Patient)`.
+- No table or column references `cases`, `assessments` or `assessment_expenses`.
+- The module's source files do not import `Assessment`, `AssessmentExpense`, `CaseModel`,
+  `CalculateMswdClassificationAction` or any assessment service.
+- Allowed shared helper, because it is case-agnostic: `App\Support\UisExpenseSlots` (ANNEX B expense slots).
+  Vocabulary constants for tenure/light/water are **duplicated** in `App\Support\SocioeconomicVocabulary`, not imported
+  from `Assessment`.
+
+## Phase S1 — Schema
+
+New create-table migrations only (the repo's one-create-per-table style).
+
+`patient_socioeconomic_profiles`
+
+| Column | Notes |
+|---|---|
+| `id`, `timestamps`, `softDeletes` | |
+| `patient_id` | FK `patients`, RESTRICT |
+| `recorded_on` | date |
+| `recorded_by` | FK `users` |
+| `total_family_income` | decimal(12,2) null |
+| `other_income_sources` | json null |
+| `house_tenure` | string null (`owned` \| `rented`) |
+| `housing_type`, `utilities_access` | string null, free text |
+| `light_source`, `water_source` | json null (vocabulary arrays) |
+| `remarks` | text null |
+| `household_size` | unsigned smallint — family members + 1 **at record time** |
+| `net_per_capita_income` | decimal(12,2) null — computed on write |
+| index | `(patient_id, recorded_on, id)` |
+
+`patient_socioeconomic_expenses`: `id`, `profile_id` FK RESTRICT, `expense_type` string(255), `amount` decimal(12,2),
+`timestamps`.
+
+## Phase S2 — Models, audit, merge, permissions
+
+- `App\Models\PatientSocioeconomicProfile` (`Auditable`, `SoftDeletes`; `belongsTo patient`; `hasMany expenses`;
+  decimal/array/date casts) and `PatientSocioeconomicExpense` (`Auditable`). `Patient::socioeconomicProfiles()`.
+- `activityOwner()`: profile → `['patient_id' => patient_id, 'case_id' => null]`; expense → one hop via its profile.
+  Update the two locked tests: `AuditCoverageTest` (model lists) and `ActivityOwnershipResolverTest` (a dataset row per
+  resolver — its reflection guard fails otherwise).
+- `PatientMergeService::REASSIGNABLE` gains `'socioeconomic_profiles' => PatientSocioeconomicProfile::class`, so a merge
+  moves the records and an unmerge reverses it.
+- `RolesAndPermissionsSeeder`: add `socioeconomic.view|create|update|delete`; grant `view` wherever `intake.view` is
+  granted, `create|update` wherever `patients.update` is, `delete` to MSS Head (Admin has `*`).
+
+## Phase S3 — API (patient-scoped; no case in any URL)
+
+| Route | Permission | Purpose |
+|---|---|---|
+| `GET /patients/{patient}/socioeconomic` | `socioeconomic.view` | overview (below) |
+| `GET /socioeconomic-profiles/{profile}` | `socioeconomic.view` | one record in full (history row) |
+| `POST /patients/{patient}/socioeconomic-profiles` | `socioeconomic.create` | new dated record, nested `expenses[]` |
+| `PUT /socioeconomic-profiles/{profile}` | `socioeconomic.update` | correct a record; `expenses[]`, when present, **replaces** the lines in one transaction |
+| `DELETE /socioeconomic-profiles/{profile}` | `socioeconomic.delete` | soft delete |
+
+Files: `PatientSocioeconomicController` (overview, rewritten), `SocioeconomicProfileController`
+(show/store/update/destroy), `SocioeconomicProfileService` (transaction, household snapshot, per-capita),
+`StoreSocioeconomicProfileRequest` / `UpdateSocioeconomicProfileRequest`, `SocioeconomicProfileResource`,
+`SocioeconomicProfileDto`, `PatientSocioeconomicDocs` + schema. Routes go next to `patients/{patient}/uis` in
+`routes/api.php`.
+
+Validation: `recorded_on` date, not in the future; `total_family_income` numeric ≥ 0; `house_tenure` /
+`light_source.*` / `water_source.*` `Rule::in` the vocabulary; `expenses.*.expense_type` string max 255,
+`expenses.*.amount` numeric ≥ 0; `recorded_by` is the authenticated user (never from the body).
+
+Overview response `{ data }`:
 
 ```
-data{
-  patient{ occupation, monthly_income, educational_attainment, civil_status },
-  household{ size, members_count, earners_count, members_income_total, members[…] },
-  current{ case{id,case_code,date_opened}, assessment_id, assessed_at,
-           income{ total_family_income, net_per_capita_income, other_income_sources[] },
-           classification{ calculated, final, discount_rate, has_override, stale },
-           living{ housing_type, house_tenure, light_source[], water_source[], utilities_access },
-           problems{ categories[], specify, presenting },
-           expenses{ lines[{id,expense_type,amount}], slots{…}, total, expense_to_income_ratio } } | null,
-  history[{ assessment_id, case_id, case_code, assessed_at, total_family_income, net_per_capita_income,
-            classification, expenses_total, house_tenure }]   // newest first, max 10
-}
+patient   { occupation, monthly_income, educational_attainment, civil_status }
+household { size, members_count, earners_count, members_income_total, members[…] }      // live, from family members
+current   { id, recorded_on, recorded_by{id,name}, income{ total_family_income, net_per_capita_income,
+            other_income_sources[] }, living{ housing_type, house_tenure, light_source[], water_source[],
+            utilities_access }, remarks, household_size, household_changed,
+            expenses{ lines[{id,expense_type,amount}], slots{…UisExpenseSlots keys}, total,
+                      expense_to_income_ratio } } | null
+history[] { id, recorded_on, total_family_income, net_per_capita_income, expenses_total, household_size,
+            house_tenure }                                                             // newest first, max 10
 ```
 
-- `household.size` = family members + 1 (as `CalculateMswdClassificationAction`). `earners_count` = members with
-  `monthly_income > 0` plus the patient when they have income. `members_income_total` is the members' sum.
-- `expenses.slots` is `UisExpenseSlots::slots()`; `expenses.total` sums **every** line (unmatched lines are not lost);
-  `expense_to_income_ratio` is `total / income` (2 dp), `null` when income is null or 0.
-- `classification.stale` = stored `net_per_capita_income` ≠ `round(max(0, income − expenses_total) / size, 2)`.
-- Query set is constant: patient family members (one), intake assessments of the patient's cases limited to 10 with
-  `withSum('expenses', 'amount')` and the case (one), the current assessment's expense lines (one).
-- No intake assessment → `current: null`, `history: []`. A case promoted to the SCSR is excluded (as in the UIS
-  endpoint). Soft-deleted cases/assessments are excluded.
+`household_changed` = the current record's `household_size` ≠ today's live size (informational). `expenses.total` sums
+every line (unmatched lines are not lost); the ratio is `null` when income is null/0. Constant query count
+(patient members; profiles limited to 10 with `withSum`; current record's lines).
 
-Files: `app/Services/PatientSocioeconomicService.php`, `app/Http/Controllers/PatientSocioeconomicController.php`,
-`routes/api.php` (next to `patients/{patient}/uis`), `app/Http/Docs/PatientSocioeconomicDocs.php`.
+## Phase S4 — Tests (`tests/Feature/SocioeconomicProfileTest.php`, replacing `PatientSocioeconomicTest`)
 
-## Phase B2 — Tests (`tests/Feature/PatientSocioeconomicTest.php`)
+A patient with **no cases at all** can create, read, edit and delete (headline test); create → current + history order
+and cap; household snapshot and `household_changed` after adding a family member; nested expenses create / replace /
+clear; slots equal `UisExpenseSlots`, total counts unmatched lines, ratio null without income; per-capita math;
+validation (bad vocab, negative amount, future date); soft delete drops the record from current/history; patient
+isolation; 401/403 per permission; query-count guard; merge moves profiles; audit rows carry `patient_id` with null
+`case_id`; **independence guard** (module sources contain no `Assessment`/`CaseModel` references).
+Existing `AssessmentExpenseApiTest`, `PatientUisTest`, `CaseUisPrintTest` stay untouched and green; full
+`php artisan test` green.
 
-Auth (401 / 403 without `intake.view`); shape for an assessed patient (slots, unmatched line counted in `total`, ratio);
-household size, earners and member income total; no assessment → `current: null`; SCSR excluded; history order and
-cap; reassessment chain; query-count guard; cross-patient isolation; `stale` flips after a family member is added and
-clears after a reassessment; expense edit through the existing endpoint keeps `stale` false.
+## Phase S5 — Docs
+
+This file and a "Socio-Economic module" line in `CLAUDE.md`. Do not commit a regenerated
+`storage/api-docs/api-docs.json` (the committed file has drifted; regenerating rewrites ~1,200 unrelated lines).
 
 ## Verification
 
-`php artisan test` (new file + `PatientUisTest`, `AssessmentExpenseApiTest`, `CaseUisPrintTest` stay green); compare
-`expenses.slots` with the PDF preview of the same case.
+`php artisan test`; with a patient who has **zero cases**, exercise all five endpoints; check an `activity_log` row for
+a profile write has `patient_id` set and `case_id` null; merge two patients and confirm their profiles follow.
 
 ## Non-goals
 
-Schema changes; auto-recalculating classification on family writes; changing the UIS PDF/print contract; a master
-expense list; a profile PDF.
+Linking to or prefilling the UIS; MSWD classification; Problem Presented; Filament admin screens; a profile PDF; a
+master expense list (`expense_type` stays free text); changing the UIS/assessment endpoints.
