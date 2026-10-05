@@ -16,9 +16,10 @@ class StoreSocioeconomicProfileRequest extends FormRequest
     }
 
     /**
-     * The List of Expenses form (ANNEX B section III). `recorded_by` is never taken
-     * from the body — it is the signed-in user. `house_rent_amount` is dropped by the
-     * service unless the house is rented.
+     * The List of Expenses form (ANNEX B section III) plus the other family income.
+     * `recorded_by` is the signed-in user, and the patient's and family members' income
+     * snapshot and `total_family_income` are computed by the server — none of them is
+     * taken from the body. `house_rent_amount` is dropped by the service unless rented.
      *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
@@ -43,6 +44,9 @@ class StoreSocioeconomicProfileRequest extends FormRequest
             'house_help' => $amount,
             'others' => $amount,
             'others_specify' => ['nullable', 'string', 'max:255'],
+            'other_income_sources' => ['nullable', 'array'],
+            'other_income_sources.*.source' => ['required', 'string', 'max:255'],
+            'other_income_sources.*.amount' => ['required', 'numeric', 'min:0'],
             'remarks' => ['nullable', 'string'],
         ];
     }

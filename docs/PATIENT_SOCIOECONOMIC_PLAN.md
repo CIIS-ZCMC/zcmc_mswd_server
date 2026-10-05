@@ -17,8 +17,13 @@ client half is `zcmc_mswd_client/docs/PATIENT_SOCIOECONOMIC_PLAN.md`.
 | S6. Rework schema to the fixed List of Expenses form | S5 | ☑ done |
 | S7. Model, service, requests, API reshaped to the form | S6 | ☑ done |
 | S8. Tests rewritten; docs | S7 | ☑ done |
+| S9. Schema: family-income snapshot columns (alter migration) | S8 (#187 merged) | ☑ done |
+| S10. `FamilyIncome` support class; model, service, request, API, OpenAPI | S9 | ☑ done |
+| S11. Tests; docs | S10 | ☑ done |
 
 S1–S5 shipped the first design (free-text expense lines, income, per-capita). S6–S8 replace it with the fixed form.
+S9–S11 add the **family income** half back (patient + family members + other family sources → total family income),
+because the module manages the patient's expenses *and* the family's income.
 
 ## Background
 
@@ -30,8 +35,8 @@ the patient, and gated by its own `socioeconomic.*` permissions (Admin has all v
 
 ## Decisions
 
-1. **Expenses form only.** Dropped: family income, other income sources, housing-type text, utilities text,
-   per-capita income, household-size snapshot, and the live-household block in the overview.
+1. **Expenses form + family income.** Dropped for good: housing-type text, utilities text, per-capita income, the
+   household-size snapshot and the live-household block in the overview. Family income comes back in S9–S10.
 2. **One column per item** on the profile row; the free-text expense-lines table is removed.
 3. **Label-only rename.** Routes, permissions, tables, models and the client folder keep their `socioeconomic` names.
 4. **Independence rules unchanged** (enforced by a test): no `case_id` / `assessment_id`, no FK to cases or assessments,
@@ -103,6 +108,61 @@ rented and cleared when owned or unset, including on update; an update that leav
 blank amounts count as zero; validation (bad tenure / light / water, negative or non-numeric amount, over-long specify,
 future or missing date); the payload carries no income / household / classification.
 
+## Phase S9 — Family-income schema (new alter migration, after `2026_10_06_010000`)
+
+On `patient_socioeconomic_profiles` add: `patient_income` decimal(12,2) null; `income_members` json null — a snapshot
+`[{name, relationship, monthly_income}]` of the family members who have income; `other_income_sources` json null —
+`[{source, amount}]` typed in this module; `total_family_income` decimal(12,2) null. `down()` drops them. No data to
+carry over.
+
+## Phase S10 — `FamilyIncome`, model, service, API
+
+**Decisions.**
+
+- `total_family_income` = `patient_income` + Σ family-member incomes + Σ other sources. The first two are read from
+  `Patient.monthly_income` and **every** `PatientFamilyMember.monthly_income` (not only members living with the patient)
+  **when the record is created** and stored as a snapshot; the third is typed here. A member with no income adds nothing.
+- **Snapshots, not live reads**, so history stays interpretable. `PUT` keeps the snapshot and recomputes the total when
+  `other_income_sources` is sent; `refresh_income: true` on `PUT` re-reads the live family. A changed family is
+  normally a new dated record; `income_changed` tells the client.
+- Derived, never stored: `balance = total_family_income − total` and `expense_to_income_ratio` (null when income is
+  0/null). No household size, per-capita or classification.
+- **Independence unchanged:** `FamilyIncome` reads `Patient` and `PatientFamilyMember` (patient-level records), never
+  cases or assessments; the independence guard test is extended to it.
+
+**Changes.**
+
+- **`App\Support\FamilyIncome`** (new): `snapshot(Patient): {patient_income, income_members[], members_total, total}` — the
+  single place that reads the patient and family; used at record time and by the overview for the live preview and
+  `income_changed`.
+- **Model:** the four columns in `$fillable`/casts (`income_members`, `other_income_sources` as `array`);
+  `otherIncomeTotal()` and `incomeTotal()` (patient + Σ members + other, rounded to 2 dp).
+- **Service:** `create()` stores `FamilyIncome::snapshot()` then computes `total_family_income`; `update()` keeps the
+  snapshot, recomputes when `other_income_sources` is present and re-snapshots on `refresh_income`; one transaction.
+- **Requests:** `other_income_sources` nullable array, `.*.source` required string ≤ 255, `.*.amount` required numeric ≥ 0;
+  `refresh_income` boolean (update only). `patient_income`, `income_members` and `total_family_income` are never
+  accepted from the body.
+- **Presenter / overview** — every record gains:
+  ```
+  income{ patient_income, family_members[{name, relationship, monthly_income}], family_members_total,
+          other_sources[{source, amount}], other_sources_total, total_family_income,
+          balance, expense_to_income_ratio, income_changed }
+  ```
+  `income_changed` = snapshot patient/members income ≠ the live family's (computed in the overview and show only). The
+  overview also returns `live_income{ patient_income, family_members[{id, name, relationship, monthly_income}],
+  family_members_total, total }` (what the form pre-fills) and `history[]` rows add `total_family_income` and `balance`.
+- Routes and `socioeconomic.*` permissions unchanged (Admin keeps access via `'*'` / `Gate::before`); OpenAPI updated.
+
+## Phase S11 — Tests and docs
+
+Extend `SocioeconomicProfileTest.php`: income snapshot at create (patient + members); total = patient + members + other
+sources; members without income ignored; a patient with no family and no income; `PUT` keeps the snapshot after the
+family changes, recomputes on `other_income_sources`, re-snapshots with `refresh_income`; `income_changed` flips after
+a family income edit and clears on a new record; `balance` and the ratio (null for 0/null income); validation (blank or
+negative other source; the body cannot set `total_family_income`); history rows carry income and balance; merge and
+unmerge unaffected; the independence guard also covers `FamilyIncome.php`. Full `php artisan test` green. Update this
+doc's notes and contract. Do not commit a regenerated `storage/api-docs/api-docs.json` (the committed file has drifted).
+
 ## Notes from building it
 
 - **Total is computed, not stored**, so it can never drift from the amounts; `history[].total` uses the same method.
@@ -110,13 +170,22 @@ future or missing date); the payload carries no income / household / classificat
 - **`house.rent_amount` is `null` unless rented** in every response, even if a legacy value were present.
 - The shipped tables from #185 are altered in place by an additive migration; existing databases just run `migrate`.
 - Final state: 675 tests passing (2302 assertions).
+- **S9–S11 build notes.** Only family members **with income** are snapshotted (and listed in `live_income`), so a member
+  with no income never shows as a zero line; the snapshot lines carry no `id` (they are history), `live_income` lines do.
+  A record made before the income columns existed has no snapshot: its `total_family_income` stays `null`, it is never
+  `income_changed`, and a `PUT` leaves its total alone unless `other_income_sources` or `refresh_income` is sent.
+  `income_changed` is computed in the overview and in show/store/update, from `FamilyIncome::snapshot()` against the
+  stored snapshot. `balance = total_family_income − total` (negative when expenses exceed income); the ratio is `null` for
+  zero/unknown income. No new routes or permissions; deploy with `php artisan migrate` only.
+- Final state: 690 tests passing (2384 assertions), 43 of them for this module.
 
 ## Verification
 
 `php artisan test`; with a patient who has zero cases exercise all five endpoints; an Admin and a view-only Processor
-behave as before; the Rented/Owned amount rule works through the API.
+behave as before; the Rented/Owned amount rule works through the API. After S9–S10: a patient with a monthly income and two family members with incomes gets
+`total_family_income` on `POST`; editing a member's income raises `income_changed`. Deploy: `php artisan migrate`, no re-seed.
 
 ## Non-goals
 
-Income, per-capita and household figures; free-text expense lines; MSWD classification; Problem Presented; linking to
+Per-capita income, household size and MSWD classification (UIS concepts); live-recomputed history; free-text expense lines; Problem Presented; linking to
 or prefilling the UIS; renaming routes, permissions or tables; Filament screens; a PDF.

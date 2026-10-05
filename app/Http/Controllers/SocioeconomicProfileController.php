@@ -8,6 +8,7 @@ use App\Models\Patient;
 use App\Models\PatientSocioeconomicProfile;
 use App\Services\PatientSocioeconomicService;
 use App\Services\SocioeconomicProfileService;
+use App\Support\FamilyIncome;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -35,7 +36,7 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
 
     public function show(PatientSocioeconomicProfile $profile): JsonResponse
     {
-        return response()->json(['data' => $this->presenter->present($profile)]);
+        return response()->json(['data' => $this->presenter->present($profile, $this->liveIncome($profile))]);
     }
 
     public function store(StoreSocioeconomicProfileRequest $request, Patient $patient): JsonResponse
@@ -43,7 +44,7 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
         $profile = $this->service->create($patient, $request->validated(), (int) $request->user()->id);
 
         return response()->json(
-            ['data' => $this->presenter->present($profile)],
+            ['data' => $this->presenter->present($profile, $this->liveIncome($profile))],
             Response::HTTP_CREATED,
         );
     }
@@ -52,7 +53,7 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
     {
         $profile = $this->service->update($profile, $request->validated());
 
-        return response()->json(['data' => $this->presenter->present($profile)]);
+        return response()->json(['data' => $this->presenter->present($profile, $this->liveIncome($profile))]);
     }
 
     public function destroy(PatientSocioeconomicProfile $profile): Response
@@ -60,5 +61,11 @@ class SocioeconomicProfileController extends Controller implements HasMiddleware
         $this->service->delete($profile);
 
         return response()->noContent();
+    }
+
+    /** The patient's family income today, so a record can say whether its snapshot has drifted. */
+    private function liveIncome(PatientSocioeconomicProfile $profile): array
+    {
+        return FamilyIncome::snapshot($profile->patient()->withTrashed()->firstOrFail());
     }
 }
