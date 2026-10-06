@@ -3,6 +3,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Card, CardContent } from "@/components/ui/card"
 import type { HospitalEncounter, HospitalLookup } from "../types/hospital-transaction.types"
 import { Calendar, CreditCard, FileText, Stethoscope } from "lucide-react"
+import { EncounterGuaranteesCard } from "@/features/guarantees"
 
 const PLACEHOLDER = "—"
 
@@ -28,9 +29,10 @@ const Field: React.FC<{ label: string; value: string; className?: string }> = ({
 
 interface HospitalEncounterDetailProps {
   encounter: HospitalEncounter
+  patientId?: number | string
 }
 
-export const HospitalEncounterDetail: React.FC<HospitalEncounterDetailProps> = ({ encounter }) => {
+export const HospitalEncounterDetail: React.FC<HospitalEncounterDetailProps> = ({ encounter, patientId }) => {
   return (
     <div className="space-y-4 pt-1">
       {/* Overview & Service Details */}
@@ -91,13 +93,13 @@ export const HospitalEncounterDetail: React.FC<HospitalEncounterDetailProps> = (
         </CardContent>
       </Card>
 
-      {/* Guarantors & Financial Breakdown */}
+      {/* Hospital Billing Guarantors (HIS) */}
       <Card className="border shadow-2xs bg-card/60">
         <CardContent className="p-4 space-y-3">
           <div className="flex items-center justify-between border-b pb-2 flex-wrap gap-2">
             <div className="flex items-center gap-2 font-bold text-sm sm:text-base text-primary">
               <CreditCard className="w-4 h-4 text-primary shrink-0" />
-              Guarantors & Financial Assistance
+              Hospital Billing Guarantors (HIS)
             </div>
             {encounter.guarantorTotal !== null && encounter.guarantorTotal > 0 && (
               <div className="text-xs sm:text-sm font-bold text-emerald-600 dark:text-emerald-400 bg-emerald-500/10 px-2.5 py-1 rounded border border-emerald-500/30">
@@ -108,7 +110,7 @@ export const HospitalEncounterDetail: React.FC<HospitalEncounterDetailProps> = (
 
           {encounter.guarantors.length === 0 ? (
             <div className="text-sm font-medium text-muted-foreground py-3 text-center">
-              No guarantors on file for this encounter.
+              No hospital billing guarantors on file for this encounter.
             </div>
           ) : (
             <div className="border rounded-lg overflow-hidden">
@@ -144,6 +146,14 @@ export const HospitalEncounterDetail: React.FC<HospitalEncounterDetailProps> = (
           )}
         </CardContent>
       </Card>
+
+      {/* MSWD Patient Guarantors */}
+      {patientId && (
+        <EncounterGuaranteesCard
+          patientId={patientId}
+          transactionId={encounter.id}
+        />
+      )}
     </div>
   )
 }
