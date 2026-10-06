@@ -1,6 +1,8 @@
 import React from "react"
 import { router, usePage } from "@inertiajs/react"
+import { useQueryClient } from "@tanstack/react-query"
 import type { PatientRecord } from "@/features/patients/types"
+import { prefetchPatientDetail } from "@/features/patients/hooks/use-patient-detail"
 import { Input } from "@/components/ui/input"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
@@ -59,6 +61,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   onDateChange,
   onClearFilters,
 }) => {
+  const queryClient = useQueryClient()
   const pageObj = usePage()
   const pathname = pageObj.url.split("?")[0]
   const navigate = (url: string) => router.visit(url)
@@ -243,6 +246,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
               <div
                 key={patient.id}
                 onClick={() => onSelectPatient(patient.id)}
+                onMouseEnter={() => prefetchPatientDetail(queryClient, Number(patient.id), canViewCases)}
                 className={cn(
                   "group relative flex cursor-pointer flex-col gap-2 rounded-xl border p-3.5 text-sm transition-all hover:shadow-xs",
                   isSelected

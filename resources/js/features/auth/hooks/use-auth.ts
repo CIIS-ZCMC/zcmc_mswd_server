@@ -1,4 +1,4 @@
-import { usePage } from "@inertiajs/react"
+import { router, usePage } from "@inertiajs/react"
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import type { ApiError } from "@/lib/api-client"
 import { login, logout } from "../api/auth-api"
@@ -35,11 +35,17 @@ export function useAuth() {
     onSettled: () => {
       queryClient.setQueryData(AUTH_QUERY_KEY, null)
       queryClient.clear()
+      router.visit("/login")
     },
   })
 
+  const roles = page.props?.auth?.roles ?? user?.roles ?? []
+  const permissions = page.props?.auth?.permissions ?? user?.permissions ?? []
+
   return {
     user,
+    roles,
+    permissions,
     isLoading: false,
     isAuthenticated: Boolean(user),
     login: loginMutation.mutateAsync,

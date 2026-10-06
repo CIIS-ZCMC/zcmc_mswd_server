@@ -35,7 +35,10 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           selectedPatientId={patientsState.selectedPatientId}
           onSelectPatient={(id) => {
             patientsState.setSelectedPatientId(id)
-            router.visit(`/patients/${id}`)
+            router.visit(`/patients/${id}`, {
+              preserveState: true,
+              preserveScroll: true,
+            })
           }}
           page={patientsState.page}
           totalPages={patientsState.totalPages}

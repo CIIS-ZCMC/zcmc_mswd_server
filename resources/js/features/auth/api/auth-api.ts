@@ -9,7 +9,7 @@ interface UserEnvelope {
  * POST /login — authenticates via session cookie.
  */
 export async function login(payload: LoginPayload): Promise<AuthUser> {
-  const res = await apiClient.post<UserEnvelope>("/login", payload)
+  const res = await apiClient.post<UserEnvelope>("/login", payload, { baseUrl: "" })
   return res.data
 }
 
@@ -25,7 +25,7 @@ export async function getMe(): Promise<AuthUser> {
  * POST /logout — logs out session cookie server-side.
  */
 export async function logout(): Promise<void> {
-  await apiClient.post<void>("/logout")
+  await apiClient.post<void>("/logout", undefined, { baseUrl: "" })
 }
 
 /**

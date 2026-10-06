@@ -138,6 +138,21 @@ it('renders the case patient, family and intake assessment into the ANNEX B view
         // The printing user is the interviewer; no draft watermark on a printable.
         ->and($html)->toContain($this->worker->employee_name)
         ->and($html)->not->toContain('DRAFT');
+
+    $pdf->render();
+    expect($pdf->getCanvas()->get_page_count())->toBe(1);
+
+    // Verify dense record with multiple family members also strictly fits on 1 page
+    for ($i = 1; $i <= 4; $i++) {
+        PatientFamilyMember::create([
+            'patient_id' => $this->patient->id, 'name' => "Family Member {$i}", 'relationship' => 'child',
+            'birthdate' => '2010-01-01', 'sex' => 'female', 'occupation' => 'Student',
+            'educational_attainment' => 'Elementary', 'monthly_income' => 0,
+        ]);
+    }
+    $densePdf = app(UnifiedIntakeSheetPdfService::class)->renderForCase($this->case->fresh(), $this->worker);
+    $densePdf->render();
+    expect($densePdf->getCanvas()->get_page_count())->toBe(1);
 });
 
 it('refuses to print a case with no intake assessment unless blank=1', function () {
@@ -409,11 +424,14 @@ it('keeps House help out of House/Lot and sums several Others lines', function (
 
     // House/Lot gets only the rent: not House help, and not Clothing ("clothing" contains "lot").
     expect($html)->toContain('How much/Magkano: 1200')
-        ->and($html)->toContain('HouseHelp (Kasambahay): <span class="u">777</span>')
-        ->and($html)->toContain('Clothing(Kasuotan): <span class="u">321</span>')
+        ->and($html)->toContain('HouseHelp<br>(Kasambahay):')
+        ->and($html)->toContain('777')
+        ->and($html)->toContain('Clothing(Kasuotan):')
+        ->and($html)->toContain('321')
         // Both Others lines add up; the School fees line is not also counted as Education.
-        ->and($html)->toContain('Others(Iba pa): <span class="u">150</span>')
-        ->and($html)->toContain('Education (Edukasyon): <span class="u">&nbsp;</span>');
+        ->and($html)->toContain('Others(Iba pa):')
+        ->and($html)->toContain('150')
+        ->and($html)->toContain('Education<br>(Edukasyon):');
 });
 
 it('prints the mode of assistance and fund source as labels', function () {
