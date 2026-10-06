@@ -10,6 +10,8 @@ import {
 import { toPatientDetailRecord } from "../api/patients-adapter"
 import type { PatientRecord } from "../types"
 
+import type { QueryClient } from "@tanstack/react-query"
+
 /** Shared with use-patient-writes.ts so a successful write invalidates the right query. */
 export function patientDetailKeys(patientId: number) {
   return {
@@ -19,6 +21,32 @@ export function patientDetailKeys(patientId: number) {
     history: ["patients", "detail", patientId, "history"] as const,
     /** Custody. No query reads it yet — the Caretake tab is the next phase. */
     caretake: ["patients", "detail", patientId, "caretake"] as const,
+  }
+}
+
+/** Pre-fetches patient profile, history, and latest case to provide instant switching on click. */
+export function prefetchPatientDetail(queryClient: QueryClient, patientId: number, canViewCases = true) {
+  if (!patientId || Number.isNaN(patientId)) return
+  const keys = patientDetailKeys(patientId)
+
+  queryClient.prefetchQuery({
+    queryKey: keys.profile,
+    queryFn: () => getPatientProfile(patientId),
+    staleTime: 30_000,
+  })
+
+  queryClient.prefetchQuery({
+    queryKey: keys.history,
+    queryFn: () => getPatientHistory(patientId),
+    staleTime: 30_000,
+  })
+
+  if (canViewCases) {
+    queryClient.prefetchQuery({
+      queryKey: keys.latestCase,
+      queryFn: () => getLatestCaseForPatient(patientId),
+      staleTime: 30_000,
+    })
   }
 }
 

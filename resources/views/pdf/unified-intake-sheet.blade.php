@@ -80,53 +80,56 @@
          pdf/partials/_styles.blade.php. DejaVu Sans keeps glyphs consistent in
          DomPDF. --}}
     <style>
+        @page { margin: 12px 18px 12px 18px; }
         * { font-family: DejaVu Sans, sans-serif; }
-        body { font-size: 8.5px; color: #000; margin: 0; }
+        body { font-size: 9px; color: #000; margin: 0; }
         b, .b { font-weight: bold; }
         i { font-style: italic; }
         .center { text-align: center; }
         .right { text-align: right; }
-        .sub { font-size: 6.5px; font-style: italic; color: #333; }
+        .sub { font-size: 7px; font-style: italic; color: #333; }
 
         /* Letterhead (outside the ruled form) */
+        .head { width: 100%; border-collapse: collapse; }
         .head td { vertical-align: middle; padding: 0; }
-        .head .logos img { height: 40px; margin: 0 5px; vertical-align: middle; }
-        .head .malasakit { height: 52px; }
+        .head .logos img { height: 34px; margin: 0 4px; vertical-align: middle; }
+        .head .malasakit { height: 45px; }
         .annex { font-size: 12px; font-weight: bold; text-decoration: underline; }
-        .title { text-align: center; font-size: 14px; font-weight: bold; margin: 2px 0 6px; }
-        .idrow { margin-bottom: 3px; }
-        .idrow td { font-weight: bold; }
+        .title { text-align: center; font-size: 13px; font-weight: bold; margin-top: 2px; }
+        .idrow { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 2px; }
+        .idrow td { padding: 2px 0; font-size: 9px; vertical-align: middle; }
 
         /* The ruled form */
         table.sheet { border-collapse: collapse; width: 100%; border: 1px solid #000; }
         table.sheet > tbody > tr > td { border: 1px solid #000; padding: 0; vertical-align: top; }
 
         table.plain { width: 100%; border-collapse: collapse; }
-        table.plain > tbody > tr > td { padding: 2px 5px; vertical-align: top; }
+        table.plain > tbody > tr > td { padding: 2.5px 5px; vertical-align: middle; }
         .vdiv { border-left: 1px solid #000; }
 
-        .section { font-weight: bold; padding: 2px 5px; }
+        .section { font-weight: bold; padding: 2px 5px; font-size: 9px; }
 
         table.cells { width: 100%; border-collapse: collapse; table-layout: fixed; }
-        table.cells > tbody > tr > td, table.cells > tbody > tr > th { border: 1px solid #000; padding: 2px 4px;
+        table.cells > tbody > tr > td, table.cells > tbody > tr > th { border: 1px solid #000; padding: 1.5px 3px;
             vertical-align: top; word-wrap: break-word; }
         table.cells th { text-align: center; font-weight: bold; }
 
         .cb { display: inline-block; width: 10px; height: 10px; line-height: 10px; text-align: center;
-              border: 1px solid #000; font-size: 8px; font-weight: bold; vertical-align: middle; }
-        .opt { white-space: nowrap; }
+              border: 1px solid #000; font-size: 8.5px; font-weight: bold; vertical-align: middle; margin-right: 3px; }
+        .opt { display: inline-block; white-space: nowrap; }
         .u { border-bottom: 1px solid #000; display: inline-block; min-width: 40px; padding: 0 3px;
              text-align: center; font-weight: bold; }
         .uwide { min-width: 220px; }
+        .expense-grid td .u { float: right; min-width: 45px; }
 
-        .prose { padding: 4px 5px; min-height: 34px; }
-        .cert { text-align: center; font-weight: bold; font-style: italic; margin: 6px 0 2px; }
-        .clientname { text-align: center; font-weight: bold; font-size: 11px; text-decoration: underline; margin-top: 4px; }
-        .thumb { text-align: center; padding: 6px; }
-        .thumbbox { border: 1px solid #000; height: 92px; }
+        .prose { padding: 3px 4px; min-height: 26px; }
+        .cert { text-align: center; font-weight: bold; font-style: italic; margin: 3px 0 1px; font-size: 7px; }
+        .clientname { text-align: center; font-weight: bold; font-size: 11px; text-decoration: underline; margin-top: 2px; }
+        .thumb { text-align: center; padding: 4px; }
+        .thumbbox { border: 1px solid #000; height: 75px; }
 
-        .signame { text-align: center; font-weight: bold; text-decoration: underline; padding-top: 14px; }
-        .sigcap { text-align: center; font-size: 7px; }
+        .signame { text-align: center; font-weight: bold; text-decoration: underline; padding-top: 10px; }
+        .sigcap { text-align: center; font-size: 7.5px; }
     </style>
 </head>
 <body>
@@ -135,21 +138,23 @@
 <table class="head">
     <tr>
         <td style="width:22%"><img src="{{ $logo('malasakit') }}" class="malasakit" alt=""></td>
-        <td class="center logos">
-            <img src="{{ $logo('doh') }}" alt="">
-            <img src="{{ $logo('dswd') }}" alt="">
-            <img src="{{ $logo('pcso') }}" alt="">
-            <img src="{{ $logo('philhealth') }}" alt="">
+        <td class="center">
+            <div class="logos">
+                <img src="{{ $logo('doh') }}" alt="">
+                <img src="{{ $logo('dswd') }}" alt="">
+                <img src="{{ $logo('pcso') }}" alt="">
+                <img src="{{ $logo('philhealth') }}" alt="">
+            </div>
+            <div class="title">UNIFIED INTAKE SHEET</div>
         </td>
         <td style="width:22%" class="right"><span class="annex">ANNEX B</span></td>
     </tr>
 </table>
-<div class="title">UNIFIED INTAKE SHEET</div>
 
 <table class="plain idrow">
     <tr>
-        <td style="width:60%">Philhealth Identification No.: {!! $u($philhealthNo) !!}</td>
-        <td class="right">Hospital No.: {!! $u($p?->hospital_id) !!}</td>
+        <td style="width:60%"><b>Philhealth Identification No.:</b> {!! filled($philhealthNo) ? '<span class="u">'.e($philhealthNo).'</span>' : '' !!}</td>
+        <td class="right"><b>Hospital No.:</b> {!! filled($p?->hospital_id) ? '<u>'.e($p?->hospital_id).'</u>' : '' !!}</td>
     </tr>
 </table>
 
@@ -182,93 +187,122 @@
     </td></tr>
 
     {{-- ── I. IDENTIFYING INFORMATION ── --}}
-    <tr><td class="section">I. IDENTIFYING INFORMATION <i>(Impormasyon ng Pagkakakilanlan)</i></td></tr>
-
-    {{-- Client's name / Sex --}}
     <tr><td>
-        <table class="plain"><tr>
-            <td style="width:22%"><b>Client's Name</b><br><i>(Pangalan ng pasyente)</i></td>
-            <td class="center">
-                <span class="u" style="min-width:340px">{!! filled($fullName) ? e($fullName) : '&nbsp;' !!}</span>
-                <table class="plain"><tr>
-                    <td class="sub center">Last Name (Apelyido)</td>
-                    <td class="sub center">First Name (Pangalan)</td>
-                    <td class="sub center">Middle Name (Gitnang Pangalan)</td>
-                    <td class="sub center">Ext. (Sr., Jr.)</td>
-                </tr></table>
-            </td>
-            <td style="width:18%" class="center"><span class="u">{!! filled($p?->sex) ? e(ucfirst($p->sex)) : '&nbsp;' !!}</span><div class="sub"><b>Sex</b> (Kasarian)</div></td>
-        </tr></table>
+        <div class="section">I. IDENTIFYING INFORMATION <i>(Impormasyon ng Pagkakakilanlan)</i></div>
+        <table class="plain" style="margin-top: 1px; margin-bottom: 2px;">
+            <tr>
+                <td style="width:18%; vertical-align: middle;" class="center">
+                    <b>Client's Name</b><br><span class="sub"><i>(Pangalan ng pasyente)</i></span>
+                </td>
+                <td style="padding-right: 14px; vertical-align: top;">
+                    <div style="border-bottom: 1px solid #000; padding: 0 4px 1px 4px; font-weight: bold; text-align: left; min-height: 11px;">
+                        {!! filled($fullName) ? e($fullName) : '&nbsp;' !!}
+                    </div>
+                    <table style="width: 100%; border-collapse: collapse; margin-top: 1px;">
+                        <tr>
+                            <td class="sub" style="text-align: left; width: 26%;"><b>Last Name</b><i>(Apelyido)</i></td>
+                            <td class="sub center" style="width: 26%;"><b>First Name</b> <i>(Pangalan)</i></td>
+                            <td class="sub center" style="width: 32%;"><b>Middle Name</b> <i>(Gitnang Pangalan)</i></td>
+                            <td class="sub right" style="width: 16%;"><b>Ext.</b> <i>(Sr., Jr.)</i></td>
+                        </tr>
+                    </table>
+                </td>
+                <td style="width:15%; vertical-align: top;" class="center">
+                    <div style="border-bottom: 1px solid #000; padding-bottom: 1px; font-weight: bold; text-align: center; margin: 0 auto; width: 85%; min-height: 11px;">
+                        {!! filled($p?->sex) ? e(ucfirst($p->sex)) : '&nbsp;' !!}
+                    </div>
+                    <div class="sub" style="margin-top: 1px;"><b>Sex</b> <i>(Kasarian)</i></div>
+                </td>
+            </tr>
+        </table>
     </td></tr>
 
     {{-- DOB / Age / Place of birth (value over label) --}}
     <tr><td>
-        <table class="plain"><tr>
-            <td style="width:45%" class="center"><span class="u">{!! optional($p?->birthdate)->format('d/m/Y') ?: '&nbsp;' !!}</span><div class="sub"><b>Date of Birth</b> (Petsa ng Kapanganakan) (dd/mm/yyyy)</div></td>
-            <td style="width:20%" class="center"><span class="u">{!! $age !== null && $age !== '' ? e($age) : '&nbsp;' !!}</span><div class="sub"><b>Age</b> (Edad)</div></td>
-            <td class="center"><span class="u">{!! filled($p?->place_of_birth) ? e($p->place_of_birth) : '&nbsp;' !!}</span><div class="sub"><b>Place of Birth</b> (Lugar ng Kapanganakan)</div></td>
+        <table class="plain" style="table-layout: fixed; width: 100%;"><tr>
+            <td style="width:45%" class="center"><span class="u" style="min-width: 160px;">{!! optional($p?->birthdate)->format('d/m/Y') ?: '&nbsp;' !!}</span><div class="sub"><b>Date of Birth</b> (Petsa ng Kapanganakan) (dd/mm/yyyy)</div></td>
+            <td style="width:18%" class="center"><span class="u" style="min-width: 60px;">{!! $age !== null && $age !== '' ? e($age) : '&nbsp;' !!}</span><div class="sub"><b>Age</b> (Edad)</div></td>
+            <td style="width:37%" class="center"><span class="u" style="min-width: 140px;">{!! filled($p?->place_of_birth) ? e($p->place_of_birth) : '&nbsp;' !!}</span><div class="sub"><b>Place of Birth</b> (Lugar ng Kapanganakan)</div></td>
         </tr></table>
     </td></tr>
 
     {{-- Permanent address --}}
     <tr><td>
-        <table class="plain"><tr>
-            <td style="width:22%"><b>Permanent Address</b>/<i>(Permanenteng Tirahan)</i>:</td>
-            <td class="center"><span class="u uwide">{!! filled($permanentAddress) ? e($permanentAddress) : '&nbsp;' !!}</span><div class="sub">Street Number, Barangay, City/Municipality, District, Province, Region</div></td>
+        <table class="plain" style="table-layout: fixed; width: 100%;"><tr>
+            <td style="width:24%; vertical-align: middle;"><b>Permanent Address</b> / <i>(Permanenteng Tirahan)</i>:</td>
+            <td class="center" style="width:76%;"><span class="u uwide" style="width:96%;">{!! filled($permanentAddress) ? e($permanentAddress) : '&nbsp;' !!}</span><div class="sub">Street Number, Barangay, City/Municipality, District, Province, Region</div></td>
         </tr></table>
     </td></tr>
 
     {{-- Present address --}}
     <tr><td>
-        <table class="plain"><tr>
-            <td style="width:22%"><b>Present Address</b>/<i>(Kasalukuyang Tirahan)</i>:</td>
-            <td class="center"><span class="u uwide">{!! filled($presentAddress) ? e($presentAddress) : '&nbsp;' !!}</span><div class="sub">Street Number, Barangay, City/Municipality, District, Province, Region</div></td>
+        <table class="plain" style="table-layout: fixed; width: 100%;"><tr>
+            <td style="width:24%; vertical-align: middle;"><b>Present Address</b> / <i>(Kasalukuyang Tirahan)</i>:</td>
+            <td class="center" style="width:76%;"><span class="u uwide" style="width:96%;">{!! filled($presentAddress) ? e($presentAddress) : '&nbsp;' !!}</span><div class="sub">Street Number, Barangay, City/Municipality, District, Province, Region</div></td>
         </tr></table>
     </td></tr>
 
-    {{-- Civil status (boxed cells) --}}
+    {{-- Civil status --}}
     <tr><td>
-        <table class="cells"><tr>
-            <td style="width:11%"><b>Civil Status:</b></td>
-            <td style="width:12%">{!! $optL(str_contains($civil, 'single'), 'Single') !!}</td>
-            <td style="width:13%">{!! $optL(str_contains($civil, 'married'), 'Married') !!}</td>
-            <td style="width:18%">{!! $optL(str_contains($civil, 'widow'), 'Widow/Widower') !!}</td>
-            <td style="width:32%">{!! $optL(str_contains($civil, 'separat') || str_contains($civil, 'common') || str_contains($civil, 'law'), 'Separated with common Law Partner') !!}</td>
-            <td>{!! $optL($civil !== '' && ! preg_match('/single|married|widow|separat|common|law/', $civil), 'Others') !!}</td>
+        <table class="plain" style="width: 100%;"><tr>
+            <td style="width: 10%; white-space: nowrap; vertical-align: middle;"><b>Civil Status:</b></td>
+            <td style="vertical-align: middle;">
+                {!! $optL(str_contains($civil, 'single'), 'Single') !!} &nbsp;&nbsp;&nbsp;&nbsp;
+                {!! $optL(str_contains($civil, 'married'), 'Married') !!} &nbsp;&nbsp;&nbsp;&nbsp;
+                {!! $optL(str_contains($civil, 'widow'), 'Widow/Widower') !!} &nbsp;&nbsp;&nbsp;&nbsp;
+                {!! $optL(str_contains($civil, 'separat') || str_contains($civil, 'common') || str_contains($civil, 'law'), 'Separated with common Law Partner') !!} &nbsp;&nbsp;&nbsp;&nbsp;
+                {!! $optL($civil !== '' && ! preg_match('/single|married|widow|separat|common|law/', $civil), 'Others') !!}
+            </td>
         </tr></table>
     </td></tr>
 
     {{-- Religion / Nationality --}}
     <tr><td>
-        <table class="plain"><tr>
-            <td style="width:50%"><b>Religion</b><i>(Relihiyon)</i>: {!! $u($p?->religion) !!}</td>
-            <td><b>Nationality</b><i>(Nasyonalidad)</i>: {!! $u($p?->nationality ?: $p?->citizenship) !!}</td>
+        <table class="plain" style="width: 100%;"><tr>
+            <td style="width: 50%; vertical-align: middle; padding: 4px 6px; white-space: nowrap;">
+                <b>Religion</b> <i>(Relihiyon)</i>:
+                <span class="u" style="min-width: 150px; margin-left: 4px;">{!! filled($p?->religion) ? e($p->religion) : '&nbsp;' !!}</span>
+            </td>
+            <td style="width: 50%; vertical-align: middle; padding: 4px 6px; white-space: nowrap;">
+                <b>Nationality</b> <i>(Nasyonalidad)</i>:
+                <span class="u" style="min-width: 150px; margin-left: 4px;">{!! filled($p?->nationality ?: $p?->citizenship) ? e($p->nationality ?: $p->citizenship) : '&nbsp;' !!}</span>
+            </td>
         </tr></table>
     </td></tr>
 
     {{-- Highest educational attainment (inline boxes) --}}
     <tr><td>
-        <table class="plain"><tr><td>
-            <b>Highest Educational Attainment</b>/<i>(Pinaka-mataas na Edukasyon)</i>: &nbsp;
-            {!! $optL(str_contains($edu, 'post'), 'Post Grad') !!} &nbsp;
-            {!! $optL(str_contains($edu, 'college'), 'College') !!} &nbsp;
-            {!! $optL(str_contains($edu, 'high'), 'High School') !!} &nbsp;
-            {!! $optL(str_contains($edu, 'element'), 'Elementary') !!} &nbsp;
-            {!! $optL(str_contains($edu, 'none'), 'None') !!} &nbsp;
-            {!! $optL($edu !== '' && ! preg_match('/post|college|high|element|none/', $edu), 'others') !!}
-        </td></tr></table>
+        <table class="plain" style="width: 100%;"><tr>
+            <td style="white-space: nowrap; vertical-align: middle; padding-right: 2px; font-size: 8px;">
+                <b>Highest Educational Attainment</b> / <i>(Pinaka-mataas na Edukasyon)</i>:
+            </td>
+            <td style="vertical-align: middle; white-space: nowrap; font-size: 8px; padding-left: 0;">
+                {!! $optL(str_contains($edu, 'post'), 'Post Grad') !!}&nbsp;
+                {!! $optL(str_contains($edu, 'college'), 'College') !!}&nbsp;
+                {!! $optL(str_contains($edu, 'high'), 'High School') !!}&nbsp;
+                {!! $optL(str_contains($edu, 'element'), 'Elementary') !!}&nbsp;
+                {!! $optL(str_contains($edu, 'none'), 'None') !!}&nbsp;
+                {!! $optL($edu !== '' && ! preg_match('/post|college|high|element|none/', $edu), 'others') !!}
+            </td>
+        </tr></table>
     </td></tr>
 
     {{-- Occupation / Monthly income --}}
     <tr><td>
-        <table class="plain"><tr>
-            <td style="width:50%"><b>Occupation</b>/<i>(Trabaho)</i>: {!! $u($p?->occupation) !!}</td>
-            <td><b>Monthly Income</b>/<i>(Kinikita Kada Buwan)</i>: {!! $u($num($p?->monthly_income)) !!}</td>
+        <table class="plain" style="width: 100%;"><tr>
+            <td style="width: 50%; vertical-align: middle; padding: 4px 6px; white-space: nowrap;">
+                <b>Occupation</b> / <i>(Trabaho)</i>:
+                <span class="u" style="min-width: 150px; margin-left: 4px;">{!! filled($p?->occupation) ? e($p->occupation) : '&nbsp;' !!}</span>
+            </td>
+            <td style="width: 50%; vertical-align: middle; padding: 4px 6px; white-space: nowrap;">
+                <b>Monthly Income</b> / <i>(Kinikita Kada Buwan)</i>:
+                <span class="u" style="min-width: 120px; margin-left: 4px;">{!! filled($num($p?->monthly_income)) ? e($num($p->monthly_income)) : '&nbsp;' !!}</span>
+            </td>
         </tr></table>
     </td></tr>
 
     {{-- ── II. FAMILY COMPOSITION ── --}}
-    <tr><td class="section">II. FAMILY COMPOSITION<i>(Komposisyon ng Pamilya)</i></td></tr>
+    <tr><td class="section">II. FAMILY COMPOSITION <i>(Komposisyon ng Pamilya)</i></td></tr>
     <tr><td>
         <table class="cells">
             <tr>
@@ -299,9 +333,30 @@
         </table>
     </td></tr>
     <tr><td>
-        <table class="plain"><tr>
-            <td style="width:55%"><b>Other source/s of Family Income</b><br><i>(Ibang Pinagkakakitaan ng Pamilya)</i>: {!! $u($otherIncomeLabel) !!} &nbsp; Amount: {!! $u($num($otherIncomeTotal)) !!}</td>
-            <td class="right"><b>Total Family Income</b><br><i>(Kabuuang Kita ng Pamilya)</i> &nbsp; {!! $u($num($a?->total_family_income)) !!}</td>
+        <table class="plain" style="width: 100%;"><tr>
+            <td style="padding: 4px 6px; vertical-align: top;">
+                <table class="plain" style="width: auto;"><tr>
+                    <td style="padding: 0; vertical-align: top; white-space: nowrap;">
+                        Other source/s of Family Income<br>
+                        (Ibang Pinagkakakitaan ng Pamilya)
+                    </td>
+                    <td style="padding: 0 0 0 10px; vertical-align: top; white-space: nowrap;">
+                        {{ filled($otherIncomeLabel) ? $otherIncomeLabel : 'NONE' }}<br>
+                        Amount: {{ filled($otherIncomeTotal) ? $num($otherIncomeTotal) : '0' }}
+                    </td>
+                </tr></table>
+            </td>
+            <td style="padding: 4px 6px; vertical-align: top; text-align: right;">
+                <table class="plain" style="width: auto; margin-left: auto;"><tr>
+                    <td style="padding: 0; vertical-align: top; text-align: left; white-space: nowrap;">
+                        Total Family Income<br>
+                        (Kabuuang Kita ng Pamilya)
+                    </td>
+                    <td style="padding: 0 0 0 12px; vertical-align: top; text-align: right; white-space: nowrap;">
+                        {{ filled($a?->total_family_income) ? $num($a->total_family_income) : ($num($otherIncomeTotal) ?: '0') }}
+                    </td>
+                </tr></table>
+            </td>
         </tr></table>
     </td></tr>
 
@@ -310,38 +365,74 @@
          no cell grid, no row separators, no left/right divider. --}}
     <tr><td class="section">III. LIST OF EXPENSES <i>(Talaan ng mga Gastusin)</i></td></tr>
     <tr><td>
-        <table class="plain"><tr>
+        <table class="plain" style="table-layout: fixed; width: 100%;"><tr>
             {{-- left: home/utilities checkboxes --}}
-            <td style="width:52%; padding:0">
-                <table class="plain">
+            <td style="width: 54%; padding: 3px 4px; vertical-align: top;">
+                <table class="plain" style="table-layout: fixed; width: 100%; font-size: 7.5px;">
                     <tr>
-                        <td style="width:24%"><b>House/Lot:</b></td>
-                        <td style="width:26%">{!! $optR($a?->house_tenure === 'owned', 'Owned/Sarili') !!}</td>
-                        <td style="width:28%">{!! $optR($a?->house_tenure === 'rented', 'Rented/Inuupahan') !!}</td>
-                        <td>How much/Magkano: {{ $num($slots['housing']) }}</td>
+                        <td style="width: 24%; padding: 2px 1px; vertical-align: middle;"><b>House/Lot:</b></td>
+                        <td style="width: 20%; padding: 2px 1px; vertical-align: middle;">{!! $optL($a?->house_tenure === 'owned', 'Owned/Sarili') !!}</td>
+                        <td style="width: 26%; padding: 2px 1px; vertical-align: middle;">{!! $optL($a?->house_tenure === 'rented', 'Rented/Inuupahan') !!}</td>
+                        <td style="width: 30%; padding: 2px 1px 2px 6px; vertical-align: middle; white-space: nowrap;">How much/Magkano: {{ $num($slots['housing']) }}</td>
                     </tr>
                     <tr>
-                        <td><b>Light Source</b><br><i>(Pinagmumulan ng ilaw)</i>:</td>
-                        <td>{!! $optL($has($a?->light_source, 'electricity'), 'Electricity') !!}</td>
-                        <td>{!! $optL($has($a?->light_source, 'kerosene'), 'Kerosene') !!}</td>
-                        <td>{!! $optL($has($a?->light_source, 'candle'), 'candle') !!}</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;"><b>Light Source</b><br><i>(Pinagmumulan ng ilaw)</i>:</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->light_source, 'electricity'), 'Electricity') !!}</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->light_source, 'kerosene'), 'Kerosene') !!}</td>
+                        <td style="padding: 2px 1px 2px 6px; vertical-align: middle;">{!! $optL($has($a?->light_source, 'candle'), 'Candle') !!}</td>
                     </tr>
                     <tr>
-                        <td><b>Water Source</b><br><i>(Pinagmumulan ng Tubig)</i>:</td>
-                        <td>{!! $optL($has($a?->water_source, 'owned'), 'Owned') !!}</td>
-                        <td>{!! $optL($has($a?->water_source, 'public'), 'Public') !!}</td>
-                        <td>{!! $optL($has($a?->water_source, 'artesian_well'), 'Artesian Well') !!}</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;"><b>Water Source</b><br><i>(Pinagmumulan ng Tubig)</i>:</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->water_source, 'owned'), 'Owned') !!}</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->water_source, 'public'), 'Public') !!}</td>
+                        <td style="padding: 2px 1px 2px 6px; vertical-align: middle;">{!! $optL($has($a?->water_source, 'artesian_well'), 'Artesian Well') !!}</td>
                     </tr>
                 </table>
             </td>
-            {{-- right: itemised amounts --}}
-            <td style="padding:0">
-                <table class="plain">
-                    <tr><td>Food(Pagkain): {!! $u($num($slots['food'])) !!}</td><td>Education (Edukasyon): {!! $u($num($slots['education'])) !!}</td></tr>
-                    <tr><td>Transportation(Pamasahe): {!! $u($num($slots['transport'])) !!}</td><td>Clothing(Kasuotan): {!! $u($num($slots['clothing'])) !!}</td></tr>
-                    <tr><td>Medikal(Medikal): {!! $u($num($slots['medical'])) !!}</td><td>HouseHelp (Kasambahay): {!! $u($num($slots['house_help'])) !!}</td></tr>
-                    <tr><td>Insurance Premium: {!! $u($num($slots['insurance'])) !!}</td><td>Others(Iba pa): {!! $u($num($slots['others'])) !!}</td></tr>
-                </table>
+            {{-- right: itemised amounts matching official ANNEX B layout --}}
+            <td style="width: 50%; padding: 3px 4px; vertical-align: top;">
+                <table class="plain" style="width: 100%; border-collapse: collapse; font-size: 7.5px;"><tr>
+                    <td style="width: 50%; padding: 0; vertical-align: top;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="text-align: right; padding: 2px 4px 2px 0; white-space: nowrap; vertical-align: middle;">Food(Pagkain):</td>
+                                <td style="width: 35px; text-align: left; padding: 2px 0; vertical-align: middle;">{{ filled($num($slots['food'])) ? $num($slots['food']) : '0' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: right; padding: 2px 4px 2px 0; white-space: nowrap; vertical-align: middle;">Transportation(Pamasahe):</td>
+                                <td style="width: 35px; text-align: left; padding: 2px 0; vertical-align: middle;">{{ filled($num($slots['transport'])) ? $num($slots['transport']) : '0' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: right; padding: 2px 4px 2px 0; white-space: nowrap; vertical-align: middle;">Medikal(Medikal):</td>
+                                <td style="width: 35px; text-align: left; padding: 2px 0; vertical-align: middle;">{{ filled($num($slots['medical'])) ? $num($slots['medical']) : '0' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: right; padding: 2px 4px 2px 0; white-space: nowrap; vertical-align: middle;">Insurance Premium:</td>
+                                <td style="width: 35px; text-align: left; padding: 2px 0; vertical-align: middle;">{{ filled($num($slots['insurance'])) ? $num($slots['insurance']) : '0' }}</td>
+                            </tr>
+                        </table>
+                    </td>
+                    <td style="width: 50%; padding: 0 0 0 6px; vertical-align: top;">
+                        <table style="width: 100%; border-collapse: collapse;">
+                            <tr>
+                                <td style="text-align: right; padding: 1px 4px 1px 0; white-space: nowrap; vertical-align: top;">Education<br>(Edukasyon):</td>
+                                <td style="width: 35px; text-align: left; padding: 1px 0; vertical-align: top;">{{ filled($num($slots['education'])) ? $num($slots['education']) : '0' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: right; padding: 2px 4px 2px 0; white-space: nowrap; vertical-align: middle;">Clothing(Kasuotan):</td>
+                                <td style="width: 35px; text-align: left; padding: 2px 0; vertical-align: middle;">{{ filled($num($slots['clothing'])) ? $num($slots['clothing']) : '0' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: right; padding: 1px 4px 1px 0; white-space: nowrap; vertical-align: top;">HouseHelp<br>(Kasambahay):</td>
+                                <td style="width: 35px; text-align: left; padding: 1px 0; vertical-align: top;">{{ filled($num($slots['house_help'])) ? $num($slots['house_help']) : '0' }}</td>
+                            </tr>
+                            <tr>
+                                <td style="text-align: right; padding: 2px 4px 2px 0; white-space: nowrap; vertical-align: middle;">Others(Iba pa):</td>
+                                <td style="width: 35px; text-align: left; padding: 2px 0; vertical-align: middle;">{{ filled($num($slots['others'])) ? $num($slots['others']) : '0' }}</td>
+                            </tr>
+                        </table>
+                    </td>
+                </tr></table>
             </td>
         </tr></table>
     </td></tr>
@@ -351,19 +442,23 @@
     <tr><td>
         <table class="plain"><tr>
             <td style="width:70%; padding:0">
-                <table class="plain">
+                <table class="plain" style="table-layout: fixed; width: 100%; font-size: 7.5px;">
                     <tr>
-                        <td>{!! $optL($has($a?->problem_categories, 'health'), 'Health Condition of Patient (Specify)') !!}</td>
-                        <td>{!! $optL($has($a?->problem_categories, 'economic'), 'Economic Resources(specify)') !!}</td>
-                        <td>{!! $optL($has($a?->problem_categories, 'housing'), 'Housing (Specify)') !!}</td>
+                        <td style="width: 44%; padding: 3px 2px; white-space: nowrap;">{!! $optL($has($a?->problem_categories, 'health'), 'Health Condition of Patient (Specify)') !!}</td>
+                        <td style="width: 32%; padding: 3px 2px; white-space: nowrap;">{!! $optL($has($a?->problem_categories, 'economic'), 'Economic Resources(specify)') !!}</td>
+                        <td style="width: 24%; padding: 3px 2px; white-space: nowrap;">{!! $optL($has($a?->problem_categories, 'housing'), 'Housing (Specify)') !!}</td>
                     </tr>
                     <tr>
-                        <td>{!! $optL($has($a?->problem_categories, 'food_nutrition'), 'Food/Nutrition (Specify)') !!}</td>
-                        <td>{!! $optL($has($a?->problem_categories, 'employment'), 'Employment (Specify)') !!}</td>
-                        <td>{!! $optL($has($a?->problem_categories, 'other'), 'Other (Specify)') !!}</td>
+                        <td style="padding: 3px 2px; white-space: nowrap;">{!! $optL($has($a?->problem_categories, 'food_nutrition'), 'Food/Nutrition (Specify)') !!}</td>
+                        <td style="padding: 3px 2px; white-space: nowrap;">{!! $optL($has($a?->problem_categories, 'employment'), 'Employment (Specify)') !!}</td>
+                        <td style="padding: 3px 2px; white-space: nowrap;">{!! $optL($has($a?->problem_categories, 'other'), 'Other (Specify)') !!}</td>
                     </tr>
                     @php $specify = $a?->problem_specify ?: $a?->presenting_problem; @endphp
-                    <tr><td colspan="3" class="center">{!! filled($specify) ? nl2br(e($specify)) : '&nbsp;' !!}</td></tr>
+                    <tr>
+                        <td style="padding: 2px;">&nbsp;</td>
+                        <td style="padding: 2px;">&nbsp;</td>
+                        <td style="padding: 2px 2px 2px 14px;"><span class="u" style="width: 85%; min-width: 80px; text-align: left;">{!! filled($specify) ? e($specify) : '&nbsp;' !!}</span></td>
+                    </tr>
                     <tr><td colspan="3" class="center"><u>{{ $assistances->map(fn ($x) => strtoupper((string) $x->assistantType?->name))->filter()->unique()->implode(', ') }}</u></td></tr>
                 </table>
                 <div class="cert">*AKO AY NAGPAPATUNAY ANG IMPORMASYONG NAKASULAT SA IBABAW AY TOTOO AT TAMA</div>

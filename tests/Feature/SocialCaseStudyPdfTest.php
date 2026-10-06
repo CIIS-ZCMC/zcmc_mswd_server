@@ -127,7 +127,7 @@ it('watermarks a report that is not finalized and drops it once signed', functio
 
     $finalHtml = view('pdf.social-case-study', ['scsr' => $scsr->refresh()->load(['expenses', 'notedBy'])])->render();
     expect($finalHtml)->not->toContain('class="watermark"')
-        ->and($finalHtml)->toContain($this->head->employee_name);
+        ->and($finalHtml)->toContain(e($this->head->employee_name));
 });
 
 it('names the archived file by control number and revision', function () {

@@ -61,9 +61,11 @@ interface RequestOptions {
   /** Nested `filter[key]=value` params, per the backend's ListQuery contract. */
   filters?: QueryParams
   signal?: AbortSignal
+  /** Base URL prefix. If empty string is passed, routes directly from root domain. */
+  baseUrl?: string
 }
 
-export function buildUrl(path: string, options: RequestOptions): string {
+export function buildUrl(path: string, options: RequestOptions = {}): string {
   const cleanPath = path.replace(/^\//, "")
   const search = new URLSearchParams()
 
@@ -78,7 +80,9 @@ export function buildUrl(path: string, options: RequestOptions): string {
   }
 
   const qs = search.toString()
-  return `${API_URL}/${cleanPath}${qs ? `?${qs}` : ""}`
+  const base = options.baseUrl !== undefined ? options.baseUrl.replace(/\/$/, "") : API_URL
+  const prefix = base ? `${base}/` : "/"
+  return `${prefix}${cleanPath}${qs ? `?${qs}` : ""}`
 }
 
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {

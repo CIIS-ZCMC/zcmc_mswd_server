@@ -1,4 +1,5 @@
 import { useState, useEffect, useCallback } from "react"
+import { usePage } from "@inertiajs/react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
 import { listPatients } from "../api/patients-api"
 import { toPatientListRecord } from "../api/patients-adapter"
@@ -10,6 +11,10 @@ export const PATIENTS_LIST_QUERY_KEY = ["patients", "list"] as const
  * The sidebar/master list hook. Owns pagination and server-driven filter state.
  */
 export function usePatients() {
+  const pageObj = usePage<{ patientId?: string }>()
+  const pathPatientId = pageObj.url.match(/^\/patients\/([^/?#]+)/)?.[1] || ""
+  const routePatientId = pageObj.props?.patientId ?? pathPatientId ?? ""
+
   const [page, setPage] = useState<number>(1)
   const [search, setSearch] = useState<string>("")
   const [debouncedSearch, setDebouncedSearch] = useState<string>("")
@@ -69,9 +74,15 @@ export function usePatients() {
   const totalPages = meta?.last_page ?? 1
   const total = meta?.total ?? 0
 
-  const [selectedPatientId, setSelectedPatientId] = useState<string>("")
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(routePatientId)
 
-  const effectiveSelectedId = selectedPatientId || patients[0]?.id || ""
+  useEffect(() => {
+    if (routePatientId) {
+      setSelectedPatientId(routePatientId)
+    }
+  }, [routePatientId])
+
+  const effectiveSelectedId = routePatientId || selectedPatientId || ""
 
   return {
     patients,

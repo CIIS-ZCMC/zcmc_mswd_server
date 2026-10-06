@@ -19,10 +19,11 @@ return [
     */
 
     'stateful' => explode(',', env('SANCTUM_STATEFUL_DOMAINS', sprintf(
-        '%s%s',
-        'localhost,localhost:3000,127.0.0.1,127.0.0.1:8000,::1',
+        '%s%s%s',
+        'localhost,localhost:8000,localhost:5173,localhost:3000,127.0.0.1,127.0.0.1:8000,127.0.0.1:5173,::1',
+        // Both helpers already return a leading comma (or '' when unset).
         Sanctum::currentApplicationUrlWithPort(),
-        // Sanctum::currentRequestHost(),
+        Sanctum::currentRequestHost(),
     ))),
 
     /*
