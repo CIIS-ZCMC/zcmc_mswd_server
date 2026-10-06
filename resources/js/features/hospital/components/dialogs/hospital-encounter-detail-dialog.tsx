@@ -17,6 +17,7 @@ import { RegistryStatusBadge } from "../registry-status-badge"
 import { AssessEncounterDialog } from "./assess-encounter-dialog"
 import { OpenCaseDialog } from "@/features/cases/components/dialogs/open-case-dialog"
 import { EncounterUisPanel } from "@/features/cases/components/encounter-uis-panel"
+import { EncounterGuaranteesCard } from "@/features/guarantees"
 import { useHospitalEncounter, useAssignableCases } from "../../hooks/use-hospital-encounters"
 import { formatTransactionType } from "../../lib/transaction-type"
 import type { HospitalEncounter, HospitalLookup } from "../../types/hospital-transaction.types"
@@ -335,64 +336,73 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
               </TabsContent>
 
               {/* TAB 3: GUARANTORS & FINANCIAL ASSISTANCE */}
-              <TabsContent value="financial" className="m-0 space-y-4 focus-visible:outline-none">
-                <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/40 border flex-wrap gap-2">
-                  <div className="space-y-0.5">
-                    <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
-                      Guarantor Coverage
+              <TabsContent value="financial" className="m-0 space-y-5 focus-visible:outline-none">
+                {/* Hospital Billing Guarantors (HIS) */}
+                <div className="space-y-3">
+                  <div className="flex items-center justify-between p-3.5 rounded-xl bg-muted/40 border flex-wrap gap-2">
+                    <div className="space-y-0.5">
+                      <div className="text-xs font-bold uppercase tracking-wider text-muted-foreground">
+                        Hospital Billing Guarantors (HIS)
+                      </div>
+                      <div className="text-xs text-muted-foreground">
+                        Financial guarantees and assistance logged in the hospital billing system (read-only).
+                      </div>
                     </div>
-                    <div className="text-xs text-muted-foreground">
-                      Financial guarantees and assistance logged in the hospital billing system.
-                    </div>
+                    {activeEncounter.guarantorTotal !== null && activeEncounter.guarantorTotal > 0 && (
+                      <div className="text-right">
+                        <div className="text-[11px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
+                          Total Amount
+                        </div>
+                        <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">
+                          {peso(activeEncounter.guarantorTotal)}
+                        </div>
+                      </div>
+                    )}
                   </div>
-                  {activeEncounter.guarantorTotal !== null && activeEncounter.guarantorTotal > 0 && (
-                    <div className="text-right">
-                      <div className="text-[11px] font-bold uppercase text-emerald-600 dark:text-emerald-400">
-                        Total Amount
-                      </div>
-                      <div className="text-lg font-black text-emerald-600 dark:text-emerald-400">
-                        {peso(activeEncounter.guarantorTotal)}
-                      </div>
+
+                  {!activeEncounter.guarantors || activeEncounter.guarantors.length === 0 ? (
+                    <div className="text-sm font-medium text-muted-foreground py-6 text-center border border-dashed rounded-lg">
+                      No hospital billing guarantors on file for this encounter.
+                    </div>
+                  ) : (
+                    <div className="border rounded-lg overflow-hidden">
+                      <Table>
+                        <TableHeader className="bg-muted/50">
+                          <TableRow>
+                            <TableHead className="text-xs font-bold text-foreground">Guarantor Name</TableHead>
+                            <TableHead className="text-xs font-bold text-foreground text-right">Amount</TableHead>
+                            <TableHead className="text-xs font-bold text-foreground">General Ledger Status</TableHead>
+                          </TableRow>
+                        </TableHeader>
+                        <TableBody>
+                          {activeEncounter.guarantors.map((g) => (
+                            <TableRow key={g.id} className="hover:bg-muted/30">
+                              <TableCell className="font-semibold text-sm">{text(g.name)}</TableCell>
+                              <TableCell className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                {peso(g.amount)}
+                              </TableCell>
+                              <TableCell className="text-xs font-medium">
+                                {g.glPosted ? (
+                                  <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-500/15 px-2 py-0.5 rounded text-xs">
+                                    <CheckCircle2 className="w-3.5 h-3.5" /> Posted ({text(g.glPostDate)})
+                                  </span>
+                                ) : (
+                                  <span className="text-muted-foreground text-xs">Not Posted</span>
+                                )}
+                              </TableCell>
+                            </TableRow>
+                          ))}
+                        </TableBody>
+                      </Table>
                     </div>
                   )}
                 </div>
 
-                {!activeEncounter.guarantors || activeEncounter.guarantors.length === 0 ? (
-                  <div className="text-sm font-medium text-muted-foreground py-8 text-center border border-dashed rounded-lg">
-                    No guarantors or financial assistance records on file for this encounter.
-                  </div>
-                ) : (
-                  <div className="border rounded-lg overflow-hidden">
-                    <Table>
-                      <TableHeader className="bg-muted/50">
-                        <TableRow>
-                          <TableHead className="text-xs font-bold text-foreground">Guarantor Name</TableHead>
-                          <TableHead className="text-xs font-bold text-foreground text-right">Amount</TableHead>
-                          <TableHead className="text-xs font-bold text-foreground">General Ledger Status</TableHead>
-                        </TableRow>
-                      </TableHeader>
-                      <TableBody>
-                        {activeEncounter.guarantors.map((g) => (
-                          <TableRow key={g.id} className="hover:bg-muted/30">
-                            <TableCell className="font-semibold text-sm">{text(g.name)}</TableCell>
-                            <TableCell className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                              {peso(g.amount)}
-                            </TableCell>
-                            <TableCell className="text-xs font-medium">
-                              {g.glPosted ? (
-                                <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-500/15 px-2 py-0.5 rounded text-xs">
-                                  <CheckCircle2 className="w-3.5 h-3.5" /> Posted ({text(g.glPostDate)})
-                                </span>
-                              ) : (
-                                <span className="text-muted-foreground text-xs">Not Posted</span>
-                              )}
-                            </TableCell>
-                          </TableRow>
-                        ))}
-                      </TableBody>
-                    </Table>
-                  </div>
-                )}
+                {/* MSWD Patient Guarantors */}
+                <EncounterGuaranteesCard
+                  patientId={patient.id}
+                  transactionId={activeEncounter.id}
+                />
               </TabsContent>
 
               {/* TAB 4: MSWD CASE & UIS INTAKE */}

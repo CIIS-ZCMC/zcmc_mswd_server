@@ -12,10 +12,10 @@ one branch and one PR.
 | 1. Schema: `assistance_sources`, `patient_guarantees`, `patient_guarantee_items`; seeders | server | — | ☑ done |
 | 2. Models, permissions, patient merge, audit ownership | server | 1 | ☑ done |
 | 3. API: service, requests, routes, resources, OpenAPI; Filament lookup CRUD | server | 2 | ☑ done |
-| 4. Client: `features/guarantees` + encounter card and form dialog (SSR-safe) | client | 3 | ☐ |
-| 5. Tests; docs | both | 4 | ◐ server tests done (`PatientGuaranteeTest`, 28 tests); client checks pending |
+| 4. Client: `features/guarantees` + encounter card and form dialog (SSR-safe) | client | 3 | ☑ done |
+| 5. Tests; docs | both | 4 | ☑ done |
 
-**Backend shipped (Phases 1–3, server half of 5); the client (Phase 4) has not started.** Notes from the build:
+**Full module shipped (Phases 1–5).** Notes from the build:
 
 - No repository layer. `PatientGuaranteeService` works on Eloquent directly, the same as the socioeconomic module.
   Encounter lookups go through `PatientTransactionService`.
