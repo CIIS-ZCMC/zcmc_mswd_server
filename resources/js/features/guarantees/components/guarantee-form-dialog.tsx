@@ -53,6 +53,9 @@ interface GuaranteeFormDialogProps {
   patientId: number | string
   transactionId: number | string
   guarantee?: PatientGuarantee | null
+  initialGuarantorId?: number | null
+  initialGuarantorName?: string | null
+  lockGuarantor?: boolean
   open: boolean
   onOpenChange: (open: boolean) => void
 }
@@ -69,6 +72,9 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
   patientId,
   transactionId,
   guarantee,
+  initialGuarantorId,
+  initialGuarantorName,
+  lockGuarantor = false,
   open,
   onOpenChange,
 }) => {
@@ -126,7 +132,7 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
         ])
       }
     } else {
-      setGuarantorId(null)
+      setGuarantorId(initialGuarantorId ?? null)
       setReferenceNo("")
       setGuaranteedOn(getTodayString())
       setRemarks("")
@@ -136,7 +142,23 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
     }
     setServerErrors({})
     setGeneralError(null)
-  }, [open, guarantee])
+  }, [open, guarantee, initialGuarantorId])
+
+  // Pre-select a guarantor by name (e.g. a HIS ledger row) once the options have
+  // loaded. Kept apart from the reset above so the options arriving never clears
+  // what has been typed, and only fills an empty choice.
+  useEffect(() => {
+    if (!open || guarantee || !initialGuarantorName || guarantorId !== null) {
+      return
+    }
+    const wanted = initialGuarantorName.trim().toLowerCase()
+    const found = guarantorOptions.find(
+      (opt) => opt.name.trim().toLowerCase() === wanted
+    )
+    if (found) {
+      setGuarantorId(found.id)
+    }
+  }, [open, guarantee, initialGuarantorName, guarantorId, guarantorOptions])
 
   // Live computed total
   const computedTotal = useMemo(() => {
@@ -311,7 +333,11 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
                     <Select
                       value={guarantorId ? String(guarantorId) : ""}
                       onValueChange={(val) => setGuarantorId(Number(val))}
-                      disabled={loadingGuarantors || isPending}
+                      disabled={
+                        loadingGuarantors ||
+                        isPending ||
+                        (lockGuarantor && Boolean(guarantorId))
+                      }
                     >
                       <SelectTrigger
                         id={`${prefix}-guarantor`}

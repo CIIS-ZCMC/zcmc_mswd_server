@@ -29,6 +29,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardList,
+  CreditCard,
   Download,
   Eye,
   FileEdit,
@@ -50,6 +51,7 @@ import { IntakeAssessmentDialog } from "./dialogs/intake-assessment-dialog"
 import { ReassessCaseDialog } from "./dialogs/reassess-case-dialog"
 import { SocialCaseTab } from "@/features/patients/components/tabs/social-case-tab"
 import { WatchersTab } from "@/features/patients/components/tabs/watchers-tab"
+import { CaseGuarantorsTab } from "./case-guarantors-tab"
 import { EncounterUisPanel } from "./encounter-uis-panel"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import { ProgressNotesTab } from "./progress-notes-tab"
@@ -425,6 +427,14 @@ export const CaseDetailPage: React.FC = () => {
             </TabsTrigger>
 
             <TabsTrigger
+              value="guarantors"
+              className="rounded-lg px-4 py-2.5 h-auto text-xs sm:text-sm font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all cursor-pointer"
+            >
+              <CreditCard className="size-4" />
+              <span>Patient Guarantors</span>
+            </TabsTrigger>
+
+            <TabsTrigger
               value="watchers"
               className="rounded-lg px-4 py-2.5 h-auto text-xs sm:text-sm font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all cursor-pointer"
             >
@@ -502,6 +512,14 @@ export const CaseDetailPage: React.FC = () => {
 
               <AssessmentHistoryTimeline assessments={assessments} />
             </div>
+          </TabsContent>
+
+          <TabsContent value="guarantors">
+            <CaseGuarantorsTab
+              patientId={caseRecord.patientId}
+              transactionId={caseRecord.transactionId}
+              caseCode={caseRecord.caseCode}
+            />
           </TabsContent>
 
           <TabsContent value="watchers">
