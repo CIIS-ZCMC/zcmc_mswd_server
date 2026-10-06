@@ -3,6 +3,7 @@
 use App\Models\Activity;
 use App\Models\Assessment;
 use App\Models\AssessmentExpense;
+use App\Models\AssistanceSource;
 use App\Models\AssistantType;
 use App\Models\CaseHospitalTransaction;
 use App\Models\CaseModel;
@@ -12,6 +13,7 @@ use App\Models\Concerns\Auditable;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticReport;
 use App\Models\Document;
+use App\Models\Guarantor;
 use App\Models\Intervention;
 use App\Models\InterventionType;
 use App\Models\Patient;
@@ -20,6 +22,8 @@ use App\Models\PatientAssistanceLog;
 use App\Models\PatientAssistanceReport;
 use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
+use App\Models\PatientGuarantee;
+use App\Models\PatientGuaranteeItem;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
 use App\Models\PatientSocioeconomicProfile;
@@ -85,6 +89,15 @@ function socioeconomicProfileFor(Patient $patient, User $worker): PatientSocioec
     ]);
 }
 
+function guaranteeFor(Patient $patient, User $worker): PatientGuarantee
+{
+    return PatientGuarantee::create([
+        'patient_id' => $patient->id, 'his_transaction_id' => 9,
+        'guarantor_id' => Guarantor::firstOrCreate(['name' => 'MAIFIP'])->id,
+        'guaranteed_on' => now()->toDateString(), 'recorded_by' => $worker->id,
+    ]);
+}
+
 dataset('resolvers', [
     'Patient (itself)' => [fn () => test()->patient, true, false],
     'PatientId' => [fn () => PatientId::create([
@@ -110,6 +123,12 @@ dataset('resolvers', [
     ]), true, false],
 
     'PatientSocioeconomicProfile' => [fn () => socioeconomicProfileFor(test()->patient, test()->worker), true, false],
+    'PatientGuarantee' => [fn () => guaranteeFor(test()->patient, test()->worker), true, false],
+    'PatientGuaranteeItem (through the guarantee)' => [fn () => PatientGuaranteeItem::create([
+        'patient_guarantee_id' => guaranteeFor(test()->patient, test()->worker)->id,
+        'assistance_source_id' => AssistanceSource::firstOrCreate(['name' => 'City Mayor Assistance'])->id,
+        'amount' => 1000,
+    ]), true, false],
 
     'CaseModel' => [fn () => test()->case, true, true],
     'CaseHospitalTransaction' => [fn () => CaseHospitalTransaction::create([
@@ -199,7 +218,7 @@ it('covers every model that declares a resolver', function () {
     // The models the dataset above exercises, one row each.
     $covered = collect([
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
-        'PatientMerge', 'PatientSocioeconomicProfile', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
+        'PatientMerge', 'PatientSocioeconomicProfile', 'PatientGuarantee', 'PatientGuaranteeItem', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document',
     ])->sort()->values();

@@ -9,6 +9,7 @@ use App\Http\Controllers\AssessmentExpenseController;
 use App\Http\Controllers\AssessPatientTransactionController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
+use App\Http\Controllers\AssistanceSourceController;
 use App\Http\Controllers\AssistantTypeController;
 use App\Http\Controllers\CancelAssistanceController;
 use App\Http\Controllers\CaseActivitiesController;
@@ -58,6 +59,7 @@ use App\Http\Controllers\PatientCaretakerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicatesController;
 use App\Http\Controllers\PatientFamilyMemberController;
+use App\Http\Controllers\PatientGuaranteeController;
 use App\Http\Controllers\PatientGuarantorController;
 use App\Http\Controllers\PatientHistoryController;
 use App\Http\Controllers\PatientIdController;
@@ -113,6 +115,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('assistant-types', AssistantTypeController::class)->only(['index', 'show'])->parameters(['assistant-types' => 'assistantType']);
     Route::apiResource('intervention-types', InterventionTypeController::class)->only(['index', 'show'])->parameters(['intervention-types' => 'interventionType']);
     Route::apiResource('guarantors', GuarantorController::class)->only(['index', 'show']);
+    Route::apiResource('assistance-sources', AssistanceSourceController::class)->only(['index', 'show'])->parameters(['assistance-sources' => 'assistanceSource']);
     Route::apiResource('watcher-relationship-types', WatcherRelationshipTypeController::class)->only(['index', 'show'])->parameters(['watcher-relationship-types' => 'watcherRelationshipType']);
 
     // Users (read-only) + role assignment
@@ -183,6 +186,15 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('socioeconomic-profiles/{profile}', [SocioeconomicProfileController::class, 'show']);
     Route::put('socioeconomic-profiles/{profile}', [SocioeconomicProfileController::class, 'update']);
     Route::delete('socioeconomic-profiles/{profile}', [SocioeconomicProfileController::class, 'destroy']);
+
+    // Patient guarantors per hospital encounter, with their assistance breakdown. Gated by
+    // guarantee.* permissions (set in the controller). Not the HIS ledger at
+    // patient-transactions/{id}/guarantors.
+    Route::get('patients/{patient}/guarantees', [PatientGuaranteeController::class, 'index']);
+    Route::post('patients/{patient}/guarantees', [PatientGuaranteeController::class, 'store']);
+    Route::get('guarantees/{guarantee}', [PatientGuaranteeController::class, 'show']);
+    Route::put('guarantees/{guarantee}', [PatientGuaranteeController::class, 'update']);
+    Route::delete('guarantees/{guarantee}', [PatientGuaranteeController::class, 'destroy']);
 
     // Patient records
     Route::middleware('permission:patients.update')->group(function () {

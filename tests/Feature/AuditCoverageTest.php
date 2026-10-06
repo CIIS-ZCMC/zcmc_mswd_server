@@ -2,6 +2,7 @@
 
 use App\Models\Assessment;
 use App\Models\AssessmentExpense;
+use App\Models\AssistanceSource;
 use App\Models\AssistantType;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
@@ -20,6 +21,8 @@ use App\Models\PatientAssistanceLog;
 use App\Models\PatientAssistanceReport;
 use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
+use App\Models\PatientGuarantee;
+use App\Models\PatientGuaranteeItem;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
 use App\Models\PatientSocioeconomicProfile;
@@ -42,6 +45,8 @@ $audited = [
     PatientCaretaker::class,
     PatientMerge::class,
     PatientSocioeconomicProfile::class,
+    PatientGuarantee::class,
+    PatientGuaranteeItem::class,
     // Episode-level
     CaseModel::class,
     CaseWatcher::class,
@@ -75,6 +80,7 @@ it('leaves master data and identity models out of the trail', function (string $
     User::class,
     Sector::class,
     AssistantType::class,
+    AssistanceSource::class,
     InterventionType::class,
     WatcherRelationshipType::class,
     CaseActivity::class,

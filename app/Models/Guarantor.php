@@ -28,4 +28,9 @@ class Guarantor extends Model
     {
         return $this->hasMany(PatientAssistance::class);
     }
+
+    public function patientGuarantees(): HasMany
+    {
+        return $this->hasMany(PatientGuarantee::class);
+    }
 }

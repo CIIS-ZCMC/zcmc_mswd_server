@@ -73,6 +73,73 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
     ],
 )]
+#[OA\Schema(
+    schema: 'AssistanceSource',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'code', type: 'string', nullable: true),
+        new OA\Property(property: 'requires_specify', type: 'boolean'),
+        new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+    ],
+)]
+#[OA\Schema(
+    schema: 'PatientGuarantee',
+    description: 'An MSWD patient guarantor on one hospital encounter. `total` is the sum of `items`.',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'patient_id', type: 'integer'),
+        new OA\Property(property: 'his_transaction_id', type: 'integer'),
+        new OA\Property(property: 'hospital_id', type: 'integer', nullable: true),
+        new OA\Property(property: 'guarantor', properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string'),
+        ], type: 'object', nullable: true),
+        new OA\Property(property: 'reference_no', type: 'string', nullable: true),
+        new OA\Property(property: 'guaranteed_on', type: 'string', format: 'date'),
+        new OA\Property(property: 'remarks', type: 'string', nullable: true),
+        new OA\Property(property: 'items', type: 'array', items: new OA\Items(properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'source', properties: [
+                new OA\Property(property: 'id', type: 'integer'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'requires_specify', type: 'boolean'),
+            ], type: 'object', nullable: true),
+            new OA\Property(property: 'others_specify', type: 'string', nullable: true),
+            new OA\Property(property: 'amount', type: 'number', format: 'float'),
+        ], type: 'object')),
+        new OA\Property(property: 'total', type: 'number', format: 'float'),
+        new OA\Property(property: 'recorded_by', properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string', nullable: true),
+        ], type: 'object', nullable: true),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+    ],
+)]
+#[OA\Schema(
+    schema: 'PatientGuaranteeRequest',
+    required: ['his_transaction_id', 'guarantor_id', 'guaranteed_on', 'items'],
+    description: 'On update every field is optional and `his_transaction_id` is prohibited.',
+    properties: [
+        new OA\Property(property: 'his_transaction_id', type: 'integer'),
+        new OA\Property(property: 'guarantor_id', type: 'integer'),
+        new OA\Property(property: 'reference_no', type: 'string', nullable: true),
+        new OA\Property(property: 'guaranteed_on', type: 'string', format: 'date'),
+        new OA\Property(property: 'remarks', type: 'string', nullable: true),
+        new OA\Property(property: 'items', type: 'array', minItems: 1, items: new OA\Items(
+            required: ['assistance_source_id', 'amount'],
+            properties: [
+                new OA\Property(property: 'assistance_source_id', type: 'integer'),
+                new OA\Property(property: 'amount', type: 'number', format: 'float', minimum: 0.01),
+                new OA\Property(property: 'others_specify', type: 'string', nullable: true),
+            ],
+            type: 'object',
+        )),
+    ],
+)]
 final class AssistanceSchema
 {
     //

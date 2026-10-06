@@ -63,6 +63,11 @@ class RolesAndPermissionsSeeder extends Seeder
         'socioeconomic.create',
         'socioeconomic.update',
         'socioeconomic.delete',
+        // Patient guarantors per hospital encounter, with their assistance breakdown
+        'guarantee.view',
+        'guarantee.create',
+        'guarantee.update',
+        'guarantee.delete',
         // Audit trail
         'audit.view',
         'audit.view_protective',
@@ -93,6 +98,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
             'settings.manage',
@@ -105,6 +111,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
+            'guarantee.view', 'guarantee.create', 'guarantee.update',
             'audit.view',
             'reports.view', 'reports.generate',
             'panel.access',
@@ -115,6 +122,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
+            'guarantee.view', 'guarantee.create', 'guarantee.update',
             'reports.view',
         ],
         'Processor' => [
@@ -123,6 +131,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'assistance.view', 'assistance.create', 'assistance.update',
             'intake.view',
             'socioeconomic.view',
+            'guarantee.view',
             'reports.view',
         ],
     ];
