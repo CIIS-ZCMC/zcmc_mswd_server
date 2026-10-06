@@ -7,6 +7,7 @@ use App\Models\Document;
 use App\Models\Patient;
 use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
+use App\Models\PatientGuarantee;
 use App\Models\PatientId;
 use App\Models\PatientMerge;
 use App\Models\PatientSocioeconomicProfile;
@@ -31,6 +32,7 @@ class PatientMergeService
         'caretakers' => PatientCaretaker::class,
         'documents' => Document::class,
         'socioeconomic_profiles' => PatientSocioeconomicProfile::class,
+        'guarantees' => PatientGuarantee::class,
     ];
 
     /**
