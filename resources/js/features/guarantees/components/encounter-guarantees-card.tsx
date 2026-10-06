@@ -35,12 +35,14 @@ import {
   Loader2,
   Plus,
   Receipt,
+  SlidersHorizontal,
   Trash2,
 } from "lucide-react"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { formatCurrency } from "@/lib/format-currency"
 import { useDeleteGuarantee, useGuarantees } from "../hooks/use-guarantees"
 import { GuaranteeFormDialog } from "./guarantee-form-dialog"
+import { AssistanceSourcesManagerDialog } from "./assistance-sources-manager-dialog"
 import type { PatientGuarantee } from "../types"
 
 interface EncounterGuaranteesCardProps {
@@ -69,6 +71,7 @@ export const EncounterGuaranteesCard: React.FC<
 
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
+  const [isManageTypesOpen, setIsManageTypesOpen] = useState(false)
   const [editingGuarantee, setEditingGuarantee] =
     useState<PatientGuarantee | null>(null)
   const [deletingGuarantee, setDeletingGuarantee] =
@@ -133,15 +136,28 @@ export const EncounterGuaranteesCard: React.FC<
               </div>
             )}
             {canCreate && (
-              <Button
-                type="button"
-                size="sm"
-                onClick={handleAdd}
-                className="h-8 gap-1 px-2.5 text-xs font-bold shadow-2xs"
-              >
-                <Plus className="size-3.5" />
-                Add Guarantor
-              </Button>
+              <div className="flex items-center gap-2">
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setIsManageTypesOpen(true)}
+                  className="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold shadow-2xs"
+                  title="Manage Breakdown Types"
+                >
+                  <SlidersHorizontal className="size-3.5 text-primary" />
+                  Manage Types
+                </Button>
+                <Button
+                  type="button"
+                  size="sm"
+                  onClick={handleAdd}
+                  className="h-8 cursor-pointer gap-1 px-2.5 text-xs font-bold shadow-2xs"
+                >
+                  <Plus className="size-3.5" />
+                  Add Guarantor
+                </Button>
+              </div>
             )}
           </div>
         </div>
@@ -368,6 +384,12 @@ export const EncounterGuaranteesCard: React.FC<
         guarantee={editingGuarantee}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+      />
+
+      {/* Breakdown Types Manager Dialog */}
+      <AssistanceSourcesManagerDialog
+        open={isManageTypesOpen}
+        onOpenChange={setIsManageTypesOpen}
       />
 
       {/* Delete Confirmation Alert Dialog */}

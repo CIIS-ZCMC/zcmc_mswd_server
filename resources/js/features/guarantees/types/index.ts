@@ -8,6 +8,7 @@ export interface ApiAssistanceSource {
   code?: string | null
   requires_specify?: boolean
   is_active?: boolean
+  usage_count?: number
   created_at?: string
   updated_at?: string
 }
@@ -18,6 +19,21 @@ export interface AssistanceSource {
   code: string | null
   requiresSpecify: boolean
   isActive: boolean
+  usageCount: number
+}
+
+export interface ApiSaveAssistanceSourcePayload {
+  name: string
+  code?: string | null
+  requires_specify?: boolean
+  is_active?: boolean
+}
+
+export interface SaveAssistanceSourceInput {
+  name: string
+  code?: string | null
+  requiresSpecify?: boolean
+  isActive?: boolean
 }
 
 export interface ApiGuarantorOption {
