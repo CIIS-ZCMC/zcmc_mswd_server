@@ -8,6 +8,7 @@ import type {
   GuaranteesResponse,
   GuarantorOption,
   PatientGuarantee,
+  SaveAssistanceSourceInput,
   SaveGuaranteeInput,
 } from "../types"
 import {
@@ -15,6 +16,7 @@ import {
   toGuaranteesResponse,
   toGuarantorOption,
   toPatientGuarantee,
+  toApiSaveAssistanceSourcePayload,
   toApiSaveGuaranteePayload,
 } from "./guarantee-adapter"
 
@@ -102,6 +104,44 @@ export async function getAssistanceSources(
   )
   const list = Array.isArray(res.data) ? res.data : []
   return list.map(toAssistanceSource)
+}
+
+/**
+ * POST /api/assistance-sources
+ */
+export async function createAssistanceSource(
+  input: SaveAssistanceSourceInput
+): Promise<AssistanceSource> {
+  const payload = toApiSaveAssistanceSourcePayload(input)
+  const res = await apiClient.post<{ data: ApiAssistanceSource }>(
+    "/assistance-sources",
+    payload
+  )
+  return toAssistanceSource(res.data)
+}
+
+/**
+ * PUT /api/assistance-sources/{id}
+ */
+export async function updateAssistanceSource(
+  id: number | string,
+  input: SaveAssistanceSourceInput
+): Promise<AssistanceSource> {
+  const payload = toApiSaveAssistanceSourcePayload(input)
+  const res = await apiClient.put<{ data: ApiAssistanceSource }>(
+    `/assistance-sources/${id}`,
+    payload
+  )
+  return toAssistanceSource(res.data)
+}
+
+/**
+ * DELETE /api/assistance-sources/{id}
+ */
+export async function deleteAssistanceSource(
+  id: number | string
+): Promise<void> {
+  await apiClient.delete(`/assistance-sources/${id}`)
 }
 
 /**

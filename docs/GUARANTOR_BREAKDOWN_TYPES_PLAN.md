@@ -9,8 +9,17 @@ MAIFIP, the lines are City Mayor ₱1,000 and Other Funds ₱1,000. Builds on th
 | Phase | Side | Depends on | Status |
 |-------|------|-----------|--------|
 | 1. API: create / update / delete breakdown types; usage count; audit | server | — | ☑ done |
-| 2. Client: "Manage Breakdown Types" dialog, opened from the guarantor card and form | client | 1 | ☐ |
-| 3. Tests; docs | both | 2 | ◐ server tests done (`AssistanceSourceCrudTest`, 13 tests); client checks pending |
+| 2. Client: "Manage Breakdown Types" dialog, opened from the guarantor card and form | client | 1 | ☑ done |
+| 3. Tests; docs | both | 2 | ☑ done |
+
+**All phases shipped.** Notes from the build:
+
+- Codes are unique across every row, including deleted ones, because `assistance_sources.code` has a unique index. A
+  deleted type's name can be reused, but its code cannot.
+- The client saves codes exactly as typed. Upper-casing them would rewrite the seeded lowercase codes (`city_mayor`)
+  that `AssistanceSourceSeeder` looks types up by.
+- There is no JS test runner. The client was checked with `tsc -p tsconfig.app.json`, ESLint and `npm run build`
+  (client + SSR). `npm run typecheck` alone checks nothing, because the root `tsconfig.json` has `"files": []`.
 
 ## Background
 

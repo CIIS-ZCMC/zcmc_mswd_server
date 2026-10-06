@@ -4,12 +4,14 @@ import type {
   ApiGuaranteesResponse,
   ApiGuarantorOption,
   ApiPatientGuarantee,
+  ApiSaveAssistanceSourcePayload,
   ApiSaveGuaranteePayload,
   AssistanceSource,
   GuaranteeItem,
   GuaranteesResponse,
   GuarantorOption,
   PatientGuarantee,
+  SaveAssistanceSourceInput,
   SaveGuaranteeInput,
 } from "../types"
 
@@ -68,6 +70,25 @@ export function toAssistanceSource(api: ApiAssistanceSource): AssistanceSource {
     code: api.code ?? null,
     requiresSpecify: Boolean(api.requires_specify),
     isActive: Boolean(api.is_active ?? true),
+    usageCount: api.usage_count ?? 0,
+  }
+}
+
+export function toApiSaveAssistanceSourcePayload(
+  input: SaveAssistanceSourceInput
+): ApiSaveAssistanceSourcePayload {
+  return {
+    name: input.name.trim(),
+    code:
+      input.code !== undefined &&
+      input.code !== null &&
+      input.code.trim() !== ""
+        ? input.code.trim()
+        : null,
+    ...(input.requiresSpecify !== undefined
+      ? { requires_specify: input.requiresSpecify }
+      : {}),
+    ...(input.isActive !== undefined ? { is_active: input.isActive } : {}),
   }
 }
 
