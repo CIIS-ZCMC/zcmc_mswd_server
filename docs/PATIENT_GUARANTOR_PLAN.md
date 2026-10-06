@@ -23,6 +23,8 @@ one branch and one PR.
 - `AuditCoverageTest` and `ActivityOwnershipResolverTest` now cover `PatientGuarantee` and `PatientGuaranteeItem`.
   `RolesAndPermissionsTest` expects the Processor role to have `guarantee.view`.
 - `docs/MIGRATIONS.md` was not updated. It is marked as a historical draft that no longer tracks the schema.
+- Follow-up: managing the breakdown types (assistance sources) inside the app is planned in
+  `docs/GUARANTOR_BREAKDOWN_TYPES_PLAN.md`.
 
 ## Background
 
