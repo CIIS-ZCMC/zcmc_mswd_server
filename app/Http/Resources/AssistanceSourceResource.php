@@ -18,6 +18,8 @@ class AssistanceSourceResource extends JsonResource
             'code' => $this->code,
             'requires_specify' => $this->requires_specify,
             'is_active' => $this->is_active,
+            // How many breakdown lines use this type, when counted.
+            'usage_count' => $this->whenCounted('guaranteeItems'),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

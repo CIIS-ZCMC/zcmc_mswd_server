@@ -142,4 +142,61 @@ final class PatientGuaranteeDocs
         ],
     )]
     public function source(): void {}
+
+    #[OA\Post(
+        path: '/assistance-sources',
+        operationId: 'assistanceSources.store',
+        tags: ['Patient Guarantors'],
+        summary: 'Add a breakdown type',
+        description: 'Requires the `guarantee.create` permission.',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/AssistanceSourceRequest')),
+        responses: [
+            new OA\Response(response: 201, description: 'The created type', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/AssistanceSource'),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+        ],
+    )]
+    public function storeSource(): void {}
+
+    #[OA\Put(
+        path: '/assistance-sources/{assistanceSource}',
+        operationId: 'assistanceSources.update',
+        tags: ['Patient Guarantors'],
+        summary: 'Rename, retire or reactivate a breakdown type',
+        description: 'Partial update. Requires the `guarantee.create` permission.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'assistanceSource', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/AssistanceSourceRequest')),
+        responses: [
+            new OA\Response(response: 200, description: 'The updated type', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/AssistanceSource'),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+        ],
+    )]
+    public function updateSource(): void {}
+
+    #[OA\Delete(
+        path: '/assistance-sources/{assistanceSource}',
+        operationId: 'assistanceSources.destroy',
+        tags: ['Patient Guarantors'],
+        summary: 'Delete a breakdown type (soft delete)',
+        description: 'Lines that already use the type keep showing its name; new lines can no longer pick it. Requires the `guarantee.create` permission.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'assistanceSource', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 204, description: 'Deleted'),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+        ],
+    )]
+    public function destroySource(): void {}
 }

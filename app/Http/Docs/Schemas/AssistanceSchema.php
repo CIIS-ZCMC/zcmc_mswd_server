@@ -81,8 +81,20 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'code', type: 'string', nullable: true),
         new OA\Property(property: 'requires_specify', type: 'boolean'),
         new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(property: 'usage_count', type: 'integer', description: 'Breakdown lines that use this type.'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+    ],
+)]
+#[OA\Schema(
+    schema: 'AssistanceSourceRequest',
+    required: ['name'],
+    description: 'On update every field is optional. Name and code are unique among types that are not deleted.',
+    properties: [
+        new OA\Property(property: 'name', type: 'string', maxLength: 255),
+        new OA\Property(property: 'code', type: 'string', maxLength: 255, nullable: true),
+        new OA\Property(property: 'requires_specify', type: 'boolean'),
+        new OA\Property(property: 'is_active', type: 'boolean'),
     ],
 )]
 #[OA\Schema(

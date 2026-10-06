@@ -115,7 +115,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('assistant-types', AssistantTypeController::class)->only(['index', 'show'])->parameters(['assistant-types' => 'assistantType']);
     Route::apiResource('intervention-types', InterventionTypeController::class)->only(['index', 'show'])->parameters(['intervention-types' => 'interventionType']);
     Route::apiResource('guarantors', GuarantorController::class)->only(['index', 'show']);
-    Route::apiResource('assistance-sources', AssistanceSourceController::class)->only(['index', 'show'])->parameters(['assistance-sources' => 'assistanceSource']);
+    // Guarantor breakdown types: read by everyone; written by guarantee.create (set in the controller).
+    Route::apiResource('assistance-sources', AssistanceSourceController::class)->except(['create', 'edit'])->parameters(['assistance-sources' => 'assistanceSource']);
     Route::apiResource('watcher-relationship-types', WatcherRelationshipTypeController::class)->only(['index', 'show'])->parameters(['watcher-relationship-types' => 'watcherRelationshipType']);
 
     // Users (read-only) + role assignment

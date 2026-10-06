@@ -32,9 +32,10 @@ class PatientGuaranteeItem extends Model
         return $this->belongsTo(PatientGuarantee::class, 'patient_guarantee_id');
     }
 
+    /** Includes a deleted type, so an old line still shows its name. */
     public function source(): BelongsTo
     {
-        return $this->belongsTo(AssistanceSource::class, 'assistance_source_id');
+        return $this->belongsTo(AssistanceSource::class, 'assistance_source_id')->withTrashed();
     }
 
     /**
