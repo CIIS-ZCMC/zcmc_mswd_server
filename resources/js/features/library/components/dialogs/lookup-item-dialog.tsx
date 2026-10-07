@@ -12,20 +12,32 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from "@/components/ui/select"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Check, Loader2, Lock } from "lucide-react"
 import { ApiError } from "@/lib/api-client"
-
-export type LookupType =
-  "mode_of_assistance" | "fund_source" | "guarantor" | "assistance_source"
+import {
+  ASSISTANT_TYPE_CATEGORIES,
+  getCategoryConfig,
+  type LibraryTabDefinition,
+} from "../../lib/library-tabs"
 
 export interface LookupFormItem {
   id?: number
   name: string
   code?: string | null
   address?: string | null
-  sortOrder?: number
-  requiresSpecify?: boolean
+  category?: string | null
+  description?: string | null
+  sortOrder?: number | null
+  requiresSpecify?: boolean | null
+  codeLocked?: boolean
   isActive: boolean
   usageCount?: number
 }
@@ -33,7 +45,7 @@ export interface LookupFormItem {
 interface LookupItemDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  type: LookupType
+  tabConfig: LibraryTabDefinition
   editingItem: LookupFormItem | null
   onSave: (data: LookupFormItem) => Promise<void>
 }
@@ -41,7 +53,7 @@ interface LookupItemDialogProps {
 export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
   open,
   onOpenChange,
-  type,
+  tabConfig,
   editingItem,
   onSave,
 }) => {
@@ -49,6 +61,8 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
 
   const [name, setName] = useState("")
   const [code, setCode] = useState("")
+  const [category, setCategory] = useState("medical")
+  const [description, setDescription] = useState("")
   const [address, setAddress] = useState("")
   const [sortOrder, setSortOrder] = useState<number>(0)
   const [requiresSpecify, setRequiresSpecify] = useState(false)
@@ -63,6 +77,8 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
       if (editingItem) {
         setName(editingItem.name || "")
         setCode(editingItem.code || "")
+        setCategory(editingItem.category || "medical")
+        setDescription(editingItem.description || "")
         setAddress(editingItem.address || "")
         setSortOrder(editingItem.sortOrder ?? 0)
         setRequiresSpecify(Boolean(editingItem.requiresSpecify))
@@ -70,6 +86,8 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
       } else {
         setName("")
         setCode("")
+        setCategory("medical")
+        setDescription("")
         setAddress("")
         setSortOrder(0)
         setRequiresSpecify(false)
@@ -80,21 +98,16 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
     }
   }, [open, editingItem])
 
-  const isCodeLocked = isEditing && (editingItem?.usageCount ?? 0) > 0
+  // The server says when a code is locked: only assessments store codes, so Mode and
+  // Fund lock while an assessment uses them; Types of Assistance never lock.
+  const isCodeLocked = isEditing && Boolean(editingItem?.codeLocked)
 
-  const getTitle = () => {
-    const action = isEditing ? "Edit" : "Add New"
-    switch (type) {
-      case "guarantor":
-        return `${action} Guarantor`
-      case "mode_of_assistance":
-        return `${action} Mode of Assistance`
-      case "fund_source":
-        return `${action} Fund Source`
-      case "assistance_source":
-        return `${action} Assistance Source (Breakdown Type)`
-    }
-  }
+  // An older type may hold a category outside the vocabulary; keep it selectable.
+  const categoryOptions = ASSISTANT_TYPE_CATEGORIES.some(
+    (c) => c.value === category
+  )
+    ? ASSISTANT_TYPE_CATEGORIES
+    : [...ASSISTANT_TYPE_CATEGORIES, getCategoryConfig(category)]
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -106,16 +119,17 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
       await onSave({
         id: editingItem?.id,
         name,
-        code: type !== "guarantor" ? code : undefined,
-        address: type === "guarantor" ? address : undefined,
-        sortOrder:
-          type === "mode_of_assistance" || type === "fund_source"
-            ? Number(sortOrder)
-            : undefined,
-        requiresSpecify:
-          type === "assistance_source" ? requiresSpecify : undefined,
+        code: tabConfig.showCode ? code : undefined,
+        category: tabConfig.showCategory ? category : undefined,
+        description: tabConfig.showCategory ? description : undefined,
+        address: tabConfig.showAddress ? address : undefined,
+        sortOrder: tabConfig.showSortOrder ? Number(sortOrder) : undefined,
+        requiresSpecify: tabConfig.showRequiresSpecify
+          ? requiresSpecify
+          : undefined,
         isActive,
         usageCount: editingItem?.usageCount,
+        codeLocked: editingItem?.codeLocked,
       })
       onOpenChange(false)
     } catch (err: unknown) {
@@ -143,12 +157,14 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
         <form onSubmit={handleSubmit} className="space-y-5">
           <DialogHeader className="space-y-1.5 border-b border-border/60 pb-3">
             <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
-              {getTitle()}
+              {isEditing
+                ? `Edit ${tabConfig.singularLabel}`
+                : `Add ${tabConfig.singularLabel}`}
             </DialogTitle>
             <DialogDescription className="text-sm text-muted-foreground">
               {isEditing
-                ? "Update details for this lookup option."
-                : "Fill in the details below to add a new option to system dropdowns."}
+                ? `Update details for this ${tabConfig.singularLabel.toLowerCase()}.`
+                : `Fill in the details below to add a new ${tabConfig.singularLabel.toLowerCase()} to the system.`}
             </DialogDescription>
           </DialogHeader>
 
@@ -165,7 +181,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
           )}
 
           <div className="space-y-4.5 pt-1">
-            {/* Name Field */}
+            {/* Display Name Field */}
             <div className="space-y-2">
               <Label
                 htmlFor="name"
@@ -177,10 +193,11 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                 id="name"
                 value={name}
                 onChange={(e) => {
-                  setName(e.target.value)
+                  const val = e.target.value
+                  setName(val)
                   if (
                     !isEditing &&
-                    type !== "guarantor" &&
+                    tabConfig.showCode &&
                     (!code ||
                       code ===
                         name
@@ -189,14 +206,14 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                           .replace(/^_+|_+$/g, ""))
                   ) {
                     setCode(
-                      e.target.value
+                      val
                         .toLowerCase()
                         .replace(/[^a-z0-9]+/g, "_")
                         .replace(/^_+|_+$/g, "")
                     )
                   }
                 }}
-                placeholder="e.g. Financial Assistance"
+                placeholder={`e.g. ${tabConfig.singularLabel}`}
                 required
                 className={`h-12 rounded-lg text-sm font-medium ${serverErrors.name ? "border-destructive" : ""}`}
               />
@@ -208,7 +225,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
             </div>
 
             {/* Code Field */}
-            {type !== "guarantor" && (
+            {tabConfig.showCode && (
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label
@@ -220,8 +237,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                   </Label>
                   {isCodeLocked && (
                     <span className="flex items-center gap-1.5 rounded border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
-                      <Lock className="size-3.5" /> Locked (Used in{" "}
-                      {editingItem?.usageCount} records)
+                      <Lock className="size-3.5" /> Locked (used by assessments)
                     </span>
                   )}
                 </div>
@@ -231,12 +247,12 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                   onChange={(e) => setCode(e.target.value)}
                   placeholder="e.g. financial_assistance"
                   disabled={isCodeLocked}
-                  required={type !== "assistance_source"}
+                  required
                   className={`h-12 rounded-lg font-mono text-sm ${serverErrors.code ? "border-destructive" : ""}`}
                 />
                 <p className="text-xs text-muted-foreground">
                   Lower-case letters, numbers and underscores only (e.g.{" "}
-                  <code>medical_assistance</code>).
+                  <code>medicines</code>, <code>city_mayor</code>).
                 </p>
                 {serverErrors.code && (
                   <p className="text-xs font-semibold text-destructive">
@@ -246,8 +262,73 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
               </div>
             )}
 
+            {/* Category Select (Types of Assistance) */}
+            {tabConfig.showCategory && (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="category"
+                  className="text-sm font-bold text-foreground"
+                >
+                  Assistance Category{" "}
+                  <span className="text-destructive">*</span>
+                </Label>
+                <Select
+                  value={category}
+                  onValueChange={(v) => setCategory(v ?? "medical")}
+                >
+                  <SelectTrigger
+                    id="category"
+                    className={`h-12 rounded-lg text-sm font-medium ${serverErrors.category ? "border-destructive" : ""}`}
+                  >
+                    <SelectValue placeholder="Select Category" />
+                  </SelectTrigger>
+                  <SelectContent>
+                    {categoryOptions.map((cat) => (
+                      <SelectItem
+                        key={cat.value}
+                        value={cat.value}
+                        className="py-2 text-sm"
+                      >
+                        {cat.label}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
+                {serverErrors.category && (
+                  <p className="text-xs font-semibold text-destructive">
+                    {serverErrors.category[0]}
+                  </p>
+                )}
+              </div>
+            )}
+
+            {/* Description Field (Types of Assistance) */}
+            {tabConfig.showCategory && (
+              <div className="space-y-2">
+                <Label
+                  htmlFor="description"
+                  className="text-sm font-bold text-foreground"
+                >
+                  Description (Optional)
+                </Label>
+                <Textarea
+                  id="description"
+                  value={description}
+                  onChange={(e) => setDescription(e.target.value)}
+                  placeholder="e.g. Covers prescription medications and oral drugs"
+                  rows={2}
+                  className={`rounded-lg text-sm font-medium ${serverErrors.description ? "border-destructive" : ""}`}
+                />
+                {serverErrors.description && (
+                  <p className="text-xs font-semibold text-destructive">
+                    {serverErrors.description[0]}
+                  </p>
+                )}
+              </div>
+            )}
+
             {/* Address Field (Guarantor) */}
-            {type === "guarantor" && (
+            {tabConfig.showAddress && (
               <div className="space-y-2">
                 <Label
                   htmlFor="address"
@@ -272,7 +353,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
             )}
 
             {/* Sort Order */}
-            {(type === "mode_of_assistance" || type === "fund_source") && (
+            {tabConfig.showSortOrder && (
               <div className="space-y-2">
                 <Label
                   htmlFor="sort_order"
@@ -301,19 +382,19 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
               </div>
             )}
 
-            {/* Requires Specify (Assistance Source) */}
-            {type === "assistance_source" && (
+            {/* Requires Specify Switch (Fund Sources / Legacy Assistance Sources) */}
+            {tabConfig.showRequiresSpecify && (
               <div className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/20 p-4">
                 <div className="space-y-1">
                   <Label
                     htmlFor="requires_specify"
                     className="cursor-pointer text-sm font-bold text-foreground"
                   >
-                    Requires Specification
+                    Requires Specification (Specify field)
                   </Label>
                   <p className="text-xs text-muted-foreground">
-                    Prompts staff to enter custom description when selected in
-                    guarantee items.
+                    Prompts staff to enter a custom description when selected in
+                    guarantee breakdown lines (e.g. for &ldquo;Others&rdquo;).
                   </p>
                 </div>
                 <Switch
@@ -335,8 +416,8 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                   Active Status
                 </Label>
                 <p className="text-xs text-muted-foreground">
-                  Active options appear in dropdown menus. Inactive ones remain
-                  visible on historical records.
+                  Active options appear in dropdown menus. Inactive options
+                  remain visible on historical records.
                 </p>
               </div>
               <Switch
@@ -368,7 +449,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
               ) : (
                 <Check className="mr-2 size-4.5" />
               )}
-              {isEditing ? "Save Changes" : "Create Item"}
+              {isEditing ? "Save Changes" : `Create ${tabConfig.singularLabel}`}
             </Button>
           </DialogFooter>
         </form>

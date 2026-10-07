@@ -16,7 +16,7 @@ issue, one branch and one PR per phase.
 |-------|------|-----------|--------|
 | 1. Fund Sources absorb Assistance Sources (schema, data migration, API, Filament) | server | — | ☑ done |
 | 2. Types of Assistance as a Library list (seed, API CRUD, audit, Filament) | server | — | ☑ done |
-| 3. Library tables UI: one config-driven table per tab | client | 1, 2 | ☐ not started |
+| 3. Library tables UI: one config-driven table per tab | client | 1, 2 | ☑ done |
 | 4. Remove Assistance Sources (after the breakdown moves to `fund_source_id`) | both | 3 + Breakdown phase 1 | ☐ not started |
 | 5. Docs and verification | both | 4 | ☐ not started |
 
@@ -55,6 +55,21 @@ rewrite lands.
     codes), so uniqueness is enforced by validation.
   - The controller writes through the model directly, like the other Library controllers. The older
     `AssistantTypeService` / repository are untouched.
+
+- **Phase 3:**
+  - Built tab config definition system (`LIBRARY_TABS`, `getTabConfig`, `ASSISTANT_TYPE_CATEGORIES`) in `library-tabs.tsx`.
+  - Config-driven `LookupTable` and `LookupItemDialog` dynamically adapt columns, inputs, auto-slugging, category filters,
+    category badges, code locks, and usage count tooltips.
+  - Added full React Query hook suites for `assistant-types` (`useAssistantTypes`, `useCreateAssistantType`,
+    `useUpdateAssistantType`, `useDeleteAssistantType`, `useAssistanceTypeOptions`).
+  - `LibraryPage` renders 5 tabs with real-time counts, including the legacy Assistance Sources notice.
+  - Review fixes before merging:
+    - eight type errors fixed: Base UI `TooltipTrigger` takes `render`, not `asChild`; Select `onValueChange`
+      passes `string | null`; `requiresSpecify` can be `null`
+    - the dialog locks the code only on the server's `code_locked`; it used to also lock whenever `usage_count > 0`,
+      which wrongly locked a fund source used only by breakdown lines
+    - an older category outside the vocabulary stays selectable in the dialog
+    - the Mode of Assistance examples match the seeded modes
 
 ## Background
 
