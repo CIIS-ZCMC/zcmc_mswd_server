@@ -15,7 +15,7 @@ issue, one branch and one PR per phase.
 | Phase | Side | Depends on | Status |
 |-------|------|-----------|--------|
 | 1. Fund Sources absorb Assistance Sources (schema, data migration, API, Filament) | server | — | ☑ done |
-| 2. Types of Assistance as a Library list (seed, API CRUD, audit, Filament) | server | — | ☐ not started |
+| 2. Types of Assistance as a Library list (seed, API CRUD, audit, Filament) | server | — | ☑ done |
 | 3. Library tables UI: one config-driven table per tab | client | 1, 2 | ☐ not started |
 | 4. Remove Assistance Sources (after the breakdown moves to `fund_source_id`) | both | 3 + Breakdown phase 1 | ☐ not started |
 | 5. Docs and verification | both | 4 | ☐ not started |
@@ -44,6 +44,17 @@ rewrite lands.
     an accessor over `assessments_usage + guarantee_lines_usage`, which `withUsageCount()` selects.
   - The merge's `down()` drops `patient_guarantee_items.fund_source_id` only. The copied fund sources stay, since
     assessments may already use them.
+
+- **Phase 2:**
+  - The category vocabulary is enforced on create. An update may keep a type's older category (e.g. `pharmacy`
+    from before the vocabulary) but can't switch to another value outside it. Filament adds the older value to its
+    Select so editing doesn't blank it.
+  - `usage.guarantee_lines` is 0 until breakdown lines store a type (Guarantee Breakdown phase 1); `usage_count`
+    counts assistance records.
+  - The API resource adds `category_label`. `assistant_types.code` has no unique index (older rows may share or lack
+    codes), so uniqueness is enforced by validation.
+  - The controller writes through the model directly, like the other Library controllers. The older
+    `AssistantTypeService` / repository are untouched.
 
 ## Background
 
