@@ -114,7 +114,8 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Reference lookups backing the client's select inputs (read-only).
     Route::apiResource('sectors', SectorController::class)->only(['index', 'show']);
-    Route::apiResource('assistant-types', AssistantTypeController::class)->only(['index', 'show'])->parameters(['assistant-types' => 'assistantType']);
+    // Types of Assistance: read by everyone; written by library.manage (set in the controller).
+    Route::apiResource('assistant-types', AssistantTypeController::class)->except(['create', 'edit'])->parameters(['assistant-types' => 'assistantType']);
     Route::apiResource('intervention-types', InterventionTypeController::class)->only(['index', 'show'])->parameters(['intervention-types' => 'interventionType']);
     // Guarantors: read by everyone; written by guarantee.create (set in the controller).
     Route::apiResource('guarantors', GuarantorController::class)->except(['create', 'edit']);

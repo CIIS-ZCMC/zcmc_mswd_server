@@ -66,6 +66,7 @@ $audited = [
     AssistanceSource::class,
     ModeOfAssistance::class,
     FundSource::class,
+    AssistantType::class,
 ];
 
 it('records an audit trail on every model the caretake module covers', function (string $model) {
@@ -84,7 +85,6 @@ it('leaves master data and identity models out of the trail', function (string $
 })->with([
     User::class,
     Sector::class,
-    AssistantType::class,
     InterventionType::class,
     WatcherRelationshipType::class,
     CaseActivity::class,

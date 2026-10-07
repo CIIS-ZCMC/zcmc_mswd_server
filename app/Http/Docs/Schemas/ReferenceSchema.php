@@ -26,10 +26,28 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'name', type: 'string'),
         new OA\Property(property: 'code', type: 'string', nullable: true),
         new OA\Property(property: 'category', type: 'string', nullable: true),
+        new OA\Property(property: 'category_label', type: 'string', nullable: true),
         new OA\Property(property: 'description', type: 'string', nullable: true),
         new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(property: 'usage_count', type: 'integer', description: 'Assistance records plus guarantee breakdown lines.'),
+        new OA\Property(property: 'usage', properties: [
+            new OA\Property(property: 'assistance_records', type: 'integer'),
+            new OA\Property(property: 'guarantee_lines', type: 'integer'),
+        ], type: 'object'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+    ],
+)]
+#[OA\Schema(
+    schema: 'AssistantTypeRequest',
+    required: ['name', 'code', 'category'],
+    description: 'On update every field is optional. Name is unique among types that are not deleted; code is unique across all types.',
+    properties: [
+        new OA\Property(property: 'name', type: 'string', maxLength: 255),
+        new OA\Property(property: 'code', type: 'string', maxLength: 64, pattern: '^[a-z0-9_]+$'),
+        new OA\Property(property: 'category', type: 'string', enum: ['medical', 'food', 'financial', 'burial', 'transportation', 'others']),
+        new OA\Property(property: 'description', type: 'string', maxLength: 255, nullable: true),
+        new OA\Property(property: 'is_active', type: 'boolean'),
     ],
 )]
 #[OA\Schema(
