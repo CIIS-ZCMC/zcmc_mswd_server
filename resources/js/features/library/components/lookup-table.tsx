@@ -18,7 +18,15 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Edit2, FilterX, Plus, Search, Trash2 } from "lucide-react"
+import {
+  CheckCircle2,
+  Edit2,
+  FilterX,
+  Plus,
+  Search,
+  Trash2,
+  XCircle,
+} from "lucide-react"
 import { DeleteLookupDialog } from "./dialogs/delete-lookup-dialog"
 import { LookupItemDialog } from "./dialogs/lookup-item-dialog"
 import type { LookupFormItem, LookupType } from "./dialogs/lookup-item-dialog"
@@ -132,23 +140,24 @@ export const LookupTable: React.FC<LookupTableProps> = ({
 
   return (
     <div className="space-y-4">
-      {/* Header controls: Search, Filter, Add button */}
-      <div className="flex flex-col items-start justify-between gap-3 rounded-xl border border-border/60 bg-muted/20 p-3.5 sm:flex-row sm:items-center">
-        <div className="flex w-full flex-1 items-center gap-2.5 sm:w-auto">
+      {/* Header controls: Search, Filter, Add button (Senior-friendly sizing) */}
+      <div className="flex flex-col items-start justify-between gap-3.5 rounded-xl border border-border/80 bg-muted/25 p-4 sm:flex-row sm:items-center">
+        <div className="flex w-full flex-1 items-center gap-3 sm:w-auto">
           <div className="relative max-w-sm flex-1">
-            <Search className="absolute top-2.5 left-2.5 size-4 text-muted-foreground" />
+            <Search className="absolute top-3 left-3 size-4.5 text-muted-foreground" />
             <Input
               value={search}
               onChange={(e) => setSearch(e.target.value)}
               placeholder={`Search ${title.toLowerCase()}...`}
-              className="h-9 pl-8 text-xs"
+              className="h-11 rounded-lg pl-10 text-sm font-medium"
             />
             {search && (
               <button
                 onClick={() => setSearch("")}
-                className="absolute top-2.5 right-2.5 text-muted-foreground hover:text-foreground"
+                className="absolute top-3 right-3 text-muted-foreground hover:text-foreground"
+                aria-label="Clear search"
               >
-                <FilterX className="size-3.5" />
+                <FilterX className="size-4" />
               </button>
             )}
           </div>
@@ -161,17 +170,17 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               }
             }}
           >
-            <SelectTrigger className="h-9 w-32 text-xs">
-              <SelectValue placeholder="Status" />
+            <SelectTrigger className="h-11 w-40 rounded-lg text-sm font-medium">
+              <SelectValue placeholder="Status Filter" />
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="all" className="text-xs">
-                All Status
+              <SelectItem value="all" className="py-2 text-sm">
+                All Statuses
               </SelectItem>
-              <SelectItem value="active" className="text-xs">
+              <SelectItem value="active" className="py-2 text-sm">
                 Active Only
               </SelectItem>
-              <SelectItem value="inactive" className="text-xs">
+              <SelectItem value="inactive" className="py-2 text-sm">
                 Inactive Only
               </SelectItem>
             </SelectContent>
@@ -181,47 +190,48 @@ export const LookupTable: React.FC<LookupTableProps> = ({
         {canManage && (
           <Button
             onClick={handleOpenAdd}
-            size="sm"
-            className="h-9 shrink-0 gap-1.5 text-xs font-bold"
+            className="h-11 shrink-0 gap-2 rounded-lg px-5 text-sm font-bold shadow-xs"
           >
-            <Plus className="size-4" /> Add {singularTitle}
+            <Plus className="size-4.5" /> Add {singularTitle}
           </Button>
         )}
       </div>
 
       {/* Items Table */}
-      <div className="overflow-hidden rounded-xl border border-border bg-card">
+      <div className="overflow-hidden rounded-xl border border-border bg-card shadow-2xs">
         <Table>
-          <TableHeader className="bg-muted/40">
+          <TableHeader className="border-b border-border bg-muted/50">
             <TableRow>
-              <TableHead className="w-[35%] text-xs font-bold">Name</TableHead>
+              <TableHead className="w-[32%] py-3.5 text-sm font-bold text-foreground">
+                Name
+              </TableHead>
               {type !== "guarantor" ? (
-                <TableHead className="w-[25%] text-xs font-bold">
+                <TableHead className="w-[24%] py-3.5 text-sm font-bold text-foreground">
                   Code
                 </TableHead>
               ) : (
-                <TableHead className="w-[30%] text-xs font-bold">
+                <TableHead className="w-[28%] py-3.5 text-sm font-bold text-foreground">
                   Address
                 </TableHead>
               )}
               {(type === "mode_of_assistance" || type === "fund_source") && (
-                <TableHead className="w-20 text-center text-xs font-bold">
+                <TableHead className="w-20 py-3.5 text-center text-sm font-bold text-foreground">
                   Order
                 </TableHead>
               )}
               {type === "assistance_source" && (
-                <TableHead className="w-28 text-center text-xs font-bold">
+                <TableHead className="w-28 py-3.5 text-center text-sm font-bold text-foreground">
                   Specify
                 </TableHead>
               )}
-              <TableHead className="w-24 text-center text-xs font-bold">
+              <TableHead className="w-28 py-3.5 text-center text-sm font-bold text-foreground">
                 Status
               </TableHead>
-              <TableHead className="w-24 text-center text-xs font-bold">
+              <TableHead className="w-28 py-3.5 text-center text-sm font-bold text-foreground">
                 Usage
               </TableHead>
               {canManage && (
-                <TableHead className="w-24 pr-4 text-right text-xs font-bold">
+                <TableHead className="w-44 py-3.5 pr-5 text-right text-sm font-bold text-foreground">
                   Actions
                 </TableHead>
               )}
@@ -231,28 +241,28 @@ export const LookupTable: React.FC<LookupTableProps> = ({
             {isLoading ? (
               Array.from({ length: 5 }).map((_, i) => (
                 <TableRow key={i}>
-                  <TableCell>
-                    <Skeleton className="h-4 w-36" />
+                  <TableCell className="py-4">
+                    <Skeleton className="h-5 w-40" />
                   </TableCell>
-                  <TableCell>
-                    <Skeleton className="h-4 w-28" />
+                  <TableCell className="py-4">
+                    <Skeleton className="h-5 w-32" />
                   </TableCell>
                   {(type === "mode_of_assistance" ||
                     type === "fund_source" ||
                     type === "assistance_source") && (
-                    <TableCell>
-                      <Skeleton className="mx-auto h-4 w-12" />
+                    <TableCell className="py-4">
+                      <Skeleton className="mx-auto h-5 w-12" />
                     </TableCell>
                   )}
-                  <TableCell>
-                    <Skeleton className="mx-auto h-5 w-16 rounded-full" />
+                  <TableCell className="py-4">
+                    <Skeleton className="mx-auto h-6 w-20 rounded-full" />
                   </TableCell>
-                  <TableCell>
-                    <Skeleton className="mx-auto h-4 w-12" />
+                  <TableCell className="py-4">
+                    <Skeleton className="mx-auto h-5 w-16" />
                   </TableCell>
                   {canManage && (
-                    <TableCell className="pr-4 text-right">
-                      <Skeleton className="ml-auto h-8 w-16" />
+                    <TableCell className="py-4 pr-5 text-right">
+                      <Skeleton className="ml-auto h-9 w-32" />
                     </TableCell>
                   )}
                 </TableRow>
@@ -269,102 +279,115 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                         ? 6
                         : 5
                   }
-                  className="h-32 text-center text-xs text-muted-foreground"
+                  className="h-40 text-center text-sm text-muted-foreground"
                 >
                   {items.length === 0 ? (
-                    <div className="space-y-1">
-                      <p className="font-semibold text-foreground">
-                        No {title.toLowerCase()} configured.
+                    <div className="space-y-1.5 py-4">
+                      <p className="text-base font-bold text-foreground">
+                        No {title.toLowerCase()} found.
                       </p>
-                      <p className="text-[11px]">{description}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {description}
+                      </p>
                     </div>
                   ) : (
-                    <p>No matches found for your filter criteria.</p>
+                    <p className="text-sm">
+                      No matches found for your search/filter criteria.
+                    </p>
                   )}
                 </TableCell>
               </TableRow>
             ) : (
               filteredItems.map((item) => (
-                <TableRow key={item.id} className="hover:bg-muted/30">
-                  <TableCell className="text-xs font-medium text-foreground">
+                <TableRow
+                  key={item.id}
+                  className="transition-colors hover:bg-muted/35"
+                >
+                  <TableCell className="py-3.5 text-sm font-semibold text-foreground">
                     {item.name}
                   </TableCell>
 
                   {type !== "guarantor" ? (
-                    <TableCell className="font-mono text-xs text-muted-foreground">
-                      <code>{item.code || "—"}</code>
+                    <TableCell className="py-3.5 font-mono text-xs text-muted-foreground">
+                      <code className="rounded border border-border/50 bg-muted/60 px-2 py-1 text-foreground">
+                        {item.code || "—"}
+                      </code>
                     </TableCell>
                   ) : (
-                    <TableCell className="max-w-xs truncate text-xs text-muted-foreground">
+                    <TableCell className="max-w-xs truncate py-3.5 text-sm text-muted-foreground">
                       {item.address || "—"}
                     </TableCell>
                   )}
 
                   {(type === "mode_of_assistance" ||
                     type === "fund_source") && (
-                    <TableCell className="text-center font-mono text-xs text-muted-foreground">
+                    <TableCell className="py-3.5 text-center font-mono text-sm font-semibold text-muted-foreground">
                       {item.sortOrder ?? 0}
                     </TableCell>
                   )}
 
                   {type === "assistance_source" && (
-                    <TableCell className="text-center text-xs">
+                    <TableCell className="py-3.5 text-center text-sm">
                       {item.requiresSpecify ? (
                         <Badge
                           variant="outline"
-                          className="border-primary/40 text-[10px] text-primary"
+                          className="border-primary/40 px-2.5 py-0.5 text-xs font-bold text-primary"
                         >
                           Required
                         </Badge>
                       ) : (
-                        <span className="text-muted-foreground">—</span>
+                        <span className="text-xs text-muted-foreground">—</span>
                       )}
                     </TableCell>
                   )}
 
-                  <TableCell className="text-center">
+                  <TableCell className="py-3.5 text-center">
                     <Badge
                       variant={item.isActive ? "default" : "outline"}
-                      className={`text-[10px] font-bold ${
+                      className={`inline-flex items-center gap-1.5 px-2.5 py-1 text-xs font-bold shadow-2xs ${
                         item.isActive
                           ? "bg-emerald-600 text-white hover:bg-emerald-600"
-                          : "border-border text-muted-foreground"
+                          : "border-amber-500/50 bg-amber-500/10 text-amber-800 dark:text-amber-300"
                       }`}
                     >
-                      {item.isActive ? "Active" : "Inactive"}
+                      {item.isActive ? (
+                        <>
+                          <CheckCircle2 className="size-3.5" /> Active
+                        </>
+                      ) : (
+                        <>
+                          <XCircle className="size-3.5" /> Inactive
+                        </>
+                      )}
                     </Badge>
                   </TableCell>
 
-                  <TableCell className="text-center font-mono text-xs text-muted-foreground">
-                    {item.usageCount > 0 ? (
-                      <span className="font-bold text-foreground">
-                        {item.usageCount}
-                      </span>
-                    ) : (
-                      "0"
-                    )}
+                  <TableCell className="py-3.5 text-center font-mono text-xs text-muted-foreground">
+                    <span className="inline-flex items-center rounded-md border border-border/40 bg-muted/70 px-2.5 py-1 text-xs font-bold text-foreground">
+                      {item.usageCount}{" "}
+                      {item.usageCount === 1 ? "record" : "records"}
+                    </span>
                   </TableCell>
 
                   {canManage && (
-                    <TableCell className="pr-3 text-right">
-                      <div className="flex items-center justify-end gap-1">
+                    <TableCell className="py-3.5 pr-4 text-right">
+                      <div className="flex items-center justify-end gap-2">
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-muted-foreground hover:text-foreground"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 gap-1.5 rounded-lg border-border px-3 text-xs font-bold hover:border-primary/40 hover:bg-primary/10 hover:text-primary"
                           onClick={() => handleOpenEdit(item)}
-                          title="Edit"
                         >
-                          <Edit2 className="size-3.5" />
+                          <Edit2 className="size-3.5 text-primary" /> Edit
                         </Button>
                         <Button
-                          variant="ghost"
-                          size="icon"
-                          className="size-7 text-muted-foreground hover:text-destructive"
+                          variant="outline"
+                          size="sm"
+                          className="h-9 gap-1.5 rounded-lg border-destructive/30 px-3 text-xs font-bold text-destructive hover:border-destructive hover:bg-destructive/10"
                           onClick={() => handleOpenDelete(item)}
-                          title="Delete / Deactivate"
                         >
-                          <Trash2 className="size-3.5" />
+                          <Trash2 className="size-3.5 text-destructive" />{" "}
+                          Delete
                         </Button>
                       </div>
                     </TableCell>

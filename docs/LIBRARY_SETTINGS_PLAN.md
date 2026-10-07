@@ -31,6 +31,9 @@ issue, one branch and one PR per phase, as the work was split in practice.
   with "(inactive)" instead of the raw code. A value that was deleted shows as stored.
 - The Library hooks are imported from `features/library/hooks/use-lookup-options`, not the feature barrel, so the cases
   and patients features do not pull in the whole Library page.
+- The Library link moved from the sidebar's view buttons to a book icon in the header (next to the theme toggle), and the
+  page got larger text, an intro note per tab, and Edit / Delete buttons with labels. Delete is still a soft delete: the
+  dialog says records that use the option keep showing it, and offers **Deactivate Instead**.
 - There is no JS test runner. The client was checked with `tsc -p tsconfig.app.json` (only the three errors that were
   already in `app.tsx`, `ssr.tsx` and `use-auth.ts`), `npm run lint` (0 errors) and `npm run build` (client and SSR). The
   `/library` route is covered by `LibraryPageTest`.
@@ -118,7 +121,7 @@ issue, one branch and one PR per phase, as the work was split in practice.
 
 - New feature folder `resources/js/features/library/{api,hooks,components,types}`.
 - Page `resources/js/pages/Library/Index.tsx`; route `GET /library` in `routes/web.php` through a Web controller guarded
-  by `library.manage`; a Library button in `components/layout/sidebar.tsx` shown with
+  by `library.manage`; a Library icon button in `components/layout/header.tsx` shown with
   `usePermission("library.manage")`.
 - Four tabs: **Guarantors**, **Mode of Assistance**, **Fund Sources**, **Assistance Sources**.
   - A reusable list table and item dialog: name, plus code, address, sort order or "requires specify" where they apply;

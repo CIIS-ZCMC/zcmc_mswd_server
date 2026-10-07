@@ -83,7 +83,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
   const isCodeLocked = isEditing && (editingItem?.usageCount ?? 0) > 0
 
   const getTitle = () => {
-    const action = isEditing ? "Edit" : "Add"
+    const action = isEditing ? "Edit" : "Add New"
     switch (type) {
       case "guarantor":
         return `${action} Guarantor`
@@ -139,43 +139,45 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={(v) => !isSubmitting && onOpenChange(v)}>
-      <DialogContent className="max-w-lg">
-        <form onSubmit={handleSubmit}>
-          <DialogHeader>
-            <DialogTitle className="text-lg font-bold">
+      <DialogContent className="max-w-lg p-6 sm:p-7">
+        <form onSubmit={handleSubmit} className="space-y-5">
+          <DialogHeader className="space-y-1.5 border-b border-border/60 pb-3">
+            <DialogTitle className="text-xl font-bold tracking-tight text-foreground">
               {getTitle()}
             </DialogTitle>
-            <DialogDescription className="text-xs text-muted-foreground">
+            <DialogDescription className="text-sm text-muted-foreground">
               {isEditing
                 ? "Update details for this lookup option."
-                : "Create a new lookup option to be available in system dropdowns."}
+                : "Fill in the details below to add a new option to system dropdowns."}
             </DialogDescription>
           </DialogHeader>
 
           {generalError && (
-            <Alert variant="destructive" className="mt-4">
-              <AlertCircle className="size-4" />
-              <AlertDescription className="text-xs">
+            <Alert
+              variant="destructive"
+              className="border-destructive/40 bg-destructive/10"
+            >
+              <AlertCircle className="size-5" />
+              <AlertDescription className="text-sm font-medium">
                 {generalError}
               </AlertDescription>
             </Alert>
           )}
 
-          <div className="space-y-4 py-4">
+          <div className="space-y-4.5 pt-1">
             {/* Name Field */}
-            <div className="space-y-1.5">
+            <div className="space-y-2">
               <Label
                 htmlFor="name"
-                className="text-xs font-bold tracking-wider uppercase"
+                className="text-sm font-bold text-foreground"
               >
-                Name <span className="text-destructive">*</span>
+                Display Name <span className="text-destructive">*</span>
               </Label>
               <Input
                 id="name"
                 value={name}
                 onChange={(e) => {
                   setName(e.target.value)
-                  // Auto-generate code if adding new item and code not manually modified
                   if (
                     !isEditing &&
                     type !== "guarantor" &&
@@ -196,28 +198,30 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                 }}
                 placeholder="e.g. Financial Assistance"
                 required
-                className={serverErrors.name ? "border-destructive" : ""}
+                className={`h-12 rounded-lg text-sm font-medium ${serverErrors.name ? "border-destructive" : ""}`}
               />
               {serverErrors.name && (
-                <p className="text-xs text-destructive">
+                <p className="text-xs font-semibold text-destructive">
                   {serverErrors.name[0]}
                 </p>
               )}
             </div>
 
-            {/* Code Field (for Mode of Assistance, Fund Source, Assistance Source) */}
+            {/* Code Field */}
             {type !== "guarantor" && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <div className="flex items-center justify-between">
                   <Label
                     htmlFor="code"
-                    className="text-xs font-bold tracking-wider uppercase"
+                    className="text-sm font-bold text-foreground"
                   >
-                    Unique Code <span className="text-destructive">*</span>
+                    System Identifier Code{" "}
+                    <span className="text-destructive">*</span>
                   </Label>
                   {isCodeLocked && (
-                    <span className="flex items-center gap-1 text-[11px] font-medium text-amber-600 dark:text-amber-400">
-                      <Lock className="size-3" /> Locked (used in records)
+                    <span className="flex items-center gap-1.5 rounded border border-amber-500/30 bg-amber-500/10 px-2.5 py-0.5 text-xs font-bold text-amber-600 dark:text-amber-400">
+                      <Lock className="size-3.5" /> Locked (Used in{" "}
+                      {editingItem?.usageCount} records)
                     </span>
                   )}
                 </div>
@@ -228,28 +232,28 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                   placeholder="e.g. financial_assistance"
                   disabled={isCodeLocked}
                   required={type !== "assistance_source"}
-                  className={serverErrors.code ? "border-destructive" : ""}
+                  className={`h-12 rounded-lg font-mono text-sm ${serverErrors.code ? "border-destructive" : ""}`}
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Alphanumeric identifier with underscores (e.g.{" "}
-                  <code>financial_assistance</code>).
+                <p className="text-xs text-muted-foreground">
+                  Lower-case letters, numbers and underscores only (e.g.{" "}
+                  <code>medical_assistance</code>).
                 </p>
                 {serverErrors.code && (
-                  <p className="text-xs text-destructive">
+                  <p className="text-xs font-semibold text-destructive">
                     {serverErrors.code[0]}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Address Field (for Guarantor) */}
+            {/* Address Field (Guarantor) */}
             {type === "guarantor" && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label
                   htmlFor="address"
-                  className="text-xs font-bold tracking-wider uppercase"
+                  className="text-sm font-bold text-foreground"
                 >
-                  Address / Location (Optional)
+                  Office Address / Location (Optional)
                 </Label>
                 <Textarea
                   id="address"
@@ -257,22 +261,22 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                   onChange={(e) => setAddress(e.target.value)}
                   placeholder="e.g. Regional Office IX, Zamboanga City"
                   rows={2}
-                  className={serverErrors.address ? "border-destructive" : ""}
+                  className={`rounded-lg text-sm font-medium ${serverErrors.address ? "border-destructive" : ""}`}
                 />
                 {serverErrors.address && (
-                  <p className="text-xs text-destructive">
+                  <p className="text-xs font-semibold text-destructive">
                     {serverErrors.address[0]}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Sort Order (for Mode of Assistance & Fund Source) */}
+            {/* Sort Order */}
             {(type === "mode_of_assistance" || type === "fund_source") && (
-              <div className="space-y-1.5">
+              <div className="space-y-2">
                 <Label
                   htmlFor="sort_order"
-                  className="text-xs font-bold tracking-wider uppercase"
+                  className="text-sm font-bold text-foreground"
                 >
                   Display Order
                 </Label>
@@ -284,77 +288,85 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                     setSortOrder(parseInt(e.target.value, 10) || 0)
                   }
                   placeholder="0"
-                  className={
-                    serverErrors.sort_order ? "border-destructive" : ""
-                  }
+                  className={`h-12 rounded-lg text-sm font-medium ${serverErrors.sort_order ? "border-destructive" : ""}`}
                 />
-                <p className="text-[11px] text-muted-foreground">
-                  Lower numbers appear first in dropdown menus.
+                <p className="text-xs text-muted-foreground">
+                  Controls ordering in dropdowns. Lower numbers appear first.
                 </p>
                 {serverErrors.sort_order && (
-                  <p className="text-xs text-destructive">
+                  <p className="text-xs font-semibold text-destructive">
                     {serverErrors.sort_order[0]}
                   </p>
                 )}
               </div>
             )}
 
-            {/* Requires Specify (for Assistance Source) */}
+            {/* Requires Specify (Assistance Source) */}
             {type === "assistance_source" && (
-              <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 p-3">
-                <div className="space-y-0.5">
+              <div className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/20 p-4">
+                <div className="space-y-1">
                   <Label
                     htmlFor="requires_specify"
-                    className="text-xs font-bold"
+                    className="cursor-pointer text-sm font-bold text-foreground"
                   >
                     Requires Specification
                   </Label>
-                  <p className="text-[11px] text-muted-foreground">
-                    Prompts staff to enter custom specification details when
-                    chosen in guarantee breakdowns.
+                  <p className="text-xs text-muted-foreground">
+                    Prompts staff to enter custom description when selected in
+                    guarantee items.
                   </p>
                 </div>
                 <Switch
                   id="requires_specify"
                   checked={requiresSpecify}
                   onCheckedChange={setRequiresSpecify}
+                  className="scale-110"
                 />
               </div>
             )}
 
             {/* Active Status Switch */}
-            <div className="flex items-center justify-between rounded-lg border border-border/70 bg-muted/20 p-3">
-              <div className="space-y-0.5">
-                <Label htmlFor="is_active" className="text-xs font-bold">
+            <div className="flex items-center justify-between rounded-xl border border-border/80 bg-muted/20 p-4">
+              <div className="space-y-1">
+                <Label
+                  htmlFor="is_active"
+                  className="cursor-pointer text-sm font-bold text-foreground"
+                >
                   Active Status
                 </Label>
-                <p className="text-[11px] text-muted-foreground">
-                  Inactive items remain intact on past records but are hidden
-                  from new entry dropdowns.
+                <p className="text-xs text-muted-foreground">
+                  Active options appear in dropdown menus. Inactive ones remain
+                  visible on historical records.
                 </p>
               </div>
               <Switch
                 id="is_active"
                 checked={isActive}
                 onCheckedChange={setIsActive}
+                className="scale-110"
               />
             </div>
           </div>
 
-          <DialogFooter className="pt-2">
+          <DialogFooter className="gap-2.5 border-t border-border/60 pt-4">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isSubmitting}
+              className="h-11 rounded-lg px-5 text-sm font-bold"
             >
               Cancel
             </Button>
-            <Button type="submit" disabled={isSubmitting}>
+            <Button
+              type="submit"
+              disabled={isSubmitting}
+              className="h-11 rounded-lg px-6 text-sm font-bold shadow-xs"
+            >
               {isSubmitting ? (
-                <Loader2 className="mr-1.5 size-4 animate-spin" />
+                <Loader2 className="mr-2 size-4.5 animate-spin" />
               ) : (
-                <Check className="mr-1.5 size-4" />
+                <Check className="mr-2 size-4.5" />
               )}
               {isEditing ? "Save Changes" : "Create Item"}
             </Button>

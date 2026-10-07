@@ -1,6 +1,7 @@
 import React, { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
-import { BookOpen, Building, Coins, Sparkles, Wallet } from "lucide-react"
+import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { BookOpen, Building, Coins, Info, Sparkles, Wallet } from "lucide-react"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import {
   useCreateFundSource,
@@ -63,16 +64,16 @@ export const LibraryPage: React.FC = () => {
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
       {/* Top Header */}
-      <div className="border-b border-border/80 bg-card/60 px-6 py-4">
-        <div className="flex items-center gap-3">
-          <div className="flex size-10 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary">
-            <BookOpen className="size-5" />
+      <div className="border-b border-border/80 bg-card/70 px-6 py-5">
+        <div className="flex items-center gap-4">
+          <div className="flex size-12 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-xs">
+            <BookOpen className="size-6" />
           </div>
           <div>
-            <h1 className="flex items-center gap-2 text-xl font-bold tracking-tight text-foreground">
+            <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
               Library Settings
             </h1>
-            <p className="text-xs text-muted-foreground">
+            <p className="mt-0.5 text-sm text-muted-foreground">
               Manage system lookups, assessment recommendations, fund sources,
               and guarantor master lists.
             </p>
@@ -81,39 +82,39 @@ export const LibraryPage: React.FC = () => {
       </div>
 
       {/* Main Content Area */}
-      <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex-1 space-y-6 overflow-y-auto p-6">
         <Tabs
           value={activeTab}
           onValueChange={(v) => setActiveTab(v as LibraryTabKey)}
           className="space-y-6"
         >
-          <TabsList className="border border-border/60 bg-muted/40 p-1">
+          <TabsList className="h-13 rounded-xl border border-border/70 bg-muted/40 p-1.5">
             <TabsTrigger
               value="guarantors"
-              className="gap-2 text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
             >
-              <Building className="size-3.5" />
+              <Building className="size-4" />
               Guarantors ({guarantors.length})
             </TabsTrigger>
             <TabsTrigger
               value="mode-of-assistance"
-              className="gap-2 text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
             >
-              <Sparkles className="size-3.5" />
+              <Sparkles className="size-4" />
               Mode of Assistance ({modes.length})
             </TabsTrigger>
             <TabsTrigger
               value="fund-sources"
-              className="gap-2 text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
             >
-              <Wallet className="size-3.5" />
+              <Wallet className="size-4" />
               Fund Sources ({fundSources.length})
             </TabsTrigger>
             <TabsTrigger
               value="assistance-sources"
-              className="gap-2 text-xs font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
             >
-              <Coins className="size-3.5" />
+              <Coins className="size-4" />
               Assistance Sources ({assistanceSources.length})
             </TabsTrigger>
           </TabsList>
@@ -121,8 +122,19 @@ export const LibraryPage: React.FC = () => {
           {/* Guarantors Tab */}
           <TabsContent
             value="guarantors"
-            className="mt-0 focus-visible:outline-hidden"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
           >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Guarantors
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                External partner agencies (e.g. MAIFIP, PCSO, DSWD, PhilHealth)
+                that provide financial guarantees and hospital bill assistance.
+              </AlertDescription>
+            </Alert>
+
             <LookupTable
               type="guarantor"
               title="Guarantors"
@@ -158,8 +170,20 @@ export const LibraryPage: React.FC = () => {
           {/* Mode of Assistance Tab */}
           <TabsContent
             value="mode-of-assistance"
-            className="mt-0 focus-visible:outline-hidden"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
           >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Modes of Assistance
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                Standard assistance recommendation modes (e.g. Financial
+                Assistance, Medical Assistance, Counseling) selected during
+                social worker intake and printed on UIS Section V.
+              </AlertDescription>
+            </Alert>
+
             <LookupTable
               type="mode_of_assistance"
               title="Modes of Assistance"
@@ -197,8 +221,20 @@ export const LibraryPage: React.FC = () => {
           {/* Fund Sources Tab */}
           <TabsContent
             value="fund-sources"
-            className="mt-0 focus-visible:outline-hidden"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
           >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Fund Sources
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                Funding source allocations (e.g. MSWD, MAIP, Malasakit Center,
+                PCSO) assigned to recommended assistance on the Unified Intake
+                Sheet.
+              </AlertDescription>
+            </Alert>
+
             <LookupTable
               type="fund_source"
               title="Fund Sources"
@@ -236,8 +272,20 @@ export const LibraryPage: React.FC = () => {
           {/* Assistance Sources Tab */}
           <TabsContent
             value="assistance-sources"
-            className="mt-0 focus-visible:outline-hidden"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
           >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Assistance Sources (Breakdown Types)
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                Line-item categories (e.g. Medicines, Hospital Bills, Laboratory
+                / Diagnostics) used when recording itemized patient guarantee
+                breakdowns.
+              </AlertDescription>
+            </Alert>
+
             <LookupTable
               type="assistance_source"
               title="Assistance Sources"

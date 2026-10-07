@@ -1,10 +1,12 @@
 import React from "react"
+import { router, usePage } from "@inertiajs/react"
 import { Button } from "@/components/ui/button"
 import { Badge } from "@/components/ui/badge"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { useTheme } from "@/providers/theme-provider"
 import { useAuth } from "@/features/auth/hooks/use-auth"
-import { Activity, LogOut, Moon, Plus, Sun, UserCheck } from "lucide-react"
+import { usePermission } from "@/features/auth/hooks/use-permission"
+import { Activity, BookOpen, LogOut, Moon, Plus, Sun, UserCheck } from "lucide-react"
 
 interface HeaderProps {
   onNewIntake?: () => void
@@ -13,6 +15,10 @@ interface HeaderProps {
 export const Header: React.FC<HeaderProps> = ({ onNewIntake }) => {
   const { theme, setTheme } = useTheme()
   const { user, logout, isLoggingOut } = useAuth()
+  const canManageLibrary = usePermission("library.manage")
+  const pageObj = usePage()
+  const pathname = pageObj.url.split("?")[0]
+  const isLibraryRoute = pathname.startsWith("/library")
 
   const toggleTheme = () => {
     setTheme(theme === "dark" ? "light" : "dark")
@@ -67,6 +73,23 @@ export const Header: React.FC<HeaderProps> = ({ onNewIntake }) => {
           </TooltipTrigger>
           <TooltipContent>Toggle Theme (Press &apos;d&apos;)</TooltipContent>
         </Tooltip>
+
+        {canManageLibrary && (
+          <Tooltip>
+            <TooltipTrigger>
+              <Button
+                variant={isLibraryRoute ? "default" : "outline"}
+                size="default"
+                className={`h-10 w-10 p-0 ${isLibraryRoute ? "shadow-xs" : ""}`}
+                onClick={() => router.visit("/library")}
+              >
+                <BookOpen className="size-4" />
+              </Button>
+            </TooltipTrigger>
+            <TooltipContent>Library Settings</TooltipContent>
+          </Tooltip>
+        )}
+
         <Tooltip>
           <TooltipTrigger>
             <Button
