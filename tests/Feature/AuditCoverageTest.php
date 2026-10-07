@@ -2,7 +2,6 @@
 
 use App\Models\Assessment;
 use App\Models\AssessmentExpense;
-use App\Models\AssistanceSource;
 use App\Models\AssistantType;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
@@ -63,7 +62,6 @@ $audited = [
     PatientAssistanceReport::class,
     Document::class,
     Guarantor::class,
-    AssistanceSource::class,
     ModeOfAssistance::class,
     FundSource::class,
     AssistantType::class,

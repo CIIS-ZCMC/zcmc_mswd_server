@@ -5,7 +5,6 @@ import {
   DollarSign,
   HeartHandshake,
   Layers,
-  Sparkles,
 } from "lucide-react"
 
 export interface AssistantTypeCategoryOption {
@@ -82,7 +81,6 @@ export interface LibraryTabDefinition {
   showAddress: boolean
   showRequiresSpecify: boolean
   showUsageCount: boolean
-  isMergedNotice?: boolean
 }
 
 export const LIBRARY_TABS: LibraryTabDefinition[] = [
@@ -149,23 +147,6 @@ export const LIBRARY_TABS: LibraryTabDefinition[] = [
     showAddress: false,
     showRequiresSpecify: true,
     showUsageCount: true,
-  },
-  {
-    key: "assistance-sources",
-    label: "Assistance Sources",
-    singularLabel: "Assistance Source",
-    description:
-      "Legacy breakdown sources (Being merged into Fund Sources for unified breakdown tracking).",
-    icon: Sparkles,
-    writePermission: "guarantee.create",
-    defaultSort: "name",
-    showCode: false,
-    showSortOrder: false,
-    showCategory: false,
-    showAddress: false,
-    showRequiresSpecify: true,
-    showUsageCount: false,
-    isMergedNotice: true,
   },
 ]
 

@@ -1,22 +1,17 @@
 import { apiClient } from "@/lib/api-client"
 import type {
-  ApiAssistanceSource,
   ApiGuaranteesResponse,
   ApiGuarantorOption,
   ApiPatientGuarantee,
-  AssistanceSource,
   GuaranteesResponse,
   GuarantorOption,
   PatientGuarantee,
-  SaveAssistanceSourceInput,
   SaveGuaranteeInput,
 } from "../types"
 import {
-  toAssistanceSource,
   toGuaranteesResponse,
   toGuarantorOption,
   toPatientGuarantee,
-  toApiSaveAssistanceSourcePayload,
   toApiSaveGuaranteePayload,
 } from "./guarantee-adapter"
 
@@ -88,60 +83,6 @@ export async function updateGuarantee(
  */
 export async function deleteGuarantee(id: number | string): Promise<void> {
   await apiClient.delete(`/guarantees/${id}`)
-}
-
-/**
- * GET /api/assistance-sources?active=1
- */
-export async function getAssistanceSources(
-  activeOnly = true
-): Promise<AssistanceSource[]> {
-  const res = await apiClient.get<{ data: ApiAssistanceSource[] }>(
-    "/assistance-sources",
-    {
-      params: activeOnly ? { active: 1 } : {},
-    }
-  )
-  const list = Array.isArray(res.data) ? res.data : []
-  return list.map(toAssistanceSource)
-}
-
-/**
- * POST /api/assistance-sources
- */
-export async function createAssistanceSource(
-  input: SaveAssistanceSourceInput
-): Promise<AssistanceSource> {
-  const payload = toApiSaveAssistanceSourcePayload(input)
-  const res = await apiClient.post<{ data: ApiAssistanceSource }>(
-    "/assistance-sources",
-    payload
-  )
-  return toAssistanceSource(res.data)
-}
-
-/**
- * PUT /api/assistance-sources/{id}
- */
-export async function updateAssistanceSource(
-  id: number | string,
-  input: SaveAssistanceSourceInput
-): Promise<AssistanceSource> {
-  const payload = toApiSaveAssistanceSourcePayload(input)
-  const res = await apiClient.put<{ data: ApiAssistanceSource }>(
-    `/assistance-sources/${id}`,
-    payload
-  )
-  return toAssistanceSource(res.data)
-}
-
-/**
- * DELETE /api/assistance-sources/{id}
- */
-export async function deleteAssistanceSource(
-  id: number | string
-): Promise<void> {
-  await apiClient.delete(`/assistance-sources/${id}`)
 }
 
 /**

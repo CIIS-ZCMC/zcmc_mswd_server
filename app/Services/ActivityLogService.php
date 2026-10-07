@@ -91,7 +91,18 @@ class ActivityLogService
             )
             ->when(
                 $filters['subject_type'] ?? null,
-                fn ($q, $type) => $q->where('subject_type', $this->resolveSubjectType($type)),
+                function ($q, $type) {
+                    $resolved = $this->resolveSubjectType($type);
+                    if ($resolved !== $type) {
+                        $q->where('subject_type', $resolved);
+                    } else {
+                        $candidate = str_starts_with($type, 'App\\Models\\') ? $type : 'App\\Models\\'.$type;
+                        $q->where(function ($sub) use ($type, $candidate) {
+                            $sub->where('subject_type', $type)
+                                ->orWhere('subject_type', $candidate);
+                        });
+                    }
+                },
             )
             ->when($filters['subject_id'] ?? null, fn ($q, $id) => $q->where('subject_id', $id))
             ->when($filters['date_from'] ?? null, fn ($q, $date) => $q->whereDate('created_at', '>=', $date))
@@ -157,6 +168,10 @@ class ActivityLogService
             $class = Relation::getMorphedModel((string) $type) ?? (string) $type;
 
             if (! class_exists($class)) {
+                foreach ($group as $row) {
+                    $row->subject_label = class_basename($class);
+                }
+
                 continue;
             }
 

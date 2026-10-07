@@ -1,8 +1,6 @@
 <?php
 
-use App\Filament\Resources\AssistanceSources\Pages\CreateAssistanceSource;
 use App\Filament\Resources\Guarantors\Pages\ListGuarantors;
-use App\Models\AssistanceSource;
 use App\Models\AssistantType;
 use App\Models\Bizbox\HospitalPatient;
 use App\Models\Bizbox\PatientTransaction;
@@ -16,7 +14,6 @@ use App\Models\Sector;
 use App\Models\User;
 use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use App\Services\PatientMergeService;
-use Database\Seeders\AssistanceSourceSeeder;
 use Database\Seeders\GuarantorSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -34,7 +31,6 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(GuarantorSeeder::class);
-    $this->seed(AssistanceSourceSeeder::class);
 
     $this->worker = pgUser('MSS Head');
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
@@ -44,10 +40,6 @@ beforeEach(function () {
     ]);
 
     $this->maifip = Guarantor::where('name', 'MAIFIP')->firstOrFail();
-    $this->mayor = AssistanceSource::where('code', 'city_mayor')->firstOrFail();
-    $this->council = AssistanceSource::where('code', 'city_council')->firstOrFail();
-    $this->congress = AssistanceSource::where('code', 'congressional')->firstOrFail();
-    $this->others = AssistanceSource::where('code', 'others')->firstOrFail();
 
     // The breakdown's Library lists (seeded by their migrations).
     $this->medicines = AssistantType::where('code', 'medicines')->firstOrFail();
@@ -253,7 +245,7 @@ it('lists an older line without a type or mode, and asks for them when it is edi
         'patient_id' => $this->patient->id, 'his_transaction_id' => 9, 'guarantor_id' => $this->maifip->id,
         'guaranteed_on' => '2026-10-01', 'recorded_by' => $this->worker->id,
     ]);
-    $guarantee->items()->create(['assistance_source_id' => $this->mayor->id, 'fund_source_id' => $this->mayorFund->id, 'amount' => 800]);
+    $guarantee->items()->create(['fund_source_id' => $this->mayorFund->id, 'amount' => 800]);
 
     $this->getJson("/api/guarantees/{$guarantee->id}")->assertOk()
         ->assertJsonPath('data.items.0.assistance_type', null)
@@ -269,10 +261,10 @@ it('lists an older line without a type or mode, and asks for them when it is edi
     expect($guarantee->items()->first()->assistant_type_id)->toBe($this->medicines->id);
 });
 
-it('no longer accepts an assistance source on a line', function () {
+it('requires type, amount, mode, and fund on every line', function () {
     $this->postJson(pgStore($this->patient), pgPayload(['items' => [
-        ['assistance_source_id' => $this->mayor->id, 'amount' => 100],
-    ]]))->assertUnprocessable()->assertJsonValidationErrors(['items.0.assistant_type_id', 'items.0.fund_source_id']);
+        ['amount' => 100],
+    ]]))->assertUnprocessable()->assertJsonValidationErrors(['items.0.assistant_type_id', 'items.0.mode_of_assistance_id', 'items.0.fund_source_id']);
 });
 
 it('counts breakdown lines in the Library usage of each list', function () {
@@ -409,23 +401,10 @@ it('audits the guarantee and its lines against the patient and no case', functio
         ->and($rows->pluck('case_id')->filter()->all())->toBe([]);
 });
 
-it('lists assistance sources, hiding retired ones on request', function () {
-    $this->others->update(['is_active' => false]);
-
-    $this->getJson('/api/assistance-sources')->assertOk()->assertJsonCount(6, 'data');
-    $this->getJson('/api/assistance-sources?active=1')->assertOk()->assertJsonCount(5, 'data')
-        ->assertJsonMissing(['code' => 'others']);
-    $this->getJson("/api/assistance-sources/{$this->mayor->id}")->assertOk()
-        ->assertJsonPath('data.name', 'City Mayor Assistance');
-});
-
 it('seeds the lookups idempotently', function () {
     $this->seed(GuarantorSeeder::class);
-    $this->seed(AssistanceSourceSeeder::class);
 
-    expect(Guarantor::count())->toBe(3)
-        ->and(AssistanceSource::count())->toBe(6)
-        ->and(AssistanceSource::where('requires_specify', true)->pluck('code')->all())->toBe(['others']);
+    expect(Guarantor::count())->toBe(3);
 });
 
 it('adds the guarantee permissions to existing roles through its migration', function () {
@@ -449,11 +428,4 @@ it('lets settings managers maintain the lookups in the admin panel', function ()
     actingAs(pgUser('Admin'));
 
     Livewire::test(ListGuarantors::class)->assertOk()->assertCanSeeTableRecords(Guarantor::all());
-
-    Livewire::test(CreateAssistanceSource::class)
-        ->fillForm(['name' => 'Vice Mayor Assistance', 'code' => 'vice_mayor', 'is_active' => true])
-        ->call('create')
-        ->assertHasNoFormErrors();
-
-    expect(AssistanceSource::where('code', 'vice_mayor')->exists())->toBeTrue();
 });

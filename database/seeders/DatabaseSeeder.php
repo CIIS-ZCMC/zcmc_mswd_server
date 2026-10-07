@@ -18,7 +18,6 @@ class DatabaseSeeder extends Seeder
         $this->call(RolesAndPermissionsSeeder::class);
         $this->call(WatcherRelationshipTypeSeeder::class);
         $this->call(GuarantorSeeder::class);
-        $this->call(AssistanceSourceSeeder::class);
         $this->call(ModeOfAssistanceSeeder::class);
         $this->call(FundSourceSeeder::class);
         $this->call(AssistantTypeSeeder::class);

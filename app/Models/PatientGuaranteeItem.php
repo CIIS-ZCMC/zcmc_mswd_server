@@ -22,7 +22,6 @@ class PatientGuaranteeItem extends Model
         'mode_of_assistance_id',
         'fund_source_id',
         'others_specify',
-        'assistance_source_id',
     ];
 
     protected function casts(): array
@@ -47,12 +46,6 @@ class PatientGuaranteeItem extends Model
     public function modeOfAssistance(): BelongsTo
     {
         return $this->belongsTo(ModeOfAssistance::class)->withTrashed();
-    }
-
-    /** The former assistance source; kept until the Assistance Sources list is removed. */
-    public function source(): BelongsTo
-    {
-        return $this->belongsTo(AssistanceSource::class, 'assistance_source_id')->withTrashed();
     }
 
     /** Who pays for this line. Includes a deleted fund source, so an old line still shows it. */

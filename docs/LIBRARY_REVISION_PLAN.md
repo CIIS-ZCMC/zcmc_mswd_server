@@ -17,7 +17,7 @@ issue, one branch and one PR per phase.
 | 1. Fund Sources absorb Assistance Sources (schema, data migration, API, Filament) | server | — | ☑ done |
 | 2. Types of Assistance as a Library list (seed, API CRUD, audit, Filament) | server | — | ☑ done |
 | 3. Library tables UI: one config-driven table per tab | client | 1, 2 | ☑ done |
-| 4. Remove Assistance Sources (after the breakdown moves to `fund_source_id`) | both | 3 + Breakdown phase 1 | ☐ not started |
+| 4. Remove Assistance Sources (after the breakdown moves to `fund_source_id`) | both | 3 + Breakdown phase 1 | ☑ done |
 | 5. Docs and verification | both | 4 | ☐ not started |
 
 **Order across both plans:**
@@ -25,9 +25,6 @@ issue, one branch and one PR per phase.
 2. Guarantee Breakdown phase 1
 3. Library phase 4
 4. Docs for both
-
-Every merge leaves `master` working: the current breakdown form keeps using `assistance_source_id` until the breakdown
-rewrite lands.
 
 **Update:** Guarantee Breakdown phase 1 has landed. Breakdown lines use `fund_source_id` and no longer write
 `assistance_source_id` (now nullable), so Phase 4 is unblocked.
@@ -73,6 +70,18 @@ rewrite lands.
       which wrongly locked a fund source used only by breakdown lines
     - an older category outside the vocabulary stays selectable in the dialog
     - the Mode of Assistance examples match the seeded modes
+
+- **Phase 4:**
+  - Dropped `patient_guarantee_items.assistance_source_id` FK and column, and dropped `assistance_sources` table.
+  - Removed server artifacts: `AssistanceSource` model, controller, requests, resource, seeder, route, OpenAPI schemas & endpoints, and Filament resource.
+  - Removed client artifacts: `use-assistance-sources.ts`, `assistance-sources-manager-dialog.tsx`, legacy `assistance-sources` tab in `library-tabs.tsx`, and removed `AssistanceSource` types & adapter methods.
+  - Added graceful fallback in `ActivityLogService` for past audit trail logs whose subject class no longer exists (falls back to class basename and handles basename subject_type filtering).
+  - Cleaned up test suites (`AuditCoverageTest`, `ActivityOwnershipResolverTest`, `LibraryFilamentTest`, `PatientGuaranteeTest`, `FundSourceMergeTest`, and `ActivityLogEndpointTest`). All tests passing (835+ tests, 0 errors).
+  - The merge migration's own tests were removed with the table they read. Phase 1's merge already ran everywhere, and
+    `FundSourceMergeTest` now checks that `assistance_sources`, `patient_guarantee_items.assistance_source_id` and
+    `/api/assistance-sources` are gone.
+  - Review before merging: removed the leftover `isMergedNotice` tab flag; Pint tidied the test imports.
+
 
 ## Background
 

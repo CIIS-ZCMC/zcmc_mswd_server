@@ -10,6 +10,7 @@ use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
+use Spatie\Activitylog\Models\Activity;
 
 uses(RefreshDatabase::class);
 
@@ -107,6 +108,25 @@ it('labels each row with a human-readable subject', function () {
     $response = $this->getJson('/api/activity-log?subject_type=PatientWatcher')->assertOk();
 
     expect($response->json('data.0.subject_label'))->toBe('PatientWatcher: Maria Cruz');
+});
+
+it('gracefully handles legacy activity log rows whose subject model class was removed', function () {
+    Sanctum::actingAs(auditUser('MSS Head'));
+
+    Activity::create([
+        'log_name' => 'default',
+        'description' => 'deleted',
+        'subject_type' => 'App\\Models\\AssistanceSource',
+        'subject_id' => 999,
+        'causer_type' => User::class,
+        'causer_id' => $this->worker->id,
+        'properties' => ['attributes' => ['name' => 'Old Source']],
+    ]);
+
+    $response = $this->getJson('/api/activity-log?subject_type=AssistanceSource')->assertOk();
+
+    expect($response->json('data.0.subject_type'))->toBe('AssistanceSource')
+        ->and($response->json('data.0.subject_label'))->toBe('AssistanceSource');
 });
 
 describe('the protective-case filter', function () {
