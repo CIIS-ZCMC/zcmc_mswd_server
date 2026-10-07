@@ -40,43 +40,52 @@ export const DeleteLookupDialog: React.FC<DeleteLookupDialogProps> = ({
 
   return (
     <AlertDialog open={open} onOpenChange={onOpenChange}>
-      <AlertDialogContent className="max-w-md">
-        <AlertDialogHeader>
-          <AlertDialogTitle className="flex items-center gap-2 text-destructive">
-            <AlertTriangle className="size-5" />
+      <AlertDialogContent className="max-w-lg p-6 sm:p-7">
+        <AlertDialogHeader className="space-y-2 border-b border-border/60 pb-3">
+          <AlertDialogTitle className="flex items-center gap-2.5 text-xl font-bold text-destructive">
+            <AlertTriangle className="size-6" />
             {title}
           </AlertDialogTitle>
           <AlertDialogDescription
             render={<div />}
-            className="space-y-3 pt-2 text-sm"
+            className="space-y-4 pt-2 text-base leading-relaxed text-foreground"
           >
             <p>
               Are you sure you want to delete{" "}
-              <strong className="text-foreground">"{itemName}"</strong>?
+              <strong className="font-bold text-foreground underline">
+                "{itemName}"
+              </strong>
+              ?
             </p>
 
             {usageCount > 0 && (
               <Alert
                 variant="destructive"
-                className="border-amber-500/30 bg-amber-500/10 text-amber-900 dark:text-amber-200"
+                className="rounded-xl border-amber-500/40 bg-amber-500/10 p-4 text-amber-950 dark:text-amber-200"
               >
-                <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
-                <AlertTitle className="text-xs font-bold">
-                  Item is currently in use
+                <AlertTriangle className="mt-0.5 size-5 text-amber-600 dark:text-amber-400" />
+                <AlertTitle className="text-sm font-bold">
+                  Warning: Item is currently used in {usageCount} record
+                  {usageCount === 1 ? "" : "s"}
                 </AlertTitle>
-                <AlertDescription className="mt-1 text-xs leading-relaxed">
-                  This item is linked to <strong>{usageCount}</strong>{" "}
-                  record(s). Deleting it may cause historical records to lose
-                  their reference. We strongly recommend deactivating it
-                  instead.
+                <AlertDescription className="mt-1.5 text-xs leading-relaxed font-medium">
+                  Deleting this option removes it from every dropdown. Records
+                  that already use it keep showing it. If you only want to stop
+                  new records from selecting it, click{" "}
+                  <strong>Deactivate Instead</strong>.
                 </AlertDescription>
               </Alert>
             )}
           </AlertDialogDescription>
         </AlertDialogHeader>
 
-        <AlertDialogFooter className="flex-col gap-2 pt-2 sm:flex-row">
-          <AlertDialogCancel disabled={isBusy}>Cancel</AlertDialogCancel>
+        <AlertDialogFooter className="flex-col gap-3 pt-3 sm:flex-row sm:justify-end">
+          <AlertDialogCancel
+            disabled={isBusy}
+            className="h-11 rounded-lg px-5 text-sm font-bold"
+          >
+            Cancel
+          </AlertDialogCancel>
 
           {usageCount > 0 && onDeactivate && (
             <Button
@@ -84,12 +93,12 @@ export const DeleteLookupDialog: React.FC<DeleteLookupDialogProps> = ({
               variant="outline"
               onClick={onDeactivate}
               disabled={isBusy}
-              className="border-amber-500/40 text-amber-700 hover:bg-amber-50 dark:text-amber-300 dark:hover:bg-amber-950/40"
+              className="h-11 gap-2 rounded-lg border-amber-500/50 px-5 text-sm font-bold text-amber-800 hover:bg-amber-100/50 dark:text-amber-300 dark:hover:bg-amber-950/50"
             >
               {isDeactivating ? (
-                <Loader2 className="mr-1.5 size-4 animate-spin" />
+                <Loader2 className="size-4.5 animate-spin" />
               ) : (
-                <PowerOff className="mr-1.5 size-4" />
+                <PowerOff className="size-4.5" />
               )}
               Deactivate Instead
             </Button>
@@ -101,12 +110,12 @@ export const DeleteLookupDialog: React.FC<DeleteLookupDialogProps> = ({
               onConfirmDelete()
             }}
             disabled={isBusy}
-            className="text-destructive-foreground bg-destructive hover:bg-destructive/90"
+            className="text-destructive-foreground h-11 gap-2 rounded-lg bg-destructive px-5 text-sm font-bold shadow-xs hover:bg-destructive/90"
           >
             {isDeleting ? (
-              <Loader2 className="mr-1.5 size-4 animate-spin" />
+              <Loader2 className="size-4.5 animate-spin" />
             ) : (
-              <Trash2 className="mr-1.5 size-4" />
+              <Trash2 className="size-4.5" />
             )}
             Delete
           </AlertDialogAction>
