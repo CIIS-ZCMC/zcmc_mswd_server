@@ -4,6 +4,7 @@ namespace App\Filament\Resources\AssistanceSources\Pages;
 
 use App\Filament\Resources\AssistanceSources\AssistanceSourceResource;
 use Filament\Actions\DeleteAction;
+use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
 class EditAssistanceSource extends EditRecord
@@ -14,6 +15,7 @@ class EditAssistanceSource extends EditRecord
     {
         return [
             DeleteAction::make(),
+            RestoreAction::make(),
         ];
     }
 }
