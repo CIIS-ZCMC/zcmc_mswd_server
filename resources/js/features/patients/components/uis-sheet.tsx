@@ -29,13 +29,15 @@ import {
   getClassificationBadgeText,
 } from "@/features/cases/lib/classification"
 import {
-  FUND_SOURCE_OPTIONS,
   HOUSE_TENURE_OPTIONS,
   LIGHT_SOURCE_OPTIONS,
-  RECOMMENDATION_MODE_OPTIONS,
   WATER_SOURCE_OPTIONS,
   labelFor,
 } from "@/features/cases/lib/assessment-constants"
+import {
+  useFundSourceOptions,
+  useModeOfAssistanceOptions,
+} from "@/features/library/hooks/use-lookup-options"
 import { MISSING_SECTION_LABELS } from "@/features/cases/lib/uis-labels"
 import { MswdClassificationCard } from "@/features/cases/components/mswd-classification-card"
 import { UisPrintHistoryTable } from "@/features/cases/components/uis-print-history-table"
@@ -87,6 +89,8 @@ export const UisSheet: React.FC<UisSheetProps> = ({
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
   const deleteAssessmentMutation = useDeleteAssessment(row.case.id)
+  const { data: modeOptions = [] } = useModeOfAssistanceOptions(false)
+  const { data: fundSourceOptions = [] } = useFundSourceOptions(false)
 
   const { case: caseData, uis } = row
   const assessment = uis.assessment
@@ -744,13 +748,13 @@ export const UisSheet: React.FC<UisSheetProps> = ({
                 <div>
                   <span className="text-muted-foreground font-medium block">Mode of Assistance</span>
                   <span className="font-bold text-foreground">
-                    {labelFor(RECOMMENDATION_MODE_OPTIONS, assessment?.recommendationMode) || "—"}
+                    {labelFor(modeOptions, assessment?.recommendationMode) || "—"}
                   </span>
                 </div>
                 <div>
                   <span className="text-muted-foreground font-medium block">Fund Source</span>
                   <span className="font-bold text-foreground">
-                    {labelFor(FUND_SOURCE_OPTIONS, assessment?.fundSource) || "—"}
+                    {labelFor(fundSourceOptions, assessment?.fundSource) || "—"}
                   </span>
                 </div>
               </div>

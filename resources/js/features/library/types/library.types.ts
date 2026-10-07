@@ -1,0 +1,80 @@
+/**
+ * Types for the Library Settings module (Lookups management).
+ */
+
+export interface ApiAssessmentLookup {
+  id: number
+  name: string
+  code: string
+  is_active: boolean
+  sort_order: number
+  usage_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface AssessmentLookup {
+  id: number
+  name: string
+  code: string
+  isActive: boolean
+  sortOrder: number
+  usageCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApiSaveAssessmentLookupPayload {
+  name: string
+  code: string
+  is_active?: boolean
+  sort_order?: number
+}
+
+export interface SaveAssessmentLookupInput {
+  name: string
+  code: string
+  isActive?: boolean
+  sortOrder?: number
+}
+
+export interface ApiGuarantor {
+  id: number
+  name: string
+  address?: string | null
+  is_active: boolean
+  usage_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+export interface Guarantor {
+  id: number
+  name: string
+  address: string | null
+  isActive: boolean
+  usageCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApiSaveGuarantorPayload {
+  name: string
+  address?: string | null
+  is_active?: boolean
+}
+
+export interface SaveGuarantorInput {
+  name: string
+  address?: string | null
+  isActive?: boolean
+}
+
+export interface LookupOption {
+  value: string
+  label: string
+  isActive?: boolean
+}
+
+export type LibraryTabKey =
+  "guarantors" | "mode-of-assistance" | "fund-sources" | "assistance-sources"
