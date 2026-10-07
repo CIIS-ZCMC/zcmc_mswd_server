@@ -12,9 +12,11 @@ use App\Models\Concerns\Auditable;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticReport;
 use App\Models\Document;
+use App\Models\FundSource;
 use App\Models\Guarantor;
 use App\Models\Intervention;
 use App\Models\InterventionType;
+use App\Models\ModeOfAssistance;
 use App\Models\Patient;
 use App\Models\PatientAssistance;
 use App\Models\PatientAssistanceLog;
@@ -62,6 +64,8 @@ $audited = [
     Document::class,
     Guarantor::class,
     AssistanceSource::class,
+    ModeOfAssistance::class,
+    FundSource::class,
 ];
 
 it('records an audit trail on every model the caretake module covers', function (string $model) {

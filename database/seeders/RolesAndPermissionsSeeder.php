@@ -76,6 +76,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'reports.generate',
         // Reference / lookup data
         'settings.manage',
+        // In-app Library: modes of assistance and fund sources offered on the UIS
+        'library.manage',
         // Access administration
         'users.view',
         'users.manage',
@@ -102,6 +104,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
             'settings.manage',
+            'library.manage',
             'users.view',
             'panel.access',
         ],
@@ -114,6 +117,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'guarantee.view', 'guarantee.create', 'guarantee.update',
             'audit.view',
             'reports.view', 'reports.generate',
+            'library.manage',
             'panel.access',
         ],
         'Case Manager' => [
