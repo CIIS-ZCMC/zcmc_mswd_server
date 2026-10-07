@@ -67,14 +67,20 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'AssessmentLookup',
-    description: 'A UIS mode of assistance or fund source. Assessments store `code`.',
+    description: 'A mode of assistance or fund source. Assessments store `code`; guarantee breakdown lines store the fund source id.',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'name', type: 'string'),
         new OA\Property(property: 'code', type: 'string'),
         new OA\Property(property: 'is_active', type: 'boolean'),
         new OA\Property(property: 'sort_order', type: 'integer'),
-        new OA\Property(property: 'usage_count', type: 'integer', description: 'Assessments that store this code.'),
+        new OA\Property(property: 'requires_specify', type: 'boolean', description: 'Fund sources only: a breakdown line using it must say what it is.'),
+        new OA\Property(property: 'usage_count', type: 'integer', description: 'Assessments plus guarantee breakdown lines.'),
+        new OA\Property(property: 'usage', properties: [
+            new OA\Property(property: 'assessments', type: 'integer'),
+            new OA\Property(property: 'guarantee_lines', type: 'integer'),
+        ], type: 'object'),
+        new OA\Property(property: 'code_locked', type: 'boolean', description: 'True while an assessment stores the code.'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
     ],
@@ -88,6 +94,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'code', type: 'string', maxLength: 64, pattern: '^[a-z0-9_]+$'),
         new OA\Property(property: 'is_active', type: 'boolean'),
         new OA\Property(property: 'sort_order', type: 'integer', minimum: 0),
+        new OA\Property(property: 'requires_specify', type: 'boolean', description: 'Fund sources only.'),
     ],
 )]
 #[OA\Schema(

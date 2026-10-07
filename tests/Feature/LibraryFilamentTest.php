@@ -67,7 +67,7 @@ it('lists the seeded rows with how many assessments use them', function (string 
 
     Livewire::test($list)
         ->assertOk()
-        ->assertCanSeeTableRecords($model::ordered()->get())
+        ->assertCanSeeTableRecords($model::ordered()->limit(10)->get()) // first page
         ->assertTableColumnStateSet('usage_count', 1, $model::where('code', $code)->firstOrFail());
 })->with('assessment lookups');
 
