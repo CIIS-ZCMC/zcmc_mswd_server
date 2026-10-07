@@ -2,7 +2,9 @@
 
 namespace App\Services;
 
+use App\Models\AssistanceSource;
 use App\Models\Bizbox\PatientTransaction;
+use App\Models\FundSource;
 use App\Models\Patient;
 use App\Models\PatientGuarantee;
 use Illuminate\Database\Eloquent\Collection;
@@ -135,9 +137,31 @@ class PatientGuaranteeService
         foreach ($items as $item) {
             $guarantee->items()->create([
                 'assistance_source_id' => $item['assistance_source_id'],
+                'fund_source_id' => $this->fundSourceFor((int) $item['assistance_source_id']),
                 'others_specify' => $item['others_specify'] ?? null,
                 'amount' => $item['amount'],
             ]);
         }
+    }
+
+    /**
+     * The fund source an assistance source was merged into (same code, else same name).
+     * Bridges the breakdown form until lines are entered with a fund source directly.
+     */
+    private function fundSourceFor(int $assistanceSourceId): ?int
+    {
+        $source = AssistanceSource::withTrashed()->find($assistanceSourceId);
+
+        if ($source === null) {
+            return null;
+        }
+
+        $byCode = filled($source->code)
+            ? FundSource::withTrashed()->where('code', $source->code)->value('id')
+            : null;
+
+        return $byCode ?? FundSource::withTrashed()
+            ->whereRaw('lower(name) = ?', [mb_strtolower(trim($source->name))])
+            ->value('id');
     }
 }

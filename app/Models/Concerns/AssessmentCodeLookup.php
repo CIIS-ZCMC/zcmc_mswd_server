@@ -3,17 +3,25 @@
 namespace App\Models\Concerns;
 
 use App\Models\Assessment;
+use App\Models\PatientGuaranteeItem;
 use Illuminate\Database\Eloquent\Builder;
 
 /**
  * A Library list whose `code` assessments store as a plain string (no foreign key) in
- * the column named by assessmentColumn(). Gives the list its dropdown order and a
- * usage count, and resolves a stored code back to its name.
+ * the column named by assessmentColumn(). Guarantee breakdown lines may also point at
+ * a row by id, through guaranteeItemColumn(). Gives the list its dropdown order and
+ * usage counts, and resolves a stored code back to its name.
  */
 trait AssessmentCodeLookup
 {
     /** The assessments column that stores this list's code. */
     abstract public static function assessmentColumn(): string;
+
+    /** The patient_guarantee_items column that stores this list's id, if any. */
+    public static function guaranteeItemColumn(): ?string
+    {
+        return null;
+    }
 
     /** Dropdown order: sort order, then name. */
     public function scopeOrdered(Builder $query): Builder
@@ -21,19 +29,41 @@ trait AssessmentCodeLookup
         return $query->orderBy('sort_order')->orderBy('name');
     }
 
-    /** Adds `usage_count`: how many assessments store this row's code. */
+    /**
+     * Adds `assessments_usage` (assessments storing this row's code) and
+     * `guarantee_lines_usage` (breakdown lines pointing at it); `usage_count` is their sum.
+     */
     public function scopeWithUsageCount(Builder $query): Builder
     {
         $table = $this->getTable();
+        $itemColumn = static::guaranteeItemColumn();
 
-        return $query
-            ->select("{$table}.*")
+        $query->select("{$table}.*")
             ->selectSub(
                 Assessment::query()
                     ->selectRaw('count(*)')
                     ->whereColumn(static::assessmentColumn(), "{$table}.code"),
-                'usage_count',
+                'assessments_usage',
             );
+
+        return $itemColumn === null
+            ? $query->selectRaw('0 as guarantee_lines_usage')
+            : $query->selectSub(
+                PatientGuaranteeItem::query()
+                    ->selectRaw('count(*)')
+                    ->whereColumn($itemColumn, "{$table}.id"),
+                'guarantee_lines_usage',
+            );
+    }
+
+    /** Assessments plus breakdown lines, when selected withUsageCount(); null otherwise. */
+    public function getUsageCountAttribute(): ?int
+    {
+        if (! array_key_exists('assessments_usage', $this->attributes)) {
+            return null;
+        }
+
+        return (int) $this->attributes['assessments_usage'] + (int) ($this->attributes['guarantee_lines_usage'] ?? 0);
     }
 
     /**
@@ -53,8 +83,11 @@ trait AssessmentCodeLookup
             ->all();
     }
 
-    /** How many assessments store this row's code. */
-    public function usageCount(): int
+    /**
+     * How many assessments store this row's code. This alone locks the code: breakdown
+     * lines store the id, so a code change never orphans them.
+     */
+    public function assessmentUsageCount(): int
     {
         return Assessment::query()->where(static::assessmentColumn(), $this->code)->count();
     }

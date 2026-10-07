@@ -16,6 +16,7 @@ class PatientGuaranteeItem extends Model
     protected $fillable = [
         'patient_guarantee_id',
         'assistance_source_id',
+        'fund_source_id',
         'others_specify',
         'amount',
     ];
@@ -36,6 +37,12 @@ class PatientGuaranteeItem extends Model
     public function source(): BelongsTo
     {
         return $this->belongsTo(AssistanceSource::class, 'assistance_source_id')->withTrashed();
+    }
+
+    /** Who pays for this line. Includes a deleted fund source, so an old line still shows it. */
+    public function fundSource(): BelongsTo
+    {
+        return $this->belongsTo(FundSource::class)->withTrashed();
     }
 
     /**

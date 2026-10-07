@@ -30,6 +30,9 @@ abstract class AssessmentLookupResource extends Resource
 
     protected static ?string $recordTitleAttribute = 'name';
 
+    /** Whether the list has the "Requires specify" flag (fund sources). */
+    protected static bool $hasRequiresSpecify = false;
+
     public static function form(Schema $schema): Schema
     {
         return $schema
@@ -45,7 +48,7 @@ abstract class AssessmentLookupResource extends Resource
                     ->validationMessages(['regex' => 'Use lowercase letters, numbers and underscores only.'])
                     ->unique(ignoreRecord: true)
                     ->helperText('What assessments store. It cannot change once an assessment uses it.')
-                    ->disabled(fn (?Model $record) => $record !== null && $record->usageCount() > 0),
+                    ->disabled(fn (?Model $record) => $record !== null && $record->assessmentUsageCount() > 0),
                 TextInput::make('sort_order')
                     ->numeric()
                     ->integer()
@@ -53,6 +56,10 @@ abstract class AssessmentLookupResource extends Resource
                     ->maxValue(65535)
                     ->default(0)
                     ->helperText('Lower numbers come first in the dropdown.'),
+                Toggle::make('requires_specify')
+                    ->label('Requires specify')
+                    ->helperText('Breakdown lines with this option must say what it is (e.g. "Others").')
+                    ->visible(static::$hasRequiresSpecify),
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true)
@@ -74,6 +81,10 @@ abstract class AssessmentLookupResource extends Resource
                 TextColumn::make('sort_order')
                     ->label('Order')
                     ->sortable(),
+                IconColumn::make('requires_specify')
+                    ->label('Requires specify')
+                    ->boolean()
+                    ->visible(static::$hasRequiresSpecify),
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),

@@ -22,6 +22,8 @@ class FundSourceResource extends AssessmentLookupResource
 
     protected static ?int $navigationSort = 4;
 
+    protected static bool $hasRequiresSpecify = true;
+
     protected static ?string $modelLabel = 'fund source';
 
     protected static ?string $pluralModelLabel = 'fund sources';

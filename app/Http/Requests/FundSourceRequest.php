@@ -14,4 +14,11 @@ class FundSourceRequest extends AssessmentLookupRequest
     {
         return 'fundSource';
     }
+
+    protected function extraRules(): array
+    {
+        return [
+            'requires_specify' => ['sometimes', 'boolean'],
+        ];
+    }
 }

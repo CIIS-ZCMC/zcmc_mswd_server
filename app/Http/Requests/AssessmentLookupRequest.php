@@ -46,14 +46,25 @@ abstract class AssessmentLookupRequest extends FormRequest
                 'regex:/^[a-z0-9_]+$/',
                 Rule::unique($this->table(), 'code')->ignore($current),
                 function (string $attribute, mixed $value, Closure $fail) use ($current, $isUpdate) {
-                    if ($isUpdate && $value !== $current->code && $current->usageCount() > 0) {
+                    if ($isUpdate && $value !== $current->code && $current->assessmentUsageCount() > 0) {
                         $fail('The code cannot change while assessments use it.');
                     }
                 },
             ],
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0', 'max:65535'],
+            ...$this->extraRules(),
         ];
+    }
+
+    /**
+     * Fields only one list has.
+     *
+     * @return array<string, array<mixed>>
+     */
+    protected function extraRules(): array
+    {
+        return [];
     }
 
     /**
