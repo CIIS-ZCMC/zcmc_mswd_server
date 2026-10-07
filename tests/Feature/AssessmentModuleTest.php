@@ -2,7 +2,8 @@
 
 use App\Models\Assessment;
 use App\Models\CaseModel;
-use App\Models\MswdClassificationMatrix;
+use App\Models\FundSource;
+use App\Models\ModeOfAssistance;
 use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\User;
@@ -121,7 +122,6 @@ it('promotes an intake assessment to a social case study report draft', function
     expect($assessment->fresh()->social_case_status)->toBe('draft');
 });
 
-
 it('keeps the whole re-assessment chain append-only and linked', function () {
     $first = Assessment::create([
         'case_id' => $this->case->id, 'created_by' => $this->worker->id,
@@ -231,6 +231,58 @@ it('validates the mode of assistance and fund source vocabularies', function () 
     $this->postJson("/api/cases/{$this->case->id}/assessments", [
         'recommendation_mode' => 'hospital_discount', 'fund_source' => 'maip',
     ])->assertCreated();
+});
+
+it('reads the mode of assistance and fund source options from the Library', function () {
+    ModeOfAssistance::create(['name' => 'Burial Aid', 'code' => 'burial_aid']);
+    FundSource::create(['name' => 'City Fund', 'code' => 'city_fund']);
+
+    $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'recommendation_mode' => 'burial_aid', 'fund_source' => 'city_fund',
+    ])->assertCreated()
+        ->assertJsonPath('data.recommendation_mode', 'burial_aid')
+        ->assertJsonPath('data.fund_source', 'city_fund');
+});
+
+it('rejects a retired or deleted option on a new assessment', function () {
+    ModeOfAssistance::where('code', 'referral')->update(['is_active' => false]);
+    FundSource::where('code', 'ngo')->delete();
+
+    $this->postJson("/api/cases/{$this->case->id}/assessments", [
+        'recommendation_mode' => 'referral', 'fund_source' => 'ngo',
+    ])->assertUnprocessable()->assertJsonValidationErrors(['recommendation_mode', 'fund_source']);
+});
+
+it('keeps saving an assessment whose option was retired since', function () {
+    $assessment = Assessment::create([
+        'case_id' => $this->case->id, 'created_by' => $this->worker->id, 'classification' => 'B',
+        'recommendation_mode' => 'referral', 'fund_source' => 'ngo',
+    ]);
+    ModeOfAssistance::where('code', 'referral')->update(['is_active' => false]);
+    FundSource::where('code', 'ngo')->delete();
+
+    $this->putJson("/api/assessments/{$assessment->id}", [
+        'recommendation_mode' => 'referral', 'fund_source' => 'ngo', 'assessment_notes' => 'Still fine',
+    ])->assertOk();
+
+    // Only the value it already stores is grandfathered.
+    $this->putJson("/api/assessments/{$assessment->id}", ['recommendation_mode' => 'counseling', 'fund_source' => 'pcso'])
+        ->assertOk();
+    $this->putJson("/api/assessments/{$assessment->id}", ['recommendation_mode' => 'referral'])
+        ->assertUnprocessable()->assertJsonValidationErrors('recommendation_mode');
+});
+
+it('offers active options plus the stored one to forms, and resolves stored codes to names', function () {
+    ModeOfAssistance::where('code', 'referral')->update(['is_active' => false]);
+    FundSource::where('code', 'ngo')->delete();
+
+    expect(ModeOfAssistance::options())->not->toHaveKey('referral')
+        ->and(ModeOfAssistance::options('referral'))->toHaveKey('referral')
+        ->and(FundSource::options('ngo'))->toHaveKey('ngo')
+        ->and(FundSource::labelFor('ngo'))->toBe('NGO')
+        ->and(ModeOfAssistance::labelFor('referral'))->toBe('Referral')
+        ->and(ModeOfAssistance::labelFor('typed by hand'))->toBe('typed by hand')
+        ->and(FundSource::labelFor(null))->toBeNull();
 });
 
 it('lists assessments newest first even when created in the same second', function () {

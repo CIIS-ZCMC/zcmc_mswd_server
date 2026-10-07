@@ -36,6 +36,23 @@ trait AssessmentCodeLookup
             );
     }
 
+    /**
+     * Select options (code => name) for a form: the active rows, plus `$keep` (the value
+     * the record already stores) so a retired option stays visible on the records using it.
+     *
+     * @return array<string, string>
+     */
+    public static function options(?string $keep = null): array
+    {
+        return static::withTrashed()
+            ->where(fn (Builder $query) => $query
+                ->where(fn (Builder $live) => $live->where('is_active', true)->whereNull('deleted_at'))
+                ->when($keep, fn (Builder $q) => $q->orWhere('code', $keep)))
+            ->ordered()
+            ->pluck('name', 'code')
+            ->all();
+    }
+
     /** How many assessments store this row's code. */
     public function usageCount(): int
     {
