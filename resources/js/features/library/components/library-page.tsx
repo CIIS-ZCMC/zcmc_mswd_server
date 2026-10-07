@@ -1,18 +1,22 @@
 import React, { useState } from "react"
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { BookOpen, Building, Coins, Info, Sparkles, Wallet } from "lucide-react"
+import { BookOpen, Info } from "lucide-react"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import {
+  useAssistantTypes,
+  useCreateAssistantType,
   useCreateFundSource,
   useCreateGuarantor,
   useCreateModeOfAssistance,
+  useDeleteAssistantType,
   useDeleteFundSource,
   useDeleteGuarantor,
   useDeleteModeOfAssistance,
   useFundSources,
   useGuarantors,
   useModeOfAssistances,
+  useUpdateAssistantType,
   useUpdateFundSource,
   useUpdateGuarantor,
   useUpdateModeOfAssistance,
@@ -26,12 +30,27 @@ import {
 import { LookupTable } from "./lookup-table"
 import type { LookupFormItem } from "./dialogs/lookup-item-dialog"
 import type { LibraryTabKey } from "../types"
+import { LIBRARY_TABS, getTabConfig } from "../lib/library-tabs"
 
 export const LibraryPage: React.FC = () => {
   const [activeTab, setActiveTab] = useState<LibraryTabKey>("guarantors")
 
   const canManageLibrary = usePermission("library.manage")
   const canManageGuarantees = usePermission("guarantee.create")
+
+  // Guarantors
+  const { data: guarantors = [], isLoading: guarantorsLoading } =
+    useGuarantors(false)
+  const createGuarantorMut = useCreateGuarantor()
+  const updateGuarantorMut = useUpdateGuarantor()
+  const deleteGuarantorMut = useDeleteGuarantor()
+
+  // Types of Assistance
+  const { data: assistantTypes = [], isLoading: assistantTypesLoading } =
+    useAssistantTypes(false)
+  const createAssistantTypeMut = useCreateAssistantType()
+  const updateAssistantTypeMut = useUpdateAssistantType()
+  const deleteAssistantTypeMut = useDeleteAssistantType()
 
   // Modes of Assistance
   const { data: modes = [], isLoading: modesLoading } =
@@ -47,19 +66,27 @@ export const LibraryPage: React.FC = () => {
   const updateFund = useUpdateFundSource()
   const deleteFund = useDeleteFundSource()
 
-  // Guarantors
-  const { data: guarantors = [], isLoading: guarantorsLoading } =
-    useGuarantors(false)
-  const createGuarantorMut = useCreateGuarantor()
-  const updateGuarantorMut = useUpdateGuarantor()
-  const deleteGuarantorMut = useDeleteGuarantor()
-
-  // Assistance Sources (Guarantor Breakdown Types)
+  // Assistance Sources (Legacy tab being merged into Fund Sources)
   const { data: assistanceSources = [], isLoading: assistanceSourcesLoading } =
     useAssistanceSources(false)
   const createAssistanceSourceMut = useCreateAssistanceSource()
   const updateAssistanceSourceMut = useUpdateAssistanceSource()
   const deleteAssistanceSourceMut = useDeleteAssistanceSource()
+
+  const getTabCount = (key: LibraryTabKey) => {
+    switch (key) {
+      case "guarantors":
+        return guarantors.length
+      case "assistance-types":
+        return assistantTypes.length
+      case "mode-of-assistance":
+        return modes.length
+      case "fund-sources":
+        return fundSources.length
+      case "assistance-sources":
+        return assistanceSources.length
+    }
+  }
 
   return (
     <div className="flex h-full flex-col overflow-hidden bg-background">
@@ -74,8 +101,8 @@ export const LibraryPage: React.FC = () => {
               Library Settings
             </h1>
             <p className="mt-0.5 text-sm text-muted-foreground">
-              Manage system lookups, assessment recommendations, fund sources,
-              and guarantor master lists.
+              Manage system lookups, types of assistance, modes of assistance,
+              fund sources, and guarantor master lists.
             </p>
           </div>
         </div>
@@ -88,35 +115,22 @@ export const LibraryPage: React.FC = () => {
           onValueChange={(v) => setActiveTab(v as LibraryTabKey)}
           className="space-y-6"
         >
-          <TabsList className="h-13 rounded-xl border border-border/70 bg-muted/40 p-1.5">
-            <TabsTrigger
-              value="guarantors"
-              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
-            >
-              <Building className="size-4" />
-              Guarantors ({guarantors.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="mode-of-assistance"
-              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
-            >
-              <Sparkles className="size-4" />
-              Mode of Assistance ({modes.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="fund-sources"
-              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
-            >
-              <Wallet className="size-4" />
-              Fund Sources ({fundSources.length})
-            </TabsTrigger>
-            <TabsTrigger
-              value="assistance-sources"
-              className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:shadow-xs"
-            >
-              <Coins className="size-4" />
-              Assistance Sources ({assistanceSources.length})
-            </TabsTrigger>
+          {/* Tabs Navigation */}
+          <TabsList className="h-auto flex-wrap gap-1.5 rounded-xl border border-border/70 bg-muted/40 p-1.5">
+            {LIBRARY_TABS.map((tab) => {
+              const TabIcon = tab.icon
+              const count = getTabCount(tab.key)
+              return (
+                <TabsTrigger
+                  key={tab.key}
+                  value={tab.key}
+                  className="gap-2.5 rounded-lg px-4 py-2.5 text-sm font-bold data-[state=active]:bg-background data-[state=active]:text-foreground data-[state=active]:shadow-xs"
+                >
+                  <TabIcon className="size-4" />
+                  {tab.label} ({count})
+                </TabsTrigger>
+              )
+            })}
           </TabsList>
 
           {/* Guarantors Tab */}
@@ -136,10 +150,7 @@ export const LibraryPage: React.FC = () => {
             </Alert>
 
             <LookupTable
-              type="guarantor"
-              title="Guarantors"
-              singularTitle="Guarantor"
-              description="External guarantee and assistance agencies (MAIFIP, PCSO, DSWD, etc.)"
+              tabConfig={getTabConfig("guarantors")}
               items={guarantors}
               isLoading={guarantorsLoading}
               canManage={canManageGuarantees}
@@ -167,6 +178,56 @@ export const LibraryPage: React.FC = () => {
             />
           </TabsContent>
 
+          {/* Types of Assistance Tab */}
+          <TabsContent
+            value="assistance-types"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
+          >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Types of Assistance
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                Assistance line item types (Medicines, Hospital Bills,
+                Laboratory / Diagnostics, Medical Supplies / Devices) used
+                across patient assistance records and guarantee breakdowns.
+              </AlertDescription>
+            </Alert>
+
+            <LookupTable
+              tabConfig={getTabConfig("assistance-types")}
+              items={assistantTypes}
+              isLoading={assistantTypesLoading}
+              canManage={canManageLibrary}
+              onSave={async (data: LookupFormItem) => {
+                if (data.id) {
+                  await updateAssistantTypeMut.mutateAsync({
+                    id: data.id,
+                    input: {
+                      name: data.name,
+                      code: data.code || "",
+                      category: data.category || "medical",
+                      description: data.description,
+                      isActive: data.isActive,
+                    },
+                  })
+                } else {
+                  await createAssistantTypeMut.mutateAsync({
+                    name: data.name,
+                    code: data.code || "",
+                    category: data.category || "medical",
+                    description: data.description,
+                    isActive: data.isActive,
+                  })
+                }
+              }}
+              onDelete={async (id: number) => {
+                await deleteAssistantTypeMut.mutateAsync(id)
+              }}
+            />
+          </TabsContent>
+
           {/* Mode of Assistance Tab */}
           <TabsContent
             value="mode-of-assistance"
@@ -178,17 +239,14 @@ export const LibraryPage: React.FC = () => {
                 About Modes of Assistance
               </AlertTitle>
               <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
-                Standard assistance recommendation modes (e.g. Financial
-                Assistance, Medical Assistance, Counseling) selected during
-                social worker intake and printed on UIS Section V.
+                How assistance is given (e.g. Financial Assistance, Medical
+                Assistance, Counseling, Referral), chosen during the intake
+                assessment and on guarantee breakdown lines.
               </AlertDescription>
             </Alert>
 
             <LookupTable
-              type="mode_of_assistance"
-              title="Modes of Assistance"
-              singularTitle="Mode of Assistance"
-              description="Intake assessment and UIS Section V mode of assistance options."
+              tabConfig={getTabConfig("mode-of-assistance")}
               items={modes}
               isLoading={modesLoading}
               canManage={canManageLibrary}
@@ -199,7 +257,7 @@ export const LibraryPage: React.FC = () => {
                     input: {
                       name: data.name,
                       code: data.code || "",
-                      sortOrder: data.sortOrder,
+                      sortOrder: data.sortOrder ?? 0,
                       isActive: data.isActive,
                     },
                   })
@@ -207,7 +265,7 @@ export const LibraryPage: React.FC = () => {
                   await createMode.mutateAsync({
                     name: data.name,
                     code: data.code || "",
-                    sortOrder: data.sortOrder,
+                    sortOrder: data.sortOrder ?? 0,
                     isActive: data.isActive,
                   })
                 }
@@ -229,17 +287,15 @@ export const LibraryPage: React.FC = () => {
                 About Fund Sources
               </AlertTitle>
               <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
-                Funding source allocations (e.g. MSWD, MAIP, Malasakit Center,
-                PCSO) assigned to recommended assistance on the Unified Intake
-                Sheet.
+                Official funding sources and breakdown allocations (MSWD, City
+                Mayor, Congressional, Senatorial, PCSO, Malasakit). Includes
+                specify requirements for flexible funds like
+                &ldquo;Others&rdquo;.
               </AlertDescription>
             </Alert>
 
             <LookupTable
-              type="fund_source"
-              title="Fund Sources"
-              singularTitle="Fund Source"
-              description="Intake assessment and UIS Section V funding source options."
+              tabConfig={getTabConfig("fund-sources")}
               items={fundSources}
               isLoading={fundSourcesLoading}
               canManage={canManageLibrary}
@@ -250,7 +306,8 @@ export const LibraryPage: React.FC = () => {
                     input: {
                       name: data.name,
                       code: data.code || "",
-                      sortOrder: data.sortOrder,
+                      sortOrder: data.sortOrder ?? 0,
+                      requiresSpecify: data.requiresSpecify ?? undefined,
                       isActive: data.isActive,
                     },
                   })
@@ -258,7 +315,8 @@ export const LibraryPage: React.FC = () => {
                   await createFund.mutateAsync({
                     name: data.name,
                     code: data.code || "",
-                    sortOrder: data.sortOrder,
+                    sortOrder: data.sortOrder ?? 0,
+                    requiresSpecify: data.requiresSpecify ?? undefined,
                     isActive: data.isActive,
                   })
                 }
@@ -269,28 +327,26 @@ export const LibraryPage: React.FC = () => {
             />
           </TabsContent>
 
-          {/* Assistance Sources Tab */}
+          {/* Assistance Sources Tab (Legacy notice) */}
           <TabsContent
             value="assistance-sources"
             className="mt-0 space-y-4 focus-visible:outline-hidden"
           >
-            <Alert className="border-primary/20 bg-primary/5 text-foreground">
-              <Info className="size-5 text-primary" />
-              <AlertTitle className="text-sm font-bold">
-                About Assistance Sources (Breakdown Types)
+            <Alert className="border-amber-500/30 bg-amber-500/10 text-foreground">
+              <Info className="size-5 text-amber-600 dark:text-amber-400" />
+              <AlertTitle className="text-sm font-bold text-amber-800 dark:text-amber-300">
+                Notice: Being Merged into Fund Sources
               </AlertTitle>
               <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
-                Line-item categories (e.g. Medicines, Hospital Bills, Laboratory
-                / Diagnostics) used when recording itemized patient guarantee
-                breakdowns.
+                Assistance Sources are being unified with Fund Sources. This tab
+                remains temporarily available for backward compatibility with
+                existing guarantee records until the guarantee breakdown rewrite
+                is active.
               </AlertDescription>
             </Alert>
 
             <LookupTable
-              type="assistance_source"
-              title="Assistance Sources"
-              singularTitle="Assistance Source"
-              description="Breakdown assistance item types for patient guarantees (Medicines, Hospital Bills, Diagnostics, etc.)."
+              tabConfig={getTabConfig("assistance-sources")}
               items={assistanceSources}
               isLoading={assistanceSourcesLoading}
               canManage={canManageGuarantees}
@@ -301,7 +357,7 @@ export const LibraryPage: React.FC = () => {
                     input: {
                       name: data.name,
                       code: data.code,
-                      requiresSpecify: data.requiresSpecify,
+                      requiresSpecify: data.requiresSpecify ?? undefined,
                       isActive: data.isActive,
                     },
                   })
@@ -309,7 +365,7 @@ export const LibraryPage: React.FC = () => {
                   await createAssistanceSourceMut.mutateAsync({
                     name: data.name,
                     code: data.code,
-                    requiresSpecify: data.requiresSpecify,
+                    requiresSpecify: data.requiresSpecify ?? undefined,
                     isActive: data.isActive,
                   })
                 }

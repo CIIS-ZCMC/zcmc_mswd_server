@@ -1,25 +1,40 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
+  createAssistantType,
   createFundSource,
   createGuarantor,
   createModeOfAssistance,
+  deleteAssistantType,
   deleteFundSource,
   deleteGuarantor,
   deleteModeOfAssistance,
+  getAssistantTypes,
   getFundSources,
   getGuarantors,
   getModeOfAssistances,
+  updateAssistantType,
   updateFundSource,
   updateGuarantor,
   updateModeOfAssistance,
 } from "../api/library-api"
-import type { SaveAssessmentLookupInput, SaveGuarantorInput } from "../types"
+import type {
+  SaveAssessmentLookupInput,
+  SaveAssistantTypeInput,
+  SaveGuarantorInput,
+} from "../types"
 import { guarantorOptionKeys } from "@/features/guarantees/hooks/use-guarantor-options"
 import { assistanceSourceKeys } from "@/features/guarantees/hooks/use-assistance-sources"
 import { guaranteeKeys } from "@/features/guarantees/hooks/use-guarantees"
 
 export const libraryKeys = {
   all: ["library"] as const,
+  assistantTypes: {
+    all: ["library", "assistant-types"] as const,
+    list: (activeOnly: boolean) =>
+      [...libraryKeys.assistantTypes.all, "list", { activeOnly }] as const,
+    options: (activeOnly: boolean) =>
+      ["assistant-types", "options", { activeOnly }] as const,
+  },
   modes: {
     all: ["library", "modes"] as const,
     list: (activeOnly: boolean) =>
@@ -48,11 +63,59 @@ export function invalidateLibraryCaches(
   queryClient: ReturnType<typeof useQueryClient>
 ) {
   queryClient.invalidateQueries({ queryKey: libraryKeys.all })
+  queryClient.invalidateQueries({ queryKey: ["assistant-types"] })
   queryClient.invalidateQueries({ queryKey: ["mode-of-assistances"] })
   queryClient.invalidateQueries({ queryKey: ["fund-sources"] })
   queryClient.invalidateQueries({ queryKey: guarantorOptionKeys.all })
   queryClient.invalidateQueries({ queryKey: assistanceSourceKeys.all })
   queryClient.invalidateQueries({ queryKey: guaranteeKeys.all })
+}
+
+/**
+ * Types of Assistance Hooks
+ */
+export function useAssistantTypes(activeOnly = false, enabled = true) {
+  return useQuery({
+    queryKey: libraryKeys.assistantTypes.list(activeOnly),
+    queryFn: () => getAssistantTypes(activeOnly),
+    enabled,
+  })
+}
+
+export function useCreateAssistantType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SaveAssistantTypeInput) => createAssistantType(input),
+    onSuccess: () => {
+      invalidateLibraryCaches(queryClient)
+    },
+  })
+}
+
+export function useUpdateAssistantType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: number | string
+      input: SaveAssistantTypeInput
+    }) => updateAssistantType(id, input),
+    onSuccess: () => {
+      invalidateLibraryCaches(queryClient)
+    },
+  })
+}
+
+export function useDeleteAssistantType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => deleteAssistantType(id),
+    onSuccess: () => {
+      invalidateLibraryCaches(queryClient)
+    },
+  })
 }
 
 /**

@@ -1,20 +1,76 @@
 import { apiClient } from "@/lib/api-client"
 import type {
   ApiAssessmentLookup,
+  ApiAssistantType,
   ApiGuarantor,
   AssessmentLookup,
+  AssistantType,
   Guarantor,
   LookupOption,
   SaveAssessmentLookupInput,
+  SaveAssistantTypeInput,
   SaveGuarantorInput,
 } from "../types"
 import {
   toApiSaveAssessmentLookupPayload,
+  toApiSaveAssistantTypePayload,
   toApiSaveGuarantorPayload,
   toAssessmentLookup,
+  toAssistantType,
+  toAssistantTypeLookupOption,
   toGuarantor,
   toLookupOption,
 } from "./library-adapter"
+
+/**
+ * Types of Assistance API (/api/assistant-types)
+ */
+export async function getAssistantTypes(
+  activeOnly = false
+): Promise<AssistantType[]> {
+  const res = await apiClient.get<{ data: ApiAssistantType[] }>(
+    "/assistant-types",
+    {
+      params: activeOnly ? { active: 1 } : {},
+    }
+  )
+  const list = Array.isArray(res.data) ? res.data : []
+  return list.map(toAssistantType)
+}
+
+export async function createAssistantType(
+  input: SaveAssistantTypeInput
+): Promise<AssistantType> {
+  const payload = toApiSaveAssistantTypePayload(input)
+  const res = await apiClient.post<{ data: ApiAssistantType }>(
+    "/assistant-types",
+    payload
+  )
+  return toAssistantType(res.data)
+}
+
+export async function updateAssistantType(
+  id: number | string,
+  input: SaveAssistantTypeInput
+): Promise<AssistantType> {
+  const payload = toApiSaveAssistantTypePayload(input)
+  const res = await apiClient.put<{ data: ApiAssistantType }>(
+    `/assistant-types/${id}`,
+    payload
+  )
+  return toAssistantType(res.data)
+}
+
+export async function deleteAssistantType(id: number | string): Promise<void> {
+  await apiClient.delete(`/assistant-types/${id}`)
+}
+
+export async function getAssistantTypeOptions(
+  activeOnly = true
+): Promise<LookupOption[]> {
+  const items = await getAssistantTypes(activeOnly)
+  return items.map(toAssistantTypeLookupOption)
+}
 
 /**
  * Modes of Assistance API (/api/mode-of-assistances)
