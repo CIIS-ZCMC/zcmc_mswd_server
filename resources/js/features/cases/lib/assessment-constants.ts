@@ -40,26 +40,6 @@ export const PROBLEM_CATEGORY_OPTIONS = [
   { value: "other", label: "Other Needs" },
 ] as const
 
-export const RECOMMENDATION_MODE_OPTIONS = [
-  { value: "financial_assistance", label: "Financial Assistance" },
-  { value: "medical_assistance", label: "Medical / Diagnostic Assistance" },
-  { value: "counseling", label: "Counseling / Psychosocial Support" },
-  { value: "referral", label: "Referral to External Agency" },
-  { value: "hospital_discount", label: "Hospital Discount (MSWD Matrix)" },
-  { value: "other", label: "Other" },
-] as const
-
-export const FUND_SOURCE_OPTIONS = [
-  { value: "mswd", label: "MSWD Fund" },
-  { value: "maip", label: "MAIP (DOH)" },
-  { value: "malasakit", label: "Malasakit Center" },
-  { value: "pcso", label: "PCSO / Pagcor" },
-  { value: "lgu_dswd", label: "LGU / DSWD Assistance" },
-  { value: "ngo", label: "NGO / Private Donors" },
-  { value: "philhealth", label: "PhilHealth Benefit" },
-  { value: "personal", label: "Personal / Out of Pocket" },
-] as const
-
 export const MSWD_CLASSIFICATION_OPTIONS = [
   { value: "A", label: "Class A (Full Pay)" },
   { value: "B", label: "Class B (Partial Pay)" },
@@ -86,4 +66,25 @@ export function labelFor(
 ): string | null {
   if (!value) return null
   return options.find((o) => o.value === value)?.label ?? value
+}
+
+/**
+ * Library options for a new-record Select: the active ones, plus the value the record
+ * already stores so a retired option stays visible (shown as "(inactive)"). A value that
+ * is not in the Library at all, such as a deleted row, is kept as typed.
+ */
+export function selectableOptions(
+  options: ReadonlyArray<{ value: string; label: string; isActive?: boolean }>,
+  current: string | null | undefined
+): Array<{ value: string; label: string }> {
+  const list = options
+    .filter((o) => o.isActive !== false)
+    .map(({ value, label }) => ({ value, label }))
+  if (!current || list.some((o) => o.value === current)) return list
+
+  const retired = options.find((o) => o.value === current)
+  return [
+    { value: current, label: `${retired?.label ?? current} (inactive)` },
+    ...list,
+  ]
 }

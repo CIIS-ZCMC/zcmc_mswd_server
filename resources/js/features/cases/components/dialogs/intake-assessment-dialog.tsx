@@ -25,13 +25,16 @@ import type {
   UpdateAssessmentPayload,
 } from "../../types/assessment.types"
 import {
-  FUND_SOURCE_OPTIONS,
   INFORMANT_RELATIONSHIP_OPTIONS,
   LEGACY_CLASSIFICATION_OPTIONS,
   MSWD_CLASSIFICATION_OPTIONS,
   PROBLEM_CATEGORY_OPTIONS,
-  RECOMMENDATION_MODE_OPTIONS,
+  selectableOptions,
 } from "../../lib/assessment-constants"
+import {
+  useFundSourceOptions,
+  useModeOfAssistanceOptions,
+} from "@/features/library/hooks/use-lookup-options"
 import {
   AlertCircle,
   FileCheck,
@@ -115,6 +118,10 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
 
   const createMutation = useCreateAssessment(caseId)
   const updateMutation = useUpdateAssessment(caseId, assessmentId)
+
+  // Library options; the inactive ones are fetched too so a retired value keeps its name.
+  const { data: modeOptionsData = [] } = useModeOfAssistanceOptions(false)
+  const { data: fundSourceOptionsData = [] } = useFundSourceOptions(false)
 
   // Form State: Informant Details
   const [isInformantPatient, setIsInformantPatient] = useState(false)
@@ -623,7 +630,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
                     <SelectValue placeholder="Select Recommendation Mode" />
                   </SelectTrigger>
                   <SelectContent>
-                    {RECOMMENDATION_MODE_OPTIONS.map((opt) => (
+                    {selectableOptions(modeOptionsData, recommendationMode).map((opt) => (
                       <SelectItem key={opt.value} value={opt.value} className="text-sm py-2">
                         {opt.label}
                       </SelectItem>
@@ -639,7 +646,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
                     <SelectValue placeholder="Select Fund Source" />
                   </SelectTrigger>
                   <SelectContent>
-                    {FUND_SOURCE_OPTIONS.map((opt) => (
+                    {selectableOptions(fundSourceOptionsData, fundSource).map((opt) => (
                       <SelectItem key={opt.value} value={opt.value} className="text-sm py-2">
                         {opt.label}
                       </SelectItem>
