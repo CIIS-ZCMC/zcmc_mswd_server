@@ -5,6 +5,8 @@ namespace App\Filament\Resources\Cases\RelationManagers;
 use App\DTOs\AssessmentDto;
 use App\Exceptions\WatcherRequirementNotSatisfiedException;
 use App\Models\Assessment;
+use App\Models\FundSource;
+use App\Models\ModeOfAssistance;
 use App\Services\AssessmentService;
 use App\Services\CaseModelService;
 use Filament\Actions\CreateAction;
@@ -115,8 +117,11 @@ class AssessmentsRelationManager extends RelationManager
             Textarea::make('family_background')->columnSpanFull(),
             Textarea::make('medical_history')->columnSpanFull(),
             Textarea::make('recommendation')->columnSpanFull(),
-            Select::make('recommendation_mode')->label('Mode of assistance')->options(Assessment::RECOMMENDATION_MODES),
-            Select::make('fund_source')->options(Assessment::FUND_SOURCES),
+            Select::make('recommendation_mode')
+                ->label('Mode of assistance')
+                ->options(fn (?Assessment $record) => ModeOfAssistance::options($record?->recommendation_mode)),
+            Select::make('fund_source')
+                ->options(fn (?Assessment $record) => FundSource::options($record?->fund_source)),
             Textarea::make('intervention_plan')->columnSpanFull(),
         ]);
     }

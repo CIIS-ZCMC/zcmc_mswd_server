@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use App\Models\Assessment;
+use App\Rules\SelectableLookupCode;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -29,6 +30,9 @@ class UpdateAssessmentRequest extends FormRequest
      */
     public function rules(): array
     {
+        // The values the record already stores stay valid even if their option was retired.
+        $assessment = $this->route('assessment');
+
         return [
             'parent_assessment_id' => ['nullable', 'integer', 'exists:assessments,id'],
             'reassessment_reason' => ['nullable', 'string', 'max:255'],
@@ -59,8 +63,8 @@ class UpdateAssessmentRequest extends FormRequest
             'referral_source' => ['nullable', 'string', 'max:255'],
             'medical_history' => ['nullable', 'string'],
             'recommendation' => ['nullable', 'string'],
-            'recommendation_mode' => ['nullable', 'string', Rule::in(array_keys(Assessment::RECOMMENDATION_MODES))],
-            'fund_source' => ['nullable', 'string', Rule::in(array_keys(Assessment::FUND_SOURCES))],
+            'recommendation_mode' => ['nullable', 'string', 'max:255', new SelectableLookupCode('mode_of_assistances', $assessment?->recommendation_mode)],
+            'fund_source' => ['nullable', 'string', 'max:255', new SelectableLookupCode('fund_sources', $assessment?->fund_source)],
             'family_background' => ['nullable', 'string'],
             'social_functioning' => ['nullable', 'string'],
             'assessment_notes' => ['nullable', 'string'],

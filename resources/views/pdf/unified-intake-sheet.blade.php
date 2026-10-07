@@ -64,10 +64,11 @@
 
     $assistances = $case?->patientAssistances ?? collect();
 
-    // §V mode of assistance / fund source print their label; a legacy free-text
-    // value (entered before these became fixed lists) prints as typed.
-    $modeLabel = \App\Models\Assessment::RECOMMENDATION_MODES[$a?->recommendation_mode] ?? $a?->recommendation_mode;
-    $fundLabel = \App\Models\Assessment::FUND_SOURCES[$a?->fund_source] ?? $a?->fund_source;
+    // §V mode of assistance / fund source print their Library name, even if the option
+    // was retired or deleted since; an unknown value (entered before these became
+    // Library lists) prints as typed.
+    $modeLabel = \App\Models\ModeOfAssistance::labelFor($a?->recommendation_mode);
+    $fundLabel = \App\Models\FundSource::labelFor($a?->fund_source);
 
     $logo = fn ($name) => public_path("images/intake/{$name}.png");
 @endphp
