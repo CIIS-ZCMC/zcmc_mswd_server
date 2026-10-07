@@ -1,15 +1,15 @@
 <?php
 
-namespace App\Filament\Resources\Guarantors\Pages;
+namespace App\Filament\Resources\ModeOfAssistances\Pages;
 
-use App\Filament\Resources\Guarantors\GuarantorResource;
+use App\Filament\Resources\ModeOfAssistances\ModeOfAssistanceResource;
 use Filament\Actions\DeleteAction;
 use Filament\Actions\RestoreAction;
 use Filament\Resources\Pages\EditRecord;
 
-class EditGuarantor extends EditRecord
+class EditModeOfAssistance extends EditRecord
 {
-    protected static string $resource = GuarantorResource::class;
+    protected static string $resource = ModeOfAssistanceResource::class;
 
     protected function getHeaderActions(): array
     {

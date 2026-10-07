@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\Guarantors;
 
+use App\Filament\Concerns\ManagesSoftDeletedLookups;
 use App\Filament\Resources\Guarantors\Pages\CreateGuarantor;
 use App\Filament\Resources\Guarantors\Pages\EditGuarantor;
 use App\Filament\Resources\Guarantors\Pages\ListGuarantors;
 use App\Models\Guarantor;
 use BackedEnum;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
@@ -15,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 /**
@@ -24,6 +27,8 @@ use Filament\Tables\Table;
  */
 class GuarantorResource extends Resource
 {
+    use ManagesSoftDeletedLookups;
+
     protected static ?string $model = Guarantor::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBuildingLibrary;
@@ -63,8 +68,12 @@ class GuarantorResource extends Resource
                     ->label('Active')
                     ->boolean(),
             ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->recordActions([
                 EditAction::make(),
+                RestoreAction::make(),
             ])
             ->defaultSort('name');
     }
@@ -89,6 +98,11 @@ class GuarantorResource extends Resource
     }
 
     public static function canEdit($record): bool
+    {
+        return auth()->user()?->can('settings.manage') ?? false;
+    }
+
+    public static function canRestore($record): bool
     {
         return auth()->user()?->can('settings.manage') ?? false;
     }

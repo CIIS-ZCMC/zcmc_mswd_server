@@ -2,12 +2,14 @@
 
 namespace App\Filament\Resources\AssistanceSources;
 
+use App\Filament\Concerns\ManagesSoftDeletedLookups;
 use App\Filament\Resources\AssistanceSources\Pages\CreateAssistanceSource;
 use App\Filament\Resources\AssistanceSources\Pages\EditAssistanceSource;
 use App\Filament\Resources\AssistanceSources\Pages\ListAssistanceSources;
 use App\Models\AssistanceSource;
 use BackedEnum;
 use Filament\Actions\EditAction;
+use Filament\Actions\RestoreAction;
 use Filament\Forms\Components\TextInput;
 use Filament\Forms\Components\Toggle;
 use Filament\Resources\Resource;
@@ -15,6 +17,7 @@ use Filament\Schemas\Schema;
 use Filament\Support\Icons\Heroicon;
 use Filament\Tables\Columns\IconColumn;
 use Filament\Tables\Columns\TextColumn;
+use Filament\Tables\Filters\TrashedFilter;
 use Filament\Tables\Table;
 
 /**
@@ -23,6 +26,8 @@ use Filament\Tables\Table;
  */
 class AssistanceSourceResource extends Resource
 {
+    use ManagesSoftDeletedLookups;
+
     protected static ?string $model = AssistanceSource::class;
 
     protected static string|BackedEnum|null $navigationIcon = Heroicon::OutlinedBanknotes;
@@ -69,8 +74,12 @@ class AssistanceSourceResource extends Resource
                     ->label('Active')
                     ->boolean(),
             ])
+            ->filters([
+                TrashedFilter::make(),
+            ])
             ->recordActions([
                 EditAction::make(),
+                RestoreAction::make(),
             ])
             ->defaultSort('name');
     }
@@ -95,6 +104,11 @@ class AssistanceSourceResource extends Resource
     }
 
     public static function canEdit($record): bool
+    {
+        return auth()->user()?->can('settings.manage') ?? false;
+    }
+
+    public static function canRestore($record): bool
     {
         return auth()->user()?->can('settings.manage') ?? false;
     }
