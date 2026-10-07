@@ -109,18 +109,14 @@ it('counts the breakdown lines that use a type', function () {
         ->and($listed['city_council']['usage_count'])->toBe(0);
 });
 
-it('keeps a deleted type on existing lines but not on new ones', function () {
+it('keeps a deleted type on existing lines and hides it from the list', function () {
     $guarantee = asGuaranteeUsing($this->mayor, $this->worker);
 
     $this->deleteJson("/api/assistance-sources/{$this->mayor->id}")->assertNoContent();
 
-    $this->getJson("/api/guarantees/{$guarantee->id}")->assertOk()
-        ->assertJsonPath('data.items.0.source.name', 'City Mayor Assistance')
-        ->assertJsonPath('data.total', 1000);
-
-    $this->putJson("/api/guarantees/{$guarantee->id}", [
-        'items' => [['assistance_source_id' => $this->mayor->id, 'amount' => 500]],
-    ])->assertUnprocessable()->assertJsonValidationErrors('items.0.assistance_source_id');
+    // Breakdown lines now name a fund source; the old source link stays on the row.
+    expect($guarantee->items()->first()->source->name)->toBe('City Mayor Assistance');
+    $this->getJson("/api/guarantees/{$guarantee->id}")->assertOk()->assertJsonPath('data.total', 1000);
 
     $this->getJson('/api/assistance-sources')->assertOk()->assertJsonMissing(['code' => 'city_mayor']);
 });

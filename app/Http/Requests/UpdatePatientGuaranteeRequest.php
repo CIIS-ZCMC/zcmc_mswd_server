@@ -18,7 +18,8 @@ class UpdatePatientGuaranteeRequest extends StorePatientGuaranteeRequest
         $rules = [...$this->headerRules(), ...$this->itemRules()];
 
         foreach (['guarantor_id', 'guaranteed_on', 'items'] as $field) {
-            $rules[$field] = ['sometimes', ...array_diff($rules[$field], ['required'])];
+            // Filter, not array_diff: the list holds rule objects that can't be cast to string.
+            $rules[$field] = ['sometimes', ...array_filter($rules[$field], fn ($rule) => $rule !== 'required')];
         }
 
         $rules['his_transaction_id'] = ['prohibited'];

@@ -31,15 +31,28 @@ class PatientGuaranteeResource extends JsonResource
             'reference_no' => $this->reference_no,
             'guaranteed_on' => $this->guaranteed_on?->toDateString(),
             'remarks' => $this->remarks,
+            // Each line: Type of Assistance, amount, Mode of Assistance, Fund Source.
+            // Lines from before this shape have no type or mode (null).
             'items' => $this->whenLoaded('items', fn () => $this->items->map(fn ($item) => [
                 'id' => $item->id,
-                'source' => $item->source === null ? null : [
-                    'id' => $item->source->id,
-                    'name' => $item->source->name,
-                    'requires_specify' => $item->source->requires_specify,
+                'assistance_type' => $item->assistanceType === null ? null : [
+                    'id' => $item->assistanceType->id,
+                    'name' => $item->assistanceType->name,
+                    'code' => $item->assistanceType->code,
+                ],
+                'amount' => (float) $item->amount,
+                'mode_of_assistance' => $item->modeOfAssistance === null ? null : [
+                    'id' => $item->modeOfAssistance->id,
+                    'name' => $item->modeOfAssistance->name,
+                    'code' => $item->modeOfAssistance->code,
+                ],
+                'fund_source' => $item->fundSource === null ? null : [
+                    'id' => $item->fundSource->id,
+                    'name' => $item->fundSource->name,
+                    'code' => $item->fundSource->code,
+                    'requires_specify' => $item->fundSource->requires_specify,
                 ],
                 'others_specify' => $item->others_specify,
-                'amount' => (float) $item->amount,
             ])->all()),
             'total' => $this->total(),
             'recorded_by' => $this->whenLoaded('recordedBy', fn () => $this->recordedBy === null ? null : [

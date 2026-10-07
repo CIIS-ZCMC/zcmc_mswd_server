@@ -26,12 +26,14 @@ class AssistantTypeResource extends JsonResource
             'category_label' => AssistantType::categoryOptions($this->category)[$this->category] ?? $this->category,
             'description' => $this->description,
             'is_active' => $this->is_active,
-            // Usage, when counted. Guarantee breakdown lines start naming a type with the
-            // breakdown rewrite (docs/GUARANTEE_BREAKDOWN_PLAN.md); until then they are 0.
-            'usage_count' => $this->whenCounted('patientAssistances'),
-            'usage' => $this->whenCounted('patientAssistances', fn () => [
+            // Usage, when counted: assistance records plus guarantee breakdown lines.
+            'usage_count' => $this->when(
+                isset($this->patient_assistances_count, $this->guarantee_items_count),
+                fn () => (int) $this->patient_assistances_count + (int) $this->guarantee_items_count,
+            ),
+            'usage' => $this->when(isset($this->patient_assistances_count, $this->guarantee_items_count), fn () => [
                 'assistance_records' => (int) $this->patient_assistances_count,
-                'guarantee_lines' => 0,
+                'guarantee_lines' => (int) $this->guarantee_items_count,
             ]),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

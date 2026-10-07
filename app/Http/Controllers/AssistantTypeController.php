@@ -20,6 +20,9 @@ use Illuminate\Routing\Controllers\Middleware;
  */
 class AssistantTypeController extends Controller implements HasMiddleware
 {
+    /** What uses a type: assistance records and guarantee breakdown lines. */
+    private const USAGE = ['patientAssistances', 'guaranteeItems'];
+
     public static function middleware(): array
     {
         return [
@@ -33,7 +36,7 @@ class AssistantTypeController extends Controller implements HasMiddleware
             // `?active=1` hides retired entries from new-record dropdowns
             // while leaving them resolvable on historical records.
             ->when($request->boolean('active'), fn ($query) => $query->where('is_active', true))
-            ->withCount('patientAssistances')
+            ->withCount(self::USAGE)
             ->ordered()
             ->get();
 
@@ -42,14 +45,14 @@ class AssistantTypeController extends Controller implements HasMiddleware
 
     public function show(AssistantType $assistantType): AssistantTypeResource
     {
-        return AssistantTypeResource::make($assistantType->loadCount('patientAssistances'));
+        return AssistantTypeResource::make($assistantType->loadCount(self::USAGE));
     }
 
     public function store(StoreAssistantTypeRequest $request): JsonResponse
     {
         $type = AssistantType::create($request->validated());
 
-        return AssistantTypeResource::make($type->refresh()->loadCount('patientAssistances'))
+        return AssistantTypeResource::make($type->refresh()->loadCount(self::USAGE))
             ->response()
             ->setStatusCode(Response::HTTP_CREATED);
     }
@@ -58,7 +61,7 @@ class AssistantTypeController extends Controller implements HasMiddleware
     {
         $assistantType->update($request->validated());
 
-        return AssistantTypeResource::make($assistantType->refresh()->loadCount('patientAssistances'));
+        return AssistantTypeResource::make($assistantType->refresh()->loadCount(self::USAGE));
     }
 
     /**

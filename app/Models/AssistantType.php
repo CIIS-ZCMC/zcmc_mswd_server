@@ -47,6 +47,11 @@ class AssistantType extends Model
         return $this->hasMany(PatientAssistance::class, 'assistant_type_id');
     }
 
+    public function guaranteeItems(): HasMany
+    {
+        return $this->hasMany(PatientGuaranteeItem::class, 'assistant_type_id');
+    }
+
     /** Dropdown order: by name. */
     public function scopeOrdered(Builder $query): Builder
     {

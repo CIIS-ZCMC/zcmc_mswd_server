@@ -41,14 +41,15 @@ import {
 } from "lucide-react"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { useHospitalEncounter } from "@/features/hospital/hooks/use-hospital-encounters"
+import { Link } from "@inertiajs/react"
 import {
-  AssistanceSourcesManagerDialog,
   GuaranteeFormDialog,
   useDeleteGuarantee,
   useGuarantees,
 } from "@/features/guarantees"
 import type { PatientGuarantee } from "@/features/guarantees/types"
 import { formatCurrency } from "@/lib/format-currency"
+import { GuaranteeBreakdownTable } from "@/features/guarantees/components/guarantee-breakdown-table"
 
 export interface CaseGuarantorsTabProps {
   patientId: number | string
@@ -77,6 +78,7 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
 
   const canView = usePermission("guarantee.view")
   const canCreate = usePermission("guarantee.create")
+  const canManageLibrary = usePermission("library.manage")
   const canUpdate = usePermission("guarantee.update")
   const canDelete = usePermission("guarantee.delete")
 
@@ -97,7 +99,6 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
 
   const [expandedKeys, setExpandedKeys] = useState<Set<string>>(new Set())
   const [isFormOpen, setIsFormOpen] = useState(false)
-  const [isManageTypesOpen, setIsManageTypesOpen] = useState(false)
   const [editingGuarantee, setEditingGuarantee] =
     useState<PatientGuarantee | null>(null)
   const [targetGuarantorName, setTargetGuarantorName] = useState<string | null>(
@@ -265,17 +266,19 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
               )}
               {canCreate && (
                 <div className="flex items-center gap-2">
-                  <Button
-                    type="button"
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setIsManageTypesOpen(true)}
-                    className="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold shadow-2xs"
-                    title="Manage Breakdown Types"
-                  >
-                    <SlidersHorizontal className="size-3.5 text-primary" />
-                    Manage Types
-                  </Button>
+                  {canManageLibrary && (
+                    <Button
+                      type="button"
+                      variant="outline"
+                      size="sm"
+                      render={<Link href="/library" />}
+                      className="h-8 gap-1.5 px-2.5 text-xs font-semibold shadow-2xs"
+                      title="Manage Types of Assistance, Modes and Fund Sources in the Library"
+                    >
+                      <SlidersHorizontal className="size-3.5 text-primary" />
+                      Manage in Library
+                    </Button>
+                  )}
                   <Button
                     type="button"
                     size="sm"
@@ -470,7 +473,7 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                                   <div className="flex items-center justify-between gap-2">
                                     <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
                                       <Receipt className="size-3.5 text-primary" />
-                                      Assistance Sources Breakdown ({row.name})
+                                      Assistance Breakdown ({row.name})
                                     </div>
                                     <div className="flex items-center gap-3 text-xs text-muted-foreground">
                                       {g.referenceNo && (
@@ -500,47 +503,7 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                                     </div>
                                   </div>
 
-                                  <div className="overflow-hidden rounded-md border bg-background">
-                                    <Table>
-                                      <TableHeader className="bg-muted/30">
-                                        <TableRow className="h-7 border-b">
-                                          <TableHead className="h-7 py-1 text-[11px] font-bold">
-                                            Assistance Source
-                                          </TableHead>
-                                          <TableHead className="h-7 py-1 text-[11px] font-bold">
-                                            Details / Specify
-                                          </TableHead>
-                                          <TableHead className="h-7 py-1 text-right text-[11px] font-bold">
-                                            Amount
-                                          </TableHead>
-                                        </TableRow>
-                                      </TableHeader>
-                                      <TableBody>
-                                        {g.items.map((item, idx) => (
-                                          <TableRow
-                                            key={item.id ?? idx}
-                                            className="h-8 border-b last:border-b-0"
-                                          >
-                                            <TableCell className="py-1.5 text-xs font-semibold">
-                                              {item.sourceName}
-                                            </TableCell>
-                                            <TableCell className="py-1.5 text-xs text-muted-foreground">
-                                              {item.othersSpecify ? (
-                                                <span className="italic">
-                                                  {item.othersSpecify}
-                                                </span>
-                                              ) : (
-                                                "—"
-                                              )}
-                                            </TableCell>
-                                            <TableCell className="py-1.5 text-right text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                              {formatCurrency(item.amount)}
-                                            </TableCell>
-                                          </TableRow>
-                                        ))}
-                                      </TableBody>
-                                    </Table>
-                                  </div>
+                                  <GuaranteeBreakdownTable items={g.items} />
                                 </div>
                               ) : (
                                 <div className="flex flex-col items-center justify-between gap-3 rounded-lg border border-dashed bg-muted/20 p-3 text-xs text-muted-foreground sm:flex-row">
@@ -595,12 +558,6 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
             setLockGuarantor(false)
           }
         }}
-      />
-
-      {/* Breakdown Types Manager Modal */}
-      <AssistanceSourcesManagerDialog
-        open={isManageTypesOpen}
-        onOpenChange={setIsManageTypesOpen}
       />
 
       {/* Delete Confirmation Alert Dialog */}

@@ -10,6 +10,7 @@ use App\Filament\Resources\Patients\RelationManagers\CaretakersRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\CasesRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\FamilyMembersRelationManager;
+use App\Filament\Resources\Patients\RelationManagers\GuaranteesRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\HistoryRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\PatientIdsRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\WatchersRelationManager;
@@ -194,6 +195,7 @@ class PatientResource extends Resource
             WatchersRelationManager::class,
             CaretakersRelationManager::class,
             CasesRelationManager::class,
+            GuaranteesRelationManager::class,
             DocumentsRelationManager::class,
             HistoryRelationManager::class,
         ];

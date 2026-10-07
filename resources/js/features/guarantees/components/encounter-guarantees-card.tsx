@@ -42,8 +42,9 @@ import { usePermission } from "@/features/auth/hooks/use-permission"
 import { formatCurrency } from "@/lib/format-currency"
 import { useDeleteGuarantee, useGuarantees } from "../hooks/use-guarantees"
 import { GuaranteeFormDialog } from "./guarantee-form-dialog"
-import { AssistanceSourcesManagerDialog } from "./assistance-sources-manager-dialog"
+import { Link } from "@inertiajs/react"
 import type { PatientGuarantee } from "../types"
+import { GuaranteeBreakdownTable } from "./guarantee-breakdown-table"
 
 interface EncounterGuaranteesCardProps {
   patientId: number | string
@@ -56,6 +57,7 @@ export const EncounterGuaranteesCard: React.FC<
 > = ({ patientId, transactionId, className = "" }) => {
   const canView = usePermission("guarantee.view")
   const canCreate = usePermission("guarantee.create")
+  const canManageLibrary = usePermission("library.manage")
   const canUpdate = usePermission("guarantee.update")
   const canDelete = usePermission("guarantee.delete")
 
@@ -71,7 +73,6 @@ export const EncounterGuaranteesCard: React.FC<
 
   const [expandedIds, setExpandedIds] = useState<Set<number>>(new Set())
   const [dialogOpen, setDialogOpen] = useState(false)
-  const [isManageTypesOpen, setIsManageTypesOpen] = useState(false)
   const [editingGuarantee, setEditingGuarantee] =
     useState<PatientGuarantee | null>(null)
   const [deletingGuarantee, setDeletingGuarantee] =
@@ -137,17 +138,19 @@ export const EncounterGuaranteesCard: React.FC<
             )}
             {canCreate && (
               <div className="flex items-center gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setIsManageTypesOpen(true)}
-                  className="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold shadow-2xs"
-                  title="Manage Breakdown Types"
-                >
-                  <SlidersHorizontal className="size-3.5 text-primary" />
-                  Manage Types
-                </Button>
+                {canManageLibrary && (
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    render={<Link href="/library" />}
+                    className="h-8 gap-1.5 px-2.5 text-xs font-semibold shadow-2xs"
+                    title="Manage Types of Assistance, Modes and Fund Sources in the Library"
+                  >
+                    <SlidersHorizontal className="size-3.5 text-primary" />
+                    Manage in Library
+                  </Button>
+                )}
                 <Button
                   type="button"
                   size="sm"
@@ -321,49 +324,9 @@ export const EncounterGuaranteesCard: React.FC<
                             <div className="space-y-1.5">
                               <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
                                 <Receipt className="size-3.5 text-primary" />
-                                Assistance Sources Breakdown
+                                Assistance Breakdown
                               </div>
-                              <div className="overflow-hidden rounded-md border bg-background">
-                                <Table>
-                                  <TableHeader className="bg-muted/30">
-                                    <TableRow className="h-7 border-b">
-                                      <TableHead className="h-7 py-1 text-[11px] font-bold">
-                                        Assistance Source
-                                      </TableHead>
-                                      <TableHead className="h-7 py-1 text-[11px] font-bold">
-                                        Details / Specify
-                                      </TableHead>
-                                      <TableHead className="h-7 py-1 text-right text-[11px] font-bold">
-                                        Amount
-                                      </TableHead>
-                                    </TableRow>
-                                  </TableHeader>
-                                  <TableBody>
-                                    {g.items.map((item, idx) => (
-                                      <TableRow
-                                        key={item.id ?? idx}
-                                        className="h-8 border-b last:border-b-0"
-                                      >
-                                        <TableCell className="py-1.5 text-xs font-semibold">
-                                          {item.sourceName}
-                                        </TableCell>
-                                        <TableCell className="py-1.5 text-xs text-muted-foreground">
-                                          {item.othersSpecify ? (
-                                            <span className="italic">
-                                              {item.othersSpecify}
-                                            </span>
-                                          ) : (
-                                            "—"
-                                          )}
-                                        </TableCell>
-                                        <TableCell className="py-1.5 text-right text-xs font-bold text-emerald-600 dark:text-emerald-400">
-                                          {formatCurrency(item.amount)}
-                                        </TableCell>
-                                      </TableRow>
-                                    ))}
-                                  </TableBody>
-                                </Table>
-                              </div>
+                              <GuaranteeBreakdownTable items={g.items} />
                             </div>
                           </TableCell>
                         </TableRow>
@@ -384,12 +347,6 @@ export const EncounterGuaranteesCard: React.FC<
         guarantee={editingGuarantee}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
-      />
-
-      {/* Breakdown Types Manager Dialog */}
-      <AssistanceSourcesManagerDialog
-        open={isManageTypesOpen}
-        onOpenChange={setIsManageTypesOpen}
       />
 
       {/* Delete Confirmation Alert Dialog */}

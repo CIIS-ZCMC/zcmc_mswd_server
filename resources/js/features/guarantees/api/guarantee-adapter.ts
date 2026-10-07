@@ -18,11 +18,15 @@ import type {
 export function toGuaranteeItem(api: ApiGuaranteeItem): GuaranteeItem {
   return {
     id: api.id,
-    sourceId: api.source?.id ?? 0,
-    sourceName: api.source?.name ?? "—",
-    requiresSpecify: Boolean(api.source?.requires_specify),
-    othersSpecify: api.others_specify ?? "",
+    assistanceTypeId: api.assistance_type?.id ?? null,
+    assistanceTypeName: api.assistance_type?.name ?? null,
     amount: Number(api.amount) || 0,
+    modeOfAssistanceId: api.mode_of_assistance?.id ?? null,
+    modeOfAssistanceName: api.mode_of_assistance?.name ?? null,
+    fundSourceId: api.fund_source?.id ?? null,
+    fundSourceName: api.fund_source?.name ?? null,
+    fundRequiresSpecify: Boolean(api.fund_source?.requires_specify),
+    othersSpecify: api.others_specify ?? "",
   }
 }
 
@@ -112,8 +116,10 @@ export function toApiSaveGuaranteePayload(
     guaranteed_on: input.guaranteedOn,
     remarks: input.remarks ? input.remarks.trim() : null,
     items: input.items.map((item) => ({
-      assistance_source_id: item.sourceId,
+      assistant_type_id: item.assistanceTypeId,
       amount: Number(item.amount) || 0,
+      mode_of_assistance_id: item.modeOfAssistanceId,
+      fund_source_id: item.fundSourceId,
       others_specify: item.othersSpecify ? item.othersSpecify.trim() : null,
     })),
   }

@@ -3,9 +3,12 @@
 use App\Filament\Resources\AssistanceSources\Pages\CreateAssistanceSource;
 use App\Filament\Resources\Guarantors\Pages\ListGuarantors;
 use App\Models\AssistanceSource;
+use App\Models\AssistantType;
 use App\Models\Bizbox\HospitalPatient;
 use App\Models\Bizbox\PatientTransaction;
+use App\Models\FundSource;
 use App\Models\Guarantor;
+use App\Models\ModeOfAssistance;
 use App\Models\Patient;
 use App\Models\PatientGuarantee;
 use App\Models\PatientGuaranteeItem;
@@ -46,6 +49,17 @@ beforeEach(function () {
     $this->congress = AssistanceSource::where('code', 'congressional')->firstOrFail();
     $this->others = AssistanceSource::where('code', 'others')->firstOrFail();
 
+    // The breakdown's Library lists (seeded by their migrations).
+    $this->medicines = AssistantType::where('code', 'medicines')->firstOrFail();
+    $this->hospitalBill = AssistantType::where('code', 'hospital_bill')->firstOrFail();
+    $this->laboratory = AssistantType::where('code', 'laboratory_diagnostics')->firstOrFail();
+    $this->financial = ModeOfAssistance::where('code', 'financial_assistance')->firstOrFail();
+    $this->medical = ModeOfAssistance::where('code', 'medical_assistance')->firstOrFail();
+    $this->mayorFund = FundSource::where('code', 'city_mayor')->firstOrFail();
+    $this->councilFund = FundSource::where('code', 'city_council')->firstOrFail();
+    $this->congressFund = FundSource::where('code', 'congressional')->firstOrFail();
+    $this->othersFund = FundSource::where('code', 'others')->firstOrFail();
+
     pgMockEncounter(patid: 777);
     Sanctum::actingAs($this->worker);
 });
@@ -69,6 +83,18 @@ function pgMockEncounter(int $patid, int $key = 9): void
     });
 }
 
+/** One breakdown line: Type of Assistance, amount, Mode of Assistance, Fund Source. */
+function pgLine(AssistantType $type, float $amount, ?FundSource $fund = null, ?ModeOfAssistance $mode = null, array $extra = []): array
+{
+    return [
+        'assistant_type_id' => $type->id,
+        'amount' => $amount,
+        'mode_of_assistance_id' => ($mode ?? test()->financial)->id,
+        'fund_source_id' => ($fund ?? test()->mayorFund)->id,
+        ...$extra,
+    ];
+}
+
 function pgPayload(array $overrides = []): array
 {
     return array_merge([
@@ -78,9 +104,9 @@ function pgPayload(array $overrides = []): array
         'guaranteed_on' => '2026-10-06',
         'remarks' => 'Endorsed',
         'items' => [
-            ['assistance_source_id' => test()->mayor->id, 'amount' => 1000],
-            ['assistance_source_id' => test()->council->id, 'amount' => 1000],
-            ['assistance_source_id' => test()->congress->id, 'amount' => 1000],
+            pgLine(test()->medicines, 1000, test()->mayorFund),
+            pgLine(test()->hospitalBill, 1000, test()->councilFund),
+            pgLine(test()->laboratory, 1000, test()->congressFund, test()->medical),
         ],
     ], $overrides);
 }
@@ -106,8 +132,12 @@ it('records a guarantor with its breakdown and totals the lines', function () {
         ->assertJsonPath('data.total', 3000)
         ->assertJsonPath('data.recorded_by.id', $this->worker->id)
         ->assertJsonCount(3, 'data.items')
-        ->assertJsonPath('data.items.0.source.name', 'City Mayor Assistance')
-        ->assertJsonPath('data.items.0.amount', 1000);
+        ->assertJsonPath('data.items.0.assistance_type.name', 'Medicines')
+        ->assertJsonPath('data.items.0.amount', 1000)
+        ->assertJsonPath('data.items.0.mode_of_assistance.name', 'Financial Assistance')
+        ->assertJsonPath('data.items.0.fund_source.name', 'City Mayor Assistance')
+        ->assertJsonPath('data.items.2.mode_of_assistance.code', 'medical_assistance')
+        ->assertJsonPath('data.items.2.fund_source.code', 'congressional');
 
     $guarantee = PatientGuarantee::findOrFail($response->json('data.id'));
     expect($guarantee->patient_id)->toBe($this->patient->id)
@@ -122,7 +152,7 @@ it('ignores a total sent in the body', function () {
 it('lists the patient\'s guarantees with a grand total, optionally for one encounter', function () {
     pgCreate();
     pgCreate(['guarantor_id' => Guarantor::where('name', 'PCSO')->value('id'), 'items' => [
-        ['assistance_source_id' => $this->mayor->id, 'amount' => 500.50],
+        pgLine($this->medicines, 500.50),
     ]]);
 
     $this->getJson(pgStore($this->patient))->assertOk()
@@ -138,40 +168,121 @@ it('rejects an invalid breakdown', function (array $overrides, string $error) {
         ->assertUnprocessable()->assertJsonValidationErrors($error);
 })->with([
     'no lines' => [['items' => []], 'items'],
-    'zero amount' => [['items' => [['assistance_source_id' => 1, 'amount' => 0]]], 'items.0.amount'],
-    'negative amount' => [['items' => [['assistance_source_id' => 1, 'amount' => -5]]], 'items.0.amount'],
-    'unknown source' => [['items' => [['assistance_source_id' => 9999, 'amount' => 10]]], 'items.0.assistance_source_id'],
+    'zero amount' => [fn () => ['items' => [pgLine(test()->medicines, 0)]], 'items.0.amount'],
+    'negative amount' => [fn () => ['items' => [pgLine(test()->medicines, -5)]], 'items.0.amount'],
+    'missing type' => [fn () => ['items' => [array_diff_key(pgLine(test()->medicines, 10), ['assistant_type_id' => 1])]], 'items.0.assistant_type_id'],
+    'missing mode' => [fn () => ['items' => [array_diff_key(pgLine(test()->medicines, 10), ['mode_of_assistance_id' => 1])]], 'items.0.mode_of_assistance_id'],
+    'missing fund' => [fn () => ['items' => [array_diff_key(pgLine(test()->medicines, 10), ['fund_source_id' => 1])]], 'items.0.fund_source_id'],
+    'unknown type' => [fn () => ['items' => [[...pgLine(test()->medicines, 10), 'assistant_type_id' => 9999]]], 'items.0.assistant_type_id'],
+    'unknown mode' => [fn () => ['items' => [[...pgLine(test()->medicines, 10), 'mode_of_assistance_id' => 9999]]], 'items.0.mode_of_assistance_id'],
+    'unknown fund' => [fn () => ['items' => [[...pgLine(test()->medicines, 10), 'fund_source_id' => 9999]]], 'items.0.fund_source_id'],
     'missing guarantor' => [['guarantor_id' => null], 'guarantor_id'],
     'missing date' => [['guaranteed_on' => null], 'guaranteed_on'],
     'missing encounter' => [['his_transaction_id' => null], 'his_transaction_id'],
 ]);
 
-it('rejects the same source twice in one breakdown', function () {
+it('rejects the same Type of Assistance twice in one breakdown', function () {
     $this->postJson(pgStore($this->patient), pgPayload(['items' => [
-        ['assistance_source_id' => $this->mayor->id, 'amount' => 100],
-        ['assistance_source_id' => $this->mayor->id, 'amount' => 200],
-    ]]))->assertUnprocessable()->assertJsonValidationErrors('items.1.assistance_source_id');
+        pgLine($this->medicines, 100, $this->mayorFund),
+        pgLine($this->medicines, 200, $this->councilFund),
+    ]]))->assertUnprocessable()->assertJsonValidationErrors('items.1.assistant_type_id');
 });
 
-it('requires a specify value for an "Others" line', function () {
+it('lets two lines share a fund source and a mode', function () {
     $this->postJson(pgStore($this->patient), pgPayload(['items' => [
-        ['assistance_source_id' => $this->others->id, 'amount' => 100],
+        pgLine($this->medicines, 100, $this->mayorFund),
+        pgLine($this->hospitalBill, 200, $this->mayorFund),
+    ]]))->assertCreated()->assertJsonPath('data.total', 300);
+});
+
+it('requires a specify value when the fund source is "Others"', function () {
+    $this->postJson(pgStore($this->patient), pgPayload(['items' => [
+        pgLine($this->medicines, 100, $this->othersFund),
     ]]))->assertUnprocessable()->assertJsonValidationErrors('items.0.others_specify');
 
     $this->postJson(pgStore($this->patient), pgPayload(['items' => [
-        ['assistance_source_id' => $this->others->id, 'amount' => 100, 'others_specify' => 'Barangay Captain'],
-    ]]))->assertCreated()->assertJsonPath('data.items.0.others_specify', 'Barangay Captain');
+        pgLine($this->medicines, 100, $this->othersFund, null, ['others_specify' => 'Barangay Captain']),
+    ]]))->assertCreated()
+        ->assertJsonPath('data.items.0.others_specify', 'Barangay Captain')
+        ->assertJsonPath('data.items.0.fund_source.requires_specify', true);
 });
 
-it('rejects an inactive guarantor or source', function () {
-    $this->maifip->update(['is_active' => false]);
-    $this->postJson(pgStore($this->patient), pgPayload())
-        ->assertUnprocessable()->assertJsonValidationErrors('guarantor_id');
+it('rejects an inactive guarantor, type, mode or fund source', function (string $retire, string $error) {
+    match ($retire) {
+        'guarantor' => $this->maifip->update(['is_active' => false]),
+        'type' => $this->medicines->update(['is_active' => false]),
+        'mode' => $this->financial->update(['is_active' => false]),
+        'fund' => $this->mayorFund->delete(),
+    };
 
-    $this->maifip->update(['is_active' => true]);
-    $this->mayor->update(['is_active' => false]);
     $this->postJson(pgStore($this->patient), pgPayload())
-        ->assertUnprocessable()->assertJsonValidationErrors('items.0.assistance_source_id');
+        ->assertUnprocessable()->assertJsonValidationErrors($error);
+})->with([
+    'guarantor' => ['guarantor', 'guarantor_id'],
+    'type' => ['type', 'items.0.assistant_type_id'],
+    'mode' => ['mode', 'items.0.mode_of_assistance_id'],
+    'deleted fund' => ['fund', 'items.0.fund_source_id'],
+]);
+
+it('keeps options the guarantee already uses when it is edited after they were retired', function () {
+    $id = pgCreate();
+
+    $this->maifip->update(['is_active' => false]);
+    $this->medicines->update(['is_active' => false]);
+    $this->financial->update(['is_active' => false]);
+    $this->mayorFund->delete();
+
+    $this->putJson("/api/guarantees/{$id}", [
+        'guarantor_id' => $this->maifip->id,
+        'items' => [pgLine($this->medicines, 1200, $this->mayorFund)],
+    ])->assertOk()
+        ->assertJsonPath('data.items.0.assistance_type.name', 'Medicines')
+        ->assertJsonPath('data.items.0.fund_source.name', 'City Mayor Assistance')
+        ->assertJsonPath('data.total', 1200);
+
+    // A guarantee that never used them can't pick them.
+    $other = pgCreate(['guarantor_id' => Guarantor::where('name', 'PCSO')->value('id'), 'items' => [
+        pgLine($this->hospitalBill, 100, $this->councilFund, $this->medical),
+    ]]);
+    $this->putJson("/api/guarantees/{$other}", ['items' => [pgLine($this->medicines, 100, $this->councilFund, $this->medical)]])
+        ->assertUnprocessable()->assertJsonValidationErrors('items.0.assistant_type_id');
+});
+
+it('lists an older line without a type or mode, and asks for them when it is edited', function () {
+    $guarantee = PatientGuarantee::create([
+        'patient_id' => $this->patient->id, 'his_transaction_id' => 9, 'guarantor_id' => $this->maifip->id,
+        'guaranteed_on' => '2026-10-01', 'recorded_by' => $this->worker->id,
+    ]);
+    $guarantee->items()->create(['assistance_source_id' => $this->mayor->id, 'fund_source_id' => $this->mayorFund->id, 'amount' => 800]);
+
+    $this->getJson("/api/guarantees/{$guarantee->id}")->assertOk()
+        ->assertJsonPath('data.items.0.assistance_type', null)
+        ->assertJsonPath('data.items.0.mode_of_assistance', null)
+        ->assertJsonPath('data.items.0.fund_source.code', 'city_mayor')
+        ->assertJsonPath('data.total', 800);
+
+    $this->putJson("/api/guarantees/{$guarantee->id}", ['items' => [
+        ['amount' => 800, 'fund_source_id' => $this->mayorFund->id],
+    ]])->assertUnprocessable()->assertJsonValidationErrors(['items.0.assistant_type_id', 'items.0.mode_of_assistance_id']);
+
+    $this->putJson("/api/guarantees/{$guarantee->id}", ['items' => [pgLine($this->medicines, 800)]])->assertOk();
+    expect($guarantee->items()->first()->assistant_type_id)->toBe($this->medicines->id);
+});
+
+it('no longer accepts an assistance source on a line', function () {
+    $this->postJson(pgStore($this->patient), pgPayload(['items' => [
+        ['assistance_source_id' => $this->mayor->id, 'amount' => 100],
+    ]]))->assertUnprocessable()->assertJsonValidationErrors(['items.0.assistant_type_id', 'items.0.fund_source_id']);
+});
+
+it('counts breakdown lines in the Library usage of each list', function () {
+    pgCreate();
+
+    $this->getJson("/api/assistant-types/{$this->medicines->id}")->assertJsonPath('data.usage.guarantee_lines', 1);
+    $this->getJson("/api/mode-of-assistances/{$this->financial->id}")
+        ->assertJsonPath('data.usage.guarantee_lines', 2)
+        ->assertJsonPath('data.code_locked', false);
+    $this->getJson("/api/fund-sources/{$this->mayorFund->id}")->assertJsonPath('data.usage.guarantee_lines', 1);
 });
 
 it('rejects an encounter of a different patient', function () {
@@ -204,7 +315,7 @@ it('updates the header and replaces the breakdown', function () {
 
     $this->putJson("/api/guarantees/{$id}", [
         'reference_no' => 'GL-2026-002',
-        'items' => [['assistance_source_id' => $this->council->id, 'amount' => 2500]],
+        'items' => [pgLine($this->hospitalBill, 2500, $this->councilFund)],
     ])->assertOk()
         ->assertJsonPath('data.reference_no', 'GL-2026-002')
         ->assertJsonPath('data.guarantor.name', 'MAIFIP')

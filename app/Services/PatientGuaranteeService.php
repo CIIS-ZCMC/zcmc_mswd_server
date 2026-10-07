@@ -2,9 +2,7 @@
 
 namespace App\Services;
 
-use App\Models\AssistanceSource;
 use App\Models\Bizbox\PatientTransaction;
-use App\Models\FundSource;
 use App\Models\Patient;
 use App\Models\PatientGuarantee;
 use Illuminate\Database\Eloquent\Collection;
@@ -20,7 +18,7 @@ use Illuminate\Validation\ValidationException;
 class PatientGuaranteeService
 {
     /** Relations every guarantee is returned with. */
-    public const RELATIONS = ['guarantor', 'items.source', 'recordedBy'];
+    public const RELATIONS = ['guarantor', 'items.assistanceType', 'items.modeOfAssistance', 'items.fundSource', 'recordedBy'];
 
     public function __construct(protected PatientTransactionService $transactions) {}
 
@@ -136,32 +134,12 @@ class PatientGuaranteeService
 
         foreach ($items as $item) {
             $guarantee->items()->create([
-                'assistance_source_id' => $item['assistance_source_id'],
-                'fund_source_id' => $this->fundSourceFor((int) $item['assistance_source_id']),
-                'others_specify' => $item['others_specify'] ?? null,
+                'assistant_type_id' => $item['assistant_type_id'],
                 'amount' => $item['amount'],
+                'mode_of_assistance_id' => $item['mode_of_assistance_id'],
+                'fund_source_id' => $item['fund_source_id'],
+                'others_specify' => $item['others_specify'] ?? null,
             ]);
         }
-    }
-
-    /**
-     * The fund source an assistance source was merged into (same code, else same name).
-     * Bridges the breakdown form until lines are entered with a fund source directly.
-     */
-    private function fundSourceFor(int $assistanceSourceId): ?int
-    {
-        $source = AssistanceSource::withTrashed()->find($assistanceSourceId);
-
-        if ($source === null) {
-            return null;
-        }
-
-        $byCode = filled($source->code)
-            ? FundSource::withTrashed()->where('code', $source->code)->value('id')
-            : null;
-
-        return $byCode ?? FundSource::withTrashed()
-            ->whereRaw('lower(name) = ?', [mb_strtolower(trim($source->name))])
-            ->value('id');
     }
 }
