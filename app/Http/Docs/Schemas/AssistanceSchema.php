@@ -112,15 +112,26 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'reference_no', type: 'string', nullable: true),
         new OA\Property(property: 'guaranteed_on', type: 'string', format: 'date'),
         new OA\Property(property: 'remarks', type: 'string', nullable: true),
-        new OA\Property(property: 'items', type: 'array', items: new OA\Items(properties: [
+        new OA\Property(property: 'items', type: 'array', description: 'Type of Assistance, amount, Mode of Assistance, Fund Source. Lines from before this shape have no type or mode.', items: new OA\Items(properties: [
             new OA\Property(property: 'id', type: 'integer'),
-            new OA\Property(property: 'source', properties: [
+            new OA\Property(property: 'assistance_type', properties: [
                 new OA\Property(property: 'id', type: 'integer'),
                 new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'code', type: 'string', nullable: true),
+            ], type: 'object', nullable: true),
+            new OA\Property(property: 'amount', type: 'number', format: 'float'),
+            new OA\Property(property: 'mode_of_assistance', properties: [
+                new OA\Property(property: 'id', type: 'integer'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'code', type: 'string'),
+            ], type: 'object', nullable: true),
+            new OA\Property(property: 'fund_source', properties: [
+                new OA\Property(property: 'id', type: 'integer'),
+                new OA\Property(property: 'name', type: 'string'),
+                new OA\Property(property: 'code', type: 'string'),
                 new OA\Property(property: 'requires_specify', type: 'boolean'),
             ], type: 'object', nullable: true),
             new OA\Property(property: 'others_specify', type: 'string', nullable: true),
-            new OA\Property(property: 'amount', type: 'number', format: 'float'),
         ], type: 'object')),
         new OA\Property(property: 'total', type: 'number', format: 'float'),
         new OA\Property(property: 'recorded_by', properties: [
@@ -134,7 +145,7 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'PatientGuaranteeRequest',
     required: ['his_transaction_id', 'guarantor_id', 'guaranteed_on', 'items'],
-    description: 'On update every field is optional and `his_transaction_id` is prohibited.',
+    description: 'On update every field is optional and `his_transaction_id` is prohibited; sending `items` replaces the breakdown. One line per Type of Assistance. New choices must be active; an edit may keep options the guarantee already uses.',
     properties: [
         new OA\Property(property: 'his_transaction_id', type: 'integer'),
         new OA\Property(property: 'guarantor_id', type: 'integer'),
@@ -142,11 +153,13 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'guaranteed_on', type: 'string', format: 'date'),
         new OA\Property(property: 'remarks', type: 'string', nullable: true),
         new OA\Property(property: 'items', type: 'array', minItems: 1, items: new OA\Items(
-            required: ['assistance_source_id', 'amount'],
+            required: ['assistant_type_id', 'amount', 'mode_of_assistance_id', 'fund_source_id'],
             properties: [
-                new OA\Property(property: 'assistance_source_id', type: 'integer'),
+                new OA\Property(property: 'assistant_type_id', type: 'integer', description: 'Type of Assistance.'),
                 new OA\Property(property: 'amount', type: 'number', format: 'float', minimum: 0.01),
-                new OA\Property(property: 'others_specify', type: 'string', nullable: true),
+                new OA\Property(property: 'mode_of_assistance_id', type: 'integer'),
+                new OA\Property(property: 'fund_source_id', type: 'integer'),
+                new OA\Property(property: 'others_specify', type: 'string', nullable: true, description: 'Required when the fund source requires specify ("Others").'),
             ],
             type: 'object',
         )),

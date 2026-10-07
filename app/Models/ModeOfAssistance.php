@@ -5,6 +5,7 @@ namespace App\Models;
 use App\Models\Concerns\AssessmentCodeLookup;
 use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 /**
@@ -28,6 +29,16 @@ class ModeOfAssistance extends Model
     public static function assessmentColumn(): string
     {
         return 'recommendation_mode';
+    }
+
+    public static function guaranteeItemColumn(): ?string
+    {
+        return 'mode_of_assistance_id';
+    }
+
+    public function guaranteeItems(): HasMany
+    {
+        return $this->hasMany(PatientGuaranteeItem::class);
     }
 
     protected function casts(): array

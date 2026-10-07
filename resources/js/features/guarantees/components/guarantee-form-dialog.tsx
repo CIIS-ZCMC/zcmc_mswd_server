@@ -1,4 +1,5 @@
 import React, { useEffect, useId, useMemo, useState } from "react"
+import { Link } from "@inertiajs/react"
 import {
   Dialog,
   DialogContent,
@@ -31,22 +32,61 @@ import {
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { formatCurrency } from "@/lib/format-currency"
 import { ApiError } from "@/lib/api-client"
-import { useAssistanceSources } from "../hooks/use-assistance-sources"
+import { selectableOptions } from "@/features/cases/lib/assessment-constants"
+import {
+  useAssistanceTypeOptions,
+  useFundSourceOptions,
+  useModeOfAssistanceOptions,
+} from "@/features/library/hooks/use-lookup-options"
+import type { LookupOption } from "@/features/library/types"
 import { useGuarantorOptions } from "../hooks/use-guarantor-options"
 import { useCreateGuarantee, useUpdateGuarantee } from "../hooks/use-guarantees"
-import { AssistanceSourcesManagerDialog } from "./assistance-sources-manager-dialog"
 import type {
   PatientGuarantee,
   SaveGuaranteeInput,
   SaveGuaranteeItemInput,
 } from "../types"
 
+/** A breakdown line, in entry order: Type of Assistance, Amount, Mode, Fund Source. */
 interface FormLineItem {
   id?: number
   localId: string
-  sourceId: number | null
+  assistanceTypeId: number | null
   amount: string
+  modeOfAssistanceId: number | null
+  fundSourceId: number | null
   othersSpecify: string
+}
+
+function emptyLine(localId: string): FormLineItem {
+  return {
+    localId,
+    assistanceTypeId: null,
+    amount: "",
+    modeOfAssistanceId: null,
+    fundSourceId: null,
+    othersSpecify: "",
+  }
+}
+
+/**
+ * Select options keyed by id: the active ones, plus the line's current value when it
+ * has since been retired (shown as "(inactive)").
+ */
+function lineOptions(
+  options: LookupOption[],
+  current: number | null
+): Array<{ value: string; label: string }> {
+  return selectableOptions(
+    options
+      .filter((o) => o.id !== undefined)
+      .map((o) => ({
+        value: String(o.id),
+        label: o.label,
+        isActive: o.isActive,
+      })),
+    current ? String(current) : null
+  )
 }
 
 interface GuaranteeFormDialogProps {
@@ -80,13 +120,19 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
 }) => {
   const isEditing = Boolean(guarantee?.id)
   const prefix = useId()
-  const canManageSources = usePermission("guarantee.create")
-  const [isManageTypesOpen, setIsManageTypesOpen] = useState(false)
+  const canManageLibrary = usePermission("library.manage")
 
   const { data: guarantorOptions = [], isLoading: loadingGuarantors } =
     useGuarantorOptions(true)
-  const { data: assistanceSources = [], isLoading: loadingSources } =
-    useAssistanceSources(true)
+  // Inactive options are fetched too, so a line keeps showing a retired choice.
+  const { data: typeOptions = [], isLoading: loadingTypes } =
+    useAssistanceTypeOptions(false)
+  const { data: modeOptions = [], isLoading: loadingModes } =
+    useModeOfAssistanceOptions(false)
+  const { data: fundOptions = [], isLoading: loadingFunds } =
+    useFundSourceOptions(false)
+  const loadingOptions = loadingTypes || loadingModes || loadingFunds
+  const activeTypeCount = typeOptions.filter((o) => o.isActive !== false).length
 
   const createMutation = useCreateGuarantee(patientId, transactionId)
   const updateMutation = useUpdateGuarantee(patientId, transactionId)
@@ -96,9 +142,7 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
   const [referenceNo, setReferenceNo] = useState("")
   const [guaranteedOn, setGuaranteedOn] = useState(getTodayString())
   const [remarks, setRemarks] = useState("")
-  const [lines, setLines] = useState<FormLineItem[]>([
-    { localId: "line-1", sourceId: null, amount: "", othersSpecify: "" },
-  ])
+  const [lines, setLines] = useState<FormLineItem[]>([emptyLine("line-1")])
 
   const [serverErrors, setServerErrors] = useState<Record<string, string[]>>({})
   const [generalError, setGeneralError] = useState<string | null>(null)
@@ -117,28 +161,27 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
       setGuaranteedOn(guarantee.guaranteedOn ?? getTodayString())
       setRemarks(guarantee.remarks ?? "")
       if (guarantee.items.length > 0) {
+        // Older lines have no type or mode yet; they must be chosen before saving.
         setLines(
           guarantee.items.map((item, idx) => ({
             id: item.id,
             localId: `existing-${item.id ?? idx}`,
-            sourceId: item.sourceId,
+            assistanceTypeId: item.assistanceTypeId,
             amount: item.amount > 0 ? String(item.amount) : "",
+            modeOfAssistanceId: item.modeOfAssistanceId,
+            fundSourceId: item.fundSourceId,
             othersSpecify: item.othersSpecify ?? "",
           }))
         )
       } else {
-        setLines([
-          { localId: "line-1", sourceId: null, amount: "", othersSpecify: "" },
-        ])
+        setLines([emptyLine("line-1")])
       }
     } else {
       setGuarantorId(initialGuarantorId ?? null)
       setReferenceNo("")
       setGuaranteedOn(getTodayString())
       setRemarks("")
-      setLines([
-        { localId: "line-1", sourceId: null, amount: "", othersSpecify: "" },
-      ])
+      setLines([emptyLine("line-1")])
     }
     setServerErrors({})
     setGeneralError(null)
@@ -168,16 +211,33 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
     }, 0)
   }, [lines])
 
-  // Sources map for quick lookup of requiresSpecify
-  const sourcesMap = useMemo(() => {
-    return new Map(assistanceSources.map((s) => [s.id, s]))
-  }, [assistanceSources])
+  // Fund sources by id, to know which ones need a Specify value ("Others").
+  const fundsById = useMemo(
+    () => new Map(fundOptions.map((f) => [f.id, f])),
+    [fundOptions]
+  )
+  const typesById = useMemo(
+    () => new Map(typeOptions.map((t) => [t.id, t])),
+    [typeOptions]
+  )
+  const modesById = useMemo(
+    () => new Map(modeOptions.map((m) => [m.id, m])),
+    [modeOptions]
+  )
+  // Base UI's Select.Value shows the raw value unless given a formatter.
+  const labelOf =
+    (byId: Map<number | undefined, LookupOption>, placeholder: string) =>
+    (value: string | null) =>
+      value ? (byId.get(Number(value))?.label ?? placeholder) : placeholder
+  const fundNeedsSpecify = (fundSourceId: number | null) =>
+    fundSourceId !== null &&
+    Boolean(fundsById.get(fundSourceId)?.requiresSpecify)
 
-  // Selected source IDs across all lines
-  const selectedSourceIds = useMemo(() => {
+  // Types already used on a line: one line per Type of Assistance.
+  const selectedTypeIds = useMemo(() => {
     return new Set(
       lines
-        .map((l) => l.sourceId)
+        .map((l) => l.assistanceTypeId)
         .filter((id): id is number => id !== null && id > 0)
     )
   }, [lines])
@@ -185,12 +245,7 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
   const handleAddLine = () => {
     setLines((prev) => [
       ...prev,
-      {
-        localId: `line-${Date.now()}-${prev.length + 1}`,
-        sourceId: null,
-        amount: "",
-        othersSpecify: "",
-      },
+      emptyLine(`line-${Date.now()}-${prev.length + 1}`),
     ])
   }
 
@@ -222,11 +277,12 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
       return
     }
 
+    // Checked in the order the line is entered.
     const payloadItems: SaveGuaranteeItemInput[] = []
     for (let i = 0; i < lines.length; i++) {
       const line = lines[i]
-      if (!line.sourceId) {
-        setGeneralError(`Line ${i + 1}: Please select an Assistance Source.`)
+      if (!line.assistanceTypeId) {
+        setGeneralError(`Line ${i + 1}: Please select a Type of Assistance.`)
         return
       }
       const amt = parseFloat(line.amount)
@@ -236,19 +292,27 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
         )
         return
       }
-      const sourceDef = sourcesMap.get(line.sourceId)
-      if (sourceDef?.requiresSpecify && !line.othersSpecify.trim()) {
+      if (!line.modeOfAssistanceId) {
+        setGeneralError(`Line ${i + 1}: Please select a Mode of Assistance.`)
+        return
+      }
+      if (!line.fundSourceId) {
+        setGeneralError(`Line ${i + 1}: Please select a Fund Source.`)
+        return
+      }
+      const needsSpecify = fundNeedsSpecify(line.fundSourceId)
+      if (needsSpecify && !line.othersSpecify.trim()) {
         setGeneralError(
-          `Line ${i + 1}: Please specify the details for ${sourceDef.name}.`
+          `Line ${i + 1}: Please specify the ${fundsById.get(line.fundSourceId)?.label ?? "fund source"}.`
         )
         return
       }
       payloadItems.push({
-        sourceId: line.sourceId,
+        assistanceTypeId: line.assistanceTypeId,
         amount: amt,
-        othersSpecify: sourceDef?.requiresSpecify
-          ? line.othersSpecify.trim()
-          : null,
+        modeOfAssistanceId: line.modeOfAssistanceId,
+        fundSourceId: line.fundSourceId,
+        othersSpecify: needsSpecify ? line.othersSpecify.trim() : null,
       })
     }
 
@@ -297,8 +361,8 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
               {isEditing ? "Edit Patient Guarantor" : "Add Patient Guarantor"}
             </DialogTitle>
             <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
-              Record hospital encounter financial coverage and assistance source
-              breakdowns.
+              Record the guarantor for this hospital encounter and break it down
+              by type of assistance, mode of assistance and fund source.
             </DialogDescription>
           </DialogHeader>
 
@@ -349,9 +413,29 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
                               ? "Loading..."
                               : "Select guarantor"
                           }
-                        />
+                        >
+                          {(value: string | null) =>
+                            value
+                              ? (guarantorOptions.find(
+                                  (opt) => String(opt.id) === value
+                                )?.name ??
+                                guarantee?.guarantor?.name ??
+                                "Select guarantor")
+                              : loadingGuarantors
+                                ? "Loading..."
+                                : "Select guarantor"
+                          }
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
+                        {guarantee?.guarantor &&
+                          !guarantorOptions.some(
+                            (opt) => opt.id === guarantee.guarantor?.id
+                          ) && (
+                            <SelectItem value={String(guarantee.guarantor.id)}>
+                              {guarantee.guarantor.name} (inactive)
+                            </SelectItem>
+                          )}
                         {guarantorOptions.map((opt) => (
                           <SelectItem key={opt.id} value={String(opt.id)}>
                             {opt.name}
@@ -451,21 +535,20 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
             <Card className="border bg-card/60 shadow-2xs">
               <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/20 px-4 pt-3.5 pb-2.5">
                 <CardTitle className="text-xs font-bold tracking-wider text-muted-foreground uppercase sm:text-sm">
-                  Assistance Sources & Breakdown
+                  Assistance Breakdown
                 </CardTitle>
                 <div className="flex items-center gap-2">
-                  {canManageSources && (
+                  {canManageLibrary && (
                     <Button
                       type="button"
                       variant="ghost"
                       size="sm"
-                      onClick={() => setIsManageTypesOpen(true)}
-                      disabled={isPending}
-                      className="h-7 cursor-pointer gap-1 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
-                      title="Manage Breakdown Types"
+                      render={<Link href="/library" />}
+                      className="h-7 gap-1 px-2 text-xs font-semibold text-muted-foreground hover:text-foreground"
+                      title="Manage the options in the Library"
                     >
                       <SlidersHorizontal className="size-3.5 text-primary" />
-                      Manage Types
+                      Manage in Library
                     </Button>
                   )}
                   <Button
@@ -475,8 +558,8 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
                     onClick={handleAddLine}
                     disabled={
                       isPending ||
-                      loadingSources ||
-                      lines.length >= assistanceSources.length
+                      loadingOptions ||
+                      lines.length >= Math.max(activeTypeCount, 1)
                     }
                     className="h-7 cursor-pointer gap-1 px-2 text-xs font-semibold"
                   >
@@ -487,10 +570,9 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
               </CardHeader>
               <CardContent className="space-y-3 p-4">
                 {lines.map((line, idx) => {
-                  const selectedSource = line.sourceId
-                    ? sourcesMap.get(line.sourceId)
-                    : null
-                  const needsSpecify = Boolean(selectedSource?.requiresSpecify)
+                  const needsSpecify = fundNeedsSpecify(line.fundSourceId)
+                  const fieldError = (field: string) =>
+                    serverErrors[`items.${idx}.${field}`]?.[0]
 
                   return (
                     <div
@@ -509,89 +591,67 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
                             onClick={() => handleRemoveLine(idx)}
                             disabled={isPending}
                             className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                            aria-label={`Remove line ${idx + 1}`}
                           >
                             <Trash2 className="size-3.5" />
                           </Button>
                         )}
                       </div>
 
+                      {/* Type of Assistance -> Amount -> Mode of Assistance -> Fund Source */}
                       <div className="grid grid-cols-1 items-start gap-2.5 sm:grid-cols-12">
-                        {/* Assistance Source select */}
-                        <div
-                          className={
-                            needsSpecify
-                              ? "space-y-1 sm:col-span-5"
-                              : "space-y-1 sm:col-span-7"
-                          }
-                        >
+                        <div className="space-y-1 sm:col-span-4">
                           <Label className="text-[11px] font-semibold text-muted-foreground">
-                            Assistance Source{" "}
+                            Type of Assistance{" "}
                             <span className="text-destructive">*</span>
                           </Label>
                           <Select
-                            value={line.sourceId ? String(line.sourceId) : ""}
-                            onValueChange={(val) => {
-                              const newSourceId = Number(val)
+                            value={
+                              line.assistanceTypeId
+                                ? String(line.assistanceTypeId)
+                                : ""
+                            }
+                            onValueChange={(val) =>
                               handleLineChange(idx, {
-                                sourceId: newSourceId,
-                                othersSpecify: "",
+                                assistanceTypeId: val ? Number(val) : null,
                               })
-                            }}
-                            disabled={loadingSources || isPending}
+                            }
+                            disabled={loadingOptions || isPending}
                           >
                             <SelectTrigger className="h-9 text-xs font-medium">
-                              <SelectValue placeholder="Select source" />
+                              <SelectValue placeholder="Select type">
+                                {labelOf(typesById, "Select type")}
+                              </SelectValue>
                             </SelectTrigger>
                             <SelectContent>
-                              {assistanceSources.map((source) => {
+                              {lineOptions(
+                                typeOptions,
+                                line.assistanceTypeId
+                              ).map((opt) => {
                                 const isTaken =
-                                  selectedSourceIds.has(source.id) &&
-                                  line.sourceId !== source.id
+                                  selectedTypeIds.has(Number(opt.value)) &&
+                                  line.assistanceTypeId !== Number(opt.value)
                                 return (
                                   <SelectItem
-                                    key={source.id}
-                                    value={String(source.id)}
+                                    key={opt.value}
+                                    value={opt.value}
                                     disabled={isTaken}
                                     className="text-xs"
                                   >
-                                    {source.name} {isTaken ? "(Selected)" : ""}
+                                    {opt.label} {isTaken ? "(Selected)" : ""}
                                   </SelectItem>
                                 )
                               })}
                             </SelectContent>
                           </Select>
+                          {fieldError("assistant_type_id") && (
+                            <p className="text-[11px] font-semibold text-destructive">
+                              {fieldError("assistant_type_id")}
+                            </p>
+                          )}
                         </div>
 
-                        {/* Optional Specify input */}
-                        {needsSpecify && (
-                          <div className="space-y-1 sm:col-span-3">
-                            <Label className="text-[11px] font-semibold text-muted-foreground">
-                              Specify{" "}
-                              <span className="text-destructive">*</span>
-                            </Label>
-                            <Input
-                              placeholder="Specify source..."
-                              value={line.othersSpecify}
-                              onChange={(e) =>
-                                handleLineChange(idx, {
-                                  othersSpecify: e.target.value,
-                                })
-                              }
-                              className="h-9 text-xs"
-                              disabled={isPending}
-                              required
-                            />
-                          </div>
-                        )}
-
-                        {/* Amount input */}
-                        <div
-                          className={
-                            needsSpecify
-                              ? "space-y-1 sm:col-span-4"
-                              : "space-y-1 sm:col-span-5"
-                          }
-                        >
+                        <div className="space-y-1 sm:col-span-2">
                           <Label className="text-[11px] font-semibold text-muted-foreground">
                             Amount (₱){" "}
                             <span className="text-destructive">*</span>
@@ -609,7 +669,126 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
                             disabled={isPending}
                             required
                           />
+                          {fieldError("amount") && (
+                            <p className="text-[11px] font-semibold text-destructive">
+                              {fieldError("amount")}
+                            </p>
+                          )}
                         </div>
+
+                        <div className="space-y-1 sm:col-span-3">
+                          <Label className="text-[11px] font-semibold text-muted-foreground">
+                            Mode of Assistance{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={
+                              line.modeOfAssistanceId
+                                ? String(line.modeOfAssistanceId)
+                                : ""
+                            }
+                            onValueChange={(val) =>
+                              handleLineChange(idx, {
+                                modeOfAssistanceId: val ? Number(val) : null,
+                              })
+                            }
+                            disabled={loadingOptions || isPending}
+                          >
+                            <SelectTrigger className="h-9 text-xs font-medium">
+                              <SelectValue placeholder="Select mode">
+                                {labelOf(modesById, "Select mode")}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {lineOptions(
+                                modeOptions,
+                                line.modeOfAssistanceId
+                              ).map((opt) => (
+                                <SelectItem
+                                  key={opt.value}
+                                  value={opt.value}
+                                  className="text-xs"
+                                >
+                                  {opt.label}
+                                </SelectItem>
+                              ))}
+                            </SelectContent>
+                          </Select>
+                          {fieldError("mode_of_assistance_id") && (
+                            <p className="text-[11px] font-semibold text-destructive">
+                              {fieldError("mode_of_assistance_id")}
+                            </p>
+                          )}
+                        </div>
+
+                        <div className="space-y-1 sm:col-span-3">
+                          <Label className="text-[11px] font-semibold text-muted-foreground">
+                            Fund Source{" "}
+                            <span className="text-destructive">*</span>
+                          </Label>
+                          <Select
+                            value={
+                              line.fundSourceId ? String(line.fundSourceId) : ""
+                            }
+                            onValueChange={(val) =>
+                              handleLineChange(idx, {
+                                fundSourceId: val ? Number(val) : null,
+                                othersSpecify: "",
+                              })
+                            }
+                            disabled={loadingOptions || isPending}
+                          >
+                            <SelectTrigger className="h-9 text-xs font-medium">
+                              <SelectValue placeholder="Select fund">
+                                {labelOf(fundsById, "Select fund")}
+                              </SelectValue>
+                            </SelectTrigger>
+                            <SelectContent>
+                              {lineOptions(fundOptions, line.fundSourceId).map(
+                                (opt) => (
+                                  <SelectItem
+                                    key={opt.value}
+                                    value={opt.value}
+                                    className="text-xs"
+                                  >
+                                    {opt.label}
+                                  </SelectItem>
+                                )
+                              )}
+                            </SelectContent>
+                          </Select>
+                          {fieldError("fund_source_id") && (
+                            <p className="text-[11px] font-semibold text-destructive">
+                              {fieldError("fund_source_id")}
+                            </p>
+                          )}
+                        </div>
+
+                        {needsSpecify && (
+                          <div className="space-y-1 sm:col-span-12">
+                            <Label className="text-[11px] font-semibold text-muted-foreground">
+                              Specify Fund Source{" "}
+                              <span className="text-destructive">*</span>
+                            </Label>
+                            <Input
+                              placeholder="e.g. Barangay Captain"
+                              value={line.othersSpecify}
+                              onChange={(e) =>
+                                handleLineChange(idx, {
+                                  othersSpecify: e.target.value,
+                                })
+                              }
+                              className="h-9 text-xs"
+                              disabled={isPending}
+                              required
+                            />
+                            {fieldError("others_specify") && (
+                              <p className="text-[11px] font-semibold text-destructive">
+                                {fieldError("others_specify")}
+                              </p>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   )
@@ -657,11 +836,6 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
           </form>
         </DialogContent>
       </Dialog>
-
-      <AssistanceSourcesManagerDialog
-        open={isManageTypesOpen}
-        onOpenChange={setIsManageTypesOpen}
-      />
     </>
   )
 }

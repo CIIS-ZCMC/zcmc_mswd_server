@@ -84,6 +84,24 @@ trait AssessmentCodeLookup
     }
 
     /**
+     * Select options (id => name) for a guarantee line: the active rows, plus the ids
+     * the record already uses so a retired option stays visible on it.
+     *
+     * @param  list<int>  $keepIds
+     * @return array<int, string>
+     */
+    public static function idOptions(array $keepIds = []): array
+    {
+        return static::withTrashed()
+            ->where(fn (Builder $query) => $query
+                ->where(fn (Builder $live) => $live->where('is_active', true)->whereNull('deleted_at'))
+                ->when($keepIds !== [], fn (Builder $q) => $q->orWhereIn('id', $keepIds)))
+            ->ordered()
+            ->pluck('name', 'id')
+            ->all();
+    }
+
+    /**
      * How many assessments store this row's code. This alone locks the code: breakdown
      * lines store the id, so a code change never orphans them.
      */

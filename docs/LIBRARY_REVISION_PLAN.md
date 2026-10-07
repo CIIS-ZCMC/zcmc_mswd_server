@@ -29,6 +29,9 @@ issue, one branch and one PR per phase.
 Every merge leaves `master` working: the current breakdown form keeps using `assistance_source_id` until the breakdown
 rewrite lands.
 
+**Update:** Guarantee Breakdown phase 1 has landed. Breakdown lines use `fund_source_id` and no longer write
+`assistance_source_id` (now nullable), so Phase 4 is unblocked.
+
 **Notes from the build:**
 
 - **Phase 1:**

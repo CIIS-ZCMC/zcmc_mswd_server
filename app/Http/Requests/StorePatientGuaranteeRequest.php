@@ -2,10 +2,11 @@
 
 namespace App\Http\Requests;
 
-use App\Models\AssistanceSource;
+use App\Models\FundSource;
+use App\Models\PatientGuarantee;
+use App\Rules\SelectableLookupId;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
-use Illuminate\Validation\Rule;
 use Illuminate\Validation\Validator;
 
 class StorePatientGuaranteeRequest extends FormRequest
@@ -38,7 +39,7 @@ class StorePatientGuaranteeRequest extends FormRequest
     protected function headerRules(): array
     {
         return [
-            'guarantor_id' => ['required', 'integer', Rule::exists('guarantors', 'id')->where('is_active', true)->whereNull('deleted_at')],
+            'guarantor_id' => ['required', 'integer', new SelectableLookupId('guarantors', $this->keptIds('guarantor_id'))],
             'reference_no' => ['nullable', 'string', 'max:255'],
             'guaranteed_on' => ['required', 'date'],
             'remarks' => ['nullable', 'string'],
@@ -46,23 +47,52 @@ class StorePatientGuaranteeRequest extends FormRequest
     }
 
     /**
+     * A line is Type of Assistance -> Amount -> Mode of Assistance -> Fund Source, one
+     * line per type. New choices must be active; an edit may keep what the guarantee
+     * already uses.
+     *
      * @return array<string, array<mixed>>
      */
     protected function itemRules(): array
     {
         return [
             'items' => ['required', 'array', 'min:1'],
-            'items.*.assistance_source_id' => [
-                'required', 'integer', 'distinct',
-                Rule::exists('assistance_sources', 'id')->where('is_active', true)->whereNull('deleted_at'),
-            ],
+            'items.*.assistant_type_id' => ['required', 'integer', 'distinct', new SelectableLookupId('assistant_types', $this->keptIds('assistant_type_id'))],
             'items.*.amount' => ['required', 'numeric', 'gt:0', 'max:9999999999.99'],
+            'items.*.mode_of_assistance_id' => ['required', 'integer', new SelectableLookupId('mode_of_assistances', $this->keptIds('mode_of_assistance_id'))],
+            'items.*.fund_source_id' => ['required', 'integer', new SelectableLookupId('fund_sources', $this->keptIds('fund_source_id'))],
             'items.*.others_specify' => ['nullable', 'string', 'max:255'],
         ];
     }
 
     /**
-     * A line whose source requires it ("Others") must say what it is.
+     * The ids the guarantee being edited already uses in a column (none on create).
+     *
+     * @return list<int>
+     */
+    protected function keptIds(string $column): array
+    {
+        $guarantee = $this->route('guarantee');
+
+        if (! $guarantee instanceof PatientGuarantee) {
+            return [];
+        }
+
+        if ($column === 'guarantor_id') {
+            return [(int) $guarantee->guarantor_id];
+        }
+
+        return $guarantee->items()
+            ->whereNotNull($column)
+            ->pluck($column)
+            ->map(fn ($id) => (int) $id)
+            ->unique()
+            ->values()
+            ->all();
+    }
+
+    /**
+     * A line whose fund source requires it ("Others") must say what it is.
      *
      * @return array<int, callable>
      */
@@ -75,16 +105,16 @@ class StorePatientGuaranteeRequest extends FormRequest
                 return;
             }
 
-            $needsSpecify = AssistanceSource::query()
-                ->whereIn('id', collect($items)->pluck('assistance_source_id')->filter()->all())
+            $needsSpecify = FundSource::withTrashed()
+                ->whereIn('id', collect($items)->pluck('fund_source_id')->filter()->all())
                 ->where('requires_specify', true)
                 ->pluck('id')
                 ->all();
 
             foreach ($items as $index => $item) {
-                if (in_array((int) ($item['assistance_source_id'] ?? 0), $needsSpecify, true)
+                if (in_array((int) ($item['fund_source_id'] ?? 0), $needsSpecify, true)
                     && blank($item['others_specify'] ?? null)) {
-                    $validator->errors()->add("items.{$index}.others_specify", 'Please specify the source of this assistance.');
+                    $validator->errors()->add("items.{$index}.others_specify", 'Please specify the fund source of this line.');
                 }
             }
         }];

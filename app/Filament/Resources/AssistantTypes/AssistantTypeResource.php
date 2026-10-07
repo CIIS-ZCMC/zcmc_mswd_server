@@ -76,7 +76,7 @@ class AssistantTypeResource extends Resource
     public static function table(Table $table): Table
     {
         return $table
-            ->modifyQueryUsing(fn (Builder $query) => $query->withCount('patientAssistances'))
+            ->modifyQueryUsing(fn (Builder $query) => $query->withCount(['patientAssistances', 'guaranteeItems']))
             ->columns([
                 TextColumn::make('name')
                     ->searchable()
@@ -96,8 +96,9 @@ class AssistantTypeResource extends Resource
                 IconColumn::make('is_active')
                     ->label('Active')
                     ->boolean(),
-                TextColumn::make('patient_assistances_count')
+                TextColumn::make('usage')
                     ->label('Used in')
+                    ->state(fn (AssistantType $record) => (int) $record->patient_assistances_count + (int) $record->guarantee_items_count)
                     ->numeric(),
             ])
             ->filters([

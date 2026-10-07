@@ -7,7 +7,9 @@ use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 
 /**
- * One breakdown line of a guarantee: an assistance source and its amount.
+ * One breakdown line of a guarantee: a Type of Assistance, its amount, the Mode of
+ * Assistance and the Fund Source that pays it ("Others" funds say what they are in
+ * `others_specify`). Lines from before this shape have no type or mode yet.
  */
 class PatientGuaranteeItem extends Model
 {
@@ -15,10 +17,12 @@ class PatientGuaranteeItem extends Model
 
     protected $fillable = [
         'patient_guarantee_id',
-        'assistance_source_id',
+        'assistant_type_id',
+        'amount',
+        'mode_of_assistance_id',
         'fund_source_id',
         'others_specify',
-        'amount',
+        'assistance_source_id',
     ];
 
     protected function casts(): array
@@ -34,6 +38,18 @@ class PatientGuaranteeItem extends Model
     }
 
     /** Includes a deleted type, so an old line still shows its name. */
+    public function assistanceType(): BelongsTo
+    {
+        return $this->belongsTo(AssistantType::class, 'assistant_type_id')->withTrashed();
+    }
+
+    /** Includes a deleted mode, so an old line still shows its name. */
+    public function modeOfAssistance(): BelongsTo
+    {
+        return $this->belongsTo(ModeOfAssistance::class)->withTrashed();
+    }
+
+    /** The former assistance source; kept until the Assistance Sources list is removed. */
     public function source(): BelongsTo
     {
         return $this->belongsTo(AssistanceSource::class, 'assistance_source_id')->withTrashed();

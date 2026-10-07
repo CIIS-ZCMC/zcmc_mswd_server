@@ -48,24 +48,34 @@ export interface GuarantorOption {
   isActive?: boolean
 }
 
-export interface ApiGuaranteeItem {
-  id?: number
-  source?: {
-    id: number
-    name: string
-    requires_specify?: boolean
-  } | null
-  others_specify?: string | null
-  amount: number | string
+interface ApiLineOption {
+  id: number
+  name: string
+  code?: string | null
 }
 
+/** A breakdown line: Type of Assistance, amount, Mode of Assistance, Fund Source. */
+export interface ApiGuaranteeItem {
+  id?: number
+  assistance_type?: ApiLineOption | null
+  amount: number | string
+  mode_of_assistance?: ApiLineOption | null
+  fund_source?: (ApiLineOption & { requires_specify?: boolean }) | null
+  others_specify?: string | null
+}
+
+/** Lines from before the breakdown rewrite have no type or mode (null). */
 export interface GuaranteeItem {
   id?: number
-  sourceId: number
-  sourceName: string
-  requiresSpecify: boolean
-  othersSpecify: string
+  assistanceTypeId: number | null
+  assistanceTypeName: string | null
   amount: number
+  modeOfAssistanceId: number | null
+  modeOfAssistanceName: string | null
+  fundSourceId: number | null
+  fundSourceName: string | null
+  fundRequiresSpecify: boolean
+  othersSpecify: string
 }
 
 export interface ApiPatientGuarantee {
@@ -113,8 +123,10 @@ export interface PatientGuarantee {
 }
 
 export interface ApiSaveGuaranteeItemPayload {
-  assistance_source_id: number
+  assistant_type_id: number
   amount: number
+  mode_of_assistance_id: number
+  fund_source_id: number
   others_specify?: string | null
 }
 
@@ -128,8 +140,10 @@ export interface ApiSaveGuaranteePayload {
 }
 
 export interface SaveGuaranteeItemInput {
-  sourceId: number
+  assistanceTypeId: number
   amount: number
+  modeOfAssistanceId: number
+  fundSourceId: number
   othersSpecify?: string | null
 }
 

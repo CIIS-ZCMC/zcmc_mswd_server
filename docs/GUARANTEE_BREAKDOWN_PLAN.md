@@ -13,10 +13,37 @@ Builds on `docs/PATIENT_GUARANTOR_PLAN.md`. Ships as one issue, one branch and o
 
 | Phase | Side | Depends on | Status |
 |-------|------|-----------|--------|
-| 1. Breakdown rewrite end to end: API, Filament guarantees screen, client form and displays (one PR) | both | Library revision phases 1–3 | ☐ not started |
+| 1. Breakdown rewrite end to end: API, Filament guarantees screen, client form and displays (one PR) | both | Library revision phases 1–3 | ☑ done |
 | 2. Docs and verification | both | 1 | ☐ not started |
 
 After phase 1 merges, Library revision phase 4 removes Assistance Sources and `patient_guarantee_items.assistance_source_id`.
+
+**Notes from the build (phase 1):**
+
+- **Schema:** the migration also makes `patient_guarantee_items.assistance_source_id` nullable, because new lines no
+  longer set it. Library revision phase 4 drops it. `down()` leaves it nullable, since lines without it may exist by
+  then.
+- **Stopgap removed:** `PatientGuaranteeService` no longer fills `fund_source_id` from the assistance source. Lines now
+  arrive with their fund source.
+- **Validation:** the update request builds its rules with `array_filter` instead of `array_diff`, because the rule
+  lists now hold `SelectableLookupId` objects. `guarantor_id` uses `SelectableLookupId` too, so a guarantee keeps a
+  retired guarantor on edit.
+- **Library usage:** Types of Assistance and Modes of Assistance now count breakdown lines (`guarantee_lines`).
+  `AssistantTypeResource.usage_count` is assistance records plus lines.
+- **Filament:**
+  - `GuaranteesRelationManager` sets `->authorize()` on Edit, Delete and Restore. Its `canEdit()` / `canDelete()`
+    alone did not hide the actions.
+  - The repeater's selects use `idOptions()` (active rows plus the ones the guarantee already uses) on `AssistantType`,
+    `ModeOfAssistance`, `FundSource` and `Guarantor`.
+- **Client:**
+  - The breakdown table is one shared component, `GuaranteeBreakdownTable`, used by the encounter card and the case
+    tab.
+  - The "Manage Types" buttons there, and in the form, became **Manage in Library** links, shown with
+    `library.manage`.
+  - The selects pass a formatter to Base UI's `SelectValue`, which otherwise shows the raw id. A retired guarantor stays
+    visible on its guarantee.
+  - The client is checked with `tsc -p tsconfig.app.json`, `npm run lint` and `npm run build`. There is no JS test
+    runner.
 
 ## Background
 

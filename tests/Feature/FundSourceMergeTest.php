@@ -11,7 +11,6 @@ use App\Models\PatientGuarantee;
 use App\Models\PatientGuaranteeItem;
 use App\Models\Sector;
 use App\Models\User;
-use App\Services\PatientGuaranteeService;
 use Database\Seeders\AssistanceSourceSeeder;
 use Database\Seeders\FundSourceSeeder;
 use Database\Seeders\GuarantorSeeder;
@@ -115,26 +114,6 @@ it('makes a unique code when a copied source collides with an existing one', fun
     mergeMigration()->merge();
 
     expect(FundSource::where('name', 'MSWD Office')->value('code'))->toBe('mswd_office_2');
-});
-
-it('fills the fund source on breakdown lines saved through the current form', function () {
-    $this->seed(AssistanceSourceSeeder::class);
-    $mayor = AssistanceSource::where('code', 'city_mayor')->firstOrFail();
-
-    $guarantee = PatientGuarantee::create([
-        'patient_id' => Patient::create([
-            'sector_id' => Sector::firstOrCreate(['code' => 'MED'], ['name' => 'Medical'])->id,
-            'first_name' => 'Ben', 'last_name' => 'Cruz', 'sex' => 'male',
-        ])->id,
-        'his_transaction_id' => 10, 'guarantor_id' => Guarantor::query()->value('id'),
-        'guaranteed_on' => '2026-10-06', 'recorded_by' => $this->supervisor->id,
-    ]);
-
-    app(PatientGuaranteeService::class)->update($guarantee, [
-        'items' => [['assistance_source_id' => $mayor->id, 'amount' => 1500]],
-    ]);
-
-    expect($guarantee->items()->first()->fund_source_id)->toBe(FundSource::where('code', 'city_mayor')->value('id'));
 });
 
 it('sets and returns requires_specify on fund sources only', function () {
