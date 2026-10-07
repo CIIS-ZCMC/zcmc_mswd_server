@@ -2,8 +2,8 @@
 
 namespace App\Models;
 
+use App\Models\Concerns\AssessmentCodeLookup;
 use App\Models\Concerns\Auditable;
-use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
@@ -14,7 +14,7 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  */
 class ModeOfAssistance extends Model
 {
-    use Auditable, SoftDeletes;
+    use AssessmentCodeLookup, Auditable, SoftDeletes;
 
     protected $table = 'mode_of_assistances';
 
@@ -25,17 +25,16 @@ class ModeOfAssistance extends Model
         'sort_order',
     ];
 
+    public static function assessmentColumn(): string
+    {
+        return 'recommendation_mode';
+    }
+
     protected function casts(): array
     {
         return [
             'is_active' => 'boolean',
             'sort_order' => 'integer',
         ];
-    }
-
-    /** Dropdown order: sort order, then name. */
-    public function scopeOrdered(Builder $query): Builder
-    {
-        return $query->orderBy('sort_order')->orderBy('name');
     }
 }

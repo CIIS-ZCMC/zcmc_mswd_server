@@ -19,6 +19,11 @@ class GuarantorResource extends JsonResource
             'name' => $this->name,
             'address' => $this->address,
             'is_active' => $this->is_active,
+            // Patient guarantees plus assistance records that name this guarantor, when counted.
+            'usage_count' => $this->when(
+                isset($this->patient_guarantees_count, $this->patient_assistances_count),
+                fn () => $this->patient_guarantees_count + $this->patient_assistances_count,
+            ),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];
