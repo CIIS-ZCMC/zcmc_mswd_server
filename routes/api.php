@@ -9,7 +9,6 @@ use App\Http\Controllers\AssessmentExpenseController;
 use App\Http\Controllers\AssessPatientTransactionController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
-use App\Http\Controllers\AssistanceSourceController;
 use App\Http\Controllers\AssistantTypeController;
 use App\Http\Controllers\CancelAssistanceController;
 use App\Http\Controllers\CaseActivitiesController;
@@ -119,8 +118,6 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('intervention-types', InterventionTypeController::class)->only(['index', 'show'])->parameters(['intervention-types' => 'interventionType']);
     // Guarantors: read by everyone; written by guarantee.create (set in the controller).
     Route::apiResource('guarantors', GuarantorController::class)->except(['create', 'edit']);
-    // Guarantor breakdown types: read by everyone; written by guarantee.create (set in the controller).
-    Route::apiResource('assistance-sources', AssistanceSourceController::class)->except(['create', 'edit'])->parameters(['assistance-sources' => 'assistanceSource']);
     // Library: UIS modes of assistance and fund sources; read by everyone, written by library.manage.
     Route::apiResource('mode-of-assistances', ModeOfAssistanceController::class)->except(['create', 'edit'])->parameters(['mode-of-assistances' => 'modeOfAssistance']);
     Route::apiResource('fund-sources', FundSourceController::class)->except(['create', 'edit'])->parameters(['fund-sources' => 'fundSource']);

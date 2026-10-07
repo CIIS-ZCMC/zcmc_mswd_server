@@ -3,7 +3,6 @@
 use App\Models\Activity;
 use App\Models\Assessment;
 use App\Models\AssessmentExpense;
-use App\Models\AssistanceSource;
 use App\Models\AssistantType;
 use App\Models\CaseHospitalTransaction;
 use App\Models\CaseModel;
@@ -13,6 +12,7 @@ use App\Models\Concerns\Auditable;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticReport;
 use App\Models\Document;
+use App\Models\FundSource;
 use App\Models\Guarantor;
 use App\Models\Intervention;
 use App\Models\InterventionType;
@@ -126,7 +126,8 @@ dataset('resolvers', [
     'PatientGuarantee' => [fn () => guaranteeFor(test()->patient, test()->worker), true, false],
     'PatientGuaranteeItem (through the guarantee)' => [fn () => PatientGuaranteeItem::create([
         'patient_guarantee_id' => guaranteeFor(test()->patient, test()->worker)->id,
-        'assistance_source_id' => AssistanceSource::firstOrCreate(['name' => 'City Mayor Assistance'])->id,
+        'assistant_type_id' => AssistantType::firstOrCreate(['name' => 'Medicines'], ['category' => 'medical'])->id,
+        'fund_source_id' => FundSource::firstOrCreate(['name' => 'City Mayor Assistance', 'code' => 'city_mayor'])->id,
         'amount' => 1000,
     ]), true, false],
 

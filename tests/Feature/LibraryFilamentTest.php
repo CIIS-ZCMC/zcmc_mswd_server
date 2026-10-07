@@ -1,7 +1,5 @@
 <?php
 
-use App\Filament\Resources\AssistanceSources\Pages\EditAssistanceSource;
-use App\Filament\Resources\AssistanceSources\Pages\ListAssistanceSources;
 use App\Filament\Resources\FundSources\Pages\CreateFundSource;
 use App\Filament\Resources\FundSources\Pages\EditFundSource;
 use App\Filament\Resources\FundSources\Pages\ListFundSources;
@@ -11,7 +9,6 @@ use App\Filament\Resources\ModeOfAssistances\Pages\CreateModeOfAssistance;
 use App\Filament\Resources\ModeOfAssistances\Pages\EditModeOfAssistance;
 use App\Filament\Resources\ModeOfAssistances\Pages\ListModeOfAssistances;
 use App\Models\Assessment;
-use App\Models\AssistanceSource;
 use App\Models\CaseModel;
 use App\Models\FundSource;
 use App\Models\Guarantor;
@@ -19,7 +16,6 @@ use App\Models\ModeOfAssistance;
 use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\User;
-use Database\Seeders\AssistanceSourceSeeder;
 use Database\Seeders\GuarantorSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Actions\DeleteAction;
@@ -34,7 +30,6 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(GuarantorSeeder::class);
-    $this->seed(AssistanceSourceSeeder::class);
 
     $this->admin = User::factory()->create(['role' => 'Admin']);
     $this->admin->assignRole('Admin');
@@ -151,7 +146,7 @@ it('keeps the lookups away from users without settings.manage', function (string
     Livewire::test($create)->assertForbidden();
 })->with('assessment lookups');
 
-it('restores a deleted guarantor and breakdown type from their edit pages', function () {
+it('restores a deleted guarantor from its edit page', function () {
     $guarantor = Guarantor::where('name', 'PCSO')->firstOrFail();
     $guarantor->delete();
 
@@ -165,18 +160,4 @@ it('restores a deleted guarantor and breakdown type from their edit pages', func
         ->callAction('restore');
 
     expect(Guarantor::find($guarantor->id))->not->toBeNull();
-
-    $source = AssistanceSource::where('code', 'city_mayor')->firstOrFail();
-    $source->delete();
-
-    Livewire::test(ListAssistanceSources::class)
-        ->assertCanNotSeeTableRecords([$source])
-        ->filterTable('trashed', true)
-        ->assertCanSeeTableRecords([$source]);
-
-    Livewire::test(EditAssistanceSource::class, ['record' => $source->getRouteKey()])
-        ->assertOk()
-        ->callAction('restore');
-
-    expect(AssistanceSource::find($source->id))->not->toBeNull();
 });

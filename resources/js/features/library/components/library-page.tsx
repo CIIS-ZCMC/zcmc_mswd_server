@@ -21,12 +21,6 @@ import {
   useUpdateGuarantor,
   useUpdateModeOfAssistance,
 } from "../hooks/use-library"
-import {
-  useAssistanceSources,
-  useCreateAssistanceSource,
-  useDeleteAssistanceSource,
-  useUpdateAssistanceSource,
-} from "@/features/guarantees/hooks/use-assistance-sources"
 import { LookupTable } from "./lookup-table"
 import type { LookupFormItem } from "./dialogs/lookup-item-dialog"
 import type { LibraryTabKey } from "../types"
@@ -66,13 +60,6 @@ export const LibraryPage: React.FC = () => {
   const updateFund = useUpdateFundSource()
   const deleteFund = useDeleteFundSource()
 
-  // Assistance Sources (Legacy tab being merged into Fund Sources)
-  const { data: assistanceSources = [], isLoading: assistanceSourcesLoading } =
-    useAssistanceSources(false)
-  const createAssistanceSourceMut = useCreateAssistanceSource()
-  const updateAssistanceSourceMut = useUpdateAssistanceSource()
-  const deleteAssistanceSourceMut = useDeleteAssistanceSource()
-
   const getTabCount = (key: LibraryTabKey) => {
     switch (key) {
       case "guarantors":
@@ -83,8 +70,6 @@ export const LibraryPage: React.FC = () => {
         return modes.length
       case "fund-sources":
         return fundSources.length
-      case "assistance-sources":
-        return assistanceSources.length
     }
   }
 
@@ -323,55 +308,6 @@ export const LibraryPage: React.FC = () => {
               }}
               onDelete={async (id: number) => {
                 await deleteFund.mutateAsync(id)
-              }}
-            />
-          </TabsContent>
-
-          {/* Assistance Sources Tab (Legacy notice) */}
-          <TabsContent
-            value="assistance-sources"
-            className="mt-0 space-y-4 focus-visible:outline-hidden"
-          >
-            <Alert className="border-amber-500/30 bg-amber-500/10 text-foreground">
-              <Info className="size-5 text-amber-600 dark:text-amber-400" />
-              <AlertTitle className="text-sm font-bold text-amber-800 dark:text-amber-300">
-                Notice: Being Merged into Fund Sources
-              </AlertTitle>
-              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
-                Assistance Sources are being unified with Fund Sources. This tab
-                remains temporarily available for backward compatibility with
-                existing guarantee records until the guarantee breakdown rewrite
-                is active.
-              </AlertDescription>
-            </Alert>
-
-            <LookupTable
-              tabConfig={getTabConfig("assistance-sources")}
-              items={assistanceSources}
-              isLoading={assistanceSourcesLoading}
-              canManage={canManageGuarantees}
-              onSave={async (data: LookupFormItem) => {
-                if (data.id) {
-                  await updateAssistanceSourceMut.mutateAsync({
-                    id: data.id,
-                    input: {
-                      name: data.name,
-                      code: data.code,
-                      requiresSpecify: data.requiresSpecify ?? undefined,
-                      isActive: data.isActive,
-                    },
-                  })
-                } else {
-                  await createAssistanceSourceMut.mutateAsync({
-                    name: data.name,
-                    code: data.code,
-                    requiresSpecify: data.requiresSpecify ?? undefined,
-                    isActive: data.isActive,
-                  })
-                }
-              }}
-              onDelete={async (id: number) => {
-                await deleteAssistanceSourceMut.mutateAsync(id)
               }}
             />
           </TabsContent>

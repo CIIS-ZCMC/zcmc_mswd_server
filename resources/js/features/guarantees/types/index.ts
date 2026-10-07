@@ -2,40 +2,6 @@
  * Type definitions for the Patient Guarantor module (MSWD patient guarantees).
  */
 
-export interface ApiAssistanceSource {
-  id: number
-  name: string
-  code?: string | null
-  requires_specify?: boolean
-  is_active?: boolean
-  usage_count?: number
-  created_at?: string
-  updated_at?: string
-}
-
-export interface AssistanceSource {
-  id: number
-  name: string
-  code: string | null
-  requiresSpecify: boolean
-  isActive: boolean
-  usageCount: number
-}
-
-export interface ApiSaveAssistanceSourcePayload {
-  name: string
-  code?: string | null
-  requires_specify?: boolean
-  is_active?: boolean
-}
-
-export interface SaveAssistanceSourceInput {
-  name: string
-  code?: string | null
-  requiresSpecify?: boolean
-  isActive?: boolean
-}
-
 export interface ApiGuarantorOption {
   id: number
   name: string

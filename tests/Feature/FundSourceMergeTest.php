@@ -2,7 +2,6 @@
 
 use App\Filament\Resources\FundSources\Pages\CreateFundSource;
 use App\Models\Assessment;
-use App\Models\AssistanceSource;
 use App\Models\CaseModel;
 use App\Models\FundSource;
 use App\Models\Guarantor;
@@ -11,12 +10,11 @@ use App\Models\PatientGuarantee;
 use App\Models\PatientGuaranteeItem;
 use App\Models\Sector;
 use App\Models\User;
-use Database\Seeders\AssistanceSourceSeeder;
 use Database\Seeders\FundSourceSeeder;
 use Database\Seeders\GuarantorSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
+use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 use Livewire\Livewire;
 
@@ -33,13 +31,7 @@ beforeEach(function () {
     Sanctum::actingAs($this->supervisor);
 });
 
-function mergeMigration(): object
-{
-    return require database_path('migrations/2026_10_11_010100_merge_assistance_sources_into_fund_sources.php');
-}
-
-/** A guarantee line written straight to the database, before the merge has run. */
-function lineFor(AssistanceSource $source, ?string $specify = null): PatientGuaranteeItem
+function createGuaranteeLine(FundSource $source, ?string $specify = null): PatientGuaranteeItem
 {
     $patient = Patient::create([
         'sector_id' => Sector::firstOrCreate(['code' => 'MED'], ['name' => 'Medical'])->id,
@@ -52,7 +44,7 @@ function lineFor(AssistanceSource $source, ?string $specify = null): PatientGuar
     ]);
 
     return $guarantee->items()->create([
-        'assistance_source_id' => $source->id, 'others_specify' => $specify, 'amount' => 500,
+        'fund_source_id' => $source->id, 'others_specify' => $specify, 'amount' => 500,
     ]);
 }
 
@@ -60,60 +52,6 @@ it('seeds the former assistance sources as fund sources, Others requiring specif
     expect(FundSource::ordered()->pluck('name', 'code')->all())->toBe(FundSourceSeeder::SOURCES)
         ->and(FundSource::where('code', 'others')->value('requires_specify'))->toBeTrue()
         ->and(FundSource::where('requires_specify', true)->pluck('code')->all())->toBe(['others']);
-});
-
-it('merges assistance sources into fund sources and backfills the breakdown lines', function () {
-    // An environment from before the merge: only the UIS fund sources.
-    FundSource::withTrashed()->whereNotIn('code', ['mswd', 'maip', 'malasakit', 'pcso', 'lgu_dswd', 'ngo', 'philhealth', 'personal'])->forceDelete();
-
-    $this->seed(AssistanceSourceSeeder::class);
-    $mayor = AssistanceSource::where('code', 'city_mayor')->firstOrFail();
-    $others = AssistanceSource::where('code', 'others')->firstOrFail();
-    $retired = AssistanceSource::create(['name' => 'Vice Mayor Assistance', 'code' => 'vice_mayor']);
-    $retired->delete();
-    $noCode = AssistanceSource::create(['name' => 'Barangay Aid!', 'code' => null]);
-    $sameName = AssistanceSource::create(['name' => 'pcso', 'code' => null]); // matches the UIS PCSO by name
-
-    $mayorLine = lineFor($mayor);
-    $othersLine = lineFor($others, 'Church donation');
-    $retiredLine = lineFor($retired);
-    $pcsoLine = lineFor($sameName);
-    DB::table('patient_guarantee_items')->update(['fund_source_id' => null]);
-
-    $map = mergeMigration()->merge();
-
-    $fundMayor = FundSource::where('code', 'city_mayor')->firstOrFail();
-    $fundOthers = FundSource::where('code', 'others')->firstOrFail();
-    $fundRetired = FundSource::withTrashed()->where('code', 'vice_mayor')->firstOrFail();
-
-    expect($map[$mayor->id])->toBe($fundMayor->id)
-        ->and($fundOthers->requires_specify)->toBeTrue()
-        ->and($fundRetired->trashed())->toBeTrue()
-        ->and(FundSource::where('name', 'Barangay Aid!')->value('code'))->toBe('barangay_aid')
-        ->and($map[$sameName->id])->toBe(FundSource::where('code', 'pcso')->value('id'))
-        ->and($mayorLine->fresh()->fund_source_id)->toBe($fundMayor->id)
-        ->and($othersLine->fresh()->fund_source_id)->toBe($fundOthers->id)
-        ->and($othersLine->fresh()->others_specify)->toBe('Church donation')
-        ->and($retiredLine->fresh()->fund_source_id)->toBe($fundRetired->id)
-        ->and($pcsoLine->fresh()->fund_source_id)->toBe(FundSource::where('code', 'pcso')->value('id'))
-        ->and(PatientGuaranteeItem::whereNull('fund_source_id')->count())->toBe(0);
-
-    // Running it again maps to the same rows and adds nothing.
-    $count = FundSource::withTrashed()->count();
-    expect(mergeMigration()->merge())->toBe($map)
-        ->and(FundSource::withTrashed()->count())->toBe($count);
-
-    (new FundSourceSeeder)->run();
-    expect(FundSource::withTrashed()->count())->toBe($count);
-});
-
-it('makes a unique code when a copied source collides with an existing one', function () {
-    AssistanceSource::create(['name' => 'MSWD Office', 'code' => null]);
-    FundSource::create(['name' => 'Something Else', 'code' => 'mswd_office']);
-
-    mergeMigration()->merge();
-
-    expect(FundSource::where('name', 'MSWD Office')->value('code'))->toBe('mswd_office_2');
 });
 
 it('sets and returns requires_specify on fund sources only', function () {
@@ -129,10 +67,8 @@ it('sets and returns requires_specify on fund sources only', function () {
 });
 
 it('counts assessments and breakdown lines but locks the code only for assessments', function () {
-    $this->seed(AssistanceSourceSeeder::class);
-    $line = lineFor(AssistanceSource::where('code', 'city_mayor')->firstOrFail());
     $mayorFund = FundSource::where('code', 'city_mayor')->firstOrFail();
-    $line->update(['fund_source_id' => $mayorFund->id]);
+    $line = createGuaranteeLine($mayorFund);
 
     $this->getJson("/api/fund-sources/{$mayorFund->id}")
         ->assertOk()
@@ -167,4 +103,12 @@ it('lets settings managers flag a fund source as requiring specify in the admin 
         ->assertHasNoFormErrors();
 
     expect(FundSource::where('code', 'donations')->value('requires_specify'))->toBeTrue();
+});
+
+it('removes the Assistance Sources list now that lines name a fund source', function () {
+    expect(Schema::hasTable('assistance_sources'))->toBeFalse()
+        ->and(Schema::hasColumn('patient_guarantee_items', 'assistance_source_id'))->toBeFalse()
+        ->and(Schema::hasColumn('patient_guarantee_items', 'fund_source_id'))->toBeTrue();
+
+    $this->getJson('/api/assistance-sources')->assertNotFound();
 });

@@ -23,7 +23,6 @@ import type {
   SaveGuarantorInput,
 } from "../types"
 import { guarantorOptionKeys } from "@/features/guarantees/hooks/use-guarantor-options"
-import { assistanceSourceKeys } from "@/features/guarantees/hooks/use-assistance-sources"
 import { guaranteeKeys } from "@/features/guarantees/hooks/use-guarantees"
 
 export const libraryKeys = {
@@ -67,7 +66,6 @@ export function invalidateLibraryCaches(
   queryClient.invalidateQueries({ queryKey: ["mode-of-assistances"] })
   queryClient.invalidateQueries({ queryKey: ["fund-sources"] })
   queryClient.invalidateQueries({ queryKey: guarantorOptionKeys.all })
-  queryClient.invalidateQueries({ queryKey: assistanceSourceKeys.all })
   queryClient.invalidateQueries({ queryKey: guaranteeKeys.all })
 }
 
