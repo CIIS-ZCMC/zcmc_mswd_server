@@ -3,29 +3,20 @@
 namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
-use Illuminate\Foundation\Http\FormRequest;
 
-class UpdateGuarantorRequest extends FormRequest
+/**
+ * Same fields as a create, all optional.
+ */
+class UpdateGuarantorRequest extends StoreGuarantorRequest
 {
     /**
-     * Determine if the user is authorized to make this request.
-     */
-    public function authorize(): bool
-    {
-        return true;
-    }
-
-    /**
-     * Get the validation rules that apply to the request.
-     *
      * @return array<string, ValidationRule|array<mixed>|string>
      */
     public function rules(): array
     {
-        return [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'is_active' => ['boolean'],
-        ];
+        $rules = parent::rules();
+        $rules['name'] = ['sometimes', ...array_diff($rules['name'], ['required'])];
+
+        return $rules;
     }
 }

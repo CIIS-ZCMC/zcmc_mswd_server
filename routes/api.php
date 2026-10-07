@@ -35,6 +35,7 @@ use App\Http\Controllers\DocumentController;
 use App\Http\Controllers\FinalizeSocialCaseController;
 use App\Http\Controllers\FindHospitalPatientController;
 use App\Http\Controllers\FindPatientTransactionController;
+use App\Http\Controllers\FundSourceController;
 use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\HospitalCaseTypeController;
 use App\Http\Controllers\HospitalPatientController;
@@ -48,6 +49,7 @@ use App\Http\Controllers\LogoutController;
 use App\Http\Controllers\MeController;
 use App\Http\Controllers\MembershipController;
 use App\Http\Controllers\MergePatientController;
+use App\Http\Controllers\ModeOfAssistanceController;
 use App\Http\Controllers\MswdClassificationMatrixController;
 use App\Http\Controllers\MyCaseloadController;
 use App\Http\Controllers\MyFollowUpsController;
@@ -114,9 +116,13 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('sectors', SectorController::class)->only(['index', 'show']);
     Route::apiResource('assistant-types', AssistantTypeController::class)->only(['index', 'show'])->parameters(['assistant-types' => 'assistantType']);
     Route::apiResource('intervention-types', InterventionTypeController::class)->only(['index', 'show'])->parameters(['intervention-types' => 'interventionType']);
-    Route::apiResource('guarantors', GuarantorController::class)->only(['index', 'show']);
+    // Guarantors: read by everyone; written by guarantee.create (set in the controller).
+    Route::apiResource('guarantors', GuarantorController::class)->except(['create', 'edit']);
     // Guarantor breakdown types: read by everyone; written by guarantee.create (set in the controller).
     Route::apiResource('assistance-sources', AssistanceSourceController::class)->except(['create', 'edit'])->parameters(['assistance-sources' => 'assistanceSource']);
+    // Library: UIS modes of assistance and fund sources; read by everyone, written by library.manage.
+    Route::apiResource('mode-of-assistances', ModeOfAssistanceController::class)->except(['create', 'edit'])->parameters(['mode-of-assistances' => 'modeOfAssistance']);
+    Route::apiResource('fund-sources', FundSourceController::class)->except(['create', 'edit'])->parameters(['fund-sources' => 'fundSource']);
     Route::apiResource('watcher-relationship-types', WatcherRelationshipTypeController::class)->only(['index', 'show'])->parameters(['watcher-relationship-types' => 'watcherRelationshipType']);
 
     // Users (read-only) + role assignment
