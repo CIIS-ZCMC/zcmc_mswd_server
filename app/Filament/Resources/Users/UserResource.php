@@ -47,6 +47,13 @@ class UserResource extends Resource
                 TextInput::make('email')
                     ->disabled()
                     ->dehydrated(false),
+                // MSWD-maintained: printed under the worker's name on MSWD forms.
+                TextInput::make('license_no')
+                    ->label('License No.')
+                    ->maxLength(255),
+                TextInput::make('position')
+                    ->placeholder('e.g. Social Welfare Officer II')
+                    ->maxLength(255),
                 Select::make('roles')
                     ->relationship('roles', 'name')
                     ->multiple()

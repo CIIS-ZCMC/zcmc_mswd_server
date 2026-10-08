@@ -24,6 +24,7 @@ use App\Http\Controllers\CaseUisPrintHistoryController;
 use App\Http\Controllers\CaseUisReadinessController;
 use App\Http\Controllers\CaseWatcherController;
 use App\Http\Controllers\CaseWatcherStatusController;
+use App\Http\Controllers\CityMayorSlipPdfController;
 use App\Http\Controllers\CloseCaseController;
 use App\Http\Controllers\CompleteFollowUpController;
 use App\Http\Controllers\DestroyWatcherWaiverController;
@@ -209,6 +210,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('guarantees/{guarantee}/acknowledgement-slip/pdf', GuaranteeAcknowledgementSlipPdfController::class);
     // ... or straight from a HIS encounter's MAIFIP guarantor ledger entry (guarantee.view).
     Route::get('patient-transactions/{id}/acknowledgement-slip/pdf', EncounterAcknowledgementSlipPdfController::class);
+    // City Mayor Acknowledgement Slip (ZCMC-F-MSS-04) for a HIS encounter (guarantee.view).
+    Route::get('patient-transactions/{id}/city-mayor-slip/pdf', CityMayorSlipPdfController::class);
 
     // Patient records
     Route::middleware('permission:patients.update')->group(function () {

@@ -142,7 +142,7 @@ class AcknowledgementSlipPdfService
     {
         return $this->log([
             'his_guarantor_entry_id' => $entry->getKey(),
-            'patient_id' => $this->localPatient($encounter)?->id,
+            'patient_id' => $this->registryPatient($encounter)?->id,
             'his_transaction_id' => $encounter->getKey(),
         ], $user, $copies, $remarks);
     }
@@ -159,17 +159,12 @@ class AcknowledgementSlipPdfService
         ?string $timeEnded = null,
         array $assistantTypeIds = [],
     ): array {
-        // The registry's patient when imported (it has the MSWD # and any edits);
-        // otherwise the HIS personal data, unsaved.
-        $patient = $this->localPatient($encounter)
-            ?? (new Patient)->forceFill($encounter->patient?->toPatientAttributes() ?? []);
-
         return $this->fields(
-            $patient,
+            $this->patientFor($encounter),
             $entry->postdate ? Carbon::parse($entry->postdate) : now(),
             round((float) $entry->amount, 2),
             $this->typeNames($assistantTypeIds), // HIS records none: picked at print time
-            $this->diagnosisOf($encounter) ?? $this->snapshotDiagnosis($encounter->getKey()),
+            $this->encounterDiagnosis($encounter),
             $printedBy,
             $timeStarted,
             $timeEnded,
@@ -177,7 +172,37 @@ class AcknowledgementSlipPdfService
         );
     }
 
-    // ---- Shared ------------------------------------------------------------------------
+    // ---- Shared (also used by CityMayorSlipPdfService) ---------------------------------
+
+    /**
+     * The encounter's patient: the registry record when imported (it has the MSWD #
+     * and any edits); otherwise the HIS personal data, unsaved.
+     */
+    public function patientFor(PatientTransaction $encounter): Patient
+    {
+        return $this->registryPatient($encounter)
+            ?? (new Patient)->forceFill($encounter->patient?->toPatientAttributes() ?? []);
+    }
+
+    /** The registry record of the encounter's patient (hospital_id = patid), if imported. */
+    public function registryPatient(PatientTransaction $encounter): ?Patient
+    {
+        $patid = $encounter->patient?->patid;
+
+        return filled($patid) ? Patient::query()->where('hospital_id', $patid)->first() : null;
+    }
+
+    /** The loaded encounter's diagnosis, else the case link's frozen snapshot. */
+    public function encounterDiagnosis(PatientTransaction $encounter): ?string
+    {
+        return $this->diagnosisOf($encounter) ?? $this->snapshotDiagnosis($encounter->getKey());
+    }
+
+    /** "10:49" → "10:49 AM"; null stays blank. */
+    public function clock(?string $time): ?string
+    {
+        return filled($time) ? Carbon::createFromFormat('H:i', $time)->format('g:i A') : null;
+    }
 
     private function pdf(array $slip): DomPdf
     {
@@ -290,13 +315,6 @@ class AcknowledgementSlipPdfService
         return $snapshot['final_diagnosis'] ?? $snapshot['impression'] ?? null;
     }
 
-    private function localPatient(PatientTransaction $encounter): ?Patient
-    {
-        $patid = $encounter->patient?->patid;
-
-        return filled($patid) ? Patient::query()->where('hospital_id', $patid)->first() : null;
-    }
-
     /**
      * @param  array<string, mixed>  $source
      */
@@ -309,11 +327,5 @@ class AcknowledgementSlipPdfService
             'copies' => max(1, $copies),
             'remarks' => $remarks,
         ]);
-    }
-
-    /** "10:49" → "10:49 AM"; null stays blank. */
-    private function clock(?string $time): ?string
-    {
-        return filled($time) ? Carbon::createFromFormat('H:i', $time)->format('g:i A') : null;
     }
 }

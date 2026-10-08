@@ -245,39 +245,39 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({ patient, patientId: pr
 
                   <TableCell className="text-right">
                     <DropdownMenu>
-                      <DropdownMenuTrigger className="size-8 p-0 inline-flex items-center justify-center rounded-md hover:bg-accent text-muted-foreground hover:text-foreground">
-                        <MoreHorizontal className="size-4" />
+                      <DropdownMenuTrigger className="size-8.5 p-0 inline-flex items-center justify-center rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary">
+                        <MoreHorizontal className="size-4.5" />
                       </DropdownMenuTrigger>
-                      <DropdownMenuContent align="end" className="w-48">
+                      <DropdownMenuContent align="end" className="w-56 p-1.5 space-y-0.5">
                         {!watch.isPrimary && (
-                          <DropdownMenuItem onClick={() => handlePromote(watch.id)}>
-                            <Star className="size-4 mr-2 text-amber-500" /> Make Primary
+                          <DropdownMenuItem onClick={() => handlePromote(watch.id)} className="cursor-pointer gap-2 py-2 px-2.5 text-xs sm:text-sm font-semibold">
+                            <Star className="size-4 text-amber-500 shrink-0" /> Make Primary
                           </DropdownMenuItem>
                         )}
-                        <DropdownMenuItem onClick={() => setEditingWatcher(watch)}>
-                          <Edit className="size-4 mr-2" /> Edit Watcher
+                        <DropdownMenuItem onClick={() => setEditingWatcher(watch)} className="cursor-pointer gap-2 py-2 px-2.5 text-xs sm:text-sm font-semibold">
+                          <Edit className="size-4 shrink-0" /> Edit Watcher
                         </DropdownMenuItem>
 
-                        <DropdownMenuSeparator />
+                        <DropdownMenuSeparator className="my-1" />
 
-                        <DropdownMenuItem onClick={() => setPassWatcher(watch)}>
-                          <CheckCircle className="size-4 mr-2 text-emerald-600" />
+                        <DropdownMenuItem onClick={() => setPassWatcher(watch)} className="cursor-pointer gap-2 py-2 px-2.5 text-xs sm:text-sm font-semibold">
+                          <CheckCircle className="size-4 text-emerald-600 shrink-0" />
                           {watch.passNumber ? "Reissue Pass" : "Issue Ward Pass"}
                         </DropdownMenuItem>
 
                         {watch.passNumber && watch.passStatus === "active" && (
-                          <DropdownMenuItem onClick={() => handleRevokePass(watch.id)}>
-                            <Ban className="size-4 mr-2 text-amber-600" /> Revoke Pass
+                          <DropdownMenuItem onClick={() => handleRevokePass(watch.id)} className="cursor-pointer gap-2 py-2 px-2.5 text-xs sm:text-sm font-semibold">
+                            <Ban className="size-4 text-amber-600 shrink-0" /> Revoke Pass
                           </DropdownMenuItem>
                         )}
 
-                        <DropdownMenuSeparator />
+                        <DropdownMenuSeparator className="my-1" />
 
                         <DropdownMenuItem
-                          className="text-destructive focus:text-destructive"
+                          className="cursor-pointer gap-2 py-2 px-2.5 text-xs sm:text-sm font-semibold text-destructive focus:text-destructive"
                           onClick={() => handleDelete(watch.id)}
                         >
-                          <Trash2 className="size-4 mr-2" /> Remove Watcher
+                          <Trash2 className="size-4 shrink-0" /> Remove Watcher
                         </DropdownMenuItem>
                       </DropdownMenuContent>
                     </DropdownMenu>

@@ -185,10 +185,10 @@ export const AcknowledgementSlipDialog: React.FC<
           ) : sources.length === 0 ? (
             <Alert className="border-amber-500/30 bg-amber-500/10">
               <Info className="size-4 shrink-0 text-amber-600" />
-              <AlertTitle className="text-xs font-bold">
+              <AlertTitle className="text-sm font-bold">
                 No MAIFIP guarantee on this encounter
               </AlertTitle>
-              <AlertDescription className="mt-0.5 text-xs">
+              <AlertDescription className="mt-0.5 text-sm">
                 Neither the MSWD records nor the HIS guarantor ledger list
                 MAIFIP for this encounter. Record one under Guarantors → Add
                 Guarantor.
@@ -197,15 +197,15 @@ export const AcknowledgementSlipDialog: React.FC<
           ) : (
             <>
               {sources.length > 1 && (
-                <div className="space-y-1">
-                  <Label htmlFor="slip-guarantee" className="text-xs font-bold">
+                <div className="space-y-1.5">
+                  <Label htmlFor="slip-guarantee" className="text-sm font-bold">
                     Print from
                   </Label>
                   <Select
                     value={selected?.key ?? null}
                     onValueChange={(v) => v && setSelectedKey(v)}
                   >
-                    <SelectTrigger id="slip-guarantee" className="h-9 text-xs">
+                    <SelectTrigger id="slip-guarantee" className="h-10 text-sm">
                       <SelectValue>
                         {(value: string | null) => {
                           const source = sources.find((m) => m.key === value)
@@ -217,7 +217,7 @@ export const AcknowledgementSlipDialog: React.FC<
                     </SelectTrigger>
                     <SelectContent>
                       {sources.map((source) => (
-                        <SelectItem key={source.key} value={source.key}>
+                        <SelectItem key={source.key} value={source.key} className="text-sm">
                           {sourceLabel(source)}
                         </SelectItem>
                       ))}
@@ -227,12 +227,12 @@ export const AcknowledgementSlipDialog: React.FC<
               )}
 
               {selected && (
-                <div className="space-y-1.5 rounded-xl border bg-muted/30 p-3.5 text-xs">
+                <div className="space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">
                       sa halagang Php
                     </span>
-                    <strong className="text-foreground">
+                    <strong className="text-foreground font-bold">
                       {formatCurrency(
                         selected.kind === "mswd"
                           ? selected.guarantee.total
@@ -242,7 +242,7 @@ export const AcknowledgementSlipDialog: React.FC<
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">para sa</span>
-                    <strong className="text-right text-foreground">
+                    <strong className="text-right text-foreground font-bold">
                       {selected.kind === "mswd"
                         ? slipPurpose(selected.guarantee) ||
                           "— (no types on the breakdown)"
@@ -251,7 +251,7 @@ export const AcknowledgementSlipDialog: React.FC<
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Source</span>
-                    <strong className="text-right text-foreground">
+                    <strong className="text-right text-foreground font-bold">
                       {selected.kind === "mswd"
                         ? "MSWD guarantee record"
                         : selected.entry.glPosted
@@ -261,20 +261,20 @@ export const AcknowledgementSlipDialog: React.FC<
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Fund</span>
-                    <strong className="text-foreground">☑ DOH-MAIFIP</strong>
+                    <strong className="text-foreground font-bold">☑ DOH-MAIFIP</strong>
                   </div>
                 </div>
               )}
 
               {selected?.kind === "his" && (
-                <div className="space-y-1">
-                  <Label htmlFor="slip-types" className="text-xs font-bold">
+                <div className="space-y-1.5">
+                  <Label htmlFor="slip-types" className="text-sm font-bold">
                     Type of Assistance (para sa)
                   </Label>
                   <Select value={typeId} onValueChange={(v) => setTypeId(v)}>
                     <SelectTrigger
                       id="slip-types"
-                      className="h-9 w-full text-xs"
+                      className="h-10 w-full text-sm"
                     >
                       <SelectValue>
                         {(value: string | null) =>
@@ -284,13 +284,13 @@ export const AcknowledgementSlipDialog: React.FC<
                     </SelectTrigger>
                     <SelectContent>
                       {typeOptions.map((option) => (
-                        <SelectItem key={option.id} value={String(option.id)}>
+                        <SelectItem key={option.id} value={String(option.id)} className="text-sm">
                           {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-[11px] text-muted-foreground">
+                  <p className="text-xs text-muted-foreground">
                     HIS records no type of assistance. Pick one, or leave it
                     blank to write by hand.
                   </p>
@@ -299,20 +299,20 @@ export const AcknowledgementSlipDialog: React.FC<
 
               {error && (
                 <Alert variant="destructive">
-                  <AlertTitle className="text-xs font-bold">
+                  <AlertTitle className="text-sm font-bold">
                     Could not generate the slip
                   </AlertTitle>
-                  <AlertDescription className="mt-0.5 text-xs">
+                  <AlertDescription className="mt-0.5 text-sm">
                     {error}
                   </AlertDescription>
                 </Alert>
               )}
 
               <div className="grid grid-cols-2 gap-3">
-                <div>
+                <div className="space-y-1.5">
                   <Label
                     htmlFor="slip-time-started"
-                    className="text-xs font-bold"
+                    className="text-sm font-bold"
                   >
                     Time started (optional)
                   </Label>
@@ -321,13 +321,13 @@ export const AcknowledgementSlipDialog: React.FC<
                     type="time"
                     value={timeStarted}
                     onChange={(e) => setTimeStarted(e.target.value)}
-                    className="mt-1 h-9 text-sm"
+                    className="h-10 text-sm"
                   />
                 </div>
-                <div>
+                <div className="space-y-1.5">
                   <Label
                     htmlFor="slip-time-ended"
-                    className="text-xs font-bold"
+                    className="text-sm font-bold"
                   >
                     Time ended (optional)
                   </Label>
@@ -336,13 +336,13 @@ export const AcknowledgementSlipDialog: React.FC<
                     type="time"
                     value={timeEnded}
                     onChange={(e) => setTimeEnded(e.target.value)}
-                    className="mt-1 h-9 text-sm"
+                    className="h-10 text-sm"
                   />
                 </div>
               </div>
 
-              <div>
-                <Label htmlFor="slip-remarks" className="text-xs font-bold">
+              <div className="space-y-1.5">
+                <Label htmlFor="slip-remarks" className="text-sm font-bold">
                   Print remarks (optional)
                 </Label>
                 <Input
@@ -350,7 +350,7 @@ export const AcknowledgementSlipDialog: React.FC<
                   placeholder="e.g. Billing copy"
                   value={remarks}
                   onChange={(e) => setRemarks(e.target.value)}
-                  className="mt-1 h-9 text-xs"
+                  className="h-10 text-sm"
                 />
               </div>
             </>
@@ -364,9 +364,9 @@ export const AcknowledgementSlipDialog: React.FC<
             size="sm"
             onClick={() => openSlip(true)}
             disabled={!selected || isGenerating}
-            className="h-9 gap-1.5 px-3.5 text-xs font-bold shadow-2xs"
+            className="h-10 gap-1.5 px-4 text-sm font-bold shadow-2xs"
           >
-            <ExternalLink className="size-3.5 text-primary" />
+            <ExternalLink className="size-4 text-primary" />
             Preview in New Tab
           </Button>
           <Button
@@ -374,9 +374,9 @@ export const AcknowledgementSlipDialog: React.FC<
             size="sm"
             onClick={() => openSlip(false)}
             disabled={!selected || isGenerating}
-            className="h-9 gap-1.5 px-4 text-xs font-bold shadow-2xs"
+            className="h-10 gap-1.5 px-4 text-sm font-bold shadow-2xs"
           >
-            <Printer className="size-3.5" />
+            <Printer className="size-4" />
             Print Slip
           </Button>
         </DialogFooter>

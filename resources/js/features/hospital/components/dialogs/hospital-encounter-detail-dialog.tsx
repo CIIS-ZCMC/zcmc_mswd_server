@@ -170,39 +170,39 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
               {/* Header Print Actions */}
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-sm font-bold gap-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
                   aria-label="Print documents for encounter"
                 >
-                  <Printer className="size-4 text-primary" />
+                  <Printer className="size-4.5 text-primary" />
                   <span>Print Documents</span>
-                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                  <ChevronDown className="size-4 text-muted-foreground" />
                 </DropdownMenuTrigger>
-                <DropdownMenuContent align="end" className="w-60 p-1.5">
+                <DropdownMenuContent align="end" className="w-80 p-2 space-y-1">
                   <DropdownMenuGroup>
-                    <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                    <DropdownMenuLabel className="px-3 py-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
                       Encounter Printables
                     </DropdownMenuLabel>
                   </DropdownMenuGroup>
                   <DropdownMenuItem
                     onClick={() => handleOpenPrint("uis")}
-                    className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
                   >
-                    <FileText className="size-3.5 text-primary" />
-                    Unified Intake Sheet (UIS)
+                    <FileText className="size-5 text-primary shrink-0" />
+                    <span>Unified Intake Sheet (UIS)</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleOpenPrint("maifip")}
-                    className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
                   >
-                    <FileCheck2 className="size-3.5 text-primary" />
-                    Acknowledgement Slip (MAIFIP)
+                    <FileCheck2 className="size-5 text-primary shrink-0" />
+                    <span>Acknowledgement Slip (MAIFIP)</span>
                   </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={() => handleOpenPrint("cga")}
-                    className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
                   >
-                    <Building2 className="size-3.5 text-primary" />
-                    City Mayor Assistance (CGA)
+                    <Building2 className="size-5 text-primary shrink-0" />
+                    <span>City Mayor Acknowledgement Slip</span>
                   </DropdownMenuItem>
                 </DropdownMenuContent>
               </DropdownMenu>
@@ -584,7 +584,7 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
         }}
       />
 
-      {/* Printable Dialog (UIS, MAIFIP, CGA) */}
+      {/* Printable Dialog (UIS, MAIFIP, City Mayor) */}
       <EncounterPrintableDialog
         open={isPrintableOpen}
         onOpenChange={setIsPrintableOpen}

@@ -27,61 +27,60 @@
     {{-- Self-contained styles like the UIS: a one-page government form on US
          Letter, matching the paper ZCMC-F-MSWD-46. DejaVu Sans for the check mark. --}}
     <style>
-        @page { margin: 54px 50px 60px 50px; }
+        @page { margin: 44px 48px 48px 48px; }
         * { font-family: DejaVu Sans, sans-serif; }
-        body { font-size: 9.5px; color: #000; margin: 0; }
+        body { font-size: 10.5px; color: #000; margin: 0; line-height: 1.35; }
         b, .b { font-weight: bold; }
 
-        .head { width: 100%; border-collapse: collapse; }
+        .head { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
         .head td { vertical-align: middle; text-align: center; padding: 0; }
-        .head img { height: 58px; }
-        .head .agency { font-size: 9.5px; line-height: 1.45; }
-        .title { text-align: center; font-size: 17px; font-weight: bold; margin: 26px 0 34px; }
+        .head img { height: 75px; }
+        .head .agency { font-size: 9.5px; line-height: 1.4; padding: 0 10px; }
+        .title { text-align: center; font-size: 16px; font-weight: bold; margin-top: 8px; letter-spacing: 0.5px; }
 
-        table.line { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
-        table.line td { padding: 0 3px; vertical-align: top; }
-        .label { font-weight: bold; white-space: nowrap; padding-top: 2px !important; }
-        .fill { border-bottom: 1px solid #000; text-align: center; font-weight: bold; min-height: 13px; padding-bottom: 1px; }
-        .fill.small { font-size: 8px; padding-top: 2px; }
-        .fill.tiny { font-size: 6.5px; padding-top: 2px; }
-        .cap { text-align: center; font-size: 7px; font-style: italic; font-weight: bold; padding-top: 1px; }
-        .comma { width: 6px; padding-top: 2px !important; }
+        table.line { width: 100%; border-collapse: collapse; margin-bottom: 16px; }
+        table.line td { padding: 0 3px; vertical-align: top; font-size: 10.5px; font-weight: normal; }
+        .label { font-weight: normal; white-space: nowrap; padding-top: 2px !important; }
+        .fill { border-bottom: 1px solid #000; text-align: center; font-weight: bold; min-height: 14px; padding-bottom: 1px; font-size: 10.5px; }
+        .fill.small { font-size: 8.5px; padding-top: 2px; }
+        .fill.tiny { font-size: 7px; padding-top: 2px; }
+        .cap { text-align: center; font-size: 7.5px; font-style: italic; font-weight: normal; padding-top: 1px; }
+        .comma { width: 6px; padding-top: 2px !important; font-weight: normal; }
 
-        .funds { margin: 12px 0 0 46px; }
-        .opt { margin-bottom: 11px; }
-        .cb { display: inline-block; width: 10px; height: 10px; line-height: 10px; border: 1px solid #000;
-              text-align: center; font-size: 9px; margin-right: 10px; vertical-align: middle; }
+        .funds { margin: 10px 0 0 46px; font-size: 10.5px; }
+        .opt { margin-bottom: 9px; }
+        .cb { display: inline-block; width: 11px; height: 11px; line-height: 11px; border: 1px solid #000;
+              text-align: center; font-size: 9.5px; margin-right: 10px; vertical-align: middle; }
         .others { display: inline-block; width: 130px; border-bottom: 1px solid #000; }
 
-        .sig { width: 100%; border-collapse: collapse; }
+        .sig { width: 100%; border-collapse: collapse; font-size: 10.5px; }
         .sig td { vertical-align: bottom; padding: 0; }
-        .signame { border-bottom: 1px solid #000; text-align: center; font-weight: bold; padding-bottom: 1px; min-height: 13px; }
-        .sigcap { text-align: center; font-weight: bold; padding-top: 2px; }
-        .approver-title { text-align: center; font-size: 7.5px; font-weight: bold; padding-top: 2px; }
+        .signame { border-bottom: 1px solid #000; text-align: center; font-weight: bold; padding-bottom: 1px; min-height: 14px; font-size: 10.5px; }
+        .sigcap { text-align: center; font-weight: normal; padding-top: 2px; font-size: 8.5px; }
+        .approver-title { text-align: center; font-size: 8px; font-weight: normal; padding-top: 2px; }
 
-        .meta { border-collapse: collapse; margin-top: 44px; }
-        .meta td { padding: 3px 4px 3px 0; font-weight: bold; vertical-align: bottom; }
-        .meta .fill { font-weight: normal; }
+        .meta { border-collapse: collapse; margin-top: 36px; font-size: 10px; }
+        .meta td { padding: 2.5px 4px 2.5px 0; font-weight: normal; vertical-align: bottom; }
+        .meta .fill { font-weight: bold; font-size: 10px; }
 
-        .footer { position: fixed; bottom: -34px; left: 0; right: 0; font-size: 7.5px; }
+        .footer { position: fixed; bottom: -30px; left: 0; right: 0; font-size: 7.5px; }
         .footer table { width: 100%; border-collapse: collapse; }
     </style>
 </head>
 <body>
     <table class="head">
         <tr>
-            <td style="width: 26%; text-align: right;"><img src="{{ $logo('images/printables/zcmc.png') }}" alt="ZCMC"></td>
+            <td style="width: 18%; text-align: right;"><img src="{{ $logo('images/printables/zcmc.png') }}" alt="ZCMC"></td>
             <td class="agency">
                 Republic of the Philippines<br>
                 Department of Health<br>
                 <b>ZAMBOANGA CITY MEDICAL CENTER</b><br>
                 Dr. D. Evangelista St., Sta. Catalina, Zamboanga City, 7000
+                <div class="title">ACKNOWLEDGEMENT SLIP</div>
             </td>
-            <td style="width: 26%; text-align: left;"><img src="{{ $logo('images/intake/doh.png') }}" alt="DOH"></td>
+            <td style="width: 18%; text-align: left;"><img src="{{ $logo('images/intake/doh.png') }}" alt="DOH"></td>
         </tr>
     </table>
-
-    <div class="title">ACKNOWLEDGEMENT SLIP</div>
 
     {{-- Ako si ____, __ (Edad), ____ (Kasarian), ____ (Katayuang Sibil), --}}
     <table class="line">
