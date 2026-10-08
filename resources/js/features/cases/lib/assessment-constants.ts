@@ -40,6 +40,18 @@ export const PROBLEM_CATEGORY_OPTIONS = [
   { value: "other", label: "Other Needs" },
 ] as const
 
+export const TYPE_OF_ASSISTANCE_OPTIONS = [
+  { value: "Medicines", label: "Medicines" },
+  { value: "Laboratory", label: "Laboratory" },
+  { value: "X-ray/Ultrasound/2D Echo/CT Scan/MRI", label: "X-ray/Ultrasound/2D Echo/CT Scan/MRI" },
+  { value: "Hospital Bills", label: "Hospital Bills" },
+  { value: "Supplies", label: "Supplies" },
+  { value: "Hemodialysis", label: "Hemodialysis" },
+  { value: "Rehab", label: "Rehab" },
+  { value: "ECG", label: "ECG" },
+  { value: "Others", label: "Others" },
+] as const
+
 export const MSWD_CLASSIFICATION_OPTIONS = [
   { value: "A", label: "Class A (Full Pay)" },
   { value: "B", label: "Class B (Partial Pay)" },

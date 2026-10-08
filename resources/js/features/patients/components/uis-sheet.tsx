@@ -686,15 +686,22 @@ export const UisSheet: React.FC<UisSheetProps> = ({
             </CardContent>
           </Card>
 
-          {/* Section IV: Problem Presented & Medical History */}
+          {/* Section IV: Final Diagnosis & Medical Needs */}
           <Card className="border shadow-2xs">
             <CardHeader className="p-4 border-b bg-muted/30">
               <CardTitle className="text-xs sm:text-sm font-bold flex items-center gap-2">
                 <Layers className="size-4 text-primary" />
-                Section IV: Problem Presented &amp; Categories
+                Section IV: Final Diagnosis &amp; Medical Needs
               </CardTitle>
             </CardHeader>
             <CardContent className="p-4 space-y-3 text-xs">
+              <div>
+                <span className="text-muted-foreground font-medium block">Final Diagnosis</span>
+                <p className="text-foreground whitespace-pre-wrap leading-relaxed mt-0.5">
+                  {assessment?.presentingProblem || "—"}
+                </p>
+              </div>
+
               {assessment?.problemCategories && assessment.problemCategories.length > 0 && (
                 <div>
                   <span className="text-muted-foreground font-medium block mb-1.5">
@@ -712,17 +719,10 @@ export const UisSheet: React.FC<UisSheetProps> = ({
 
               {assessment?.problemSpecify && (
                 <div>
-                  <span className="text-muted-foreground font-medium block">Problem Details</span>
-                  <p className="text-foreground">{assessment.problemSpecify}</p>
+                  <span className="text-muted-foreground font-medium block">Type of Assistance</span>
+                  <p className="text-foreground font-semibold">{assessment.problemSpecify}</p>
                 </div>
               )}
-
-              <div>
-                <span className="text-muted-foreground font-medium block">Presenting Problem</span>
-                <p className="text-foreground whitespace-pre-wrap leading-relaxed mt-0.5">
-                  {assessment?.presentingProblem || "—"}
-                </p>
-              </div>
 
               {assessment?.medicalHistory && (
                 <div className="pt-2 border-t">
@@ -808,6 +808,7 @@ export const UisSheet: React.FC<UisSheetProps> = ({
         patientContact={patient.contactNo}
         patientMonthlyIncome={patient.monthlyIncome}
         existingAssessment={assessment}
+        transactionId={caseData.transactionId}
       />
 
       <PrintUisDialog

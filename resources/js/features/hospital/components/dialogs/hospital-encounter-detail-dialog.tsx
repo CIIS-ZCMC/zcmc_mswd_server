@@ -18,6 +18,18 @@ import { AssessEncounterDialog } from "./assess-encounter-dialog"
 import { OpenCaseDialog } from "@/features/cases/components/dialogs/open-case-dialog"
 import { EncounterUisPanel } from "@/features/cases/components/encounter-uis-panel"
 import { EncounterGuaranteesCard } from "@/features/guarantees"
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuGroup,
+  DropdownMenuItem,
+  DropdownMenuLabel,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu"
+import {
+  EncounterPrintableDialog,
+  type PrintableType,
+} from "./encounter-printable-dialog"
 import { useHospitalEncounter, useAssignableCases } from "../../hooks/use-hospital-encounters"
 import { formatTransactionType } from "../../lib/transaction-type"
 import type { HospitalEncounter, HospitalLookup } from "../../types/hospital-transaction.types"
@@ -27,6 +39,7 @@ import {
   Building2,
   Calendar,
   CheckCircle2,
+  ChevronDown,
   ClipboardCheck,
   CreditCard,
   ExternalLink,
@@ -34,6 +47,7 @@ import {
   FileText,
   FolderPlus,
   Loader2,
+  Printer,
   ShieldCheck,
   Stethoscope,
   XCircle,
@@ -91,6 +105,14 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
   const [openCaseOpen, setOpenCaseOpen] = useState(false)
   const [createdCase, setCreatedCase] = useState<{ id: number; caseCode: string } | null>(null)
 
+  const [printableType, setPrintableType] = useState<PrintableType>("uis")
+  const [isPrintableOpen, setIsPrintableOpen] = useState(false)
+
+  const handleOpenPrint = (type: PrintableType) => {
+    setPrintableType(type)
+    setIsPrintableOpen(true)
+  }
+
   const encounterId = encounter?.id ?? 0
   const { data: detail, isLoading, error } = useHospitalEncounter(encounterId, open && encounterId > 0)
   const { data: assignableCases = [] } = useAssignableCases(encounterId, open && encounterId > 0)
@@ -144,6 +166,46 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                   </span>
                 </DialogDescription>
               </div>
+
+              {/* Header Print Actions */}
+              <DropdownMenu>
+                <DropdownMenuTrigger
+                  className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
+                  aria-label="Print documents for encounter"
+                >
+                  <Printer className="size-4 text-primary" />
+                  <span>Print Documents</span>
+                  <ChevronDown className="size-3.5 text-muted-foreground" />
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-60 p-1.5">
+                  <DropdownMenuGroup>
+                    <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                      Encounter Printables
+                    </DropdownMenuLabel>
+                  </DropdownMenuGroup>
+                  <DropdownMenuItem
+                    onClick={() => handleOpenPrint("uis")}
+                    className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                  >
+                    <FileText className="size-3.5 text-primary" />
+                    Unified Intake Sheet (UIS)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleOpenPrint("maifip")}
+                    className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                  >
+                    <FileCheck2 className="size-3.5 text-primary" />
+                    Acknowledgement Slip (MAIFIP)
+                  </DropdownMenuItem>
+                  <DropdownMenuItem
+                    onClick={() => handleOpenPrint("cga")}
+                    className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                  >
+                    <Building2 className="size-3.5 text-primary" />
+                    City Mayor Assistance (CGA)
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
             </div>
           </DialogHeader>
 
@@ -520,6 +582,18 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
             setCreatedCase({ id: newCase.id, caseCode: newCase.caseCode || `CASE-${newCase.id}` })
           }
         }}
+      />
+
+      {/* Printable Dialog (UIS, MAIFIP, CGA) */}
+      <EncounterPrintableDialog
+        open={isPrintableOpen}
+        onOpenChange={setIsPrintableOpen}
+        type={printableType}
+        encounter={activeEncounter}
+        patient={patient}
+        caseId={activeCase?.id ?? patient.latestCaseId}
+        caseCode={activeCase?.caseCode}
+        onOpenCaseNeeded={() => setOpenCaseOpen(true)}
       />
     </>
   )

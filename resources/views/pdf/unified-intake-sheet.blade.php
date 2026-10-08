@@ -81,9 +81,9 @@
          pdf/partials/_styles.blade.php. DejaVu Sans keeps glyphs consistent in
          DomPDF. --}}
     <style>
-        @page { margin: 12px 18px 12px 18px; }
+        @page { margin: 16px 26px 16px 26px; }
         * { font-family: DejaVu Sans, sans-serif; }
-        body { font-size: 9px; color: #000; margin: 0; }
+        body { font-size: 9px; color: #000; margin: 0 auto; width: 100%; }
         b, .b { font-weight: bold; }
         i { font-style: italic; }
         .center { text-align: center; }
@@ -93,10 +93,10 @@
         /* Letterhead (outside the ruled form) */
         .head { width: 100%; border-collapse: collapse; }
         .head td { vertical-align: middle; padding: 0; }
-        .head .logos img { height: 34px; margin: 0 4px; vertical-align: middle; }
-        .head .malasakit { height: 45px; }
-        .annex { font-size: 12px; font-weight: bold; text-decoration: underline; }
-        .title { text-align: center; font-size: 13px; font-weight: bold; margin-top: 2px; }
+        .head .logos img { height: 48px; margin: 0 5px; vertical-align: middle; }
+        .head .malasakit { height: 62px; }
+        .annex { font-size: 16px; font-weight: bold; text-decoration: underline; }
+        .title { text-align: center; font-size: 16px; font-weight: bold; margin-top: 4px; letter-spacing: 0.5px; }
         .idrow { width: 100%; border-collapse: collapse; margin-top: 4px; margin-bottom: 2px; }
         .idrow td { padding: 2px 0; font-size: 9px; vertical-align: middle; }
 

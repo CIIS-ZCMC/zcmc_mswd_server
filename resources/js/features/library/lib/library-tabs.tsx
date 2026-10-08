@@ -1,6 +1,12 @@
 import React from "react"
 import type { LibraryTabKey } from "../types"
-import { Building2, DollarSign, HeartHandshake, Layers } from "lucide-react"
+import {
+  Building2,
+  DollarSign,
+  HeartHandshake,
+  Layers,
+  PenLine,
+} from "lucide-react"
 
 export interface AssistantTypeCategoryOption {
   value: string
@@ -60,6 +66,12 @@ export function getCategoryConfig(
       badgeClass: "bg-muted text-muted-foreground border-border",
     }
   )
+}
+
+/** Mirrors App\Models\Signatory::ROLES. */
+export const SIGNATORY_ROLES: Record<string, string> = {
+  allied_health_chief:
+    "Chief of Allied Health Professional Services (approver)",
 }
 
 export interface LibraryTabDefinition {
@@ -142,6 +154,23 @@ export const LIBRARY_TABS: LibraryTabDefinition[] = [
     showAddress: false,
     showRequiresSpecify: true,
     showUsageCount: true,
+  },
+  {
+    // Rendered by SignatoriesPanel, not LookupTable; the show* flags are unused.
+    key: "signatories",
+    label: "Signatories",
+    singularLabel: "Signatory",
+    description:
+      "Officers whose name and title print on MSWD forms (e.g. the Acknowledgement Slip approver).",
+    icon: PenLine,
+    writePermission: "library.manage",
+    defaultSort: "name",
+    showCode: false,
+    showSortOrder: false,
+    showCategory: false,
+    showAddress: false,
+    showRequiresSpecify: false,
+    showUsageCount: false,
   },
 ]
 

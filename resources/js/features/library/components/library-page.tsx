@@ -16,12 +16,14 @@ import {
   useFundSources,
   useGuarantors,
   useModeOfAssistances,
+  useSignatories,
   useUpdateAssistantType,
   useUpdateFundSource,
   useUpdateGuarantor,
   useUpdateModeOfAssistance,
 } from "../hooks/use-library"
 import { LookupTable } from "./lookup-table"
+import { SignatoriesPanel } from "./signatories-panel"
 import type { LookupFormItem } from "./dialogs/lookup-item-dialog"
 import type { LibraryTabKey } from "../types"
 import { LIBRARY_TABS, getTabConfig } from "../lib/library-tabs"
@@ -60,6 +62,9 @@ export const LibraryPage: React.FC = () => {
   const updateFund = useUpdateFundSource()
   const deleteFund = useDeleteFundSource()
 
+  // Signatories (the panel owns its own writes)
+  const { data: signatories = [] } = useSignatories()
+
   const getTabCount = (key: LibraryTabKey) => {
     switch (key) {
       case "guarantors":
@@ -70,6 +75,8 @@ export const LibraryPage: React.FC = () => {
         return modes.length
       case "fund-sources":
         return fundSources.length
+      case "signatories":
+        return signatories.length
     }
   }
 
@@ -310,6 +317,27 @@ export const LibraryPage: React.FC = () => {
                 await deleteFund.mutateAsync(id)
               }}
             />
+          </TabsContent>
+
+          {/* Signatories Tab */}
+          <TabsContent
+            value="signatories"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
+          >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Signatories
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                Officers whose name and title print on MSWD forms, such as the
+                approver on the DOH-MAIFIP Acknowledgement Slip. When an officer
+                changes, deactivate the outgoing one and add or activate the new
+                one.
+              </AlertDescription>
+            </Alert>
+
+            <SignatoriesPanel canManage={canManageLibrary} />
           </TabsContent>
         </Tabs>
       </div>

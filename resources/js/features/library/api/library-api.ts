@@ -3,6 +3,7 @@ import type {
   ApiAssessmentLookup,
   ApiAssistantType,
   ApiGuarantor,
+  ApiSignatory,
   AssessmentLookup,
   AssistantType,
   Guarantor,
@@ -10,16 +11,20 @@ import type {
   SaveAssessmentLookupInput,
   SaveAssistantTypeInput,
   SaveGuarantorInput,
+  SaveSignatoryInput,
+  Signatory,
 } from "../types"
 import {
   toApiSaveAssessmentLookupPayload,
   toApiSaveAssistantTypePayload,
   toApiSaveGuarantorPayload,
+  toApiSaveSignatoryPayload,
   toAssessmentLookup,
   toAssistantType,
   toAssistantTypeLookupOption,
   toGuarantor,
   toLookupOption,
+  toSignatory,
 } from "./library-adapter"
 
 /**
@@ -210,4 +215,38 @@ export async function updateGuarantor(
 
 export async function deleteGuarantor(id: number | string): Promise<void> {
   await apiClient.delete(`/guarantors/${id}`)
+}
+
+/**
+ * Signatories API (/api/signatories) — officers printed on MSWD forms.
+ */
+export async function getSignatories(): Promise<Signatory[]> {
+  const res = await apiClient.get<{ data: ApiSignatory[] }>("/signatories")
+  const list = Array.isArray(res.data) ? res.data : []
+  return list.map(toSignatory)
+}
+
+export async function createSignatory(
+  input: SaveSignatoryInput
+): Promise<Signatory> {
+  const res = await apiClient.post<{ data: ApiSignatory }>(
+    "/signatories",
+    toApiSaveSignatoryPayload(input)
+  )
+  return toSignatory(res.data)
+}
+
+export async function updateSignatory(
+  id: number | string,
+  input: SaveSignatoryInput
+): Promise<Signatory> {
+  const res = await apiClient.put<{ data: ApiSignatory }>(
+    `/signatories/${id}`,
+    toApiSaveSignatoryPayload(input)
+  )
+  return toSignatory(res.data)
+}
+
+export async function deleteSignatory(id: number | string): Promise<void> {
+  await apiClient.delete(`/signatories/${id}`)
 }

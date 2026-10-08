@@ -8,6 +8,7 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -25,6 +26,7 @@ import {
   AlertCircle,
   Building2,
   Calendar,
+  ChevronDown,
   ChevronLeft,
   ChevronRight,
   ClipboardCheck,
@@ -35,10 +37,15 @@ import {
   Filter,
   FolderPlus,
   MoreHorizontal,
+  Printer,
   Search,
   Stethoscope,
   X,
 } from "lucide-react"
+import {
+  EncounterPrintableDialog,
+  type PrintableType,
+} from "@/features/hospital/components/dialogs/encounter-printable-dialog"
 import type { PatientRecord } from "../../types"
 
 interface HospitalEncountersTabProps {
@@ -68,6 +75,16 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
 
   const [directAssessEncounterId, setDirectAssessEncounterId] = useState<number | null>(null)
   const [directOpenCaseEncounter, setDirectOpenCaseEncounter] = useState<HospitalEncounter | null>(null)
+
+  const [printableEncounter, setPrintableEncounter] = useState<HospitalEncounter | null>(null)
+  const [printableType, setPrintableType] = useState<PrintableType>("uis")
+  const [isPrintableOpen, setIsPrintableOpen] = useState(false)
+
+  const handleOpenPrint = (enc: HospitalEncounter, type: PrintableType) => {
+    setPrintableEncounter(enc)
+    setPrintableType(type)
+    setIsPrintableOpen(true)
+  }
 
   // Counts for metric summary
   const activeCount = useMemo(
@@ -283,7 +300,7 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
               <Table>
                 <TableHeader className="bg-muted/40">
                   <TableRow>
-                    <TableHead className="w-[180px] text-xs font-bold text-foreground">Encounter & Date</TableHead>
+                    <TableHead className="w-[180px] text-xs font-bold text-foreground">Date & Encounter</TableHead>
                     <TableHead className="w-[150px] text-xs font-bold text-foreground">Transaction Type</TableHead>
                     <TableHead className="w-[140px] text-xs font-bold text-foreground">Registry Status</TableHead>
                     <TableHead className="min-w-[200px] text-xs font-bold text-foreground">Diagnosis / Impression</TableHead>
@@ -304,11 +321,11 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                         <TableCell className="py-3.5">
                           <div className="space-y-0.5">
                             <span className="font-extrabold text-sm text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                              #{enc.id}
-                            </span>
-                            <span className="text-xs text-muted-foreground flex items-center gap-1 font-medium">
-                              <Calendar className="size-3 text-muted-foreground/70" />
+                              <Calendar className="size-3.5 text-primary/80 shrink-0" />
                               {enc.registrationDate ?? "—"}
+                            </span>
+                            <span className="text-xs text-muted-foreground font-medium">
+                              #{enc.id}
                             </span>
                           </div>
                         </TableCell>
@@ -342,11 +359,51 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                               variant="outline"
                               size="sm"
                               onClick={() => openEncounterDetail(enc)}
-                              className="h-8 px-3 text-xs font-bold gap-1.5 shadow-2xs border hover:bg-primary hover:text-primary-foreground transition-colors"
+                              className="h-8 px-3 text-xs font-bold gap-1.5 shadow-2xs border hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                             >
                               <Eye className="size-3.5" />
                               View
                             </Button>
+
+                            {/* Print Dropdown Action Button */}
+                            <DropdownMenu>
+                              <DropdownMenuTrigger
+                                className="inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                                aria-label={`Print documents for encounter #${enc.id}`}
+                              >
+                                <Printer className="size-3.5 text-primary" />
+                                <span>Print</span>
+                                <ChevronDown className="size-3 text-muted-foreground" />
+                              </DropdownMenuTrigger>
+                              <DropdownMenuContent align="end" className="w-60 p-1.5">
+                                <DropdownMenuGroup>
+                                  <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    Encounter #{enc.id} Printables
+                                  </DropdownMenuLabel>
+                                </DropdownMenuGroup>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenPrint(enc, "uis")}
+                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                >
+                                  <FileText className="size-3.5 text-primary" />
+                                  Unified Intake Sheet (UIS)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenPrint(enc, "maifip")}
+                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                >
+                                  <FileCheck2 className="size-3.5 text-primary" />
+                                  Acknowledgement Slip (MAIFIP)
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenPrint(enc, "cga")}
+                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                >
+                                  <Building2 className="size-3.5 text-primary" />
+                                  City Mayor Assistance (CGA)
+                                </DropdownMenuItem>
+                              </DropdownMenuContent>
+                            </DropdownMenu>
 
                             <DropdownMenu>
                               <DropdownMenuTrigger
@@ -356,9 +413,11 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                                 <MoreHorizontal className="size-4" />
                               </DropdownMenuTrigger>
                               <DropdownMenuContent align="end" className="w-56 p-1.5">
-                                <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
-                                  Encounter #{enc.id}
-                                </DropdownMenuLabel>
+                                <DropdownMenuGroup>
+                                  <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                    Encounter #{enc.id}
+                                  </DropdownMenuLabel>
+                                </DropdownMenuGroup>
                                 <DropdownMenuItem
                                   onClick={() => openEncounterDetail(enc, "overview")}
                                   className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
@@ -386,6 +445,16 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                                 >
                                   <FileCheck2 className="size-3.5 text-primary" />
                                   MSWD & UIS Intake
+                                </DropdownMenuItem>
+
+                                <DropdownMenuSeparator />
+
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenPrint(enc, "uis")}
+                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                >
+                                  <Printer className="size-3.5 text-primary" />
+                                  Print Documents…
                                 </DropdownMenuItem>
 
                                 {(canAssess || canCreateCase) && <DropdownMenuSeparator />}
@@ -498,6 +567,21 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
           onCaseOpened={() => setDirectOpenCaseEncounter(null)}
         />
       )}
+
+      {/* Printable Dialog (UIS, MAIFIP, CGA) */}
+      <EncounterPrintableDialog
+        open={isPrintableOpen}
+        onOpenChange={setIsPrintableOpen}
+        type={printableType}
+        encounter={printableEncounter}
+        patient={patient}
+        caseId={patient.latestCaseId}
+        onOpenCaseNeeded={() => {
+          if (printableEncounter) {
+            setDirectOpenCaseEncounter(printableEncounter)
+          }
+        }}
+      />
     </div>
   )
 }

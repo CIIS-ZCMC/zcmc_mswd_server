@@ -25,6 +25,16 @@ class Guarantor extends Model
         ];
     }
 
+    /**
+     * Whether this is the DOH-MAIFIP guarantor, whose guarantees print the
+     * Acknowledgement Slip. Guarantors have no code column, so the seeded name
+     * (GuarantorSeeder) is the key.
+     */
+    public function isMaifip(): bool
+    {
+        return str_contains(strtoupper((string) $this->name), 'MAIFIP');
+    }
+
     public function patientAssistances(): HasMany
     {
         return $this->hasMany(PatientAssistance::class);
