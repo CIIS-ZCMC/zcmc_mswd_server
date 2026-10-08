@@ -24,6 +24,12 @@ class HospitalPatientResource extends JsonResource
             'id' => $this->getKey(),
             'hospital_number' => $this->hospital_number,
             'display_name' => $this->displayName(),
+            // The registered MSWD patient's id (null when not imported), set by
+            // HospitalPatientService::paginate() on the search list only.
+            'local_patient_id' => $this->when(
+                $this->resource->relationLoaded('localPatient'),
+                fn () => $this->resource->getRelation('localPatient')?->getKey(),
+            ),
             'personal_data' => $this->whenLoaded('personalData', fn () => $this->personalDataBlock()),
             'transactions' => PatientTransactionResource::collection($this->whenLoaded('transactions')),
         ];
