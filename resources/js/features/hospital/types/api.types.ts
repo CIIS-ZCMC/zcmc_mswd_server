@@ -95,3 +95,38 @@ export interface ApiCaseHospitalTransaction {
   hospital_id?: number | null
   linked_at?: string | null
 }
+
+/** Personal data block from psPersonaldata via HospitalPatient::toPatientAttributes() */
+export interface ApiHospitalPersonalData {
+  first_name?: string | null
+  last_name?: string | null
+  middle_name?: string | null
+  extension_name?: string | null
+  sex?: "male" | "female" | null
+  birthdate?: string | null
+  place_of_birth?: string | null
+  death_date?: string | null
+  death_time?: string | null
+  citizenship?: string | null
+  nationality?: string | null
+  occupation?: string | null
+  permanent_address?: string | null
+  email?: string | null
+  contact_number?: string | null
+  birthtime?: string | null
+  civil_status?: string | null
+}
+
+/** Shapes a hospital (HIS / Bizbox) patient record from HospitalPatientResource */
+export interface ApiHospitalPatient {
+  id: number
+  hospital_number?: string | null
+  display_name: string
+  /**
+   * The registered MSWD patient's id (null when not imported yet),
+   * populated on search list queries.
+   */
+  local_patient_id?: number | null
+  personal_data?: ApiHospitalPersonalData | null
+  transactions?: ApiPatientTransaction[]
+}

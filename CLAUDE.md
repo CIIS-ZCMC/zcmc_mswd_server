@@ -36,7 +36,7 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 - `patients`: registry list, master-detail view, 11-tab patient profile.
 - `socioeconomic`: itemized living expenses and family income.
 - `cases`: caseload, episodes, progress notes, signoff, assessments.
-- `hospital`: encounters, admission details, hospital integration.
+- `hospital`: encounters, admission details, HIS patient search & 1-click import (`POST /hospital-patients/{id}/import`), hospital integration.
 - `audit`: system-wide activity logs.
 
 ### UI & Styling

@@ -68,7 +68,7 @@ function buildFullName(raw: ApiPatient): string {
     .trim()
 }
 
-function computeAge(birthdate: string | null): number {
+export function computeAge(birthdate: string | null): number {
   if (!birthdate) return 0
   const dob = new Date(birthdate)
   if (Number.isNaN(dob.getTime())) return 0
