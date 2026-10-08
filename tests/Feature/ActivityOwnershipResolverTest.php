@@ -9,6 +9,7 @@ use App\Models\CaseModel;
 use App\Models\CaseProgressNote;
 use App\Models\CaseWatcher;
 use App\Models\Concerns\Auditable;
+use App\Models\DarEntry;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticReport;
 use App\Models\Document;
@@ -130,6 +131,10 @@ dataset('resolvers', [
         'fund_source_id' => FundSource::firstOrCreate(['name' => 'City Mayor Assistance', 'code' => 'city_mayor'])->id,
         'amount' => 1000,
     ]), true, false],
+    'DarEntry' => [fn () => DarEntry::create([
+        'user_id' => test()->worker->id, 'patient_id' => test()->patient->id,
+        'entry_date' => now()->toDateString(), 'activity' => 'interview',
+    ]), true, false],
 
     'CaseModel' => [fn () => test()->case, true, true],
     'CaseHospitalTransaction' => [fn () => CaseHospitalTransaction::create([
@@ -219,7 +224,7 @@ it('covers every model that declares a resolver', function () {
     // The models the dataset above exercises, one row each.
     $covered = collect([
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
-        'PatientMerge', 'PatientSocioeconomicProfile', 'PatientGuarantee', 'PatientGuaranteeItem', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
+        'PatientMerge', 'PatientSocioeconomicProfile', 'PatientGuarantee', 'PatientGuaranteeItem', 'DarEntry', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document',
     ])->sort()->values();

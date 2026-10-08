@@ -12,6 +12,249 @@
         }
     ],
     "paths": {
+        "/guarantees/{guarantee}/acknowledgement-slip/pdf": {
+            "get": {
+                "tags": [
+                    "Guarantees"
+                ],
+                "summary": "Print the DOH-MAIFIP Acknowledgement Slip (ZCMC-F-MSWD-46)",
+                "description": "MAIFIP guarantees only (422 `not_maifip` otherwise). Records a print-history row unless `preview=1`. The times print on the slip and are not stored. Requires the `guarantee.view` permission.",
+                "operationId": "guarantees.acknowledgement-slip",
+                "parameters": [
+                    {
+                        "name": "guarantee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "preview",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "download",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "copies",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer",
+                            "maximum": 20,
+                            "minimum": 1
+                        }
+                    },
+                    {
+                        "name": "remarks",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "time_started",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "10:49"
+                        }
+                    },
+                    {
+                        "name": "time_ended",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "10:55"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The slip PDF",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/patient-transactions/{id}/city-mayor-slip/pdf": {
+            "get": {
+                "tags": [
+                    "Guarantees"
+                ],
+                "summary": "Print the City Mayor Acknowledgement Slip (ZCMC-F-MSS-04)",
+                "description": "Per HIS encounter. The fund, amount and type of assistance are picked by the caller and printed only. Logged unless `preview=1`. 503 `his_unreachable` when the HIS is down. Requires the `guarantee.view` permission.",
+                "operationId": "patient-transactions.city-mayor-slip",
+                "parameters": [
+                    {
+                        "name": "id",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "fund",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "city_grant",
+                                "dswd",
+                                "pcso",
+                                "armm",
+                                "others"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "fund_other",
+                        "in": "query",
+                        "description": "Required when fund=others.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "amount",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "number",
+                            "minimum": 0
+                        }
+                    },
+                    {
+                        "name": "assistant_type_ids",
+                        "in": "query",
+                        "description": "The \"Para sa\" ticks: Types of Assistance ids, comma-separated (e.g. 3,4).",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "3,4"
+                        }
+                    },
+                    {
+                        "name": "time_started",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "17:20"
+                        }
+                    },
+                    {
+                        "name": "time_ended",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "example": "17:28"
+                        }
+                    },
+                    {
+                        "name": "remarks",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 255
+                        }
+                    },
+                    {
+                        "name": "preview",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    },
+                    {
+                        "name": "download",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The slip PDF",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    },
+                    "503": {
+                        "description": "The HIS is unreachable"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/activity-log": {
             "get": {
                 "tags": [
@@ -866,6 +1109,55 @@
                         "sanctum": []
                     }
                 ]
+            },
+            "post": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Add a Type of Assistance",
+                "description": "Requires the `library.manage` permission.",
+                "operationId": "assistant-types.store",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantTypeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssistantType"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
             }
         },
         "/assistant-types/{assistantType}": {
@@ -898,6 +1190,105 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Rename, recategorise, retire or reactivate a Type of Assistance",
+                "description": "Partial update. Requires the `library.manage` permission.",
+                "operationId": "assistant-types.update",
+                "parameters": [
+                    {
+                        "name": "assistantType",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssistantTypeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated type",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssistantType"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Delete a Type of Assistance (soft delete)",
+                "description": "Records that already use the type keep showing it; new records can no longer pick it. Requires the `library.manage` permission.",
+                "operationId": "assistant-types.destroy",
+                "parameters": [
+                    {
+                        "name": "assistantType",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
@@ -2156,6 +2547,316 @@
                 ]
             }
         },
+        "/dar": {
+            "get": {
+                "tags": [
+                    "DAR"
+                ],
+                "summary": "One day of the caller's Daily Accomplishment Report",
+                "description": "Lines in the order served (untimed last), the day's totals, and the activity choices. Requires the `dar.manage` permission.",
+                "operationId": "dar.index",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Defaults to today.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The day",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "date": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/DarEntry"
+                                            }
+                                        },
+                                        "summary": {
+                                            "properties": {
+                                                "patients_served": {
+                                                    "type": "integer"
+                                                },
+                                                "entries": {
+                                                    "type": "integer"
+                                                },
+                                                "by_activity": {
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "integer"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        },
+                                        "activities": {
+                                            "description": "key => label",
+                                            "type": "object",
+                                            "additionalProperties": {
+                                                "type": "string"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/dar-entries": {
+            "post": {
+                "tags": [
+                    "DAR"
+                ],
+                "summary": "Add a line to the caller's DAR",
+                "description": "Requires the `dar.manage` permission.",
+                "operationId": "dar-entries.store",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DarEntryRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created line",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/DarEntry"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/dar-entries/{entry}": {
+            "delete": {
+                "tags": [
+                    "DAR"
+                ],
+                "summary": "Delete a DAR line (soft delete)",
+                "description": "The owner only (403 otherwise). Requires the `dar.manage` permission.",
+                "operationId": "dar-entries.destroy",
+                "parameters": [
+                    {
+                        "name": "entry",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "patch": {
+                "tags": [
+                    "DAR"
+                ],
+                "summary": "Edit a DAR line",
+                "description": "Partial update. The owner only (403 otherwise). Requires the `dar.manage` permission.",
+                "operationId": "dar-entries.update",
+                "parameters": [
+                    {
+                        "name": "entry",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/DarEntryRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated line",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/DarEntry"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/dar/export": {
+            "get": {
+                "tags": [
+                    "DAR"
+                ],
+                "summary": "Print or export one day of the caller's DAR",
+                "description": "An A4 PDF with a Prepared-by block (default), or a CSV with `format=csv`. Requires the `dar.manage` permission.",
+                "operationId": "dar.export",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Defaults to today.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "pdf",
+                                "csv"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "download",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The DAR",
+                        "content": {
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            },
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/cases/{case}/diagnostics": {
             "get": {
                 "tags": [
@@ -2691,7 +3392,18 @@
                     "Reference"
                 ],
                 "summary": "List guarantors",
+                "description": "`?active=1` hides retired guarantors.",
                 "operationId": "guarantors.index",
+                "parameters": [
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "Guarantors",
@@ -2713,6 +3425,55 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Add a guarantor",
+                "description": "Requires the `guarantee.create` permission.",
+                "operationId": "guarantors.store",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GuarantorRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created guarantor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Guarantor"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     }
                 },
                 "security": [
@@ -2752,6 +3513,105 @@
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Rename, retire or reactivate a guarantor",
+                "description": "Partial update. Requires the `guarantee.create` permission.",
+                "operationId": "guarantors.update",
+                "parameters": [
+                    {
+                        "name": "guarantor",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/GuarantorRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated guarantor",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Guarantor"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Delete a guarantor (soft delete)",
+                "description": "Records that already name the guarantor keep showing it; new records can no longer pick it. Requires the `guarantee.create` permission.",
+                "operationId": "guarantors.destroy",
+                "parameters": [
+                    {
+                        "name": "guarantor",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
@@ -2913,104 +3773,6 @@
                             "application/json": {
                                 "schema": {
                                     "$ref": "#/components/schemas/HospitalPatient"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/intake-sheets/{intakeSheet}/history": {
-            "get": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "An intake sheet's activity history",
-                "description": "Requires the `intake.view` permission.",
-                "operationId": "intake-sheets.history",
-                "parameters": [
-                    {
-                        "name": "intakeSheet",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Activity entries",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/Activity"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/intake-sheets/{intakeSheet}/pdf": {
-            "get": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "Download the intake sheet PDF",
-                "description": "Requires the `intake.view` permission.",
-                "operationId": "intake-sheets.pdf",
-                "parameters": [
-                    {
-                        "name": "intakeSheet",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The intake sheet PDF",
-                        "content": {
-                            "application/pdf": {
-                                "schema": {
-                                    "type": "string",
-                                    "format": "binary"
                                 }
                             }
                         }
@@ -3374,29 +4136,27 @@
                 ]
             }
         },
-        "/intake-sheets/match-patients": {
-            "post": {
+        "/mode-of-assistances": {
+            "get": {
                 "tags": [
-                    "Intake Sheets"
+                    "Library"
                 ],
-                "summary": "Find candidate matching patients for an intake",
-                "description": "Requires the `intake.view` permission.",
-                "operationId": "intake-sheets.match-patients",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "description": "Patient identifiers to match on (name, birthdate, ids).",
-                                "type": "object",
-                                "additionalProperties": true
-                            }
+                "summary": "List modes of assistance",
+                "description": "Ordered by sort order, then name. `?active=1` hides retired rows.",
+                "operationId": "modeOfAssistances.index",
+                "parameters": [
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
                         }
                     }
-                },
+                ],
                 "responses": {
                     "200": {
-                        "description": "Candidate patients",
+                        "description": "Modes of assistance",
                         "content": {
                             "application/json": {
                                 "schema": {
@@ -3404,8 +4164,51 @@
                                         "data": {
                                             "type": "array",
                                             "items": {
-                                                "$ref": "#/components/schemas/Patient"
+                                                "$ref": "#/components/schemas/AssessmentLookup"
                                             }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Add a mode of assistance",
+                "description": "Requires the `library.manage` permission.",
+                "operationId": "modeOfAssistances.store",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssessmentLookupRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created mode of assistance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssessmentLookup"
                                         }
                                     },
                                     "type": "object"
@@ -3421,6 +4224,395 @@
                     },
                     "422": {
                         "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/mode-of-assistances/{modeOfAssistance}": {
+            "get": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Show a mode of assistance",
+                "operationId": "modeOfAssistances.show",
+                "parameters": [
+                    {
+                        "name": "modeOfAssistance",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The mode of assistance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssessmentLookup"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Rename, reorder, retire or reactivate a mode of assistance",
+                "description": "Partial update. The code cannot change once an assessment stores it. Requires the `library.manage` permission.",
+                "operationId": "modeOfAssistances.update",
+                "parameters": [
+                    {
+                        "name": "modeOfAssistance",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssessmentLookupRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated mode of assistance",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssessmentLookup"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Delete a mode of assistance (soft delete)",
+                "description": "Assessments that store the code keep printing its name; new assessments can no longer pick it. Requires the `library.manage` permission.",
+                "operationId": "modeOfAssistances.destroy",
+                "parameters": [
+                    {
+                        "name": "modeOfAssistance",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/fund-sources": {
+            "get": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "List fund sources",
+                "description": "Ordered by sort order, then name. `?active=1` hides retired rows.",
+                "operationId": "fundSources.index",
+                "parameters": [
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Fund sources",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/AssessmentLookup"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Add a fund source",
+                "description": "Requires the `library.manage` permission.",
+                "operationId": "fundSources.store",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssessmentLookupRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created fund source",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssessmentLookup"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/fund-sources/{fundSource}": {
+            "get": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Show a fund source",
+                "operationId": "fundSources.show",
+                "parameters": [
+                    {
+                        "name": "fundSource",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The fund source",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssessmentLookup"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Rename, reorder, retire or reactivate a fund source",
+                "description": "Partial update. The code cannot change once an assessment stores it. Requires the `library.manage` permission.",
+                "operationId": "fundSources.update",
+                "parameters": [
+                    {
+                        "name": "fundSource",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/AssessmentLookupRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated fund source",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/AssessmentLookup"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Delete a fund source (soft delete)",
+                "description": "Assessments that store the code keep printing its name; new assessments can no longer pick it. Requires the `library.manage` permission.",
+                "operationId": "fundSources.destroy",
+                "parameters": [
+                    {
+                        "name": "fundSource",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
                     }
                 },
                 "security": [
@@ -4681,6 +5873,284 @@
                 ]
             }
         },
+        "/patients/{patient}/guarantees": {
+            "get": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "The patient's guarantors, optionally for one hospital encounter",
+                "description": "Newest first. `?transaction={his_transaction_id}` narrows to one encounter. `grand_total` sums every listed guarantee's total. Requires the `guarantee.view` permission.",
+                "operationId": "patients.guarantees.index",
+                "parameters": [
+                    {
+                        "name": "patient",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "transaction",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The guarantees",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PatientGuarantee"
+                                            }
+                                        },
+                                        "grand_total": {
+                                            "type": "number",
+                                            "format": "float"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "Record a guarantor on a hospital encounter, with its breakdown",
+                "description": "The encounter must belong to the patient's hospital record (422 otherwise). The total is the sum of `items` and is never accepted from the body. A source with `requires_specify` needs `others_specify`. Requires the `guarantee.create` permission.",
+                "operationId": "patients.guarantees.store",
+                "parameters": [
+                    {
+                        "name": "patient",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatientGuaranteeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created guarantee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PatientGuarantee"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/guarantees/{guarantee}": {
+            "get": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "One guarantee with its breakdown",
+                "description": "Requires the `guarantee.view` permission.",
+                "operationId": "guarantees.show",
+                "parameters": [
+                    {
+                        "name": "guarantee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The guarantee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PatientGuarantee"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "Correct a guarantee",
+                "description": "Partial update of the header. When `items` is sent it replaces the whole breakdown. `his_transaction_id` cannot be changed. Requires the `guarantee.update` permission.",
+                "operationId": "guarantees.update",
+                "parameters": [
+                    {
+                        "name": "guarantee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/PatientGuaranteeRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated guarantee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PatientGuarantee"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "Delete a guarantee (soft delete)",
+                "description": "Requires the `guarantee.delete` permission.",
+                "operationId": "guarantees.destroy",
+                "parameters": [
+                    {
+                        "name": "guarantee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/patients/{patient}/ids": {
             "get": {
                 "tags": [
@@ -5221,6 +6691,286 @@
                     },
                     "403": {
                         "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/patients/{patient}/socioeconomic": {
+            "get": {
+                "tags": [
+                    "List of Expenses"
+                ],
+                "summary": "The patient's socio-economic overview",
+                "description": "The current record (the newest dated one: house/lot tenure and rent amount, light and water sources, an amount per expense item, the total expenses, and `income`: the patient's income, the family members' income and the other family income that make up `total_family_income`, with `balance`, `expense_to_income_ratio` and `income_changed`), `live_income` (the patient's and family members' income today, which the form pre-fills with) and up to 10 records as history. `current` is null and `history` empty when nothing was recorded. Requires the `socioeconomic.view` permission.",
+                "operationId": "patients.socioeconomic",
+                "parameters": [
+                    {
+                        "name": "patient",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The overview",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "current": {
+                                                    "type": "object",
+                                                    "nullable": true
+                                                },
+                                                "live_income": {
+                                                    "type": "object"
+                                                },
+                                                "history": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/socioeconomic-profiles/{profile}": {
+            "get": {
+                "tags": [
+                    "List of Expenses"
+                ],
+                "summary": "One dated List of Expenses record",
+                "description": "Requires the `socioeconomic.view` permission.",
+                "operationId": "socioeconomicProfiles.show",
+                "parameters": [
+                    {
+                        "name": "profile",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The record",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "List of Expenses"
+                ],
+                "summary": "Correct a List of Expenses record",
+                "description": "Partial update. The rent amount is cleared unless the house is rented. The family-income snapshot is kept; `total_family_income` is recomputed when `other_income_sources` is sent, and `refresh_income: true` re-reads the patient's and family members' income first. Record a new dated entry when the situation changed. Requires the `socioeconomic.update` permission.",
+                "operationId": "socioeconomicProfiles.update",
+                "parameters": [
+                    {
+                        "name": "profile",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated record",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "List of Expenses"
+                ],
+                "summary": "Delete a List of Expenses record (soft delete)",
+                "description": "Requires the `socioeconomic.delete` permission.",
+                "operationId": "socioeconomicProfiles.destroy",
+                "parameters": [
+                    {
+                        "name": "profile",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/patients/{patient}/socioeconomic-profiles": {
+            "post": {
+                "tags": [
+                    "List of Expenses"
+                ],
+                "summary": "Record a new dated List of Expenses",
+                "description": "Fields: `recorded_on`, `house_tenure` (owned|rented) with `house_rent_amount` (kept only when rented), `light_source[]`, `water_source[]`, the amounts `food`, `transport`, `medical`, `insurance`, `education`, `clothing`, `house_help`, `others` (+ `others_specify`), `other_income_sources[]` (`source`, `amount`) and `remarks`. `recorded_by` is the signed-in user; the patient's and family members' income is snapshotted from their records and `total_family_income` is computed by the server (neither is accepted from the body). Requires the `socioeconomic.create` permission.",
+                "operationId": "socioeconomicProfiles.store",
+                "parameters": [
+                    {
+                        "name": "patient",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created record",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     }
                 },
                 "security": [
@@ -6572,6 +8322,204 @@
                 ]
             }
         },
+        "/signatories": {
+            "get": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "List signatories",
+                "description": "`?active=1` lists only the active ones.",
+                "operationId": "signatories.index",
+                "parameters": [
+                    {
+                        "name": "active",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Signatories",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/Signatory"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Add a signatory",
+                "description": "Requires the `library.manage` permission.",
+                "operationId": "signatories.store",
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignatoryRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The created signatory",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Signatory"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/signatories/{signatory}": {
+            "put": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Edit, retire or reactivate a signatory",
+                "description": "Partial update. Requires the `library.manage` permission.",
+                "operationId": "signatories.update",
+                "parameters": [
+                    {
+                        "name": "signatory",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/SignatoryRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated signatory",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/Signatory"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "delete": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Delete a signatory (soft delete)",
+                "description": "Requires the `library.manage` permission.",
+                "operationId": "signatories.destroy",
+                "parameters": [
+                    {
+                        "name": "signatory",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "204": {
+                        "description": "Deleted"
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/cases/{case}/social-case": {
             "get": {
                 "tags": [
@@ -6889,98 +8837,6 @@
                 ]
             }
         },
-        "/intake-sheets/{intakeSheet}/submit": {
-            "post": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "Submit an intake sheet",
-                "description": "Requires the `intake.update` permission.",
-                "operationId": "intake-sheets.submit",
-                "parameters": [
-                    {
-                        "name": "intakeSheet",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The submitted intake sheet",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/IntakeSheet"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/intake-sheets/{intakeSheet}/finalize": {
-            "post": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "Finalize an intake sheet",
-                "description": "Creates the patient/case/assessment records. Requires the `intake.finalize` permission.",
-                "operationId": "intake-sheets.finalize",
-                "parameters": [
-                    {
-                        "name": "intakeSheet",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The finalized intake sheet",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/IntakeSheet"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
         "/cases/{case}/social-case/submit": {
             "post": {
                 "tags": [
@@ -7009,243 +8865,6 @@
                                 }
                             }
                         }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/intake-sheets": {
-            "get": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "List intake sheets",
-                "description": "Requires the `intake.view` permission.",
-                "operationId": "intake-sheets.index",
-                "parameters": [
-                    {
-                        "$ref": "#/components/parameters/page"
-                    },
-                    {
-                        "$ref": "#/components/parameters/per_page"
-                    },
-                    {
-                        "$ref": "#/components/parameters/search"
-                    },
-                    {
-                        "$ref": "#/components/parameters/sort"
-                    },
-                    {
-                        "$ref": "#/components/parameters/direction"
-                    },
-                    {
-                        "$ref": "#/components/parameters/filter"
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Paginated intake sheets",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/IntakeSheetCollection"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "Create an intake sheet",
-                "description": "Requires the `intake.create` permission.",
-                "operationId": "intake-sheets.store",
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/IntakeSheetRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "The created intake sheet",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/IntakeSheet"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationError"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/intake-sheets/{intakeSheet}": {
-            "get": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "Show an intake sheet",
-                "description": "Requires the `intake.view` permission.",
-                "operationId": "intake-sheets.show",
-                "parameters": [
-                    {
-                        "name": "intakeSheet",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The intake sheet",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/IntakeSheet"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "put": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "Update an intake sheet",
-                "description": "Requires the `intake.update` permission.",
-                "operationId": "intake-sheets.update",
-                "parameters": [
-                    {
-                        "name": "intakeSheet",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/IntakeSheetRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "The updated intake sheet",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/IntakeSheet"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationError"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "delete": {
-                "tags": [
-                    "Intake Sheets"
-                ],
-                "summary": "Delete an intake sheet",
-                "description": "Requires the `intake.delete` permission.",
-                "operationId": "intake-sheets.destroy",
-                "parameters": [
-                    {
-                        "name": "intakeSheet",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "204": {
-                        "$ref": "#/components/responses/NoContent"
                     },
                     "401": {
                         "$ref": "#/components/responses/Unauthenticated"
@@ -7593,6 +9212,113 @@
     },
     "components": {
         "schemas": {
+            "DarEntry": {
+                "properties": {
+                    "id": {
+                        "description": "OpenAPI docs for App\\Http\\Controllers\\DarEntryController and DarExportController:\nthe signed-in worker's Daily Accomplishment Report. Every route needs `dar.manage`\nand only ever reaches the caller's own lines.",
+                        "type": "integer"
+                    },
+                    "entry_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "served_time": {
+                        "type": "string",
+                        "example": "09:30",
+                        "nullable": true
+                    },
+                    "activity": {
+                        "type": "string",
+                        "enum": [
+                            "interview",
+                            "assessment",
+                            "counseling",
+                            "guarantee_assistance",
+                            "referral",
+                            "follow_up",
+                            "home_ward_visit",
+                            "documentation",
+                            "other"
+                        ]
+                    },
+                    "activity_label": {
+                        "type": "string"
+                    },
+                    "remarks": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "patient": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Dela Cruz, Maria S."
+                            },
+                            "hospital_id": {
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "mswd_id": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "age": {
+                                "description": "As of the entry date.",
+                                "type": "integer",
+                                "nullable": true
+                            },
+                            "sex": {
+                                "type": "string",
+                                "nullable": true
+                            },
+                            "address": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "DarEntryRequest": {
+                "description": "A registry patient (not deleted), a date no later than today, and an activity key. On update every field is optional.",
+                "properties": {
+                    "patient_id": {
+                        "type": "integer"
+                    },
+                    "entry_date": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "served_time": {
+                        "type": "string",
+                        "example": "09:30",
+                        "nullable": true
+                    },
+                    "activity": {
+                        "type": "string"
+                    },
+                    "remarks": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 500
+                    }
+                },
+                "type": "object"
+            },
             "Activity": {
                 "properties": {
                     "id": {
@@ -7858,6 +9584,210 @@
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PatientGuarantee": {
+                "description": "An MSWD patient guarantor on one hospital encounter. `total` is the sum of `items`.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "patient_id": {
+                        "type": "integer"
+                    },
+                    "his_transaction_id": {
+                        "type": "integer"
+                    },
+                    "hospital_id": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "guarantor": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "reference_no": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "guaranteed_on": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "remarks": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "items": {
+                        "description": "Type of Assistance, amount, Mode of Assistance, Fund Source. Lines from before this shape have no type or mode.",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "type": "integer"
+                                },
+                                "assistance_type": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string",
+                                            "nullable": true
+                                        }
+                                    },
+                                    "type": "object",
+                                    "nullable": true
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "format": "float"
+                                },
+                                "mode_of_assistance": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string"
+                                        }
+                                    },
+                                    "type": "object",
+                                    "nullable": true
+                                },
+                                "fund_source": {
+                                    "properties": {
+                                        "id": {
+                                            "type": "integer"
+                                        },
+                                        "name": {
+                                            "type": "string"
+                                        },
+                                        "code": {
+                                            "type": "string"
+                                        },
+                                        "requires_specify": {
+                                            "type": "boolean"
+                                        }
+                                    },
+                                    "type": "object",
+                                    "nullable": true
+                                },
+                                "others_specify": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
+                    "total": {
+                        "type": "number",
+                        "format": "float"
+                    },
+                    "recorded_by": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PatientGuaranteeRequest": {
+                "description": "On update every field is optional and `his_transaction_id` is prohibited; sending `items` replaces the breakdown. One line per Type of Assistance. New choices must be active; an edit may keep options the guarantee already uses.",
+                "required": [
+                    "his_transaction_id",
+                    "guarantor_id",
+                    "guaranteed_on",
+                    "items"
+                ],
+                "properties": {
+                    "his_transaction_id": {
+                        "type": "integer"
+                    },
+                    "guarantor_id": {
+                        "type": "integer"
+                    },
+                    "reference_no": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "guaranteed_on": {
+                        "type": "string",
+                        "format": "date"
+                    },
+                    "remarks": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "items": {
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "assistant_type_id",
+                                "amount",
+                                "mode_of_assistance_id",
+                                "fund_source_id"
+                            ],
+                            "properties": {
+                                "assistant_type_id": {
+                                    "description": "Type of Assistance.",
+                                    "type": "integer"
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "format": "float",
+                                    "minimum": 0.01
+                                },
+                                "mode_of_assistance_id": {
+                                    "type": "integer"
+                                },
+                                "fund_source_id": {
+                                    "type": "integer"
+                                },
+                                "others_specify": {
+                                    "description": "Required when the fund source requires specify (\"Others\").",
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "minItems": 1
                     }
                 },
                 "type": "object"
@@ -8429,6 +10359,139 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "problem_categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "health",
+                                "economic",
+                                "housing",
+                                "food_nutrition",
+                                "employment",
+                                "other"
+                            ]
+                        },
+                        "nullable": true
+                    },
+                    "problem_specify": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_last_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_first_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_middle_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_contact_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_relationship": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "other_income_sources": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "source": {
+                                    "type": "string"
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "referral_source": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "medical_history": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "recommendation": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "recommendation_mode": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "financial_assistance",
+                            "medical_assistance",
+                            "counseling",
+                            "referral",
+                            "hospital_discount",
+                            "other"
+                        ]
+                    },
+                    "fund_source": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "mswd",
+                            "maip",
+                            "malasakit",
+                            "pcso",
+                            "lgu_dswd",
+                            "ngo",
+                            "philhealth",
+                            "personal"
+                        ]
+                    },
+                    "house_tenure": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "owned",
+                            "rented"
+                        ]
+                    },
+                    "light_source": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "electricity",
+                                "kerosene",
+                                "candle"
+                            ]
+                        },
+                        "nullable": true
+                    },
+                    "water_source": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "owned",
+                                "public",
+                                "artesian_well"
+                            ]
+                        },
+                        "nullable": true
+                    },
                     "family_background": {
                         "type": "string",
                         "nullable": true
@@ -8502,6 +10565,161 @@
                     },
                     "presenting_problem": {
                         "type": "string",
+                        "nullable": true
+                    },
+                    "problem_categories": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "health",
+                                "economic",
+                                "housing",
+                                "food_nutrition",
+                                "employment",
+                                "other"
+                            ]
+                        },
+                        "nullable": true
+                    },
+                    "problem_specify": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_last_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_first_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_middle_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_address": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_contact_number": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "informant_relationship": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "other_income_sources": {
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "source": {
+                                    "type": "string"
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "expenses": {
+                        "description": "Expense lines created with the assessment; the classification is calculated against them.",
+                        "type": "array",
+                        "items": {
+                            "required": [
+                                "expense_type",
+                                "amount"
+                            ],
+                            "properties": {
+                                "expense_type": {
+                                    "type": "string",
+                                    "maxLength": 255
+                                },
+                                "amount": {
+                                    "type": "number",
+                                    "minimum": 0
+                                }
+                            },
+                            "type": "object"
+                        },
+                        "nullable": true
+                    },
+                    "referral_source": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "medical_history": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "recommendation": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "recommendation_mode": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "financial_assistance",
+                            "medical_assistance",
+                            "counseling",
+                            "referral",
+                            "hospital_discount",
+                            "other"
+                        ]
+                    },
+                    "fund_source": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "mswd",
+                            "maip",
+                            "malasakit",
+                            "pcso",
+                            "lgu_dswd",
+                            "ngo",
+                            "philhealth",
+                            "personal"
+                        ]
+                    },
+                    "house_tenure": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "owned",
+                            "rented"
+                        ]
+                    },
+                    "light_source": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "electricity",
+                                "kerosene",
+                                "candle"
+                            ]
+                        },
+                        "nullable": true
+                    },
+                    "water_source": {
+                        "type": "array",
+                        "items": {
+                            "type": "string",
+                            "enum": [
+                                "owned",
+                                "public",
+                                "artesian_well"
+                            ]
+                        },
                         "nullable": true
                     },
                     "family_background": {
@@ -9050,6 +11268,11 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "local_patient_id": {
+                        "description": "The MSWD registry patient imported from this record, or null when not registered (present on the list only).",
+                        "type": "integer",
+                        "nullable": true
+                    },
                     "personal_data": {
                         "description": "Mapped personal-data block (present on the aggregate show only).",
                         "type": "object",
@@ -9115,206 +11338,6 @@
                     "guarantor_name": {
                         "type": "string",
                         "nullable": true
-                    }
-                },
-                "type": "object"
-            },
-            "IntakeSheet": {
-                "properties": {
-                    "id": {
-                        "description": "Response and request shapes for the unified intake sheet, mirroring\nApp\\Http\\Resources\\UnifiedIntakeSheetResource and StoreUnifiedIntakeSheetRequest.",
-                        "type": "integer"
-                    },
-                    "intake_no": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "status": {
-                        "type": "string"
-                    },
-                    "referral_source": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "referral_details": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "date_of_intake": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "remarks": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "patient_id": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "case_id": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "assessment_id": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "intake_worker_id": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "submitted_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "finalized_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "finalized_by": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "patient": {
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/Patient"
-                            }
-                        ],
-                        "nullable": true
-                    },
-                    "case": {
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/Case"
-                            }
-                        ],
-                        "nullable": true
-                    },
-                    "assessment": {
-                        "oneOf": [
-                            {
-                                "$ref": "#/components/schemas/Assessment"
-                            }
-                        ],
-                        "nullable": true
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    }
-                },
-                "type": "object"
-            },
-            "IntakeSheetCollection": {
-                "properties": {
-                    "data": {
-                        "type": "array",
-                        "items": {
-                            "$ref": "#/components/schemas/IntakeSheet"
-                        }
-                    },
-                    "links": {
-                        "$ref": "#/components/schemas/PaginationLinks"
-                    },
-                    "meta": {
-                        "$ref": "#/components/schemas/PaginationMeta"
-                    }
-                },
-                "type": "object"
-            },
-            "IntakeSheetRequest": {
-                "description": "The unified intake payload: header, patient (reuse patient_id OR create a new patient object), optional sub-records, case (case_id OR new case), optional assessment, recommended assistances and expenses. See StoreUnifiedIntakeSheetRequest for the full field set.",
-                "properties": {
-                    "referral_source": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "referral_details": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "date_of_intake": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "remarks": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "patient_id": {
-                        "description": "Required without `patient`.",
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "patient": {
-                        "description": "A new patient (required without patient_id).",
-                        "type": "object",
-                        "nullable": true,
-                        "additionalProperties": true
-                    },
-                    "patient_ids": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "family_members": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "watchers": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "case_id": {
-                        "description": "Required without `case`.",
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "case": {
-                        "description": "A new case (required without case_id).",
-                        "type": "object",
-                        "nullable": true,
-                        "additionalProperties": true
-                    },
-                    "assessment": {
-                        "type": "object",
-                        "nullable": true,
-                        "additionalProperties": true
-                    },
-                    "assistances": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
-                    },
-                    "expenses": {
-                        "type": "array",
-                        "items": {
-                            "type": "object",
-                            "additionalProperties": true
-                        }
                     }
                 },
                 "type": "object"
@@ -9414,6 +11437,10 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "civil_status": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "age": {
                         "type": "integer",
                         "nullable": true
@@ -9474,6 +11501,10 @@
                         "type": "string",
                         "nullable": true,
                         "maxLength": 20
+                    },
+                    "civil_status": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "age": {
                         "type": "integer",
@@ -10159,12 +12190,31 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "category_label": {
+                        "type": "string",
+                        "nullable": true
+                    },
                     "description": {
                         "type": "string",
                         "nullable": true
                     },
                     "is_active": {
                         "type": "boolean"
+                    },
+                    "usage_count": {
+                        "description": "Assistance records plus guarantee breakdown lines.",
+                        "type": "integer"
+                    },
+                    "usage": {
+                        "properties": {
+                            "assistance_records": {
+                                "type": "integer"
+                            },
+                            "guarantee_lines": {
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
                     },
                     "created_at": {
                         "type": "string",
@@ -10175,6 +12225,45 @@
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AssistantTypeRequest": {
+                "description": "On update every field is optional. Name is unique among types that are not deleted; code is unique across all types.",
+                "required": [
+                    "name",
+                    "code",
+                    "category"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$",
+                        "maxLength": 64
+                    },
+                    "category": {
+                        "type": "string",
+                        "enum": [
+                            "medical",
+                            "food",
+                            "financial",
+                            "burial",
+                            "transportation",
+                            "others"
+                        ]
+                    },
+                    "description": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "is_active": {
+                        "type": "boolean"
                     }
                 },
                 "type": "object"
@@ -10223,6 +12312,10 @@
                     "is_active": {
                         "type": "boolean"
                     },
+                    "usage_count": {
+                        "description": "Patient guarantees plus assistance records that name this guarantor.",
+                        "type": "integer"
+                    },
                     "created_at": {
                         "type": "string",
                         "format": "date-time",
@@ -10232,6 +12325,111 @@
                         "type": "string",
                         "format": "date-time",
                         "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "GuarantorRequest": {
+                "description": "On update every field is optional. The name is unique among guarantors that are not deleted.",
+                "required": [
+                    "name"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "address": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    }
+                },
+                "type": "object"
+            },
+            "AssessmentLookup": {
+                "description": "A mode of assistance or fund source. Assessments store `code`; guarantee breakdown lines store the fund source id.",
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "code": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    },
+                    "requires_specify": {
+                        "description": "Fund sources only: a breakdown line using it must say what it is.",
+                        "type": "boolean"
+                    },
+                    "usage_count": {
+                        "description": "Assessments plus guarantee breakdown lines.",
+                        "type": "integer"
+                    },
+                    "usage": {
+                        "properties": {
+                            "assessments": {
+                                "type": "integer"
+                            },
+                            "guarantee_lines": {
+                                "type": "integer"
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "code_locked": {
+                        "description": "True while an assessment stores the code.",
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "AssessmentLookupRequest": {
+                "description": "On update every field is optional. Name is unique among rows that are not deleted; code is unique across all rows, lowercase letters, numbers and underscores, and cannot change once an assessment stores it.",
+                "required": [
+                    "name",
+                    "code"
+                ],
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "code": {
+                        "type": "string",
+                        "pattern": "^[a-z0-9_]+$",
+                        "maxLength": 64
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "minimum": 0
+                    },
+                    "requires_specify": {
+                        "description": "Fund sources only.",
+                        "type": "boolean"
                     }
                 },
                 "type": "object"
@@ -10507,6 +12705,66 @@
                     }
                 },
                 "type": "object"
+            },
+            "Signatory": {
+                "properties": {
+                    "id": {
+                        "description": "OpenAPI docs for App\\Http\\Controllers\\SignatoryController: the officers printed\non MSWD forms (Library). Reads need sign-in; writes need `library.manage`.",
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string"
+                    },
+                    "title": {
+                        "description": "Printed under the name; may contain line breaks.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "allied_health_chief"
+                        ]
+                    },
+                    "role_label": {
+                        "type": "string"
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer"
+                    }
+                },
+                "type": "object"
+            },
+            "SignatoryRequest": {
+                "description": "At most one active signatory per role (422 on `is_active` otherwise). On update every field is optional.",
+                "properties": {
+                    "name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "title": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 1000
+                    },
+                    "role": {
+                        "type": "string",
+                        "enum": [
+                            "allied_health_chief"
+                        ]
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "sort_order": {
+                        "type": "integer",
+                        "minimum": 0
+                    }
+                },
+                "type": "object"
             }
         },
         "responses": {
@@ -10697,10 +12955,6 @@
             "description": "Case-scoped financial assistance and its lifecycle."
         },
         {
-            "name": "Intake Sheets",
-            "description": "Unified intake sheet workflow."
-        },
-        {
             "name": "Reference",
             "description": "Read-only reference lookups backing select inputs."
         },
@@ -10713,8 +12967,28 @@
             "description": "Reporting and exports."
         },
         {
+            "name": "DAR",
+            "description": "A worker's own Daily Accomplishment Report: patients served per day."
+        },
+        {
             "name": "Audit",
             "description": "Activity log."
+        },
+        {
+            "name": "Guarantees",
+            "description": "Guarantees"
+        },
+        {
+            "name": "Library",
+            "description": "Library"
+        },
+        {
+            "name": "Patient Guarantors",
+            "description": "Patient Guarantors"
+        },
+        {
+            "name": "List of Expenses",
+            "description": "List of Expenses"
         }
     ]
 }

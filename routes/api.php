@@ -27,6 +27,8 @@ use App\Http\Controllers\CaseWatcherStatusController;
 use App\Http\Controllers\CityMayorSlipPdfController;
 use App\Http\Controllers\CloseCaseController;
 use App\Http\Controllers\CompleteFollowUpController;
+use App\Http\Controllers\DarEntryController;
+use App\Http\Controllers\DarExportController;
 use App\Http\Controllers\DestroyWatcherWaiverController;
 use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
@@ -378,6 +380,13 @@ Route::middleware('auth:sanctum')->group(function () {
     // extract takes reports.generate, which Case Manager does not hold.
     Route::get('reports/social-cases', SocialCaseReportController::class)->middleware('permission:reports.view');
     Route::get('reports/social-cases/export', SocialCaseReportExportController::class)->middleware('permission:reports.generate');
+
+    // Daily Accomplishment Report: the caller's own lines only (dar.manage, set in the controllers).
+    Route::get('dar', [DarEntryController::class, 'index']);
+    Route::get('dar/export', DarExportController::class);
+    Route::post('dar-entries', [DarEntryController::class, 'store']);
+    Route::patch('dar-entries/{entry}', [DarEntryController::class, 'update']);
+    Route::delete('dar-entries/{entry}', [DarEntryController::class, 'destroy']);
 
     // Released-aid report snapshots
     Route::get('assistances/{assistance}/reports', [PatientAssistanceReportController::class, 'forAssistance']);
