@@ -14,8 +14,10 @@ class HospitalPatientRepository implements HospitalPatientRepositoryInterface
 
     public function paginate(?string $search = null, int $perPage = 15, ?int $page = null): LengthAwarePaginator
     {
+        // Personal data only: list rows never carry transactions (the aggregate
+        // show() does), so a search page stays one cheap read per patient.
         return $this->model->newQuery()
-            ->with(['personalData', 'transactions'])
+            ->with(['personalData'])
             ->when(filled($search), fn ($query) => $query->where(fn ($group) => $group
                 ->where('patid', 'like', "%{$search}%")
                 ->orWhereHas('personalData', fn ($sub) => $sub

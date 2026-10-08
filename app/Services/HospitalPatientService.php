@@ -3,20 +3,55 @@
 namespace App\Services;
 
 use App\Models\Bizbox\HospitalPatient;
+use App\Models\Patient;
 use App\Repositories\Contracts\HospitalPatientRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Database\QueryException;
 use Illuminate\Pagination\LengthAwarePaginator as Paginator;
+use Illuminate\Support\Collection as SupportCollection;
 
 class HospitalPatientService
 {
     public function __construct(protected HospitalPatientRepositoryInterface $repository) {}
 
+    /**
+     * A page of HIS patients for the API search, each with its `localPatient`
+     * relation set (null when not in the MSWD registry) so the client can offer
+     * Open instead of Import.
+     */
     public function paginate(?string $search = null, int $perPage = 15): LengthAwarePaginator
     {
-        return $this->repository->paginate($search, $perPage);
+        $page = $this->repository->paginate($search, $perPage);
+
+        $this->attachLocalPatients($page->getCollection());
+
+        return $page;
+    }
+
+    /**
+     * Resolve which HIS patients are already registered locally, in one query
+     * keyed on hospital_id (= HIS patid). A soft-deleted local patient counts
+     * as not registered: importing restores it.
+     *
+     * @param  SupportCollection<int, HospitalPatient>  $hospitalPatients
+     */
+    public function attachLocalPatients(SupportCollection $hospitalPatients): void
+    {
+        $patids = $hospitalPatients->pluck('patid')->filter(fn ($patid) => filled($patid))->unique()->values();
+
+        $locals = $patids->isEmpty()
+            ? collect()
+            : Patient::query()
+                ->whereIn('hospital_id', $patids->all())
+                ->get(['id', 'hospital_id'])
+                ->keyBy(fn (Patient $patient) => (string) $patient->hospital_id);
+
+        $hospitalPatients->each(fn (HospitalPatient $hospitalPatient) => $hospitalPatient->setRelation(
+            'localPatient',
+            $locals->get((string) $hospitalPatient->patid),
+        ));
     }
 
     /**

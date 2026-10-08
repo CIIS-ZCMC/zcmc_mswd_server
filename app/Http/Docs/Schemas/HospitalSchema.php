@@ -16,6 +16,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'id', type: 'string'),
         new OA\Property(property: 'hospital_number', type: 'string', nullable: true),
         new OA\Property(property: 'display_name', type: 'string', nullable: true),
+        new OA\Property(property: 'local_patient_id', type: 'integer', nullable: true, description: 'The MSWD registry patient imported from this record, or null when not registered (present on the list only).'),
         new OA\Property(property: 'personal_data', type: 'object', nullable: true, additionalProperties: true, description: 'Mapped personal-data block (present on the aggregate show only).'),
         new OA\Property(property: 'transactions', type: 'array', items: new OA\Items(ref: '#/components/schemas/PatientTransaction'), description: 'Present on the aggregate show only.'),
     ],
