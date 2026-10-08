@@ -280,7 +280,13 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
                     id="category"
                     className={`h-12 rounded-lg text-sm font-medium ${serverErrors.category ? "border-destructive" : ""}`}
                   >
-                    <SelectValue placeholder="Select Category" />
+                    <SelectValue placeholder="Select Category">
+                      {(value: string | null) =>
+                        value
+                          ? getCategoryConfig(value).label
+                          : "Select Category"
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {categoryOptions.map((cat) => (

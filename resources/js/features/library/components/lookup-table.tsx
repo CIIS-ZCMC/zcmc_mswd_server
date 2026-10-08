@@ -43,6 +43,13 @@ import {
   type LibraryTabDefinition,
 } from "../lib/library-tabs"
 
+// Base UI's Select.Value shows the raw value unless given a formatter.
+const STATUS_FILTER_LABELS: Record<string, string> = {
+  all: "All Statuses",
+  active: "Active Only",
+  inactive: "Inactive Only",
+}
+
 export interface LookupTableItem {
   id: number
   name: string
@@ -250,7 +257,13 @@ export const LookupTable: React.FC<LookupTableProps> = ({
                 onValueChange={(v) => setCategoryFilter(v ?? "all")}
               >
                 <SelectTrigger className="h-11 w-44 rounded-lg text-sm font-medium">
-                  <SelectValue placeholder="All Categories" />
+                  <SelectValue placeholder="All Categories">
+                    {(value: string | null) =>
+                      !value || value === "all"
+                        ? "All Categories"
+                        : getCategoryConfig(value).label
+                    }
+                  </SelectValue>
                 </SelectTrigger>
                 <SelectContent>
                   <SelectItem value="all" className="py-2 text-sm">
@@ -279,7 +292,11 @@ export const LookupTable: React.FC<LookupTableProps> = ({
               }}
             >
               <SelectTrigger className="h-11 w-40 rounded-lg text-sm font-medium">
-                <SelectValue placeholder="Status Filter" />
+                <SelectValue placeholder="Status Filter">
+                  {(value: string | null) =>
+                    STATUS_FILTER_LABELS[value ?? "all"] ?? "All Statuses"
+                  }
+                </SelectValue>
               </SelectTrigger>
               <SelectContent>
                 <SelectItem value="all" className="py-2 text-sm">

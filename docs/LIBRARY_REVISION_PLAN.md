@@ -14,11 +14,11 @@ issue, one branch and one PR per phase.
 
 | Phase | Side | Depends on | Status |
 |-------|------|-----------|--------|
-| 1. Fund Sources absorb Assistance Sources (schema, data migration, API, Filament) | server | — | ☑ done |
-| 2. Types of Assistance as a Library list (seed, API CRUD, audit, Filament) | server | — | ☑ done |
-| 3. Library tables UI: one config-driven table per tab | client | 1, 2 | ☑ done |
-| 4. Remove Assistance Sources (after the breakdown moves to `fund_source_id`) | both | 3 + Breakdown phase 1 | ☑ done |
-| 5. Docs and verification | both | 4 | ☐ not started |
+| 1. Fund Sources absorb Assistance Sources (schema, data migration, API, Filament) | server | — | ☑ done (#218, #219) |
+| 2. Types of Assistance as a Library list (seed, API CRUD, audit, Filament) | server | — | ☑ done (#220, #221) |
+| 3. Library tables UI: one config-driven table per tab | client | 1, 2 | ☑ done (#222, #223) |
+| 4. Remove Assistance Sources (after the breakdown moves to `fund_source_id`) | both | 3 + Breakdown phase 1 | ☑ done (#226, #227) |
+| 5. Docs and verification | both | 4 | ☑ done |
 
 **Order across both plans:**
 1. Library phases 1–3
@@ -26,8 +26,8 @@ issue, one branch and one PR per phase.
 3. Library phase 4
 4. Docs for both
 
-**Update:** Guarantee Breakdown phase 1 has landed. Breakdown lines use `fund_source_id` and no longer write
-`assistance_source_id` (now nullable), so Phase 4 is unblocked.
+**All phases shipped.** Guarantee Breakdown phase 1 (#224, #225) landed between Phases 3 and 4, as planned.
+The Library now has four tabs: Guarantors, Types of Assistance, Mode of Assistance and Fund Sources.
 
 **Notes from the build:**
 
@@ -49,8 +49,8 @@ issue, one branch and one PR per phase.
   - The category vocabulary is enforced on create. An update may keep a type's older category (e.g. `pharmacy`
     from before the vocabulary) but can't switch to another value outside it. Filament adds the older value to its
     Select so editing doesn't blank it.
-  - `usage.guarantee_lines` is 0 until breakdown lines store a type (Guarantee Breakdown phase 1); `usage_count`
-    counts assistance records.
+  - `usage.guarantee_lines` was 0 until breakdown lines stored a type. Since Guarantee Breakdown phase 1 it counts
+    them, and `usage_count` is assistance records plus lines.
   - The API resource adds `category_label`. `assistant_types.code` has no unique index (older rows may share or lack
     codes), so uniqueness is enforced by validation.
   - The controller writes through the model directly, like the other Library controllers. The older
@@ -62,7 +62,8 @@ issue, one branch and one PR per phase.
     category badges, code locks, and usage count tooltips.
   - Added full React Query hook suites for `assistant-types` (`useAssistantTypes`, `useCreateAssistantType`,
     `useUpdateAssistantType`, `useDeleteAssistantType`, `useAssistanceTypeOptions`).
-  - `LibraryPage` renders 5 tabs with real-time counts, including the legacy Assistance Sources notice.
+  - `LibraryPage` rendered 5 tabs with counts, including the legacy Assistance Sources notice, until Phase 4 removed
+    that tab.
   - Review fixes before merging:
     - eight type errors fixed: Base UI `TooltipTrigger` takes `render`, not `asChild`; Select `onValueChange`
       passes `string | null`; `requiresSpecify` can be `null`
@@ -81,6 +82,32 @@ issue, one branch and one PR per phase.
     `FundSourceMergeTest` now checks that `assistance_sources`, `patient_guarantee_items.assistance_source_id` and
     `/api/assistance-sources` are gone.
   - Review before merging: removed the leftover `isMergedNotice` tab flag; Pint tidied the test imports.
+
+- **Phase 5:**
+  - Docs: every phase is marked with its issue and PR, the notes that changed since are updated, and
+    `docs/LIBRARY_SETTINGS_PLAN.md` points here.
+  - Verification step 3 ran on a throwaway SQLite copy, not the dev database:
+    - migrate fresh, roll back four steps to just before the merge, then seed old-style Assistance Sources and
+      breakdown lines (a deleted source, a code-less "Barangay Aid!", "Others" with specify text), then migrate
+      forward
+    - every line got the matching fund source, "Others" kept its flag and specify text, the deleted source arrived
+      deleted, the code-less one got the code `barangay_aid`, and `assistance_sources` and `assistance_source_id`
+      were gone
+    - all four rolled-back `down()` methods ran cleanly
+  - Verification step 4 ran in the browser against that copy:
+    - the Library showed four tabs with the expected counts (Fund Sources 15, City Mayor … Others with Specify,
+      Types of Assistance 4) and "Used in" counts
+    - creating a type worked (code auto-filled, category badge shown)
+    - Filament Reference Data listed Guarantors, Types of Assistance, Modes of Assistance and Fund Sources, with no
+      Assistance Sources
+  - Fixes found during verification:
+    - the Library's status and category filters showed the raw value ("all") and the dialog's category showed the
+      raw code ("medical"); Base UI's `Select.Value` needs a formatter, which now shows "All Statuses", "All
+      Categories" and "Medical"
+    - Filament navigation read "Types Of Assistance" and "Mode Of Assistances"; it now reads "Types of Assistance" and
+      "Modes of Assistance"
+  - Not covered here: the encounter guarantee form needs a HIS encounter (SQL Server), so it was checked by tests, not
+    in the browser.
 
 
 ## Background

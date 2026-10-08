@@ -6,6 +6,10 @@ Lets staff manage the lists behind the dropdowns: **guarantors**, **mode of assi
 module (`docs/PATIENT_GUARANTOR_PLAN.md`) and breakdown types (`docs/GUARANTOR_BREAKDOWN_TYPES_PLAN.md`). Ships as one
 issue, one branch and one PR per phase, as the work was split in practice.
 
+> **Revised:** `docs/LIBRARY_REVISION_PLAN.md` changed this module after it shipped. Assistance Sources merged into
+> Fund Sources and were then removed. Types of Assistance became a Library list. The Library tables are now built
+> from a per-tab config. Guarantee breakdown lines use these lists (`docs/GUARANTEE_BREAKDOWN_PLAN.md`).
+
 **Status legend:** ☐ not started · ◐ in progress · ☑ done
 
 | Phase | Side | Depends on | Status |

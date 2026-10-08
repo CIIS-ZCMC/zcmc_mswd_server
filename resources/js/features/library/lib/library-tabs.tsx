@@ -1,11 +1,6 @@
 import React from "react"
 import type { LibraryTabKey } from "../types"
-import {
-  Building2,
-  DollarSign,
-  HeartHandshake,
-  Layers,
-} from "lucide-react"
+import { Building2, DollarSign, HeartHandshake, Layers } from "lucide-react"
 
 export interface AssistantTypeCategoryOption {
   value: string

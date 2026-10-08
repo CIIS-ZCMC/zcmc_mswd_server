@@ -11,7 +11,7 @@ use BackedEnum;
 use Filament\Support\Icons\Heroicon;
 
 /**
- * Lookup of UIS §V mode of assistances. Retire one with "Active" off rather than deleting it:
+ * Lookup of UIS §V modes of assistance. Retire one with "Active" off rather than deleting it:
  * assessments that already use it keep showing it, and it leaves the new-record dropdowns.
  */
 class ModeOfAssistanceResource extends AssessmentLookupResource
@@ -24,7 +24,9 @@ class ModeOfAssistanceResource extends AssessmentLookupResource
 
     protected static ?string $modelLabel = 'mode of assistance';
 
-    protected static ?string $pluralModelLabel = 'mode of assistances';
+    protected static ?string $pluralModelLabel = 'modes of assistance';
+
+    protected static ?string $navigationLabel = 'Modes of Assistance';
 
     public static function getPages(): array
     {
