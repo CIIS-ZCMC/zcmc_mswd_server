@@ -13,10 +13,11 @@ Builds on `docs/PATIENT_GUARANTOR_PLAN.md`. Ships as one issue, one branch and o
 
 | Phase | Side | Depends on | Status |
 |-------|------|-----------|--------|
-| 1. Breakdown rewrite end to end: API, Filament guarantees screen, client form and displays (one PR) | both | Library revision phases 1–3 | ☑ done |
-| 2. Docs and verification | both | 1 | ☐ not started |
+| 1. Breakdown rewrite end to end: API, Filament guarantees screen, client form and displays (one PR) | both | Library revision phases 1–3 | ☑ done (#224, #225) |
+| 2. Docs and verification | both | 1 | ☑ done |
 
-After phase 1 merges, Library revision phase 4 removes Assistance Sources and `patient_guarantee_items.assistance_source_id`.
+**All phases shipped.** After phase 1, Library revision phase 4 (#226, #227) removed Assistance Sources and
+`patient_guarantee_items.assistance_source_id`.
 
 **Notes from the build (phase 1):**
 
@@ -44,6 +45,23 @@ After phase 1 merges, Library revision phase 4 removes Assistance Sources and `p
     visible on its guarantee.
   - The client is checked with `tsc -p tsconfig.app.json`, `npm run lint` and `npm run build`. There is no JS test
     runner.
+
+**Notes from verification (phase 2):**
+
+- **Automated checks:** `composer test` (836), `npm run lint` (0 errors), `npm run build`, and `tsc -p tsconfig.app.json`
+  (no new errors).
+- **Throwaway SQLite copy:** the browser walkthrough ran against the copy the Library revision verified (old-style
+  lines migrated onto fund sources), never the dev database.
+- **Filament** (`/admin` > Patients > a patient > Guarantees):
+  - The migrated guarantee lists with its 4 lines and ₱2,000.00 total.
+  - The edit modal shows Type of Assistance → Amount → Mode of Assistance → Fund Source on every line. The fund is
+    pre-filled, Type and Mode are empty, and the "Others" line shows Specify with its text.
+  - Saving with Type and Mode empty is blocked. After filling them, the save goes through `PatientGuaranteeService`:
+    all four fields are stored, a deleted fund source the guarantee already used ("Vice Mayor Assistance") stays on
+    its line and in that guarantee's options, and the audit log records each replaced line.
+- **Not covered in the browser:** the client's Add / Edit Guarantor form opens from a HIS encounter (SQL Server), which
+  isn't available here. Its rules, the retired-option handling and the 422 mapping are covered by
+  `PatientGuaranteeTest`; the form is checked with `tsc`, lint and the build.
 
 ## Background
 
