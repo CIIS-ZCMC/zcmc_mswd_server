@@ -5,6 +5,7 @@ import { QueryClientProvider } from "@tanstack/react-query"
 import { queryClient } from "@/lib/query-client"
 import { ThemeProvider } from "@/providers/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
+import { Toaster } from "@/components/ui/toast"
 import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers"
 
 const appName = import.meta.env.VITE_APP_NAME || "ZCMC MSWD"
@@ -23,6 +24,7 @@ createInertiaApp({
         <ThemeProvider defaultTheme="system" storageKey="zcmc-mswd-theme">
           <TooltipProvider>
             <App {...props} />
+            <Toaster />
           </TooltipProvider>
         </ThemeProvider>
       </QueryClientProvider>

@@ -23,10 +23,54 @@ Ships as one issue, one branch and one PR (per-plan granularity). The phases bel
 | Phase | Side | Depends on | Status |
 |-------|------|-----------|--------|
 | 1. Make the HIS search payload fit a picker (`local_patient_id`, no transactions) | server | — | ☑ done (#232) |
-| 2. Client data layer: types, API functions, query/mutation hooks | client | 1 | ☐ |
-| 3. Search or Import dialog | client | 2 | ☐ |
-| 4. Navbar wiring: replace the button, keyboard shortcut, permissions | client | 3 | ☐ |
-| 5. Docs and verification | both | 4 | ☐ |
+| 2. Client data layer: types, API functions, query/mutation hooks | client | 1 | ☑ done |
+| 3. Search or Import dialog | client | 2 | ☑ done |
+| 4. Navbar wiring: replace the button, keyboard shortcut, permissions | client | 3 | ☑ done |
+| 5. Docs and verification | both | 4 | ☑ done |
+
+**All phases shipped.** Phase 1 shipped on its own (#232, #233). Phases 2–5 shipped together (#234).
+
+**Notes from the build (Phases 2–5):**
+
+- **Data layer** (`features/hospital/`):
+  - `api/hospital-patient-api.ts`, `hooks/use-hospital-patient-search.ts`, `hooks/use-import-hospital-patient.ts`, and
+    a `features/hospital/index.ts` barrel
+  - the registry half reads through `features/patients/hooks/use-registry-quick-search.ts`
+  - the import mutation invalidates the sidebar list, the HIS search and the new profile, then shows a toast.
+    `<Toaster />` is now mounted in `app.tsx`; before this, nothing rendered toasts.
+- **Dialog**: `features/patients/components/dialogs/patient-search-import-dialog.tsx` is mounted by `Header`.
+- **Review fixes from verifying Phases 2–4:**
+  - The search input sat outside cmdk's `<Command>`, so arrow keys and Enter never reached the list. The input now
+    lives inside it.
+  - Import ran on one click with no confirm step. It now opens an inline review panel (`ImportConfirmPanel`) showing
+    the mapped HIS personal data. Enter on a row reviews it, and Enter again on the same row imports.
+  - The Base UI toast manager has `add()`, not `create()`. Because of that, the success toast threw, the mutation
+    reported failure after a successful `201`, and the dialog never navigated.
+  - Import errors now show the server's 422 validation message (`ApiError.firstValidationMessage`).
+  - The registered row's Open button also fired the item's `onSelect`, causing two visits. It now stops propagation.
+  - The shared `CommandItem` appends a hidden `CheckIcon` with `ml-auto`, which pulled the action buttons off the
+    right edge. These rows hide it.
+  - The navbar trigger uses `TooltipTrigger render={<Button/>}`, so there is no `<button>` inside a `<button>`.
+    The theme, Library and sign-out tooltips still nest; that predates this work.
+  - The local rows printed the raw ISO birthdate. They now show `YYYY-MM-DD` with the age, using the adapter's
+    `computeAge`, which is now exported.
+  - `ApiHospitalPersonalData` gained `contact_number` and `birthtime`.
+- **Deviation from Phase 4:** `Ctrl/Cmd+K` also works while an input has focus, as command palettes conventionally do.
+  It toggles the dialog closed from its own search box. The modifier means it can't clash with typing.
+- **Verification:**
+  - `npm run typecheck` clean, `npm run lint` 0 errors, `php artisan test` green
+  - manual check on `composer dev` against the live HIS:
+    - Ctrl+K opens the dialog
+    - "santos" returns registry and HIS sections (8,700 HIS matches, paginated)
+    - arrow keys move between rows, and Enter opens the review
+    - Confirm import returns `201`, the sidebar refreshes, the profile opens, and the row then shows Registered with
+      Open
+    - search by hospital number (`1742532`) works, and Enter, Enter imports and navigates to `/patients/2`
+    - a registry row opens its profile
+  - Not exercised in the browser:
+    - a user without `patients.create` (Import is hidden by `usePermission`)
+    - an unreachable HIS (the alert shows on `hisQuery.isError`)
+
 
 ---
 
