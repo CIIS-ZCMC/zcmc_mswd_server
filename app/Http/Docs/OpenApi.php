@@ -38,6 +38,7 @@ use OpenApi\Attributes as OA;
 #[OA\Tag(name: 'Reference', description: 'Read-only reference lookups backing select inputs.')]
 #[OA\Tag(name: 'Users & Roles', description: 'Users, roles and permissions.')]
 #[OA\Tag(name: 'Reports', description: 'Reporting and exports.')]
+#[OA\Tag(name: 'DAR', description: "A worker's own Daily Accomplishment Report: patients served per day.")]
 #[OA\Tag(name: 'Audit', description: 'Activity log.')]
 final class OpenApi
 {

@@ -8,6 +8,7 @@ use App\Models\CaseModel;
 use App\Models\CaseProgressNote;
 use App\Models\CaseWatcher;
 use App\Models\Concerns\Auditable;
+use App\Models\DarEntry;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticReport;
 use App\Models\Document;
@@ -49,6 +50,7 @@ $audited = [
     PatientSocioeconomicProfile::class,
     PatientGuarantee::class,
     PatientGuaranteeItem::class,
+    DarEntry::class,
     // Episode-level
     CaseModel::class,
     CaseWatcher::class,
