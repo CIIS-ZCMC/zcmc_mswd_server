@@ -146,7 +146,4 @@ export interface LookupOption {
 }
 
 export type LibraryTabKey =
-  | "guarantors"
-  | "assistance-types"
-  | "mode-of-assistance"
-  | "fund-sources"
+  "guarantors" | "assistance-types" | "mode-of-assistance" | "fund-sources"

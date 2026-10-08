@@ -45,6 +45,8 @@ class AssistantTypeResource extends Resource
 
     protected static ?string $pluralModelLabel = 'types of assistance';
 
+    protected static ?string $navigationLabel = 'Types of Assistance';
+
     protected static ?string $recordTitleAttribute = 'name';
 
     public static function form(Schema $schema): Schema
