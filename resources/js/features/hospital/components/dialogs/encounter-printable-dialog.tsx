@@ -13,7 +13,6 @@ import { Label } from "@/components/ui/label"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
-  Building2,
   Calendar,
   ExternalLink,
   FileText,
@@ -26,6 +25,7 @@ import type { HospitalEncounter } from "@/features/hospital/types"
 import type { PatientRecord } from "@/features/patients/types"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import { AcknowledgementSlipDialog } from "@/features/guarantees"
+import { CityMayorSlipDialog } from "./city-mayor-slip-dialog"
 import { ApiError } from "@/lib/api-client"
 import { openPdfInNewTab } from "@/lib/open-pdf"
 
@@ -82,20 +82,21 @@ export const EncounterPrintableDialog: React.FC<
     )
   }
 
+  // The City Mayor slip (ZCMC-F-MSS-04) takes its fund, amount and type in its own
+  // dialog — see docs/CITY_MAYOR_SLIP_PLAN.md.
+  if (type === "cga") {
+    return (
+      <CityMayorSlipDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        encounter={encounter}
+        patient={patient}
+      />
+    )
+  }
+
   const getDocConfig = () => {
     switch (type) {
-      case "cga":
-        return {
-          title: "City Mayor Assistance (CGA)",
-          subtitle:
-            "City Government of Zamboanga financial assistance endorsement slip",
-          icon: Building2,
-          badgeColor:
-            "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/30",
-          notice:
-            "The City Mayor Assistance (CGA) slip is not available yet: it has no print endpoint on the server.",
-          pdfPath: null,
-        }
       case "uis":
       default:
         return {

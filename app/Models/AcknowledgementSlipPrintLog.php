@@ -8,13 +8,16 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 /**
  * One row per DOH-MAIFIP Acknowledgement Slip print. The slip is rendered on
  * demand from an MSWD guarantee or a HIS guarantor ledger entry; this table is
- * the history of who printed it, when, and for which source/encounter.
+ * the history of who printed it, when, and for which source/encounter. `form`
+ * tells the printables apart: `maifip` (ZCMC-F-MSWD-46) or `city_mayor`
+ * (ZCMC-F-MSS-04, printed per encounter with no guarantee or ledger source).
  *
  * Deliberately not Auditable: this table *is* the audit trail.
  */
 class AcknowledgementSlipPrintLog extends Model
 {
     protected $fillable = [
+        'form',
         'patient_guarantee_id',
         'his_guarantor_entry_id',
         'patient_id',

@@ -359,112 +359,112 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                               variant="outline"
                               size="sm"
                               onClick={() => openEncounterDetail(enc)}
-                              className="h-8 px-3 text-xs font-bold gap-1.5 shadow-2xs border hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
+                              className="h-9 px-3 text-xs sm:text-sm font-bold gap-1.5 shadow-2xs border hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
                             >
-                              <Eye className="size-3.5" />
+                              <Eye className="size-4" />
                               View
                             </Button>
 
                             {/* Print Dropdown Action Button */}
                             <DropdownMenu>
                               <DropdownMenuTrigger
-                                className="inline-flex items-center justify-center h-8 px-2.5 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                                className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs sm:text-sm font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
                                 aria-label={`Print documents for encounter #${enc.id}`}
                               >
-                                <Printer className="size-3.5 text-primary" />
+                                <Printer className="size-4 text-primary" />
                                 <span>Print</span>
-                                <ChevronDown className="size-3 text-muted-foreground" />
+                                <ChevronDown className="size-3.5 text-muted-foreground" />
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-60 p-1.5">
+                              <DropdownMenuContent align="end" className="w-80 p-2 space-y-1">
                                 <DropdownMenuGroup>
-                                  <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                  <DropdownMenuLabel className="px-3 py-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
                                     Encounter #{enc.id} Printables
                                   </DropdownMenuLabel>
                                 </DropdownMenuGroup>
                                 <DropdownMenuItem
                                   onClick={() => handleOpenPrint(enc, "uis")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
                                 >
-                                  <FileText className="size-3.5 text-primary" />
-                                  Unified Intake Sheet (UIS)
+                                  <FileText className="size-5 text-primary shrink-0" />
+                                  <span>Unified Intake Sheet (UIS)</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleOpenPrint(enc, "maifip")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
                                 >
-                                  <FileCheck2 className="size-3.5 text-primary" />
-                                  Acknowledgement Slip (MAIFIP)
+                                  <FileCheck2 className="size-5 text-primary shrink-0" />
+                                  <span>Acknowledgement Slip (MAIFIP)</span>
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => handleOpenPrint(enc, "cga")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
                                 >
-                                  <Building2 className="size-3.5 text-primary" />
-                                  City Mayor Assistance (CGA)
+                                  <Building2 className="size-5 text-primary shrink-0" />
+                                  <span>City Mayor Acknowledgement Slip</span>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
 
                             <DropdownMenu>
                               <DropdownMenuTrigger
-                                className="inline-flex items-center justify-center size-8 p-0 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                                className="inline-flex items-center justify-center size-9 p-0 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
                                 aria-label={`Actions for encounter #${enc.id}`}
                               >
-                                <MoreHorizontal className="size-4" />
+                                <MoreHorizontal className="size-4.5" />
                               </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-56 p-1.5">
+                              <DropdownMenuContent align="end" className="w-72 p-2 space-y-1">
                                 <DropdownMenuGroup>
-                                  <DropdownMenuLabel className="text-[11px] font-bold uppercase tracking-wider text-muted-foreground">
+                                  <DropdownMenuLabel className="px-3 py-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
                                     Encounter #{enc.id}
                                   </DropdownMenuLabel>
                                 </DropdownMenuGroup>
                                 <DropdownMenuItem
                                   onClick={() => openEncounterDetail(enc, "overview")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
                                 >
-                                  <Stethoscope className="size-3.5 text-primary" />
+                                  <Stethoscope className="size-4.5 text-primary shrink-0" />
                                   Clinical Overview
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => openEncounterDetail(enc, "clinical")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
                                 >
-                                  <FileText className="size-3.5 text-primary" />
+                                  <FileText className="size-4.5 text-primary shrink-0" />
                                   Diagnosis & Discharge
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => openEncounterDetail(enc, "financial")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
                                 >
-                                  <CreditCard className="size-3.5 text-primary" />
+                                  <CreditCard className="size-4.5 text-primary shrink-0" />
                                   Guarantors & Billing
                                 </DropdownMenuItem>
                                 <DropdownMenuItem
                                   onClick={() => openEncounterDetail(enc, "mswd")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
                                 >
-                                  <FileCheck2 className="size-3.5 text-primary" />
+                                  <FileCheck2 className="size-4.5 text-primary shrink-0" />
                                   MSWD & UIS Intake
                                 </DropdownMenuItem>
 
-                                <DropdownMenuSeparator />
+                                <DropdownMenuSeparator className="my-1.5" />
 
                                 <DropdownMenuItem
                                   onClick={() => handleOpenPrint(enc, "uis")}
-                                  className="cursor-pointer gap-2 py-1.5 text-xs font-semibold"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
                                 >
-                                  <Printer className="size-3.5 text-primary" />
+                                  <Printer className="size-4.5 text-primary shrink-0" />
                                   Print Documents…
                                 </DropdownMenuItem>
 
-                                {(canAssess || canCreateCase) && <DropdownMenuSeparator />}
+                                {(canAssess || canCreateCase) && <DropdownMenuSeparator className="my-1.5" />}
 
                                 {canAssess && (
                                   <DropdownMenuItem
                                     onClick={() => setDirectAssessEncounterId(enc.id)}
-                                    className="cursor-pointer gap-2 py-1.5 text-xs font-bold text-primary focus:text-primary"
+                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-primary focus:text-primary min-h-10 rounded-lg"
                                   >
-                                    <ClipboardCheck className="size-3.5" />
+                                    <ClipboardCheck className="size-4.5 shrink-0" />
                                     Assess Encounter
                                   </DropdownMenuItem>
                                 )}
@@ -472,9 +472,9 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                                 {canCreateCase && (
                                   <DropdownMenuItem
                                     onClick={() => setDirectOpenCaseEncounter(enc)}
-                                    className="cursor-pointer gap-2 py-1.5 text-xs font-bold"
+                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold min-h-10 rounded-lg"
                                   >
-                                    <FolderPlus className="size-3.5 text-primary" />
+                                    <FolderPlus className="size-4.5 text-primary shrink-0" />
                                     Open Case for Encounter
                                   </DropdownMenuItem>
                                 )}
@@ -568,7 +568,7 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
         />
       )}
 
-      {/* Printable Dialog (UIS, MAIFIP, CGA) */}
+      {/* Printable Dialog (UIS, MAIFIP, City Mayor) */}
       <EncounterPrintableDialog
         open={isPrintableOpen}
         onOpenChange={setIsPrintableOpen}

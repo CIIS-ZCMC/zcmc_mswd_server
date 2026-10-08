@@ -17,7 +17,9 @@ Medical Social Work Department (MSWD) officers frequently generate official prin
    `maifip-slip` and `MaifipSlipPdfService` are superseded.
    - Official acknowledgement and guarantee slip for Medical Assistance for Indigent Patients (MAIFIP).
    - Backend service and Blade template to render encounter, guarantor, and assistance amount details.
-3. **CGA (City Mayor Assistance)**:
+3. **CGA (City Mayor Assistance)**: built as the City Mayor Acknowledgement Slip (ZCMC-F-MSS-04); see
+   `docs/CITY_MAYOR_SLIP_PLAN.md` (`GET /api/patient-transactions/{id}/city-mayor-slip/pdf`). The `cga-slip` and
+   `CgaSlipPdfService` rows below are superseded.
    - Guarantee / endorsement slip for City Government of Zamboanga assistance.
    - Backend service and Blade template to render patient, transaction, diagnosis, and allocation lines.
 
