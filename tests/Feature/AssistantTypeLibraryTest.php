@@ -117,7 +117,7 @@ it('audits every change to a type', function () {
 });
 
 it('offers active types plus the ones a record already uses', function () {
-    $retired = AssistantType::where('code', 'hospital_bill')->firstOrFail();
+    $retired = AssistantType::where('code', 'hospital_bills')->firstOrFail();
     $retired->update(['is_active' => false]);
 
     expect(AssistantType::idOptions())->not->toHaveKey($retired->id)

@@ -31,10 +31,12 @@ use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
 use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\EncounterAcknowledgementSlipPdfController;
 use App\Http\Controllers\FinalizeSocialCaseController;
 use App\Http\Controllers\FindHospitalPatientController;
 use App\Http\Controllers\FindPatientTransactionController;
 use App\Http\Controllers\FundSourceController;
+use App\Http\Controllers\GuaranteeAcknowledgementSlipPdfController;
 use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\HospitalCaseTypeController;
 use App\Http\Controllers\HospitalPatientController;
@@ -85,6 +87,7 @@ use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\ServiceTypeController;
 use App\Http\Controllers\ShowHospitalPatientImportBatchController;
+use App\Http\Controllers\SignatoryController;
 use App\Http\Controllers\SocialCaseController;
 use App\Http\Controllers\SocialCasePdfController;
 use App\Http\Controllers\SocialCaseReportController;
@@ -121,6 +124,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Library: UIS modes of assistance and fund sources; read by everyone, written by library.manage.
     Route::apiResource('mode-of-assistances', ModeOfAssistanceController::class)->except(['create', 'edit'])->parameters(['mode-of-assistances' => 'modeOfAssistance']);
     Route::apiResource('fund-sources', FundSourceController::class)->except(['create', 'edit'])->parameters(['fund-sources' => 'fundSource']);
+    // Library: officers printed on MSWD forms; read by everyone, written by library.manage.
+    Route::apiResource('signatories', SignatoryController::class)->except(['create', 'edit']);
     Route::apiResource('watcher-relationship-types', WatcherRelationshipTypeController::class)->only(['index', 'show'])->parameters(['watcher-relationship-types' => 'watcherRelationshipType']);
 
     // Users (read-only) + role assignment
@@ -200,6 +205,10 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('guarantees/{guarantee}', [PatientGuaranteeController::class, 'show']);
     Route::put('guarantees/{guarantee}', [PatientGuaranteeController::class, 'update']);
     Route::delete('guarantees/{guarantee}', [PatientGuaranteeController::class, 'destroy']);
+    // DOH-MAIFIP Acknowledgement Slip (ZCMC-F-MSWD-46) for a MAIFIP guarantee (guarantee.view).
+    Route::get('guarantees/{guarantee}/acknowledgement-slip/pdf', GuaranteeAcknowledgementSlipPdfController::class);
+    // ... or straight from a HIS encounter's MAIFIP guarantor ledger entry (guarantee.view).
+    Route::get('patient-transactions/{id}/acknowledgement-slip/pdf', EncounterAcknowledgementSlipPdfController::class);
 
     // Patient records
     Route::middleware('permission:patients.update')->group(function () {

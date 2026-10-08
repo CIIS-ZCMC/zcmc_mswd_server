@@ -32,7 +32,7 @@ beforeEach(function () {
     $this->admin = guaranteeRmUser('Admin');
 
     $this->medicines = AssistantType::where('code', 'medicines')->firstOrFail();
-    $this->hospitalBill = AssistantType::where('code', 'hospital_bill')->firstOrFail();
+    $this->hospitalBill = AssistantType::where('code', 'hospital_bills')->firstOrFail();
     $this->financial = ModeOfAssistance::where('code', 'financial_assistance')->firstOrFail();
     $this->mayorFund = FundSource::where('code', 'city_mayor')->firstOrFail();
     $this->othersFund = FundSource::where('code', 'others')->firstOrFail();

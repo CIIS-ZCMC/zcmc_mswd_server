@@ -14,6 +14,7 @@ import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -225,7 +226,9 @@ export const CaseDetailPage: React.FC = () => {
                     <ChevronDown className="size-3 opacity-60" />
                   </DropdownMenuTrigger>
                   <DropdownMenuContent align="start">
-                    <DropdownMenuLabel className="text-xs font-bold">Change Card Color</DropdownMenuLabel>
+                    <DropdownMenuGroup>
+                      <DropdownMenuLabel className="text-xs font-bold">Change Card Color</DropdownMenuLabel>
+                    </DropdownMenuGroup>
                     <DropdownMenuSeparator />
                     {Object.values(CARD_COLORS).map((cfg) => (
                       <DropdownMenuItem
@@ -403,14 +406,6 @@ export const CaseDetailPage: React.FC = () => {
             </TabsTrigger>
 
             <TabsTrigger
-              value="intake-sheet"
-              className="rounded-lg px-4 py-2.5 h-auto text-xs sm:text-sm font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all cursor-pointer"
-            >
-              <ClipboardList className="size-4" />
-              <span>Intake Sheet (ANNEX B)</span>
-            </TabsTrigger>
-
-            <TabsTrigger
               value="progress-notes"
               className="rounded-lg px-4 py-2.5 h-auto text-xs sm:text-sm font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all cursor-pointer"
             >
@@ -424,6 +419,14 @@ export const CaseDetailPage: React.FC = () => {
             >
               <Stethoscope className="size-4" />
               <span>MSWD Assessments</span>
+            </TabsTrigger>
+
+            <TabsTrigger
+              value="intake-sheet"
+              className="rounded-lg px-4 py-2.5 h-auto text-xs sm:text-sm font-bold gap-2 data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-sm transition-all cursor-pointer"
+            >
+              <ClipboardList className="size-4" />
+              <span>Intake Sheet History</span>
             </TabsTrigger>
 
             <TabsTrigger
@@ -602,6 +605,7 @@ export const CaseDetailPage: React.FC = () => {
         patientContact={caseRecord.patient?.contactNo}
         patientMonthlyIncome={caseRecord.patient?.monthlyIncome}
         existingAssessment={assessments[0] ?? null}
+        transactionId={caseRecord.transactionId}
       />
 
       <ReassessCaseDialog

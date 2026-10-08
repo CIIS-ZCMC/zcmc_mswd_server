@@ -3,15 +3,13 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Badge } from "@/components/ui/badge"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { useMswdClassificationMatrix, useReassessCase } from "../../hooks/use-assessment"
 import type { Assessment, MswdClassificationCode, ReassessmentPayload } from "../../types/assessment.types"
-import { formatCurrency, getBracketColor, getBracketLabel } from "../../lib/classification"
-import { AlertCircle, AlertTriangle, Calculator, Loader2, Plus, Trash2 } from "lucide-react"
+import { formatCurrency, getBracketColor } from "../../lib/classification"
+import { AlertCircle, Calculator, Loader2, Plus, Trash2 } from "lucide-react"
 import { ApiError } from "@/lib/api-client"
 
 interface ReassessCaseDialogProps {
@@ -32,8 +30,6 @@ const REASSESSMENT_REASONS = [
   "Medical Emergency",
   "Other",
 ]
-
-const BRACKET_OPTIONS: MswdClassificationCode[] = ["A", "B", "C1", "C2", "C3", "D"]
 
 export const ReassessCaseDialog: React.FC<ReassessCaseDialogProps> = ({
   open,
@@ -65,13 +61,6 @@ export const ReassessCaseDialog: React.FC<ReassessCaseDialogProps> = ({
     ]
   )
 
-  const [hasOverride, setHasOverride] = useState<boolean>(latestAssessment?.hasOverride || false)
-  const [overrideClassification, setOverrideClassification] = useState<MswdClassificationCode>(
-    (latestAssessment?.classification as MswdClassificationCode) || "D"
-  )
-  const [overrideReason, setOverrideReason] = useState<string>(
-    latestAssessment?.classificationOverrideReason || ""
-  )
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
   // Calculation Math
@@ -101,7 +90,7 @@ export const ReassessCaseDialog: React.FC<ReassessCaseDialogProps> = ({
     return matchedTier ? matchedTier.code : "D"
   }, [matrix, calculatedNetPerCapita])
 
-  const finalClassification = hasOverride ? overrideClassification : calculatedBracket
+  const finalClassification = calculatedBracket
 
   const handleAddExpense = () => {
     setExpenses((prev) => [...prev, { expense_type: "", amount: "0" }])
@@ -128,11 +117,6 @@ export const ReassessCaseDialog: React.FC<ReassessCaseDialogProps> = ({
       return
     }
 
-    if (hasOverride && !overrideReason.trim()) {
-      setErrorMsg("Written justification is mandatory when applying a manual classification override.")
-      return
-    }
-
     const payload: ReassessmentPayload = {
       reassessment_reason: reassessmentReason,
       total_family_income: parsedIncome,
@@ -140,11 +124,6 @@ export const ReassessCaseDialog: React.FC<ReassessCaseDialogProps> = ({
       expenses: expenses
         .filter((e) => e.expense_type.trim() && Number(e.amount) >= 0)
         .map((e) => ({ expense_type: e.expense_type, amount: Number(e.amount) || 0 })),
-    }
-
-    if (hasOverride) {
-      payload.classification_override = overrideClassification
-      payload.classification_override_reason = overrideReason.trim()
     }
 
     try {
@@ -290,7 +269,7 @@ export const ReassessCaseDialog: React.FC<ReassessCaseDialogProps> = ({
 
               <div className="flex items-center gap-2">
                 <span className="text-xs text-muted-foreground font-medium">
-                  {hasOverride ? "Override Tier:" : "Calculated Tier:"}
+                  Calculated Tier:
                 </span>
                 <Badge className={`text-sm font-extrabold px-3 py-1 ${getBracketColor(finalClassification)}`}>
                   Class {finalClassification}
@@ -298,55 +277,6 @@ export const ReassessCaseDialog: React.FC<ReassessCaseDialogProps> = ({
               </div>
 
             </div>
-          </div>
-
-          {/* Manual Classification Override Toggle */}
-          <div className="rounded-xl border border-border/80 p-4 space-y-3 bg-card">
-            <div className="flex items-center justify-between">
-              <div>
-                <Label className="font-bold text-xs flex items-center gap-1.5 cursor-pointer">
-                  <AlertTriangle className="w-4 h-4 text-amber-500" />
-                  Manual Classification Override
-                </Label>
-                <p className="text-[11px] text-muted-foreground mt-0.5">
-                  Allows social worker to override calculated net per capita tier based on clinical discretion.
-                </p>
-              </div>
-              <Switch checked={hasOverride} onCheckedChange={setHasOverride} />
-            </div>
-
-            {hasOverride && (
-              <div className="space-y-3 pt-3 border-t border-border/60">
-                <div className="space-y-1.5">
-                  <Label className="font-bold text-xs">Override Classification Bracket *</Label>
-                  <Select
-                    value={overrideClassification}
-                    onValueChange={(val) => setOverrideClassification(val as MswdClassificationCode)}
-                  >
-                    <SelectTrigger className="h-10 text-xs font-semibold">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      {BRACKET_OPTIONS.map((code) => (
-                        <SelectItem key={code} value={code} className="text-xs">
-                          {getBracketLabel(code)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="space-y-1.5">
-                  <Label className="font-bold text-xs">Written Justification (Mandatory) *</Label>
-                  <Textarea
-                    placeholder="Enter social worker written justification for overriding the calculated bracket..."
-                    value={overrideReason}
-                    onChange={(e) => setOverrideReason(e.target.value)}
-                    className="text-xs min-h-[70px]"
-                  />
-                </div>
-              </div>
-            )}
           </div>
 
           <DialogFooter className="pt-2">

@@ -34,6 +34,7 @@ import {
   Edit2,
   Loader2,
   Plus,
+  Printer,
   Receipt,
   SlidersHorizontal,
   Trash2,
@@ -45,6 +46,8 @@ import { GuaranteeFormDialog } from "./guarantee-form-dialog"
 import { Link } from "@inertiajs/react"
 import type { PatientGuarantee } from "../types"
 import { GuaranteeBreakdownTable } from "./guarantee-breakdown-table"
+import { AcknowledgementSlipDialog } from "./acknowledgement-slip-dialog"
+import { isMaifipGuarantee } from "../lib/acknowledgement-slip"
 
 interface EncounterGuaranteesCardProps {
   patientId: number | string
@@ -77,6 +80,8 @@ export const EncounterGuaranteesCard: React.FC<
     useState<PatientGuarantee | null>(null)
   const [deletingGuarantee, setDeletingGuarantee] =
     useState<PatientGuarantee | null>(null)
+  // The MAIFIP guarantee whose Acknowledgement Slip is being printed.
+  const [slipGuaranteeId, setSlipGuaranteeId] = useState<number | null>(null)
 
   const toggleExpand = (id: number) => {
     setExpandedIds((prev) => {
@@ -198,11 +203,9 @@ export const EncounterGuaranteesCard: React.FC<
                   <TableHead className="text-xs font-bold text-foreground">
                     Recorded By
                   </TableHead>
-                  {(canUpdate || canDelete) && (
-                    <TableHead className="text-right text-xs font-bold text-foreground">
-                      Actions
-                    </TableHead>
-                  )}
+                  <TableHead className="text-right text-xs font-bold text-foreground">
+                    Actions
+                  </TableHead>
                 </TableRow>
               </TableHeader>
               <TableBody>
@@ -282,45 +285,53 @@ export const EncounterGuaranteesCard: React.FC<
                         </TableCell>
 
                         {/* Actions */}
-                        {(canUpdate || canDelete) && (
-                          <TableCell className="text-right">
-                            <div className="flex items-center justify-end gap-1">
-                              {canUpdate && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => handleEdit(g)}
-                                  className="size-7 text-muted-foreground hover:text-foreground"
-                                  title="Edit guarantor"
-                                >
-                                  <Edit2 className="size-3.5" />
-                                </Button>
-                              )}
-                              {canDelete && (
-                                <Button
-                                  type="button"
-                                  variant="ghost"
-                                  size="icon"
-                                  onClick={() => setDeletingGuarantee(g)}
-                                  className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                  title="Delete guarantor"
-                                >
-                                  <Trash2 className="size-3.5" />
-                                </Button>
-                              )}
-                            </div>
-                          </TableCell>
-                        )}
+                        <TableCell className="text-right">
+                          <div className="flex items-center justify-end gap-1">
+                            {isMaifipGuarantee(g) && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setSlipGuaranteeId(g.id)}
+                                className="size-7 text-muted-foreground hover:text-foreground"
+                                title="Print Acknowledgement Slip (DOH-MAIFIP)"
+                                aria-label="Print Acknowledgement Slip"
+                              >
+                                <Printer className="size-3.5" />
+                              </Button>
+                            )}
+                            {canUpdate && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => handleEdit(g)}
+                                className="size-7 text-muted-foreground hover:text-foreground"
+                                title="Edit guarantor"
+                              >
+                                <Edit2 className="size-3.5" />
+                              </Button>
+                            )}
+                            {canDelete && (
+                              <Button
+                                type="button"
+                                variant="ghost"
+                                size="icon"
+                                onClick={() => setDeletingGuarantee(g)}
+                                className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
+                                title="Delete guarantor"
+                              >
+                                <Trash2 className="size-3.5" />
+                              </Button>
+                            )}
+                          </div>
+                        </TableCell>
                       </TableRow>
 
                       {/* Expanded Breakdown Table */}
                       {isExpanded && (
                         <TableRow className="border-b bg-muted/15 hover:bg-muted/20">
-                          <TableCell
-                            colSpan={canUpdate || canDelete ? 7 : 6}
-                            className="p-3 pl-10"
-                          >
+                          <TableCell colSpan={7} className="p-3 pl-10">
                             <div className="space-y-1.5">
                               <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
                                 <Receipt className="size-3.5 text-primary" />
@@ -347,6 +358,14 @@ export const EncounterGuaranteesCard: React.FC<
         guarantee={editingGuarantee}
         open={dialogOpen}
         onOpenChange={setDialogOpen}
+      />
+
+      <AcknowledgementSlipDialog
+        open={slipGuaranteeId !== null}
+        onOpenChange={(open) => !open && setSlipGuaranteeId(null)}
+        patientId={patientId}
+        transactionId={transactionId}
+        guaranteeId={slipGuaranteeId}
       />
 
       {/* Delete Confirmation Alert Dialog */}

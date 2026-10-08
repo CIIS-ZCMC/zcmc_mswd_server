@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useMemo, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -12,7 +12,6 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
-import { Switch } from "@/components/ui/switch"
 import { Checkbox } from "@/components/ui/checkbox"
 import { ApiError } from "@/lib/api-client"
 import {
@@ -26,21 +25,18 @@ import type {
 } from "../../types/assessment.types"
 import {
   INFORMANT_RELATIONSHIP_OPTIONS,
-  LEGACY_CLASSIFICATION_OPTIONS,
-  MSWD_CLASSIFICATION_OPTIONS,
   PROBLEM_CATEGORY_OPTIONS,
   selectableOptions,
 } from "../../lib/assessment-constants"
-import {
-  useFundSourceOptions,
-  useModeOfAssistanceOptions,
-} from "@/features/library/hooks/use-lookup-options"
+import { useAssistanceTypeOptions } from "@/features/library/hooks/use-lookup-options"
+import { useHospitalEncounter } from "@/features/hospital/hooks/use-hospital-encounters"
 import {
   AlertCircle,
   FileCheck,
   FileEdit,
   HeartHandshake,
   Loader2,
+  Sparkles,
   Stethoscope,
   User,
   UserCheck,
@@ -59,6 +55,8 @@ interface IntakeAssessmentDialogProps {
   patientContact?: string
   patientMonthlyIncome?: number | null
   existingAssessment?: Assessment | null
+  transactionId?: number | null
+  encounterFinalDiagnosis?: string | null
   onSuccess?: () => void
 }
 
@@ -111,6 +109,8 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   patientAddress,
   patientContact,
   existingAssessment,
+  transactionId,
+  encounterFinalDiagnosis,
   onSuccess,
 }) => {
   const isEditMode = Boolean(existingAssessment?.id)
@@ -119,9 +119,11 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   const createMutation = useCreateAssessment(caseId)
   const updateMutation = useUpdateAssessment(caseId, assessmentId)
 
+  // Fetch encounter if transactionId provided (to auto-fill FINAL DIAGNOSIS)
+  const { data: encounter } = useHospitalEncounter(transactionId ?? 0, open && Boolean(transactionId))
+
   // Library options; the inactive ones are fetched too so a retired value keeps its name.
-  const { data: modeOptionsData = [] } = useModeOfAssistanceOptions(false)
-  const { data: fundSourceOptionsData = [] } = useFundSourceOptions(false)
+  const { data: assistanceTypeOptionsData = [] } = useAssistanceTypeOptions(false)
 
   // Form State: Informant Details
   const [isInformantPatient, setIsInformantPatient] = useState(false)
@@ -133,19 +135,29 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   const [informantAddress, setInformantAddress] = useState("")
   const [informantContact, setInformantContact] = useState("")
 
-  // Problem & Medical
+  // Problem & Medical / Assessment
   const [presentingProblem, setPresentingProblem] = useState("")
   const [problemCategories, setProblemCategories] = useState<string[]>([])
-  const [problemSpecify, setProblemSpecify] = useState("")
+  const [assistanceType, setAssistanceType] = useState("")
+  const [customAssistanceSpecify, setCustomAssistanceSpecify] = useState("")
   const [medicalHistory, setMedicalHistory] = useState("")
 
-  // Recommendations & Classification
+  // Dynamic Type of Assistance options from Library, appending "Others"
+  const assistanceOptions = useMemo(() => {
+    const list = assistanceTypeOptionsData.map((opt) => ({
+      value: opt.label,
+      label: opt.label,
+      isActive: opt.isActive,
+    }))
+    const activeAndSelected = selectableOptions(
+      list,
+      assistanceType === "Others" ? "" : assistanceType
+    )
+    return [...activeAndSelected, { value: "Others", label: "Others" }]
+  }, [assistanceTypeOptionsData, assistanceType])
+
+  // Recommendations
   const [recommendation, setRecommendation] = useState("")
-  const [recommendationMode, setRecommendationMode] = useState("")
-  const [fundSource, setFundSource] = useState("")
-  const [hasOverride, setHasOverride] = useState(false)
-  const [classificationOverride, setClassificationOverride] = useState<string>("")
-  const [overrideReason, setOverrideReason] = useState("")
 
   const [familyBackground, setFamilyBackground] = useState("")
   const [socialFunctioning, setSocialFunctioning] = useState("")
@@ -154,7 +166,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
 
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
 
-  // Initialize form from existing assessment on open
+  // Initialize form from existing assessment or auto-fill from encounter on open
   useEffect(() => {
     if (open) {
       setErrorMsg(null)
@@ -204,24 +216,44 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         )
         setPresentingProblem(existingAssessment.presentingProblem ?? "")
         setProblemCategories(existingAssessment.problemCategories ?? [])
-        setProblemSpecify(existingAssessment.problemSpecify ?? "")
+
+        // Parse Type of Assistance from problemSpecify
+        const rawSpecify = existingAssessment.problemSpecify?.trim() || ""
+        const matchingType = assistanceTypeOptionsData.find(
+          (opt) =>
+            opt.label.toLowerCase() === rawSpecify.toLowerCase() ||
+            opt.value.toLowerCase() === rawSpecify.toLowerCase()
+        )
+        if (matchingType) {
+          setAssistanceType(matchingType.label)
+          setCustomAssistanceSpecify("")
+        } else if (rawSpecify.toLowerCase().startsWith("others:")) {
+          setAssistanceType("Others")
+          setCustomAssistanceSpecify(rawSpecify.replace(/^others:\s*/i, "").trim())
+        } else if (rawSpecify) {
+          setAssistanceType("Others")
+          setCustomAssistanceSpecify(rawSpecify)
+        } else {
+          setAssistanceType("")
+          setCustomAssistanceSpecify("")
+        }
+
         setMedicalHistory(existingAssessment.medicalHistory ?? "")
 
         setRecommendation(existingAssessment.recommendation ?? "")
-        setRecommendationMode(existingAssessment.recommendationMode ?? "")
-        setFundSource(existingAssessment.fundSource ?? "")
-        setHasOverride(existingAssessment.hasOverride ?? false)
-        setClassificationOverride(
-          (existingAssessment.classification as string) ||
-          (existingAssessment.calculatedClassification as string) ||
-          ""
-        )
-        setOverrideReason(existingAssessment.classificationOverrideReason ?? "")
         setFamilyBackground(existingAssessment.familyBackground ?? "")
         setSocialFunctioning(existingAssessment.socialFunctioning ?? "")
         setAssessmentNotes(existingAssessment.assessmentNotes ?? "")
         setInterventionPlan(existingAssessment.interventionPlan ?? "")
       } else {
+        // Creating new assessment: auto-fill Assessment from encounter FINAL DIAGNOSIS
+        const defaultDiagnosis =
+          encounterFinalDiagnosis ||
+          encounter?.finalDiagnosis ||
+          encounter?.impression ||
+          encounter?.dischargeDiagnosis ||
+          ""
+
         setIsInformantPatient(false)
         setInformantLastName("")
         setInformantFirstName("")
@@ -230,23 +262,30 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         setCustomRelationship("")
         setInformantAddress("")
         setInformantContact("")
-        setPresentingProblem("")
+        setPresentingProblem(defaultDiagnosis)
         setProblemCategories([])
-        setProblemSpecify("")
+        setAssistanceType("")
+        setCustomAssistanceSpecify("")
         setMedicalHistory("")
         setRecommendation("")
-        setRecommendationMode("")
-        setFundSource("")
-        setHasOverride(false)
-        setClassificationOverride("")
-        setOverrideReason("")
         setFamilyBackground("")
         setSocialFunctioning("")
         setAssessmentNotes("")
         setInterventionPlan("")
       }
     }
-  }, [open, existingAssessment, patientName, patientAddress, patientContact])
+  }, [
+    open,
+    existingAssessment,
+    assistanceTypeOptionsData,
+    patientName,
+    patientAddress,
+    patientContact,
+    encounterFinalDiagnosis,
+    encounter?.finalDiagnosis,
+    encounter?.impression,
+    encounter?.dischargeDiagnosis,
+  ])
 
   // Handle "Informant is Patient" toggle
   const handleToggleInformantIsPatient = (checked: boolean) => {
@@ -289,17 +328,19 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
     e.preventDefault()
     setErrorMsg(null)
 
-    if (hasOverride && !overrideReason.trim()) {
-      setErrorMsg("Written justification is required when overriding MSWD classification.")
-      return
-    }
-
     const combinedName = combineInformantName(informantLastName, informantFirstName, informantMiddleName)
 
     const effectiveRelationship =
       informantRelationship === "Other"
         ? customRelationship.trim() || "Other"
         : informantRelationship.trim() || null
+
+    const computedProblemSpecify =
+      assistanceType === "Others"
+        ? customAssistanceSpecify.trim()
+          ? `Others: ${customAssistanceSpecify.trim()}`
+          : "Others"
+        : assistanceType.trim() || null
 
     if (isEditMode) {
       const payload: UpdateAssessmentPayload = {
@@ -313,13 +354,9 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         informant_contact: informantContact.trim() || null,
         presenting_problem: presentingProblem.trim() || null,
         problem_categories: problemCategories.length > 0 ? problemCategories : null,
-        problem_specify: problemSpecify.trim() || null,
+        problem_specify: computedProblemSpecify,
         medical_history: medicalHistory.trim() || null,
         recommendation: recommendation.trim() || null,
-        recommendation_mode: recommendationMode || null,
-        fund_source: fundSource || null,
-        classification: hasOverride && classificationOverride ? classificationOverride : null,
-        classification_override_reason: hasOverride ? overrideReason.trim() : null,
         family_background: familyBackground.trim() || null,
         social_functioning: socialFunctioning.trim() || null,
         assessment_notes: assessmentNotes.trim() || null,
@@ -349,13 +386,9 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         informant_contact: informantContact.trim() || null,
         presenting_problem: presentingProblem.trim() || null,
         problem_categories: problemCategories.length > 0 ? problemCategories : null,
-        problem_specify: problemSpecify.trim() || null,
+        problem_specify: computedProblemSpecify,
         medical_history: medicalHistory.trim() || null,
         recommendation: recommendation.trim() || null,
-        recommendation_mode: recommendationMode || null,
-        fund_source: fundSource || null,
-        classification: hasOverride && classificationOverride ? classificationOverride : null,
-        classification_override_reason: hasOverride ? overrideReason.trim() : null,
         family_background: familyBackground.trim() || null,
         social_functioning: socialFunctioning.trim() || null,
         assessment_notes: assessmentNotes.trim() || null,
@@ -538,24 +571,56 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
             </div>
           </div>
 
-          {/* Section 2: Presenting Problem & Medical Needs (Renumbered from 4) */}
+          {/* Section 2: Final Diagnosis & Medical History */}
           <div className="rounded-2xl border border-border/60 bg-card p-5 space-y-4 shadow-2xs">
-            <div className="flex items-center gap-2 border-b border-border/40 pb-2">
-              <Stethoscope className="size-5 text-primary" />
-              <h4 className="text-base sm:text-lg font-bold text-foreground">
-                2. Presenting Problem &amp; Medical History
-              </h4>
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-2 border-b border-border/40 pb-2">
+              <div className="flex items-center gap-2">
+                <Stethoscope className="size-5 text-primary" />
+                <h4 className="text-base sm:text-lg font-bold text-foreground">
+                  2. Final Diagnosis &amp; Medical History
+                </h4>
+              </div>
+
+              {/* Quick-fill / Sync from HIS Diagnosis */}
+              {(encounterFinalDiagnosis || encounter?.finalDiagnosis || encounter?.impression) && (
+                <Button
+                  type="button"
+                  variant="outline"
+                  size="sm"
+                  onClick={() =>
+                    setPresentingProblem(
+                      encounterFinalDiagnosis ||
+                      encounter?.finalDiagnosis ||
+                      encounter?.impression ||
+                      ""
+                    )
+                  }
+                  className="h-7 text-xs font-bold text-primary border-primary/30 hover:bg-primary/10 gap-1.5 cursor-pointer shrink-0"
+                  title="Reload final diagnosis from hospital record"
+                >
+                  <Sparkles className="size-3" />
+                  Auto-fill HIS Diagnosis
+                </Button>
+              )}
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider">Presenting Problem</Label>
+              <div className="flex items-center justify-between">
+                <Label className="text-xs font-bold uppercase tracking-wider">Final Diagnosis</Label>
+                <span className="text-[11px] font-medium text-muted-foreground">
+                  Official HIS Record (Read-only)
+                </span>
+              </div>
               <Textarea
-                placeholder="State the primary medical, financial, or psychosocial difficulties presented by the client..."
+                placeholder="No final diagnosis logged in HIS encounter"
                 value={presentingProblem}
-                onChange={(e) => setPresentingProblem(e.target.value)}
+                readOnly
                 rows={2}
-                className="text-sm font-medium resize-y"
+                className="text-sm font-semibold bg-muted/40 text-foreground border-border/70 cursor-not-allowed resize-none"
               />
+              <p className="text-[11px] text-muted-foreground font-medium">
+                Loaded directly from the linked hospital encounter diagnosis.
+              </p>
             </div>
 
             <div className="space-y-2">
@@ -567,8 +632,8 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
                     <label
                       key={cat.value}
                       className={`flex items-center gap-2.5 p-3 rounded-xl border text-xs sm:text-sm font-semibold cursor-pointer select-none transition-all ${checked
-                          ? "bg-primary/10 border-primary text-primary shadow-2xs"
-                          : "bg-muted/20 border-border/60 text-muted-foreground hover:bg-muted/40"
+                        ? "bg-primary/10 border-primary text-primary shadow-2xs"
+                        : "bg-muted/20 border-border/60 text-muted-foreground hover:bg-muted/40"
                         }`}
                     >
                       <Checkbox checked={checked} onCheckedChange={() => toggleCategory(cat.value)} />
@@ -579,130 +644,68 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
               </div>
             </div>
 
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 pt-1">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider">Specify Problem Details</Label>
-                <Input
-                  placeholder="e.g. Inability to purchase required orthopedic implants"
-                  value={problemSpecify}
-                  onChange={(e) => setProblemSpecify(e.target.value)}
-                  className="h-11 text-sm font-medium"
-                />
-              </div>
+            {/* Type of Assistance */}
+            <div className="space-y-1.5 pt-1">
+              <Label className="text-xs font-bold uppercase tracking-wider">Type of Assistance</Label>
+              <Select
+                value={assistanceType}
+                onValueChange={(val) => {
+                  if (val) setAssistanceType(val)
+                }}
+              >
+                <SelectTrigger className="h-11 text-sm font-medium bg-background w-full">
+                  <SelectValue placeholder="Select type of assistance..." />
+                </SelectTrigger>
+                <SelectContent>
+                  {assistanceOptions.map((opt) => (
+                    <SelectItem key={opt.value} value={opt.value} className="text-sm">
+                      {opt.label}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
 
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider">Medical History / Diagnosis Summary</Label>
+              {assistanceType === "Others" && (
                 <Input
-                  placeholder="e.g. Hypertension, CKD Stage 5 on HD"
-                  value={medicalHistory}
-                  onChange={(e) => setMedicalHistory(e.target.value)}
-                  className="h-11 text-sm font-medium"
+                  placeholder="Specify other assistance details..."
+                  value={customAssistanceSpecify}
+                  onChange={(e) => setCustomAssistanceSpecify(e.target.value)}
+                  className="h-11 text-sm font-medium mt-2"
                 />
-              </div>
+              )}
+            </div>
+
+            {/* Medical History */}
+            <div className="space-y-1.5 pt-1">
+              <Label className="text-xs font-bold uppercase tracking-wider">Medical History</Label>
+              <Textarea
+                placeholder="e.g. Hypertension, CKD Stage 5 on HD, previous medical history..."
+                value={medicalHistory}
+                onChange={(e) => setMedicalHistory(e.target.value)}
+                rows={2}
+                className="text-sm font-medium resize-y"
+              />
             </div>
           </div>
 
-          {/* Section 3: Recommendations & Classification (Renumbered from 5) */}
+          {/* Section 3: Social Worker Assessment */}
           <div className="rounded-2xl border border-border/60 bg-card p-5 space-y-4 shadow-2xs">
             <div className="flex items-center gap-2 border-b border-border/40 pb-2">
               <HeartHandshake className="size-5 text-primary" />
               <h4 className="text-base sm:text-lg font-bold text-foreground">
-                3. Recommendation &amp; MSWD Classification
+                3. Social Worker Assessment
               </h4>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider">Social Worker Recommendation</Label>
+              <Label className="text-xs font-bold uppercase tracking-wider">Social Worker Assessment</Label>
               <Textarea
-                placeholder="Specific recommendations, assistance modes, or counseling plan..."
+                placeholder="Specific psychosocial assessment, recommendations, assistance modes, or counseling plan..."
                 value={recommendation}
                 onChange={(e) => setRecommendation(e.target.value)}
                 rows={2}
                 className="text-sm font-medium resize-y"
               />
-            </div>
-
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider">Mode of Assistance</Label>
-                <Select value={recommendationMode} onValueChange={(val) => setRecommendationMode(val ?? "")}>
-                  <SelectTrigger className="h-11 text-sm font-medium">
-                    <SelectValue placeholder="Select Recommendation Mode" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectableOptions(modeOptionsData, recommendationMode).map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-sm py-2">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label className="text-xs font-bold uppercase tracking-wider">Fund Source</Label>
-                <Select value={fundSource} onValueChange={(val) => setFundSource(val ?? "")}>
-                  <SelectTrigger className="h-11 text-sm font-medium">
-                    <SelectValue placeholder="Select Fund Source" />
-                  </SelectTrigger>
-                  <SelectContent>
-                    {selectableOptions(fundSourceOptionsData, fundSource).map((opt) => (
-                      <SelectItem key={opt.value} value={opt.value} className="text-sm py-2">
-                        {opt.label}
-                      </SelectItem>
-                    ))}
-                  </SelectContent>
-                </Select>
-              </div>
-            </div>
-
-            {/* Classification Override Toggle */}
-            <div className="rounded-xl border border-border/60 p-4 bg-muted/20 space-y-3">
-              <div className="flex items-center justify-between">
-                <div className="space-y-0.5">
-                  <Label className="text-sm font-bold text-foreground">Manual Classification Override</Label>
-                  <p className="text-xs text-muted-foreground">
-                    By default, the server calculates classification from per-capita net income. Enable this to manually set a specific tier.
-                  </p>
-                </div>
-                <Switch checked={hasOverride} onCheckedChange={setHasOverride} />
-              </div>
-
-              {hasOverride && (
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t border-border/40">
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider">Selected Tier</Label>
-                    <Select value={classificationOverride} onValueChange={(val) => setClassificationOverride(val ?? "")}>
-                      <SelectTrigger className="h-11 text-sm font-bold">
-                        <SelectValue placeholder="Select MSWD Tier" />
-                      </SelectTrigger>
-                      <SelectContent>
-                        {MSWD_CLASSIFICATION_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value} className="text-sm font-bold py-2">
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                        {LEGACY_CLASSIFICATION_OPTIONS.map((opt) => (
-                          <SelectItem key={opt.value} value={opt.value} className="text-sm font-semibold py-2">
-                            {opt.label}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                  </div>
-
-                  <div className="space-y-1.5">
-                    <Label className="text-xs font-bold uppercase tracking-wider">Override Justification *</Label>
-                    <Input
-                      placeholder="Mandatory justification for manual classification override"
-                      value={overrideReason}
-                      onChange={(e) => setOverrideReason(e.target.value)}
-                      className="h-11 text-sm font-medium"
-                      required={hasOverride}
-                    />
-                  </div>
-                </div>
-              )}
             </div>
           </div>
 

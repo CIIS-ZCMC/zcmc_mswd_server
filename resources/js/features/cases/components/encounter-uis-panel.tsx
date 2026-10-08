@@ -217,6 +217,7 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
         patientContact={patientContact ?? undefined}
         patientMonthlyIncome={patientMonthlyIncome}
         existingAssessment={latestAssessment}
+        transactionId={transactionId}
       />
     </Card>
   )

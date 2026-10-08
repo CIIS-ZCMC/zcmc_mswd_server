@@ -21,6 +21,7 @@ class DatabaseSeeder extends Seeder
         $this->call(ModeOfAssistanceSeeder::class);
         $this->call(FundSourceSeeder::class);
         $this->call(AssistantTypeSeeder::class);
+        $this->call(SignatorySeeder::class);
         // $this->call(SamplePatientSeeder::class);
 
         // User::factory(10)->create();

@@ -37,6 +37,8 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 - `socioeconomic`: itemized living expenses and family income.
 - `cases`: caseload, episodes, progress notes, signoff, assessments.
 - `hospital`: encounters, admission details, HIS patient search & 1-click import (`POST /hospital-patients/{id}/import`), hospital integration.
+- `guarantees`: MSWD patient guarantors per HIS encounter with their assistance breakdown; prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`).
+- `library`: Library settings (guarantors, types of assistance, modes, fund sources, signatories printed on forms).
 - `audit`: system-wide activity logs.
 
 ### UI & Styling

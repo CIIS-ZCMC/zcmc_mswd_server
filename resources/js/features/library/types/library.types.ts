@@ -146,4 +146,45 @@ export interface LookupOption {
 }
 
 export type LibraryTabKey =
-  "guarantors" | "assistance-types" | "mode-of-assistance" | "fund-sources"
+  | "guarantors"
+  | "assistance-types"
+  | "mode-of-assistance"
+  | "fund-sources"
+  | "signatories"
+
+export interface ApiSignatory {
+  id: number
+  name: string
+  title: string | null
+  role: string
+  role_label?: string
+  is_active: boolean
+  sort_order: number
+  created_at?: string
+  updated_at?: string
+}
+
+/** An officer printed on MSWD forms (e.g. the Acknowledgement Slip approver). */
+export interface Signatory {
+  id: number
+  name: string
+  title: string | null
+  role: string
+  roleLabel: string
+  isActive: boolean
+  sortOrder: number
+}
+
+export interface ApiSaveSignatoryPayload {
+  name: string
+  title?: string | null
+  role: string
+  is_active?: boolean
+}
+
+export interface SaveSignatoryInput {
+  name: string
+  title?: string | null
+  role: string
+  isActive?: boolean
+}

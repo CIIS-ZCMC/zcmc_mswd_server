@@ -4,23 +4,28 @@ import {
   createFundSource,
   createGuarantor,
   createModeOfAssistance,
+  createSignatory,
   deleteAssistantType,
   deleteFundSource,
   deleteGuarantor,
   deleteModeOfAssistance,
+  deleteSignatory,
   getAssistantTypes,
   getFundSources,
   getGuarantors,
   getModeOfAssistances,
+  getSignatories,
   updateAssistantType,
   updateFundSource,
   updateGuarantor,
   updateModeOfAssistance,
+  updateSignatory,
 } from "../api/library-api"
 import type {
   SaveAssessmentLookupInput,
   SaveAssistantTypeInput,
   SaveGuarantorInput,
+  SaveSignatoryInput,
 } from "../types"
 import { guarantorOptionKeys } from "@/features/guarantees/hooks/use-guarantor-options"
 import { guaranteeKeys } from "@/features/guarantees/hooks/use-guarantees"
@@ -52,6 +57,9 @@ export const libraryKeys = {
     all: ["library", "guarantors"] as const,
     list: (activeOnly: boolean) =>
       [...libraryKeys.guarantors.all, "list", { activeOnly }] as const,
+  },
+  signatories: {
+    all: ["library", "signatories"] as const,
   },
 }
 
@@ -254,6 +262,53 @@ export function useDeleteGuarantor() {
     mutationFn: (id: number | string) => deleteGuarantor(id),
     onSuccess: () => {
       invalidateLibraryCaches(queryClient)
+    },
+  })
+}
+
+/**
+ * Signatories Hooks
+ */
+export function useSignatories(enabled = true) {
+  return useQuery({
+    queryKey: libraryKeys.signatories.all,
+    queryFn: getSignatories,
+    enabled,
+  })
+}
+
+export function useCreateSignatory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SaveSignatoryInput) => createSignatory(input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: libraryKeys.signatories.all })
+    },
+  })
+}
+
+export function useUpdateSignatory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: number | string
+      input: SaveSignatoryInput
+    }) => updateSignatory(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: libraryKeys.signatories.all })
+    },
+  })
+}
+
+export function useDeleteSignatory() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => deleteSignatory(id),
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: libraryKeys.signatories.all })
     },
   })
 }

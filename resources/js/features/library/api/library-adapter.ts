@@ -2,6 +2,8 @@ import type {
   ApiAssessmentLookup,
   ApiAssistantType,
   ApiGuarantor,
+  ApiSaveSignatoryPayload,
+  ApiSignatory,
   ApiSaveAssessmentLookupPayload,
   ApiSaveAssistantTypePayload,
   ApiSaveGuarantorPayload,
@@ -12,6 +14,8 @@ import type {
   SaveAssessmentLookupInput,
   SaveAssistantTypeInput,
   SaveGuarantorInput,
+  SaveSignatoryInput,
+  Signatory,
 } from "../types"
 
 export function toAssessmentLookup(raw: ApiAssessmentLookup): AssessmentLookup {
@@ -121,5 +125,28 @@ export function toAssistantTypeLookupOption(item: AssistantType): LookupOption {
     value: item.code,
     label: item.name,
     isActive: item.isActive,
+  }
+}
+
+export function toSignatory(raw: ApiSignatory): Signatory {
+  return {
+    id: raw.id,
+    name: raw.name ?? "",
+    title: raw.title ?? null,
+    role: raw.role,
+    roleLabel: raw.role_label ?? raw.role,
+    isActive: Boolean(raw.is_active),
+    sortOrder: Number(raw.sort_order ?? 0),
+  }
+}
+
+export function toApiSaveSignatoryPayload(
+  input: SaveSignatoryInput
+): ApiSaveSignatoryPayload {
+  return {
+    name: input.name.trim(),
+    title: input.title?.trim() || null,
+    role: input.role,
+    is_active: input.isActive,
   }
 }

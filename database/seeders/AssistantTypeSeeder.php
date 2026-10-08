@@ -10,9 +10,13 @@ class AssistantTypeSeeder extends Seeder
     /** Types of Assistance, code => [name, category]. */
     public const TYPES = [
         'medicines' => ['Medicines', 'medical'],
-        'hospital_bill' => ['Hospital Bill', 'medical'],
-        'laboratory_diagnostics' => ['Laboratory / Diagnostics', 'medical'],
-        'medical_supplies_devices' => ['Medical Supplies / Devices', 'medical'],
+        'hospital_bills' => ['Hospital Bills', 'medical'],
+        'laboratory' => ['Laboratory', 'medical'],
+        'xray_ultrasound_diagnostics' => ['X-ray/Ultrasound/2D Echo/CT Scan/MRI', 'medical'],
+        'supplies' => ['Supplies', 'medical'],
+        'hemodialysis' => ['Hemodialysis', 'medical'],
+        'rehab' => ['Rehab', 'medical'],
+        'ecg' => ['ECG', 'medical'],
     ];
 
     public function run(): void

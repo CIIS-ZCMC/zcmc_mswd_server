@@ -14,7 +14,7 @@ class PatientGuarantorRepository implements PatientGuarantorRepositoryInterface
     public function forRegistration(int|string $registrationId): Collection
     {
         return $this->model->newQuery()
-            ->with('account.personalData')
+            ->with('guarantor.personalData')
             ->where('FK_psPatRegisters', $registrationId)
             ->orderBy('PK_TRXNO')
             ->get();
@@ -22,6 +22,6 @@ class PatientGuarantorRepository implements PatientGuarantorRepositoryInterface
 
     public function find(int|string $id): ?Model
     {
-        return $this->model->newQuery()->with('account.personalData')->find($id);
+        return $this->model->newQuery()->with('guarantor.personalData')->find($id);
     }
 }

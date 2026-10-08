@@ -43,8 +43,8 @@ beforeEach(function () {
 
     // The breakdown's Library lists (seeded by their migrations).
     $this->medicines = AssistantType::where('code', 'medicines')->firstOrFail();
-    $this->hospitalBill = AssistantType::where('code', 'hospital_bill')->firstOrFail();
-    $this->laboratory = AssistantType::where('code', 'laboratory_diagnostics')->firstOrFail();
+    $this->hospitalBill = AssistantType::where('code', 'hospital_bills')->firstOrFail();
+    $this->laboratory = AssistantType::where('code', 'laboratory')->firstOrFail();
     $this->financial = ModeOfAssistance::where('code', 'financial_assistance')->firstOrFail();
     $this->medical = ModeOfAssistance::where('code', 'medical_assistance')->firstOrFail();
     $this->mayorFund = FundSource::where('code', 'city_mayor')->firstOrFail();
