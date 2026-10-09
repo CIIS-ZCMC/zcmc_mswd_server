@@ -19,7 +19,7 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 
 - **Inertia Layer (`resources/js/pages/`)**:
   - Owns routing, auth session state, shared user props (`auth.user`, `auth.roles`, `auth.permissions`), and initial page renders.
-  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /reports`, `GET /reports/social-cases`, `GET /audit`.
+  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /dar`, `GET /reports`, `GET /reports/social-cases`, `GET /audit`.
   - Main persistent layout is `resources/js/components/layout/main-layout.tsx`.
 - **API & TanStack Query Layer**:
   - `resources/js/lib/api-client.ts` uses Sanctum cookie sessions (`credentials: "same-origin"`, `X-XSRF-TOKEN`).
@@ -39,6 +39,7 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 - `hospital`: encounters, admission details, HIS patient search & 1-click import (`POST /hospital-patients/{id}/import`), hospital integration.
 - `guarantees`: MSWD patient guarantors per HIS encounter with their assistance breakdown; prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`).
 - Encounter printables (`hospital/components/dialogs/`): the City Mayor Acknowledgement Slip, ZCMC-F-MSS-04 (`GET /patient-transactions/{id}/city-mayor-slip/pdf`, `CityMayorSlipDialog`).
+- `dar`: Daily Accomplishment Report manual entries, printable PDF and CSV export (`GET /dar`, `useDarEntries`).
 - `library`: Library settings (guarantors, types of assistance, modes, fund sources, signatories printed on forms).
 - `audit`: system-wide activity logs.
 

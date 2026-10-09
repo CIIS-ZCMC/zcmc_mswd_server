@@ -21,6 +21,7 @@ import {
   Users,
   Briefcase,
   BarChart3,
+  ClipboardList,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -68,10 +69,12 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const canViewAudit = usePermission("audit.view")
   const canViewCases = usePermission("cases.view")
   const canViewReports = usePermission("reports.view")
+  const canManageDar = usePermission("dar.manage")
 
   const isPatientsRoute = pathname === "/" || pathname.startsWith("/patients")
   const isCaseloadRoute = pathname.startsWith("/caseload") || pathname.startsWith("/cases")
   const isReportsRoute = pathname.startsWith("/reports")
+  const isDarRoute = pathname.startsWith("/dar")
   const isAuditRoute = pathname.startsWith("/audit")
 
   const getCategoryBadgeVariant = (category: string) => {
@@ -89,7 +92,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
 
   return (
     <aside className="flex h-full w-88 flex-col border-r border-border bg-card/60 text-foreground transition-colors duration-200">
-      {/* View Selector Nav (Patients vs Caseload vs Reports vs Global Audit Log) */}
+      {/* View Selector Nav (Patients vs Caseload vs Reports vs DAR vs Global Audit Log) */}
       <div className="p-2.5 border-b border-border/80 bg-muted/30 flex items-center gap-1.5 flex-wrap">
         <button
           onClick={() => {
@@ -139,6 +142,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           >
             <BarChart3 className="size-3.5" /> Reports
+          </button>
+        )}
+
+        {canManageDar && (
+          <button
+            onClick={() => {
+              navigate("/dar")
+            }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer border min-w-20",
+              isDarRoute
+                ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                : "bg-background text-muted-foreground border-border hover:bg-muted"
+            )}
+          >
+            <ClipboardList className="size-3.5" /> DAR
           </button>
         )}
 
