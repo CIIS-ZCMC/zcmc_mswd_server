@@ -27,8 +27,8 @@ as an on-screen table, printed as a PDF and exported as a CSV. Ships as one issu
 |-------|------|------------|--------|
 | 1. Schema, `DarEntry` model, `dar.manage` permission | server | — | ☑ done (#240) |
 | 2. API: entries CRUD, day listing, PDF/CSV export | server | 1 | ☑ done (#240) |
-| 3. `/dar` page, entry dialog, sidebar button | client | 2 | ☐ not started |
-| 4. Tests, docs, verification | both | 1–3 | ☐ not started |
+| 3. `/dar` page, entry dialog, sidebar button | client | 2 | ☑ done (#242) |
+| 4. Tests, docs, verification | both | 1–3 | ☑ done (#242) |
 
 ## Phase 1 — Schema, model, permission
 
@@ -145,6 +145,21 @@ All routes go in `routes/api.php`, inside `auth:sanctum` and behind `permission:
 **Done with Phases 1–2 (#240):** `tests/Feature/DarTest.php` has 25 tests. `RolesAndPermissionsTest`,
 `AuditCoverageTest` and `ActivityOwnershipResolverTest` cover the new permission and model. Full suite: 923 passed.
 OpenAPI: `app/Http/Docs/DarDocs.php`, under the `DAR` tag.
+
+**Done with Phases 3–4 (#242):** `DarTest` now has 28 tests; the three new ones cover the `/dar` page (renders with
+`today`, 403 without `dar.manage`, guests redirected to login).
+- **Type checking:** check the client with `npx tsc -p tsconfig.app.json --noEmit`. `npm run typecheck` does not cover
+  the app files; it missed the `hospital_no` / `mswd_no` bug. The only errors left are three in `app.tsx`,
+  `ssr.tsx` and `use-auth.ts`, which were already on master.
+- **Browser walkthrough** (local, as Admin), all working:
+  - Add an entry through the registry search; the hospital and MSWD numbers show.
+  - Edit the activity; the label shows, not the key.
+  - Step back a day and return to Today; future days are blocked.
+  - Delete an entry.
+  - PDF and CSV exports return 200, and the CSV rows are correct.
+- **Console:** the only errors are the header theme toggle's nested `<button>`, which also shows on the Patients page.
+- **Not done:** Print PDF opens a new tab, which the in-app browser pane blocks, so check that the tab opens in a
+  normal browser.
 
 ## Verification
 

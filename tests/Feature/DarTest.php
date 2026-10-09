@@ -245,3 +245,29 @@ it('rejects an unknown export format', function () {
 
     $this->getJson('/api/dar/export?format=xlsx')->assertJsonValidationErrors('format');
 });
+
+// ── Web Page ─────────────────────────────────────────────────────────────────
+
+it('renders the DAR Inertia page with today prop', function () {
+    $this->actingAs($this->worker)
+        ->get('/dar')
+        ->assertOk()
+        ->assertInertia(fn ($page) => $page
+            ->component('Dar/Index')
+            ->has('today')
+            ->where('today', today()->toDateString())
+        );
+});
+
+it('forbids the DAR web page without dar.manage', function () {
+    $userWithoutRole = User::factory()->create();
+
+    $this->actingAs($userWithoutRole)
+        ->get('/dar')
+        ->assertForbidden();
+});
+
+it('redirects unauthenticated guest accessing /dar', function () {
+    $this->get('/dar')
+        ->assertRedirect('/login');
+});

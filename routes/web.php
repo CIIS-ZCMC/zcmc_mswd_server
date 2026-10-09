@@ -3,6 +3,7 @@
 use App\Http\Controllers\Web\AuditPageController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CasesPageController;
+use App\Http\Controllers\Web\DarPageController;
 use App\Http\Controllers\Web\LibraryPageController;
 use App\Http\Controllers\Web\PatientsPageController;
 use App\Http\Controllers\Web\ReportsPageController;
@@ -25,6 +26,11 @@ Route::middleware('auth')->group(function () {
     // Caseload & Cases
     Route::get('/caseload', [CasesPageController::class, 'caseload'])->name('cases.caseload');
     Route::get('/cases/{case}', [CasesPageController::class, 'show'])->name('cases.show');
+
+    // Daily Accomplishment Report (DAR)
+    Route::get('/dar', [DarPageController::class, 'index'])
+        ->middleware('permission:dar.manage')
+        ->name('dar.index');
 
     // Reports
     Route::get('/reports', [ReportsPageController::class, 'index'])->name('reports.index');
