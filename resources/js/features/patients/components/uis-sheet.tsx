@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useEffect, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -30,7 +30,13 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueryClient } from "@tanstack/react-query"
 import { useDeleteAssessment } from "@/features/cases/hooks/use-assessment"
+import {
+  uisPrintKeys,
+  patientUisKeys,
+} from "@/features/cases/hooks/use-uis-prints"
+import { printUisDirectly } from "@/features/cases/api/uis-print-api"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import {
   formatCurrency,
@@ -104,6 +110,20 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isPrintingDirect, setIsPrintingDirect] = useState(false)
+  const queryClient = useQueryClient()
+
+  useEffect(() => {
+    if (initialAssessOpen) {
+      setIsIntakeDialogOpen(true)
+    }
+  }, [initialAssessOpen])
+
+  useEffect(() => {
+    if (initialPrintOpen) {
+      setIsPrintDialogOpen(true)
+    }
+  }, [initialPrintOpen])
 
   const caseId = row?.case?.id ?? 0
   const deleteAssessmentMutation = useDeleteAssessment(caseId)
@@ -121,6 +141,26 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
       ? `Encounter #${encounter.transactionId}`
       : "Intake Assessment")
   const hasAssessment = uis.hasAssessment && Boolean(assessment)
+
+  const handleDirectPrint = async () => {
+    if (!row) return
+    setIsPrintingDirect(true)
+    const target = uis.assessmentId
+      ? { assessmentId: uis.assessmentId }
+      : { caseId: caseData?.id ?? 0 }
+
+    try {
+      await printUisDirectly(target, {
+        blank: !hasAssessment,
+      })
+      queryClient.invalidateQueries({ queryKey: uisPrintKeys.all })
+      queryClient.invalidateQueries({ queryKey: patientUisKeys.all })
+    } catch (err) {
+      console.error("Failed to print UIS:", err)
+    } finally {
+      setIsPrintingDirect(false)
+    }
+  }
 
   const handleDeleteAssessment = async () => {
     if (!uis.assessmentId) return
@@ -1028,17 +1068,40 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsPrintDialogOpen(true)}
+                    disabled={isPrintingDirect}
+                    onClick={handleDirectPrint}
                     className="h-7 cursor-pointer gap-1.5 text-xs font-semibold"
                   >
-                    <Printer className="size-3" />
-                    Print Again
+                    {isPrintingDirect ? (
+                      <Loader2 className="size-3 animate-spin text-primary" />
+                    ) : (
+                      <Printer className="size-3" />
+                    )}
+                    {isPrintingDirect ? "Printing…" : "Print Again"}
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
                   <UisPrintHistoryTable
                     assessmentId={uis.assessmentId}
                     caseId={caseData?.id}
+                    emptyAction={
+                      <Button
+                        variant="outline"
+                        size="sm"
+                        disabled={isPrintingDirect}
+                        onClick={handleDirectPrint}
+                        className="cursor-pointer gap-1.5 text-xs font-semibold"
+                      >
+                        {isPrintingDirect ? (
+                          <Loader2 className="size-3.5 animate-spin text-primary" />
+                        ) : (
+                          <Printer className="size-3.5" />
+                        )}
+                        {hasAssessment
+                          ? "Print UIS Now"
+                          : "Print Blank Form Now"}
+                      </Button>
+                    }
                   />
                 </CardContent>
               </Card>
@@ -1089,17 +1152,22 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                     onClick={() => setIsPreviewDialogOpen(true)}
                     className="h-8 cursor-pointer gap-1.5 text-xs font-semibold"
                   >
-                    <Eye className="size-3.5" />
+                    <Eye className="size-3.5 text-primary" />
                     Preview PDF
                   </Button>
                   <Button
                     variant="default"
                     size="sm"
-                    onClick={() => setIsPrintDialogOpen(true)}
+                    disabled={isPrintingDirect}
+                    onClick={handleDirectPrint}
                     className="h-8 cursor-pointer gap-1.5 text-xs font-semibold shadow-2xs"
                   >
-                    <Printer className="size-3.5" />
-                    Print UIS
+                    {isPrintingDirect ? (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    ) : (
+                      <Printer className="size-3.5" />
+                    )}
+                    {isPrintingDirect ? "Preparing Print…" : "Print UIS"}
                   </Button>
                 </>
               ) : (
@@ -1118,11 +1186,25 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                   <Button
                     variant="outline"
                     size="sm"
-                    onClick={() => setIsPrintDialogOpen(true)}
+                    onClick={() => setIsPreviewDialogOpen(true)}
                     className="h-8 cursor-pointer gap-1.5 text-xs font-semibold"
                   >
-                    <Printer className="size-3.5" />
-                    Print Blank Form
+                    <Eye className="size-3.5 text-primary" />
+                    Preview Blank Form
+                  </Button>
+                  <Button
+                    variant="outline"
+                    size="sm"
+                    disabled={isPrintingDirect}
+                    onClick={handleDirectPrint}
+                    className="h-8 cursor-pointer gap-1.5 text-xs font-semibold"
+                  >
+                    {isPrintingDirect ? (
+                      <Loader2 className="size-3.5 animate-spin text-primary" />
+                    ) : (
+                      <Printer className="size-3.5" />
+                    )}
+                    {isPrintingDirect ? "Preparing Print…" : "Print Blank Form"}
                   </Button>
                 </>
               )}
@@ -1147,11 +1229,19 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
           patientId={patient.id}
           caseCode={caseData?.caseCode}
           patientName={patient.fullName}
+          patientFirstName={patient.firstName}
+          patientMiddleName={patient.middleName}
+          patientLastName={patient.lastName}
           patientAddress={patient.address}
           patientContact={patient.contactNo}
           patientMonthlyIncome={patient.monthlyIncome}
           existingAssessment={assessment}
           transactionId={encounter.transactionId ?? caseData?.transactionId}
+          onSuccess={() => {
+            setIsIntakeDialogOpen(false)
+            queryClient.invalidateQueries({ queryKey: patientUisKeys.all })
+            queryClient.invalidateQueries({ queryKey: uisPrintKeys.all })
+          }}
         />
 
         <PrintUisDialog
@@ -1173,6 +1263,12 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
           assessmentId={uis.assessmentId}
           caseId={caseData?.id}
           caseCode={caseData?.caseCode}
+          patientName={patient.fullName}
+          hasAssessment={hasAssessment}
+          onAssessNeeded={() => {
+            setIsPreviewDialogOpen(false)
+            setIsIntakeDialogOpen(true)
+          }}
         />
 
         {/* Delete Confirmation Alert Dialog */}
