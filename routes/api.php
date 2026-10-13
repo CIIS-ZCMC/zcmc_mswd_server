@@ -45,6 +45,7 @@ use App\Http\Controllers\HospitalCaseTypeController;
 use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\HospitalPlanController;
 use App\Http\Controllers\ImportHospitalPatientController;
+use App\Http\Controllers\IndigencyCertificatePdfController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionTypeController;
 use App\Http\Controllers\IssueWatcherPassController;
@@ -214,6 +215,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('patient-transactions/{id}/acknowledgement-slip/pdf', EncounterAcknowledgementSlipPdfController::class);
     // City Mayor Acknowledgement Slip (ZCMC-F-MSS-04) for a HIS encounter (guarantee.view).
     Route::get('patient-transactions/{id}/city-mayor-slip/pdf', CityMayorSlipPdfController::class);
+    // Certificate of Eligibility (Indigency), Annex A, for a HIS encounter (guarantee.view).
+    Route::get('patient-transactions/{id}/indigency-certificate/pdf', IndigencyCertificatePdfController::class);
 
     // Patient records
     Route::middleware('permission:patients.update')->group(function () {

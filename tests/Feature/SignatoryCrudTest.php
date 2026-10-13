@@ -21,9 +21,24 @@ function signatoryUser(string $role): User
     return $user;
 }
 
-it('seeds the current approver through the migration', function () {
+it('seeds the current approver and MSWD Head through the migrations', function () {
     expect(Signatory::activeFor('allied_health_chief')?->name)
-        ->toBe('DR. JAIME KRISTOFFER T. PUNZALAN, MPH');
+        ->toBe('DR. JAIME KRISTOFFER T. PUNZALAN, MPH')
+        ->and(Signatory::activeFor('mswd_head'))
+        ->name->toBe('CRISELDA A. PALOMO, RSW')
+        ->license_no->toBe('0010989');
+});
+
+it('stores and returns a license number', function () {
+    Sanctum::actingAs(signatoryUser('Supervisor'));
+    $head = Signatory::activeFor('mswd_head');
+
+    $this->putJson("/api/signatories/{$head->id}", ['license_no' => '0020000'])
+        ->assertOk()
+        ->assertJsonPath('data.license_no', '0020000');
+
+    $this->putJson("/api/signatories/{$head->id}", ['license_no' => str_repeat('9', 51)])
+        ->assertJsonValidationErrors('license_no');
 });
 
 it('lets library.manage create, update and soft-delete a signatory', function () {
@@ -78,7 +93,7 @@ it('rejects an unknown role', function () {
 it('lets any signed-in user read but only library.manage write', function () {
     Sanctum::actingAs(signatoryUser('Case Manager'));
 
-    $this->getJson('/api/signatories')->assertOk()->assertJsonCount(1, 'data');
+    $this->getJson('/api/signatories')->assertOk()->assertJsonCount(2, 'data'); // the two seeded officers
     $this->postJson('/api/signatories', ['name' => 'X', 'role' => 'allied_health_chief', 'is_active' => false])
         ->assertForbidden();
 });

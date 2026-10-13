@@ -94,6 +94,7 @@ export const SignatoriesPanel: React.FC<SignatoriesPanelProps> = ({
             <TableRow>
               <TableHead>Name</TableHead>
               <TableHead>Title</TableHead>
+              <TableHead>License No.</TableHead>
               <TableHead>Role</TableHead>
               <TableHead>Status</TableHead>
               {canManage && (
@@ -104,14 +105,14 @@ export const SignatoriesPanel: React.FC<SignatoriesPanelProps> = ({
           <TableBody>
             {isLoading ? (
               <TableRow>
-                <TableCell colSpan={5}>
+                <TableCell colSpan={6}>
                   <Skeleton className="h-10 w-full" />
                 </TableCell>
               </TableRow>
             ) : signatories.length === 0 ? (
               <TableRow>
                 <TableCell
-                  colSpan={5}
+                  colSpan={6}
                   className="py-8 text-center text-sm text-muted-foreground"
                 >
                   No signatories yet. Printed forms leave the approver blank.
@@ -123,6 +124,9 @@ export const SignatoriesPanel: React.FC<SignatoriesPanelProps> = ({
                   <TableCell className="font-semibold">{s.name}</TableCell>
                   <TableCell className="text-xs whitespace-pre-line text-muted-foreground">
                     {s.title || "—"}
+                  </TableCell>
+                  <TableCell className="text-xs">
+                    {s.licenseNo || "—"}
                   </TableCell>
                   <TableCell className="text-xs">{s.roleLabel}</TableCell>
                   <TableCell>
@@ -211,6 +215,7 @@ const SignatoryFormDialog: React.FC<SignatoryFormDialogProps> = ({
   const updateMut = useUpdateSignatory()
   const [name, setName] = useState(signatory?.name ?? "")
   const [title, setTitle] = useState(signatory?.title ?? "")
+  const [licenseNo, setLicenseNo] = useState(signatory?.licenseNo ?? "")
   const [role, setRole] = useState(
     signatory?.role ?? Object.keys(SIGNATORY_ROLES)[0]
   )
@@ -223,7 +228,7 @@ const SignatoryFormDialog: React.FC<SignatoryFormDialogProps> = ({
     e.preventDefault()
     setErrors({})
     setGeneralError(null)
-    const input = { name, title, role, isActive }
+    const input = { name, title, licenseNo, role, isActive }
 
     try {
       if (signatory) {
@@ -290,6 +295,22 @@ const SignatoryFormDialog: React.FC<SignatoryFormDialogProps> = ({
             <p className="text-xs text-muted-foreground">
               Printed under the name. Line breaks are kept.
             </p>
+          </div>
+
+          <div className="space-y-1.5">
+            <Label htmlFor="signatory-license">License No. (optional)</Label>
+            <Input
+              id="signatory-license"
+              maxLength={50}
+              value={licenseNo}
+              onChange={(e) => setLicenseNo(e.target.value)}
+              placeholder="e.g. 0010989"
+            />
+            {errors.license_no && (
+              <p className="text-xs font-semibold text-destructive">
+                {errors.license_no[0]}
+              </p>
+            )}
           </div>
 
           <div className="space-y-1.5">
