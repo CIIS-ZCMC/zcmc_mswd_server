@@ -1,6 +1,12 @@
 import React, { useEffect, useMemo, useState } from "react"
+import { useQueryClient } from "@tanstack/react-query"
 import { useSearchParams } from "@/lib/inertia-router-hooks"
-import { usePatientUis } from "@/features/cases/hooks/use-uis-prints"
+import {
+  usePatientUis,
+  uisPrintKeys,
+  patientUisKeys,
+} from "@/features/cases/hooks/use-uis-prints"
+import { printUisDirectly } from "@/features/cases/api/uis-print-api"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { Button } from "@/components/ui/button"
 import {
@@ -38,7 +44,9 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UisSheet } from "../uis-sheet"
+import { UisPdfPreviewDialog } from "@/features/cases/components/dialogs/uis-pdf-preview-dialog"
 import { NewIntakeAssessmentDialog } from "@/features/cases/components/dialogs/new-intake-assessment-dialog"
+import { IntakeAssessmentDialog } from "@/features/cases/components/dialogs/intake-assessment-dialog"
 import { formatCurrency } from "@/lib/format-currency"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import {
@@ -59,6 +67,7 @@ import {
   FileEdit,
   FileText,
   FolderPlus,
+  Loader2,
   Lock,
   MoreHorizontal,
   Plus,
@@ -103,6 +112,48 @@ export const UisTab: React.FC<UisTabProps> = ({
   const [isNewIntakeOpen, setIsNewIntakeOpen] = useState(false)
   const [initialAssessOpen, setInitialAssessOpen] = useState<boolean>(false)
   const [initialPrintOpen, setInitialPrintOpen] = useState<boolean>(false)
+
+  // Direct assess / re-assess dialog state (opens IntakeAssessmentDialog directly without UisSheet)
+  const [directAssessRow, setDirectAssessRow] = useState<PatientUisRow | null>(
+    null
+  )
+
+  const handleOpenAssessDialog = (row: PatientUisRow) => {
+    setDirectAssessRow(row)
+  }
+
+  // Direct print preview state
+  const [previewTargetRow, setPreviewTargetRow] =
+    useState<PatientUisRow | null>(null)
+  const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false)
+
+  const handleOpenPrintPreview = (row: PatientUisRow) => {
+    setPreviewTargetRow(row)
+    setIsPreviewOpen(true)
+  }
+
+  // Direct native print state
+  const [printingRowKey, setPrintingRowKey] = useState<string | null>(null)
+  const queryClient = useQueryClient()
+
+  const handleDirectPrint = async (row: PatientUisRow) => {
+    setPrintingRowKey(row.key)
+    const target = row.uis.assessmentId
+      ? { assessmentId: row.uis.assessmentId }
+      : { caseId: row.case?.id ?? 0 }
+
+    try {
+      await printUisDirectly(target, {
+        blank: !row.uis.hasAssessment,
+      })
+      queryClient.invalidateQueries({ queryKey: uisPrintKeys.all })
+      queryClient.invalidateQueries({ queryKey: patientUisKeys.all })
+    } catch (err) {
+      console.error("Failed to print UIS:", err)
+    } finally {
+      setPrintingRowKey(null)
+    }
+  }
 
   // Search, Filter & Pagination state
   const [searchTerm, setSearchTerm] = useState("")
@@ -603,12 +654,11 @@ export const UisTab: React.FC<UisTabProps> = ({
                     return (
                       <TableRow
                         key={row.key}
-                        className="group cursor-pointer transition-colors hover:bg-muted/40"
-                        onClick={() => handleOpenSheetModal(row)}
+                        className="transition-colors hover:bg-muted/40"
                       >
                         {/* Encounter: type and date */}
                         <TableCell className="py-3.5 pl-4">
-                          <div className="font-medium text-foreground group-hover:underline">
+                          <div className="font-medium text-foreground">
                             {typeStr}
                           </div>
                           <div className="font-mono text-[11px] text-muted-foreground">
@@ -639,10 +689,9 @@ export const UisTab: React.FC<UisTabProps> = ({
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={(e) => {
-                                e.stopPropagation()
+                              onClick={() =>
                                 onOpenCaseNeeded(row.encounter.transactionId)
-                              }}
+                              }
                               className="h-7 cursor-pointer gap-1 px-2 font-sans text-xs font-medium text-muted-foreground hover:text-foreground"
                             >
                               <FolderPlus className="size-3.5 text-primary" />
@@ -724,10 +773,7 @@ export const UisTab: React.FC<UisTabProps> = ({
                         </TableCell>
 
                         {/* Actions */}
-                        <TableCell
-                          className="py-3.5 pr-4 text-right whitespace-nowrap"
-                          onClick={(e) => e.stopPropagation()}
-                        >
+                        <TableCell className="py-3.5 pr-4 text-right whitespace-nowrap">
                           <div className="flex items-center justify-end gap-1.5">
                             {/* Primary View Sheet Button (Opens Sub-Tabs Modal) */}
                             <Button
@@ -747,9 +793,7 @@ export const UisTab: React.FC<UisTabProps> = ({
                                   <Button
                                     variant="ghost"
                                     size="sm"
-                                    onClick={() =>
-                                      handleOpenSheetModal(row, true, false)
-                                    }
+                                    onClick={() => handleOpenAssessDialog(row)}
                                     className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
                                     title="Assess / Re-Assess"
                                   >
@@ -762,35 +806,59 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    handleOpenSheetModal(row, false, true)
-                                  }
+                                  disabled={printingRowKey === row.key}
+                                  onClick={() => handleDirectPrint(row)}
                                   className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
-                                  title="Print UIS"
+                                  title="Print Unified Intake Sheet"
                                 >
-                                  <Printer className="size-3.5" />
+                                  {printingRowKey === row.key ? (
+                                    <Loader2 className="size-3.5 animate-spin text-primary" />
+                                  ) : (
+                                    <Printer className="size-3.5" />
+                                  )}
                                   <span className="hidden md:inline">
-                                    Print
+                                    {printingRowKey === row.key
+                                      ? "Printing…"
+                                      : "Print"}
                                   </span>
                                 </Button>
                               </>
                             ) : (
-                              canCreateAssessment && (
+                              <>
+                                {canCreateAssessment && (
+                                  <Button
+                                    variant="ghost"
+                                    size="sm"
+                                    onClick={() => handleOpenAssessDialog(row)}
+                                    className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
+                                    title="Conduct Assessment"
+                                  >
+                                    <Plus className="size-3.5 text-primary" />
+                                    <span className="hidden md:inline">
+                                      Assess
+                                    </span>
+                                  </Button>
+                                )}
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  onClick={() =>
-                                    handleOpenSheetModal(row, true, false)
-                                  }
+                                  disabled={printingRowKey === row.key}
+                                  onClick={() => handleDirectPrint(row)}
                                   className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
-                                  title="Conduct Assessment"
+                                  title="Print Blank UIS Form"
                                 >
-                                  <Plus className="size-3.5 text-primary" />
+                                  {printingRowKey === row.key ? (
+                                    <Loader2 className="size-3.5 animate-spin text-primary" />
+                                  ) : (
+                                    <Printer className="size-3.5" />
+                                  )}
                                   <span className="hidden md:inline">
-                                    Assess
+                                    {printingRowKey === row.key
+                                      ? "Printing…"
+                                      : "Print Blank"}
                                   </span>
                                 </Button>
-                              )
+                              </>
                             )}
 
                             {/* Overflow Menu */}
@@ -819,9 +887,7 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 </DropdownMenuItem>
 
                                 <DropdownMenuItem
-                                  onClick={() =>
-                                    handleOpenSheetModal(row, true, false)
-                                  }
+                                  onClick={() => handleOpenAssessDialog(row)}
                                   className="cursor-pointer gap-2"
                                 >
                                   {row.uis.hasAssessment ? (
@@ -838,15 +904,26 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 </DropdownMenuItem>
 
                                 <DropdownMenuItem
-                                  onClick={() =>
-                                    handleOpenSheetModal(row, false, true)
-                                  }
+                                  onClick={() => handleDirectPrint(row)}
+                                  disabled={printingRowKey === row.key}
                                   className="cursor-pointer gap-2"
                                 >
-                                  <Printer className="size-3.5" />
+                                  {printingRowKey === row.key ? (
+                                    <Loader2 className="size-3.5 animate-spin text-primary" />
+                                  ) : (
+                                    <Printer className="size-3.5" />
+                                  )}
                                   {row.uis.hasAssessment
-                                    ? "Print UIS Form"
+                                    ? "Print (System Dialog)"
                                     : "Print Blank Form"}
+                                </DropdownMenuItem>
+
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenPrintPreview(row)}
+                                  className="cursor-pointer gap-2"
+                                >
+                                  <FileText className="size-3.5 text-muted-foreground" />
+                                  Preview on Screen
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>
@@ -950,6 +1027,53 @@ export const UisTab: React.FC<UisTabProps> = ({
           patient={patient}
           initialAssessOpen={initialAssessOpen}
           initialPrintOpen={initialPrintOpen}
+        />
+      )}
+
+      {/* Direct Live Print Preview Dialog */}
+      {previewTargetRow && (
+        <UisPdfPreviewDialog
+          open={isPreviewOpen}
+          onOpenChange={setIsPreviewOpen}
+          assessmentId={previewTargetRow.uis.assessmentId}
+          caseId={previewTargetRow.case?.id}
+          caseCode={previewTargetRow.case?.caseCode}
+          patientName={patient.fullName}
+          hasAssessment={previewTargetRow.uis.hasAssessment}
+          onAssessNeeded={() => {
+            setIsPreviewOpen(false)
+            handleOpenAssessDialog(previewTargetRow)
+          }}
+        />
+      )}
+
+      {/* Direct Intake Assessment Dialog (Without opening UisSheet) */}
+      {directAssessRow && (
+        <IntakeAssessmentDialog
+          open={Boolean(directAssessRow)}
+          onOpenChange={(open) => {
+            if (!open) setDirectAssessRow(null)
+          }}
+          caseId={directAssessRow.case?.id}
+          patientId={patient.id}
+          caseCode={directAssessRow.case?.caseCode}
+          patientName={patient.fullName}
+          patientFirstName={patient.firstName}
+          patientMiddleName={patient.middleName}
+          patientLastName={patient.lastName}
+          patientAddress={patient.address}
+          patientContact={patient.contactNo}
+          patientMonthlyIncome={patient.monthlyIncome}
+          existingAssessment={directAssessRow.uis.assessment}
+          transactionId={
+            directAssessRow.encounter.transactionId ??
+            directAssessRow.case?.transactionId
+          }
+          onSuccess={() => {
+            setDirectAssessRow(null)
+            queryClient.invalidateQueries({ queryKey: patientUisKeys.all })
+            queryClient.invalidateQueries({ queryKey: uisPrintKeys.all })
+          }}
         />
       )}
     </div>

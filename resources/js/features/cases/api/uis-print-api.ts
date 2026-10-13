@@ -72,7 +72,8 @@ export async function downloadUisPdf(
   } else {
     const link = document.createElement("a")
     link.href = url
-    link.download = opts.filename || `UIS-${uisTargetKey(target).toUpperCase()}.pdf`
+    link.download =
+      opts.filename || `UIS-${uisTargetKey(target).toUpperCase()}.pdf`
     document.body.appendChild(link)
     link.click()
     document.body.removeChild(link)
@@ -94,12 +95,100 @@ export function listUisPrints(target: UisTarget): Promise<ApiUisPrintLog[]> {
  * Returns both the object URL and a revoke callback to free memory when the modal closes.
  */
 export async function getUisPreviewBlobUrl(
-  target: UisTarget
+  target: UisTarget,
+  options?: { blank?: boolean }
 ): Promise<{ url: string; revoke: () => void }> {
-  const blob = await fetchBlob(`${uisPath(target)}/pdf`, { preview: 1 })
+  const params: Record<string, string | number | boolean | undefined> = {
+    preview: 1,
+  }
+  if (options?.blank) {
+    params.blank = 1
+  }
+  const blob = await fetchBlob(`${uisPath(target)}/pdf`, params)
   const url = URL.createObjectURL(blob)
   return {
     url,
     revoke: () => URL.revokeObjectURL(url),
   }
+}
+
+/**
+ * Triggers server-side print logging for an encounter or case without downloading a file.
+ */
+export async function logUisPrint(
+  target: UisTarget,
+  options?: { blank?: boolean; copies?: number; remarks?: string }
+): Promise<void> {
+  const params: Record<string, string | number | boolean | undefined> = {
+    copies: options?.copies && options.copies > 1 ? options.copies : undefined,
+    remarks: options?.remarks?.trim() || undefined,
+    blank: options?.blank ? 1 : undefined,
+  }
+  // Omitting preview: 1 records the print on the server
+  // Omitting download: 1 streams the response without triggering a browser download
+  await fetchBlob(`${uisPath(target)}/pdf`, params)
+}
+
+/**
+ * Directly streams the UIS PDF into a hidden iframe and invokes the browser's
+ * native system print dialog (with printer destination and copy settings),
+ * while simultaneously recording the official print log on the server.
+ */
+export async function printUisDirectly(
+  target: UisTarget,
+  options?: { blank?: boolean; copies?: number; remarks?: string }
+): Promise<void> {
+  const params: Record<string, string | number | boolean | undefined> = {
+    copies: options?.copies && options.copies > 1 ? options.copies : undefined,
+    remarks: options?.remarks?.trim() || undefined,
+    blank: options?.blank ? 1 : undefined,
+    // Omitting preview: 1 triggers server-side print logging in CaseIntakeSheetPdfController
+    // Omitting download: 1 returns the streamed PDF instead of forcing a file download
+  }
+
+  const blob = await fetchBlob(`${uisPath(target)}/pdf`, params)
+  const url = URL.createObjectURL(blob)
+
+  const iframe = document.createElement("iframe")
+  iframe.style.position = "fixed"
+  iframe.style.right = "0"
+  iframe.style.bottom = "0"
+  iframe.style.width = "0"
+  iframe.style.height = "0"
+  iframe.style.border = "none"
+  iframe.src = url
+
+  document.body.appendChild(iframe)
+
+  const cleanup = () => {
+    setTimeout(() => {
+      iframe.remove()
+      URL.revokeObjectURL(url)
+    }, 60_000)
+  }
+
+  return new Promise<void>((resolve) => {
+    let handled = false
+    const triggerPrint = () => {
+      if (handled) return
+      handled = true
+      try {
+        iframe.contentWindow?.focus()
+        iframe.contentWindow?.print()
+      } catch {
+        const win = window.open(url, "_blank")
+        win?.focus()
+        win?.print()
+      }
+      cleanup()
+      resolve()
+    }
+
+    iframe.onload = () => {
+      setTimeout(triggerPrint, 500)
+    }
+
+    // Fallback timer if onload doesn't fire for PDF plugin in certain browsers
+    setTimeout(triggerPrint, 2500)
+  })
 }

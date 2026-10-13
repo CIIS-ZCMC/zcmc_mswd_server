@@ -221,11 +221,10 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
 
         setInformantAddress(existingAssessment.informantAddress ?? "")
         setInformantContact(existingAssessment.informantContact ?? "")
-        setIsInformantPatient(
-          (existingAssessment.informantRelationship?.toLowerCase() === "patient" ||
-            existingAssessment.informantRelationship?.toLowerCase() === "self") &&
-          Boolean(patientName && existingAssessment.informantName === patientName)
-        )
+        const isSelf =
+          existingAssessment.informantRelationship?.toLowerCase() === "patient" ||
+          existingAssessment.informantRelationship?.toLowerCase() === "self"
+        setIsInformantPatient(isSelf)
         setPresentingProblem(existingAssessment.presentingProblem ?? "")
         setProblemCategories(existingAssessment.problemCategories ?? [])
 

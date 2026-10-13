@@ -29,6 +29,10 @@ export interface PatientRecord {
   hospitalNo: string
   mswdNo: string
   fullName: string
+  /** Name parts, from the patient profile (prefill the informant as the patient). */
+  firstName?: string
+  middleName?: string
+  lastName?: string
   age: number
   gender: Gender
   birthDate: string
