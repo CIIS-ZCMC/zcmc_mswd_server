@@ -27,9 +27,11 @@ import { useAssistanceTypeOptions } from "@/features/library/hooks/use-lookup-op
 import { useHospitalEncounter } from "@/features/hospital/hooks/use-hospital-encounters"
 import type { EncounterGuarantor } from "@/features/hospital/types/hospital-transaction.types"
 import {
+  type AcknowledgementSlipFund,
   isMaifipGuarantee,
   isMaifipName,
   openAcknowledgementSlip,
+  openEncounterAcknowledgementSlip,
   openHisAcknowledgementSlip,
   slipPurpose,
 } from "../lib/acknowledgement-slip"
@@ -67,12 +69,16 @@ const sourceLabel = (source: SlipSource) =>
         .filter(Boolean)
         .join(" · ")
 
+const FUND_LABELS: Record<AcknowledgementSlipFund, string> = {
+  doh_maifip: "DOH-MAIFIP",
+  opav_socio_civid_fund: "OPAV-SOCIO CIVID FUND",
+  others: "OTHERS",
+}
+
 /**
- * Print the DOH-MAIFIP Acknowledgement Slip (ZCMC-F-MSWD-46) for the encounter.
- * Sources: the MSWD's MAIFIP guarantees (amount + types of assistance), then the
- * encounter's MAIFIP entries on the HIS guarantor ledger (HIS amount; HIS has
- * no breakdown, so "para sa" is picked here from the Library's Types of
- * Assistance). The times and picked types are printed only, not stored.
+ * Print the Acknowledgement Slip (ZCMC-F-MSWD-46) for the encounter.
+ * Sources: MSWD guarantee, HIS guarantor ledger entry, or direct encounter print
+ * with manual/blank entries. Fund options: DOH-MAIFIP, OPAV-SOCIO CIVID FUND, OTHERS.
  */
 export const AcknowledgementSlipDialog: React.FC<
   AcknowledgementSlipDialogProps
@@ -105,19 +111,25 @@ export const AcknowledgementSlipDialog: React.FC<
   )
 
   const [selectedKey, setSelectedKey] = useState<string | null>(null)
+  const [fund, setFund] = useState<AcknowledgementSlipFund>("doh_maifip")
+  const [fundOther, setFundOther] = useState("")
+  const [manualAmount, setManualAmount] = useState("")
   const [timeStarted, setTimeStarted] = useState("")
   const [timeEnded, setTimeEnded] = useState("")
   const [remarks, setRemarks] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
-  // HIS source only: the "para sa" type of assistance (a Library id).
+  // Type of assistance (Library id)
   const [typeId, setTypeId] = useState<string | null>(null)
   const { data: typeOptions = [] } = useAssistanceTypeOptions(true)
 
-  // Each opening starts from the requested guarantee (or the first) and empty times.
+  // Each opening resets to default fund and sets initial guarantee if provided
   useEffect(() => {
     if (!open) return
     setSelectedKey(guaranteeId ? `mswd-${guaranteeId}` : null)
+    setFund("doh_maifip")
+    setFundOther("")
+    setManualAmount("")
     setTimeStarted("")
     setTimeEnded("")
     setRemarks("")
@@ -126,13 +138,13 @@ export const AcknowledgementSlipDialog: React.FC<
   }, [open, guaranteeId])
 
   const selected =
-    sources.find((source) => source.key === selectedKey) ?? sources[0]
+    sources.find((source) => source.key === selectedKey) ??
+    (sources.length > 0 ? sources[0] : null)
 
   const typeName = (id: string | null) =>
     (typeOptions.find((o) => String(o.id) === id)?.label ?? "").toUpperCase()
 
   const openSlip = async (preview: boolean) => {
-    if (!selected) return
     setIsGenerating(true)
     setError(null)
 
@@ -143,16 +155,23 @@ export const AcknowledgementSlipDialog: React.FC<
         timeEnded,
         preview,
         assistantTypeIds: typeId ? [Number(typeId)] : [],
+        fund,
+        fundOther: fund === "others" ? fundOther : undefined,
+        amount: manualAmount ? Number(manualAmount) : undefined,
       }
-      if (selected.kind === "mswd") {
+
+      if (selected && selected.kind === "mswd") {
         await openAcknowledgementSlip(selected.guarantee.id, options)
-      } else {
+      } else if (selected && selected.kind === "his") {
         await openHisAcknowledgementSlip(
           transactionId,
           selected.entry.id,
           options
         )
+      } else {
+        await openEncounterAcknowledgementSlip(transactionId, options)
       }
+
       if (!preview) onOpenChange(false)
     } catch (err) {
       setError(
@@ -170,69 +189,139 @@ export const AcknowledgementSlipDialog: React.FC<
           <div className="flex items-center gap-2">
             <FileCheck2 className="size-5.5 shrink-0 text-primary" />
             <DialogTitle className="text-xl font-extrabold text-foreground">
-              Acknowledgement Slip (DOH-MAIFIP)
+              Acknowledgement Slip (ZCMC-F-MSWD-46)
             </DialogTitle>
           </div>
           <DialogDescription className="text-xs font-medium text-muted-foreground sm:text-sm">
-            ZCMC-F-MSWD-46 · printed from this encounter&apos;s MAIFIP guarantee
-            (MSWD record or HIS guarantor ledger).
+            ZCMC-F-MSWD-46 · printed from this encounter&apos;s guarantee or
+            manual fund selection.
           </DialogDescription>
         </DialogHeader>
 
         <div className="space-y-4 py-2">
           {isLoading || hisLoading ? (
             <Skeleton className="h-24 w-full rounded-xl" />
-          ) : sources.length === 0 ? (
-            <Alert className="border-amber-500/30 bg-amber-500/10">
-              <Info className="size-4 shrink-0 text-amber-600" />
-              <AlertTitle className="text-sm font-bold">
-                No MAIFIP guarantee on this encounter
-              </AlertTitle>
-              <AlertDescription className="mt-0.5 text-sm">
-                Neither the MSWD records nor the HIS guarantor ledger list
-                MAIFIP for this encounter. Record one under Guarantors → Add
-                Guarantor.
-              </AlertDescription>
-            </Alert>
           ) : (
             <>
-              {sources.length > 1 && (
+              {sources.length === 0 ? (
+                <Alert className="border-sky-500/30 bg-sky-500/10">
+                  <Info className="size-4 shrink-0 text-sky-600 dark:text-sky-400" />
+                  <AlertTitle className="text-sm font-bold">
+                    No MAIFIP guarantee on this encounter
+                  </AlertTitle>
+                  <AlertDescription className="mt-0.5 text-sm">
+                    You can select a fund and fill optional details below, or
+                    proceed to print with blank lines for handwriting.
+                  </AlertDescription>
+                </Alert>
+              ) : (
+                sources.length > 1 && (
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="slip-guarantee"
+                      className="text-sm font-bold"
+                    >
+                      Print from
+                    </Label>
+                    <Select
+                      value={selected?.key ?? null}
+                      onValueChange={(v) => v && setSelectedKey(v)}
+                    >
+                      <SelectTrigger
+                        id="slip-guarantee"
+                        className="h-10 text-sm"
+                      >
+                        <SelectValue>
+                          {(value: string | null) => {
+                            const source = sources.find((m) => m.key === value)
+                            return source
+                              ? sourceLabel(source)
+                              : "Select a source"
+                          }}
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        {sources.map((source) => (
+                          <SelectItem
+                            key={source.key}
+                            value={source.key}
+                            className="text-sm"
+                          >
+                            {sourceLabel(source)}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
+                  </div>
+                )
+              )}
+
+              {/* Fund Selector Dropdown */}
+              <div className="space-y-1.5">
+                <Label htmlFor="slip-fund" className="text-sm font-bold">
+                  Fund
+                </Label>
+                <Select
+                  value={fund}
+                  onValueChange={(v) =>
+                    v && setFund(v as AcknowledgementSlipFund)
+                  }
+                >
+                  <SelectTrigger id="slip-fund" className="h-10 w-full text-sm">
+                    <SelectValue>
+                      {(value: string | null) =>
+                        value
+                          ? (FUND_LABELS[value as AcknowledgementSlipFund] ??
+                            value)
+                          : "Select a fund"
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem
+                      value="doh_maifip"
+                      className="text-sm font-medium"
+                    >
+                      DOH-MAIFIP
+                    </SelectItem>
+                    <SelectItem
+                      value="opav_socio_civid_fund"
+                      className="text-sm font-medium"
+                    >
+                      OPAV-SOCIO CIVID FUND
+                    </SelectItem>
+                    <SelectItem value="others" className="text-sm font-medium">
+                      OTHERS
+                    </SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+
+              {fund === "others" && (
                 <div className="space-y-1.5">
-                  <Label htmlFor="slip-guarantee" className="text-sm font-bold">
-                    Print from
-                  </Label>
-                  <Select
-                    value={selected?.key ?? null}
-                    onValueChange={(v) => v && setSelectedKey(v)}
+                  <Label
+                    htmlFor="slip-fund-other"
+                    className="text-sm font-bold"
                   >
-                    <SelectTrigger id="slip-guarantee" className="h-10 text-sm">
-                      <SelectValue>
-                        {(value: string | null) => {
-                          const source = sources.find((m) => m.key === value)
-                          return source
-                            ? sourceLabel(source)
-                            : "Select a source"
-                        }}
-                      </SelectValue>
-                    </SelectTrigger>
-                    <SelectContent>
-                      {sources.map((source) => (
-                        <SelectItem key={source.key} value={source.key} className="text-sm">
-                          {sourceLabel(source)}
-                        </SelectItem>
-                      ))}
-                    </SelectContent>
-                  </Select>
+                    Specify Other Fund (optional)
+                  </Label>
+                  <Input
+                    id="slip-fund-other"
+                    placeholder="e.g. PCSO / LGU / DSWD"
+                    value={fundOther}
+                    onChange={(e) => setFundOther(e.target.value)}
+                    className="h-10 text-sm"
+                  />
                 </div>
               )}
 
-              {selected && (
+              {selected ? (
                 <div className="space-y-2 rounded-xl border bg-muted/30 p-4 text-sm">
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">
                       sa halagang Php
                     </span>
-                    <strong className="text-foreground font-bold">
+                    <strong className="font-bold text-foreground">
                       {formatCurrency(
                         selected.kind === "mswd"
                           ? selected.guarantee.total
@@ -242,7 +331,7 @@ export const AcknowledgementSlipDialog: React.FC<
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">para sa</span>
-                    <strong className="text-right text-foreground font-bold">
+                    <strong className="text-right font-bold text-foreground">
                       {selected.kind === "mswd"
                         ? slipPurpose(selected.guarantee) ||
                           "— (no types on the breakdown)"
@@ -251,7 +340,7 @@ export const AcknowledgementSlipDialog: React.FC<
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Source</span>
-                    <strong className="text-right text-foreground font-bold">
+                    <strong className="text-right font-bold text-foreground">
                       {selected.kind === "mswd"
                         ? "MSWD guarantee record"
                         : selected.entry.glPosted
@@ -261,39 +350,67 @@ export const AcknowledgementSlipDialog: React.FC<
                   </div>
                   <div className="flex justify-between gap-3">
                     <span className="text-muted-foreground">Fund</span>
-                    <strong className="text-foreground font-bold">☑ DOH-MAIFIP</strong>
+                    <strong className="font-bold text-foreground">
+                      ☑ {FUND_LABELS[fund]}
+                      {fund === "others" && fundOther ? `: ${fundOther}` : ""}
+                    </strong>
+                  </div>
+                </div>
+              ) : (
+                <div className="space-y-3">
+                  <div className="space-y-1.5">
+                    <Label
+                      htmlFor="slip-manual-amount"
+                      className="text-sm font-bold"
+                    >
+                      Amount (sa halagang Php, optional)
+                    </Label>
+                    <Input
+                      id="slip-manual-amount"
+                      type="number"
+                      min="0"
+                      step="0.01"
+                      placeholder="Leave blank for handwriting"
+                      value={manualAmount}
+                      onChange={(e) => setManualAmount(e.target.value)}
+                      className="h-10 font-mono text-sm"
+                    />
                   </div>
                 </div>
               )}
 
-              {selected?.kind === "his" && (
+              {(!selected || selected.kind === "his") && (
                 <div className="space-y-1.5">
                   <Label htmlFor="slip-types" className="text-sm font-bold">
-                    Type of Assistance (para sa)
+                    Type of Assistance (para sa, optional)
                   </Label>
-                  <Select value={typeId} onValueChange={(v) => setTypeId(v)}>
+                  <Select
+                    value={typeId ?? ""}
+                    onValueChange={(v) => setTypeId(v || null)}
+                  >
                     <SelectTrigger
                       id="slip-types"
                       className="h-10 w-full text-sm"
                     >
                       <SelectValue>
                         {(value: string | null) =>
-                          typeName(value) || "Select a type of assistance"
+                          typeName(value) ||
+                          "Select a type or leave blank for handwriting"
                         }
                       </SelectValue>
                     </SelectTrigger>
                     <SelectContent>
                       {typeOptions.map((option) => (
-                        <SelectItem key={option.id} value={String(option.id)} className="text-sm">
+                        <SelectItem
+                          key={option.id}
+                          value={String(option.id)}
+                          className="text-sm"
+                        >
                           {option.label}
                         </SelectItem>
                       ))}
                     </SelectContent>
                   </Select>
-                  <p className="text-xs text-muted-foreground">
-                    HIS records no type of assistance. Pick one, or leave it
-                    blank to write by hand.
-                  </p>
                 </div>
               )}
 
@@ -363,8 +480,8 @@ export const AcknowledgementSlipDialog: React.FC<
             variant="outline"
             size="sm"
             onClick={() => openSlip(true)}
-            disabled={!selected || isGenerating}
-            className="h-10 gap-1.5 px-4 text-sm font-bold shadow-2xs"
+            disabled={isGenerating || isLoading || hisLoading}
+            className="h-10 cursor-pointer gap-1.5 px-4 text-sm font-bold shadow-2xs"
           >
             <ExternalLink className="size-4 text-primary" />
             Preview in New Tab
@@ -373,8 +490,8 @@ export const AcknowledgementSlipDialog: React.FC<
             type="button"
             size="sm"
             onClick={() => openSlip(false)}
-            disabled={!selected || isGenerating}
-            className="h-10 gap-1.5 px-4 text-sm font-bold shadow-2xs"
+            disabled={isGenerating || isLoading || hisLoading}
+            className="h-10 cursor-pointer gap-1.5 px-4 text-sm font-bold shadow-2xs"
           >
             <Printer className="size-4" />
             Print Slip

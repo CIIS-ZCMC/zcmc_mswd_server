@@ -46,33 +46,57 @@ class EncounterAcknowledgementSlipPdfController extends Controller implements Ha
             ? $entries->first(fn ($row) => (string) $row->getKey() === (string) $request->validated('entry'))
             : $entries->first();
 
-        if ($entry === null) {
-            return response()->json([
-                'code' => 'no_his_maifip',
-                'message' => 'This encounter has no MAIFIP entry on the HIS guarantor ledger.',
-            ], Response::HTTP_UNPROCESSABLE_ENTITY);
-        }
+        $fund = $request->validated('fund') ?? 'doh_maifip';
+        $fundOther = $request->validated('fund_other');
+        $assistantTypeIds = array_map('intval', $request->validated('assistant_type_ids') ?? []);
 
-        $pdf = $slips->renderFromHis(
-            $encounter,
-            $entry,
-            $request->user(),
-            $request->validated('time_started'),
-            $request->validated('time_ended'),
-            array_map('intval', $request->validated('assistant_type_ids') ?? []),
-        );
-
-        if (! $request->boolean('preview')) {
-            $slips->recordHisPrint(
+        if ($entry !== null && ! $request->filled('amount')) {
+            $pdf = $slips->renderFromHis(
                 $encounter,
                 $entry,
                 $request->user(),
-                $request->integer('copies', 1),
-                $request->validated('remarks'),
+                $request->validated('time_started'),
+                $request->validated('time_ended'),
+                $assistantTypeIds,
+                $fund,
+                $fundOther,
             );
-        }
 
-        $filename = $slips->filenameFromHis($encounter, $entry);
+            if (! $request->boolean('preview')) {
+                $slips->recordHisPrint(
+                    $encounter,
+                    $entry,
+                    $request->user(),
+                    $request->integer('copies', 1),
+                    $request->validated('remarks'),
+                );
+            }
+
+            $filename = $slips->filenameFromHis($encounter, $entry);
+        } else {
+            $amount = $request->filled('amount') ? (float) $request->validated('amount') : ($entry ? (float) $entry->amount : null);
+            $pdf = $slips->renderFromEncounter(
+                $encounter,
+                $request->user(),
+                $request->validated('time_started'),
+                $request->validated('time_ended'),
+                $amount,
+                $assistantTypeIds,
+                $fund,
+                $fundOther,
+            );
+
+            if (! $request->boolean('preview')) {
+                $slips->recordEncounterPrint(
+                    $encounter,
+                    $request->user(),
+                    $request->integer('copies', 1),
+                    $request->validated('remarks'),
+                );
+            }
+
+            $filename = $slips->filenameFromEncounter($encounter);
+        }
 
         return $request->boolean('download')
             ? $pdf->download($filename)

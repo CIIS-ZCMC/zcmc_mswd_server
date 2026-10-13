@@ -142,6 +142,8 @@ it('validates copies and times', function (string $query, string $field) {
     'too many copies' => ['copies=99', 'copies'],
     'bad start' => ['time_started=25:99', 'time_started'],
     'bad end' => ['time_ended=10am', 'time_ended'],
+    'unknown fund' => ['fund=mayor', 'fund'],
+    'negative amount' => ['amount=-1', 'amount'],
 ]);
 
 it('refuses a user without guarantee.view', function () {
@@ -173,7 +175,7 @@ it('fills the form from the patient, the guarantee and the HIS encounter', funct
         ->toContain('ZCMC-F-MSWD-46')
         // DOH-MAIFIP ticked; the other two boxes empty.
         ->toContain('&#10003;</span> <b>DOH-MAIFIP')
-        ->toContain('&nbsp;</span> <b>OPAV-SOCIO CIVIC FUND');
+        ->toContain('&nbsp;</span> <b>OPAV-SOCIO CIVID FUND');
 });
 
 it('prints the active approver from the Library', function () {
@@ -316,13 +318,37 @@ it('picks the ledger entry named by ?entry', function () {
     expect(AcknowledgementSlipPrintLog::sole()->his_guarantor_entry_id)->toBe(73);
 });
 
-it('refuses an encounter with no HIS MAIFIP entry', function () {
+it('allows printing an encounter with no HIS MAIFIP entry and logs it', function () {
     Sanctum::actingAs($this->user);
     mockHisEncounter([[71, 'PCSO', 500]]);
 
-    $this->getJson('/api/patient-transactions/9/acknowledgement-slip/pdf')
-        ->assertUnprocessable()
-        ->assertJsonPath('code', 'no_his_maifip');
+    $response = $this->get('/api/patient-transactions/9/acknowledgement-slip/pdf?fund=opav_socio_civid_fund&amount=500')
+        ->assertOk()
+        ->assertHeader('content-type', 'application/pdf');
+
+    expect(substr($response->getContent(), 0, 4))->toBe('%PDF');
+
+    $log = AcknowledgementSlipPrintLog::sole();
+    expect($log->patient_id)->toBe($this->patient->id)
+        ->and($log->his_transaction_id)->toBe(9)
+        ->and($log->his_guarantor_entry_id)->toBeNull();
+});
+
+it('prints an encounter slip with the picked fund and blank lines for handwriting', function () {
+    mockHisEncounter([]);
+    $slips = app(AcknowledgementSlipPdfService::class);
+    $encounter = $slips->hisEncounter(9);
+
+    expect($slips->slipFromEncounter($encounter, fund: 'others', fundOther: 'Barangay'))
+        ->toMatchArray(['amount' => '', 'purpose' => '', 'fund' => 'others', 'fundOther' => 'BARANGAY'])
+        ->and($slips->slipFromEncounter($encounter, amount: 500, fund: 'opav_socio_civid_fund'))
+        ->toMatchArray(['amount' => '500.00', 'fund' => 'opav_socio_civid_fund', 'fundOther' => null])
+        ->and($slips->filenameFromEncounter($encounter))->toBe('ACK-SLIP-1687271-ENC-9.pdf');
+
+    $html = $slips->renderFromEncounter($encounter, fund: 'opav_socio_civid_fund')->getDomPDF()->outputHtml();
+    expect($html)
+        ->toContain('&nbsp;</span> <b>DOH-MAIFIP')
+        ->toContain('&#10003;</span> <b>OPAV-SOCIO CIVID FUND');
 });
 
 it('answers 503 when the HIS is unreachable', function () {
