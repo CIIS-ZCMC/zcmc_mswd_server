@@ -87,6 +87,10 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
   }
 
   const [isOpenCaseOpen, setIsOpenCaseOpen] = useState(false)
+  // The encounter to open the case on (from a UIS row), if any.
+  const [openCaseTransactionId, setOpenCaseTransactionId] = useState<
+    number | undefined
+  >(undefined)
   const [isAddFamilyOpen, setIsAddFamilyOpen] = useState(false)
   const [isWaiverOpen, setIsWaiverOpen] = useState(false)
   const [editingFamilyMember, setEditingFamilyMember] =
@@ -206,7 +210,10 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
                 variant="default"
                 size="default"
                 className="h-11 gap-2 px-4 text-base font-bold shadow-sm"
-                onClick={() => setIsOpenCaseOpen(true)}
+                onClick={() => {
+                  setOpenCaseTransactionId(undefined)
+                  setIsOpenCaseOpen(true)
+                }}
               >
                 <FolderPlus className="size-5" />
                 Open Case
@@ -360,7 +367,10 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
           <TabsContent value="uis">
             <UisTab
               patient={patient}
-              onOpenCaseNeeded={() => setIsOpenCaseOpen(true)}
+              onOpenCaseNeeded={(transactionId) => {
+                setOpenCaseTransactionId(transactionId ?? undefined)
+                setIsOpenCaseOpen(true)
+              }}
             />
           </TabsContent>
 
@@ -421,6 +431,7 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
         patientId={patient.id}
         patientName={patient.fullName}
         hospitalNumber={patient.hospitalNo}
+        transactionId={openCaseTransactionId}
         onCaseOpened={(newCase) => {
           setIsOpenCaseOpen(false)
           if (newCase?.id) {

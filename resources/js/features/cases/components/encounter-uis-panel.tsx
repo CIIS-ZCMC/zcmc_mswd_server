@@ -3,7 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { usePermission } from "@/features/auth/hooks/use-permission"
-import { useCaseUisReadiness } from "../hooks/use-uis-prints"
+import { useUisReadiness } from "../hooks/use-uis-prints"
 import { useLatestAssessment } from "../hooks/use-assessment"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import { PrintUisDialog } from "./dialogs/print-uis-dialog"
@@ -50,7 +50,7 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false)
   const [isIntakeDialogOpen, setIsIntakeDialogOpen] = useState(false)
 
-  const { data: readiness, isLoading: isReadinessLoading } = useCaseUisReadiness(caseId)
+  const { data: readiness, isLoading: isReadinessLoading } = useUisReadiness(caseId ? { caseId } : null)
   const { data: latestAssessment } = useLatestAssessment(caseId)
 
   const handleOpenAssess = () => {

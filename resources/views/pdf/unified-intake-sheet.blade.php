@@ -1,9 +1,10 @@
 @php
     use Illuminate\Support\Carbon;
 
-    // The UIS is a printable of the case's data, not a stored record. Inputs:
-    //   $patient, $case, $assessment (nullable), $printedBy (nullable User), $printedAt (Carbon).
-    // See UnifiedIntakeSheetPdfService::renderForCase().
+    // The UIS of an Intake Assessment, with or without a case. Inputs:
+    //   $patient, $case (nullable), $assessment (nullable), $assistanceLines (section V:
+    //   [{type, amount, mode, fund}]), $printedBy (nullable User), $printedAt (Carbon).
+    // See UnifiedIntakeSheetPdfService::renderForAssessment().
     $p = $patient;
     $a = $assessment;
 
@@ -62,7 +63,8 @@
     // The keyword matching lives in UisExpenseSlots, shared with the patient UIS API.
     $slots = \App\Support\UisExpenseSlots::slots($a?->expenses ?? collect());
 
-    $assistances = $case?->patientAssistances ?? collect();
+    // The encounter's guarantee items, or the case's assistances (UnifiedIntakeSheetPdfService::assistanceLines()).
+    $assistances = collect($assistanceLines ?? []);
 
     // §V mode of assistance / fund source print their Library name, even if the option
     // was retired or deleted since; an unknown value (entered before these became
@@ -460,7 +462,7 @@
                         <td style="padding: 2px;">&nbsp;</td>
                         <td style="padding: 2px 2px 2px 14px;"><span class="u" style="width: 85%; min-width: 80px; text-align: left;">{!! filled($specify) ? e($specify) : '&nbsp;' !!}</span></td>
                     </tr>
-                    <tr><td colspan="3" class="center"><u>{{ $assistances->map(fn ($x) => strtoupper((string) $x->assistantType?->name))->filter()->unique()->implode(', ') }}</u></td></tr>
+                    <tr><td colspan="3" class="center"><u>{{ $assistances->map(fn ($x) => strtoupper((string) $x['type']))->filter()->unique()->implode(', ') }}</u></td></tr>
                 </table>
                 <div class="cert">*AKO AY NAGPAPATUNAY ANG IMPORMASYONG NAKASULAT SA IBABAW AY TOTOO AT TAMA</div>
                 <div class="clientname">{!! filled($fullName) ? e($fullName) : '&nbsp;' !!}</div>
@@ -493,10 +495,10 @@
             </tr>
             @forelse($assistances as $aid)
                 <tr>
-                    <td>{{ $aid->assistantType?->name }}</td>
-                    <td class="center">{{ $num($aid->amount) }}</td>
-                    <td>{{ $modeLabel }}</td>
-                    <td>{{ $fundLabel }}</td>
+                    <td>{{ $aid['type'] }}</td>
+                    <td class="center">{{ $num($aid['amount']) }}</td>
+                    <td>{{ $aid['mode'] ?: $modeLabel }}</td>
+                    <td>{{ $aid['fund'] ?: $fundLabel }}</td>
                 </tr>
             @empty
                 <tr>

@@ -17,6 +17,10 @@ class AssessmentResource extends JsonResource
         return [
             'id' => $this->id,
             'case_id' => $this->case_id,
+            'patient_id' => $this->patient_id,
+            'his_transaction_id' => $this->his_transaction_id,
+            'transaction_type' => $this->transaction_type,
+            'encounter_date' => $this->encounter_date,
             'parent_assessment_id' => $this->parent_assessment_id,
             'reassessment_reason' => $this->reassessment_reason,
             'created_by' => $this->created_by,

@@ -10,10 +10,18 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { AlertCircle, Download, ExternalLink, FileText, Loader2 } from "lucide-react"
-import { downloadCaseUisPdf, getCaseUisPreviewBlobUrl } from "../../api/uis-print-api"
+import {
+  downloadUisPdf,
+  getUisPreviewBlobUrl,
+  uisTargetKey,
+  type UisTarget,
+} from "../../api/uis-print-api"
 
 interface UisPdfPreviewDialogProps {
-  caseId: number | string
+  /** A case's intake; ignored when `assessmentId` is given. */
+  caseId?: number | string | null
+  /** An intake assessment, with or without a case. */
+  assessmentId?: number | null
   caseCode?: string
   open: boolean
   onOpenChange: (open: boolean) => void
@@ -21,14 +29,20 @@ interface UisPdfPreviewDialogProps {
 
 export const UisPdfPreviewDialog: React.FC<UisPdfPreviewDialogProps> = ({
   caseId,
+  assessmentId,
   caseCode,
   open,
   onOpenChange,
 }) => {
+  const target: UisTarget | null = assessmentId
+    ? { assessmentId }
+    : caseId
+      ? { caseId }
+      : null
   const { data, isLoading, error } = useQuery({
-    queryKey: ["uis-pdf-preview", String(caseId)],
-    queryFn: () => getCaseUisPreviewBlobUrl(caseId),
-    enabled: open && Boolean(caseId),
+    queryKey: ["uis-pdf-preview", target ? uisTargetKey(target) : "none"],
+    queryFn: () => getUisPreviewBlobUrl(target!),
+    enabled: open && target !== null,
     staleTime: 0,
     gcTime: 1000 * 60 * 5,
   })
@@ -45,7 +59,10 @@ export const UisPdfPreviewDialog: React.FC<UisPdfPreviewDialogProps> = ({
   const errorMessage = error instanceof Error ? error.message : error ? "Failed to load PDF preview." : null
 
   const handleDownload = () => {
-    downloadCaseUisPdf(caseId, { filename: caseCode ? `UIS-${caseCode}.pdf` : undefined })
+    if (!target) return
+    downloadUisPdf(target, {
+      filename: caseCode ? `UIS-${caseCode}.pdf` : undefined,
+    })
   }
 
   const handleOpenInNewTab = () => {

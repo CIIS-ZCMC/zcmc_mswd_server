@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -14,6 +15,10 @@ use Illuminate\Validation\ValidationException;
  * An assessment is two things, distinguished by `social_case_status`:
  * NULL is the ordinary intake-time socioeconomic snapshot, non-NULL means this
  * row *is* its case's Social Case Study Report. See docs/SOCIAL_CASE_PLAN.md §A.0.
+ *
+ * The intake (the UIS) belongs to a patient and a HIS encounter and only
+ * optionally to a case: it can be taken before any case is opened, and a case
+ * opened later on that encounter picks it up. See docs/INTAKE_ASSESSMENT_PLAN.md.
  */
 class Assessment extends Model
 {
@@ -45,6 +50,10 @@ class Assessment extends Model
     ];
 
     protected $fillable = [
+        'patient_id',
+        'his_transaction_id',
+        'transaction_type',
+        'encounter_date',
         'case_id',
         'parent_assessment_id',
         'reassessment_reason',
@@ -117,6 +126,8 @@ class Assessment extends Model
             'prepared_at' => 'datetime',
             'noted_at' => 'datetime',
             'review_requested_at' => 'datetime',
+            'encounter_date' => 'datetime',
+            'his_transaction_id' => 'integer',
         ];
     }
 
@@ -128,6 +139,19 @@ class Assessment extends Model
      */
     protected static function booted(): void
     {
+        // An assessment written through a case (the case page, Filament, the
+        // SCSR) takes its patient and encounter from that case.
+        static::creating(function (Assessment $assessment) {
+            if ($assessment->case_id === null) {
+                return;
+            }
+
+            $case = CaseModel::withTrashed()->find($assessment->case_id);
+            $assessment->patient_id ??= $case?->patient_id;
+            $assessment->his_transaction_id ??= $case?->transaction_id;
+            $assessment->transaction_type ??= $case?->transaction_type;
+        });
+
         static::updating(function (Assessment $assessment) {
             if ($assessment->getOriginal('social_case_status') !== self::SOCIAL_CASE_FINALIZED) {
                 return;
@@ -144,6 +168,24 @@ class Assessment extends Model
     public function case(): BelongsTo
     {
         return $this->belongsTo(CaseModel::class, 'case_id');
+    }
+
+    public function patient(): BelongsTo
+    {
+        return $this->belongsTo(Patient::class);
+    }
+
+    /**
+     * The intake-time assessments (not the SCSR) of one patient's encounter,
+     * newest first; the first is the one the UIS prints.
+     */
+    public function scopeIntakeFor(Builder $query, int $patientId, int|string|null $transactionId): Builder
+    {
+        return $query->where('patient_id', $patientId)
+            ->where('his_transaction_id', $transactionId)
+            ->whereNull('social_case_status')
+            ->latest()
+            ->latest('id');
     }
 
     public function createdBy(): BelongsTo
@@ -215,8 +257,6 @@ class Assessment extends Model
      */
     public function activityOwner(): array
     {
-        $case = $this->auditParent('case');
-
-        return ['patient_id' => $case?->patient_id, 'case_id' => $this->case_id];
+        return ['patient_id' => $this->patient_id ?? $this->auditParent('case')?->patient_id, 'case_id' => $this->case_id];
     }
 }

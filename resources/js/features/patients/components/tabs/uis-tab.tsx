@@ -38,6 +38,8 @@ import {
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UisSheet } from "../uis-sheet"
+import { NewIntakeAssessmentDialog } from "@/features/cases/components/dialogs/new-intake-assessment-dialog"
+import { formatCurrency } from "@/lib/format-currency"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import {
   getBracketColor,
@@ -49,6 +51,7 @@ import {
   AlertCircle,
   AlertTriangle,
   CheckCircle2,
+  ClipboardPlus,
   ChevronLeft,
   ChevronRight,
   Eye,
@@ -66,8 +69,16 @@ import {
 
 interface UisTabProps {
   patient: PatientRecord
-  onOpenCaseNeeded?: () => void
+  /** Open a case, optionally on the given HIS encounter. */
+  onOpenCaseNeeded?: (transactionId?: number | null) => void
 }
+
+/** How a row is named: its case, else its encounter. */
+const rowLabel = (row: PatientUisRow) =>
+  row.case?.caseCode ??
+  (row.encounter.transactionId
+    ? `Encounter #${row.encounter.transactionId}`
+    : "Intake")
 
 type StatusFilter = "all" | "ready" | "missing" | "unassessed"
 
@@ -83,11 +94,13 @@ export const UisTab: React.FC<UisTabProps> = ({
 
   const { data: rows = [], isLoading, error } = usePatientUis(patient.id)
 
+  // ?uis=<row key> opens a sheet; the older ?case=<id> links still work.
   const caseParam = searchParams.get("case")
-  const [selectedCaseId, setSelectedCaseId] = useState<number | null>(
-    caseParam ? Number(caseParam) : null
-  )
-  const [isModalOpen, setIsModalOpen] = useState<boolean>(Boolean(caseParam))
+  const uisParam =
+    searchParams.get("uis") ?? (caseParam ? `case-${caseParam}` : null)
+  const [selectedKey, setSelectedKey] = useState<string | null>(uisParam)
+  const [isModalOpen, setIsModalOpen] = useState<boolean>(Boolean(uisParam))
+  const [isNewIntakeOpen, setIsNewIntakeOpen] = useState(false)
   const [initialAssessOpen, setInitialAssessOpen] = useState<boolean>(false)
   const [initialPrintOpen, setInitialPrintOpen] = useState<boolean>(false)
 
@@ -99,11 +112,11 @@ export const UisTab: React.FC<UisTabProps> = ({
 
   // Keep modal open/close synchronized if searchParams change externally
   useEffect(() => {
-    if (caseParam) {
-      setSelectedCaseId(Number(caseParam))
+    if (uisParam) {
+      setSelectedKey(uisParam)
       setIsModalOpen(true)
     }
-  }, [caseParam])
+  }, [uisParam])
 
   // Reset pagination when search or status filters change
   useEffect(() => {
@@ -127,9 +140,24 @@ export const UisTab: React.FC<UisTabProps> = ({
 
   // Selected row for sheet view modal
   const selectedRow = useMemo<PatientUisRow | null>(() => {
-    if (!rows || rows.length === 0 || !selectedCaseId) return null
-    return rows.find((r) => r.case.id === selectedCaseId) || null
-  }, [rows, selectedCaseId])
+    if (!rows || rows.length === 0 || !selectedKey) return null
+    return (
+      rows.find(
+        (r) =>
+          r.key === selectedKey ||
+          (r.case !== null && `case-${r.case.id}` === selectedKey)
+      ) || null
+    )
+  }, [rows, selectedKey])
+
+  // One intake per encounter: these cannot take a new one.
+  const assessedTransactionIds = useMemo(
+    () =>
+      rows
+        .filter((r) => r.uis.hasAssessment && r.encounter.transactionId)
+        .map((r) => r.encounter.transactionId as number),
+    [rows]
+  )
 
   // Filtered rows for table view
   const filteredRows = useMemo(() => {
@@ -137,8 +165,8 @@ export const UisTab: React.FC<UisTabProps> = ({
       // 1. Search filter (case code, transaction type, classification)
       if (searchTerm.trim()) {
         const query = searchTerm.toLowerCase().trim()
-        const codeMatch = row.case.caseCode.toLowerCase().includes(query)
-        const typeMatch = formatTransactionType(row.case.transactionType)
+        const codeMatch = rowLabel(row).toLowerCase().includes(query)
+        const typeMatch = formatTransactionType(row.encounter.transactionType)
           .toLowerCase()
           .includes(query)
         const classMatch = (
@@ -178,14 +206,15 @@ export const UisTab: React.FC<UisTabProps> = ({
     assessOpen = false,
     printOpen = false
   ) => {
-    setSelectedCaseId(row.case.id)
+    setSelectedKey(row.key)
     setInitialAssessOpen(assessOpen)
     setInitialPrintOpen(printOpen)
     setIsModalOpen(true)
     setSearchParams(
       (prev) => {
         const next = new URLSearchParams(prev)
-        next.set("case", String(row.case.id))
+        next.delete("case")
+        next.set("uis", row.key)
         return next
       },
       { replace: true }
@@ -201,6 +230,7 @@ export const UisTab: React.FC<UisTabProps> = ({
         (prev) => {
           const next = new URLSearchParams(prev)
           next.delete("case")
+          next.delete("uis")
           return next
         },
         { replace: true }
@@ -256,33 +286,43 @@ export const UisTab: React.FC<UisTabProps> = ({
     )
   }
 
+  const newIntakeDialog = (
+    <NewIntakeAssessmentDialog
+      open={isNewIntakeOpen}
+      onOpenChange={setIsNewIntakeOpen}
+      patient={patient}
+      assessedTransactionIds={assessedTransactionIds}
+    />
+  )
+
   if (rows.length === 0) {
     return (
       <Card className="space-y-4 border border-dashed border-border/80 p-8 text-center shadow-none sm:p-12">
         <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-          <FolderPlus className="size-7 opacity-70" />
+          <ClipboardPlus className="size-7 opacity-70" />
         </div>
         <div className="mx-auto max-w-md space-y-1.5">
           <h3 className="text-base font-bold text-foreground sm:text-lg">
-            No Case Episodes Opened
+            No Intake Assessments Yet
           </h3>
           <p className="text-xs text-muted-foreground sm:text-sm">
-            A Unified Intake Sheet (ANNEX B) is tied to a hospital case episode.
-            Open an active case for this patient to record an assessment and
-            generate printable intake sheets.
+            A Unified Intake Sheet (ANNEX B) is the intake assessment of one
+            hospital encounter. Take one for this patient&apos;s encounter; no
+            case is needed.
           </p>
         </div>
-        {onOpenCaseNeeded && canCreateCase && (
+        {canCreateAssessment && (
           <div className="pt-2">
             <Button
-              onClick={onOpenCaseNeeded}
+              onClick={() => setIsNewIntakeOpen(true)}
               className="cursor-pointer gap-2 text-xs font-semibold"
             >
-              <FolderPlus className="size-4" />
-              Open Case Episode
+              <ClipboardPlus className="size-4" />
+              New Intake Assessment
             </Button>
           </div>
         )}
+        {newIntakeDialog}
       </Card>
     )
   }
@@ -310,7 +350,7 @@ export const UisTab: React.FC<UisTabProps> = ({
         >
           <div className="mb-1 flex items-center justify-between text-muted-foreground">
             <span className="text-[11px] font-bold tracking-wider uppercase">
-              All Episodes
+              All Intakes
             </span>
             <FileText className="size-4 text-primary" />
           </div>
@@ -418,12 +458,12 @@ export const UisTab: React.FC<UisTabProps> = ({
                 variant="secondary"
                 className="ml-1 px-2 py-0.5 font-mono text-xs font-bold"
               >
-                {rows.length} {rows.length === 1 ? "episode" : "episodes"}
+                {rows.length} {rows.length === 1 ? "encounter" : "encounters"}
               </Badge>
             </CardTitle>
             <CardDescription className="mt-1 text-xs text-muted-foreground">
-              Intake assessments, MSWD classification brackets, and printable
-              ANNEX B forms across all hospital case episodes.
+              Intake assessments of each hospital encounter, with or without a
+              case: MSWD classification, guarantors and printable ANNEX B forms.
             </CardDescription>
           </div>
 
@@ -432,7 +472,7 @@ export const UisTab: React.FC<UisTabProps> = ({
             <div className="relative w-full sm:w-60">
               <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
-                placeholder="Search case code, type..."
+                placeholder="Search case, encounter, type..."
                 value={searchTerm}
                 onChange={(e) => setSearchTerm(e.target.value)}
                 className="h-9 w-full pl-8 text-xs"
@@ -474,15 +514,14 @@ export const UisTab: React.FC<UisTabProps> = ({
               </Select>
             </div>
 
-            {onOpenCaseNeeded && canCreateCase && (
+            {canCreateAssessment && (
               <Button
-                variant="outline"
                 size="sm"
-                onClick={onOpenCaseNeeded}
-                className="hidden h-9 cursor-pointer gap-1.5 text-xs font-semibold sm:flex"
+                onClick={() => setIsNewIntakeOpen(true)}
+                className="h-9 cursor-pointer gap-1.5 text-xs font-semibold"
               >
-                <FolderPlus className="size-3.5 text-primary" />
-                Open Case
+                <ClipboardPlus className="size-3.5" />
+                New Intake Assessment
               </Button>
             )}
           </div>
@@ -494,19 +533,19 @@ export const UisTab: React.FC<UisTabProps> = ({
               <TableHeader>
                 <TableRow className="border-b border-border/60 bg-muted/40 hover:bg-muted/40">
                   <TableHead className="py-3.5 pl-4 font-bold text-foreground">
-                    Case Code
+                    Encounter
                   </TableHead>
                   <TableHead className="py-3.5 font-bold text-foreground">
-                    Encounter Type
-                  </TableHead>
-                  <TableHead className="py-3.5 font-bold text-foreground">
-                    Date Opened
+                    Case
                   </TableHead>
                   <TableHead className="py-3.5 font-bold text-foreground">
                     MSWD Classification
                   </TableHead>
                   <TableHead className="py-3.5 font-bold text-foreground">
                     Assessment &amp; Status
+                  </TableHead>
+                  <TableHead className="py-3.5 text-right font-bold text-foreground">
+                    Guarantors
                   </TableHead>
                   <TableHead className="py-3.5 text-center font-bold text-foreground">
                     Prints
@@ -520,7 +559,7 @@ export const UisTab: React.FC<UisTabProps> = ({
                 {filteredRows.length === 0 ? (
                   <TableRow>
                     <TableCell
-                      colSpan={7}
+                      colSpan={8}
                       className="space-y-2 py-12 text-center text-muted-foreground"
                     >
                       <p className="text-sm font-medium">
@@ -543,18 +582,17 @@ export const UisTab: React.FC<UisTabProps> = ({
                   </TableRow>
                 ) : (
                   paginatedRows.map((row) => {
-                    const dateStr = row.case.dateOpened
-                      ? new Date(row.case.dateOpened).toLocaleDateString(
-                          undefined,
-                          {
-                            month: "short",
-                            day: "numeric",
-                            year: "numeric",
-                          }
-                        )
+                    const encounterDate =
+                      row.encounter.date ?? row.case?.dateOpened ?? null
+                    const dateStr = encounterDate
+                      ? new Date(encounterDate).toLocaleDateString(undefined, {
+                          month: "short",
+                          day: "numeric",
+                          year: "numeric",
+                        })
                       : "—"
                     const typeStr = formatTransactionType(
-                      row.case.transactionType
+                      row.encounter.transactionType ?? row.case?.transactionType
                     )
                     const classCode =
                       row.uis.classification?.classification ||
@@ -564,35 +602,57 @@ export const UisTab: React.FC<UisTabProps> = ({
 
                     return (
                       <TableRow
-                        key={row.case.id}
+                        key={row.key}
                         className="group cursor-pointer transition-colors hover:bg-muted/40"
                         onClick={() => handleOpenSheetModal(row)}
                       >
-                        {/* Case Code */}
-                        <TableCell className="py-3.5 pl-4 font-mono text-xs font-bold text-foreground">
-                          <div className="flex items-center gap-2">
-                            <span className="text-primary group-hover:underline">
-                              {row.case.caseCode}
-                            </span>
-                            {row.uis.hasSocialCase && (
-                              <Badge
-                                variant="outline"
-                                className="gap-0.5 bg-muted px-1 py-0 text-[10px] text-muted-foreground"
-                              >
-                                <Lock className="size-2.5" /> SCSR
-                              </Badge>
-                            )}
+                        {/* Encounter: type and date */}
+                        <TableCell className="py-3.5 pl-4">
+                          <div className="font-medium text-foreground group-hover:underline">
+                            {typeStr}
+                          </div>
+                          <div className="font-mono text-[11px] text-muted-foreground">
+                            {dateStr}
+                            {row.encounter.transactionId
+                              ? ` · #${row.encounter.transactionId}`
+                              : ""}
                           </div>
                         </TableCell>
 
-                        {/* Encounter Type */}
-                        <TableCell className="py-3.5 font-medium text-foreground">
-                          {typeStr}
-                        </TableCell>
-
-                        {/* Date Opened */}
-                        <TableCell className="py-3.5 font-mono text-muted-foreground">
-                          {dateStr}
+                        {/* Case, if one was opened on the encounter */}
+                        <TableCell className="py-3.5 font-mono text-xs font-bold">
+                          {row.case ? (
+                            <div className="flex items-center gap-2">
+                              <span className="text-primary">
+                                {row.case.caseCode}
+                              </span>
+                              {row.uis.hasSocialCase && (
+                                <Badge
+                                  variant="outline"
+                                  className="gap-0.5 bg-muted px-1 py-0 text-[10px] text-muted-foreground"
+                                >
+                                  <Lock className="size-2.5" /> SCSR
+                                </Badge>
+                              )}
+                            </div>
+                          ) : onOpenCaseNeeded && canCreateCase ? (
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={(e) => {
+                                e.stopPropagation()
+                                onOpenCaseNeeded(row.encounter.transactionId)
+                              }}
+                              className="h-7 cursor-pointer gap-1 px-2 font-sans text-xs font-medium text-muted-foreground hover:text-foreground"
+                            >
+                              <FolderPlus className="size-3.5 text-primary" />
+                              Open Case
+                            </Button>
+                          ) : (
+                            <span className="font-sans font-normal text-muted-foreground">
+                              No case
+                            </span>
+                          )}
                         </TableCell>
 
                         {/* MSWD Classification */}
@@ -631,6 +691,20 @@ export const UisTab: React.FC<UisTabProps> = ({
                             <span className="text-xs text-muted-foreground">
                               No assessment conducted
                             </span>
+                          )}
+                        </TableCell>
+
+                        {/* Guarantors on the encounter */}
+                        <TableCell className="py-3.5 text-right font-mono">
+                          {row.guarantees.count > 0 ? (
+                            <span className="font-semibold text-foreground">
+                              {formatCurrency(row.guarantees.total)}
+                              <span className="ml-1 font-sans text-[11px] font-normal text-muted-foreground">
+                                ({row.guarantees.count})
+                              </span>
+                            </span>
+                          ) : (
+                            <span className="text-muted-foreground/60">—</span>
                           )}
                         </TableCell>
 
@@ -723,7 +797,7 @@ export const UisTab: React.FC<UisTabProps> = ({
                             <DropdownMenu>
                               <DropdownMenuTrigger
                                 className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
-                                aria-label={`Actions for ${row.case.caseCode}`}
+                                aria-label={`Actions for ${rowLabel(row)}`}
                               >
                                 <MoreHorizontal className="size-4" />
                               </DropdownMenuTrigger>
@@ -732,7 +806,7 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 className="w-52 text-xs"
                               >
                                 <DropdownMenuLabel className="text-[11px] font-bold text-muted-foreground">
-                                  Actions for {row.case.caseCode}
+                                  Actions for {rowLabel(row)}
                                 </DropdownMenuLabel>
                                 <DropdownMenuSeparator />
 
@@ -802,7 +876,7 @@ export const UisTab: React.FC<UisTabProps> = ({
                 <strong className="text-foreground">
                   {filteredRows.length}
                 </strong>{" "}
-                case episodes
+                encounters
               </div>
 
               <div className="flex items-center gap-3">
@@ -865,7 +939,9 @@ export const UisTab: React.FC<UisTabProps> = ({
         </CardContent>
       </Card>
 
-      {/* Unified Intake Sheet Modal with 4 Sub-Tabs */}
+      {newIntakeDialog}
+
+      {/* Unified Intake Sheet Modal with 5 Sub-Tabs */}
       {selectedRow && (
         <UisSheet
           open={isModalOpen}

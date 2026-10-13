@@ -4,6 +4,7 @@ namespace App\Actions;
 
 use App\Models\CaseModel;
 use App\Models\MswdClassificationMatrix;
+use App\Models\Patient;
 
 class CalculateMswdClassificationAction
 {
@@ -19,13 +20,18 @@ class CalculateMswdClassificationAction
         ?float $totalFamilyIncome,
         float $expensesSum,
         ?CaseModel $case = null,
-        int $familyMemberCount = 1
+        int $familyMemberCount = 1,
+        ?Patient $patient = null,
     ): array {
         $income = max(0, $totalFamilyIncome ?? 0.0);
         $expenses = max(0, $expensesSum);
 
-        if ($case !== null) {
-            $memberCount = $case->patient?->familyMembers()->count() ?? 0;
+        // The household is the patient's: given directly (an intake with no
+        // case) or through the case.
+        $patient ??= $case?->patient;
+
+        if ($patient !== null || $case !== null) {
+            $memberCount = $patient?->familyMembers()->count() ?? 0;
             // Household size includes patient + family members (or minimum 1)
             $householdSize = max(1, $memberCount + 1);
         } else {
@@ -87,4 +93,3 @@ class CalculateMswdClassificationAction
         ];
     }
 }
-

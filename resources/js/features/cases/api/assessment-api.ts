@@ -62,6 +62,22 @@ export async function createCaseAssessment(
   return adaptAssessment(res.data)
 }
 
+/**
+ * POST /patients/{patient}/intake-assessments — takes an Intake Assessment (UIS)
+ * for one of the patient's HIS encounters, with no case needed.
+ */
+export async function createIntakeAssessment(
+  patientId: number | string,
+  hisTransactionId: number,
+  payload: CreateAssessmentPayload
+): Promise<Assessment> {
+  const res = await apiClient.post<ApiEnvelope<ApiAssessment>>(
+    `/patients/${patientId}/intake-assessments`,
+    { ...payload, his_transaction_id: hisTransactionId }
+  )
+  return adaptAssessment(res.data)
+}
+
 /** PUT /assessments/{assessment} — updates an existing assessment */
 export async function updateAssessment(
   assessmentId: number,

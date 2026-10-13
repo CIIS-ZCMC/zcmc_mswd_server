@@ -584,11 +584,6 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
         encounter={printableEncounter}
         patient={patient}
         caseId={patient.latestCaseId}
-        onOpenCaseNeeded={() => {
-          if (printableEncounter) {
-            setDirectOpenCaseEncounter(printableEncounter)
-          }
-        }}
       />
     </div>
   )

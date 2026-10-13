@@ -16,6 +16,7 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { ApiError } from "@/lib/api-client"
 import {
   useCreateAssessment,
+  useCreateIntakeAssessment,
   useUpdateAssessment,
 } from "../../hooks/use-assessment"
 import type {
@@ -45,7 +46,10 @@ import {
 interface IntakeAssessmentDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
-  caseId: number
+  /** The case the assessment is for; leave out for an intake with no case. */
+  caseId?: number | null
+  /** An intake with no case: the patient, with `transactionId` as its encounter. */
+  patientId?: number | string | null
   caseCode?: string
   patientName?: string
   patientFirstName?: string
@@ -101,6 +105,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   open,
   onOpenChange,
   caseId,
+  patientId,
   caseCode,
   patientName,
   patientFirstName,
@@ -116,8 +121,15 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   const isEditMode = Boolean(existingAssessment?.id)
   const assessmentId = existingAssessment?.id ?? 0
 
-  const createMutation = useCreateAssessment(caseId)
-  const updateMutation = useUpdateAssessment(caseId, assessmentId)
+  // With a case, the assessment is the case's; without one it is a standalone
+  // intake for the patient's encounter (docs/INTAKE_ASSESSMENT_PLAN.md).
+  const caseAssessment = useCreateAssessment(caseId ?? 0)
+  const intakeAssessment = useCreateIntakeAssessment(patientId, transactionId)
+  const createMutation = caseId ? caseAssessment : intakeAssessment
+  const updateMutation = useUpdateAssessment(
+    caseId ?? existingAssessment?.caseId ?? 0,
+    assessmentId
+  )
 
   // Fetch encounter if transactionId provided (to auto-fill FINAL DIAGNOSIS)
   const { data: encounter } = useHospitalEncounter(transactionId ?? 0, open && Boolean(transactionId))
@@ -424,7 +436,12 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
                 {isEditMode ? "Edit Intake Assessment (ANNEX B)" : "New Intake Assessment (ANNEX B)"}
               </DialogTitle>
               <DialogDescription className="text-sm text-muted-foreground font-medium">
-                Unified Intake Assessment and MSWD Classification Form for Case #{caseCode ?? caseId}
+                Unified Intake Assessment and MSWD Classification Form
+                {caseId
+                  ? ` for Case #${caseCode ?? caseId}`
+                  : transactionId
+                    ? ` for Encounter #${transactionId}`
+                    : ""}
                 {patientName ? ` (${patientName})` : ""}.
               </DialogDescription>
             </div>

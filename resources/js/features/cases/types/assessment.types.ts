@@ -33,7 +33,13 @@ export interface AssessmentExpense {
 
 export interface Assessment {
   id: number
-  caseId: number
+  /** null for an intake taken before any case was opened. */
+  caseId: number | null
+  patientId: number | null
+  /** The HIS encounter of the intake. */
+  hisTransactionId: number | null
+  transactionType: string | null
+  encounterDate: string | null
   createdBy: number
   createdByName?: string | null
   parentAssessmentId: number | null

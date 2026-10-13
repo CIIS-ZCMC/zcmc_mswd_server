@@ -189,7 +189,12 @@ export interface ApiOtherIncomeSource {
 
 export interface ApiAssessment {
   id: number
-  case_id: number
+  /** null for an intake taken before any case was opened. */
+  case_id: number | null
+  patient_id?: number | null
+  his_transaction_id?: number | null
+  transaction_type?: string | null
+  encounter_date?: string | null
   created_by: number
   created_by_user?: ApiUserLite | null
   parent_assessment_id?: number | null

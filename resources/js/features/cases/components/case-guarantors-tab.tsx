@@ -216,7 +216,9 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                 Patient Guarantors & Assistance Breakdowns
               </CardTitle>
               <CardDescription className="text-xs">
-                Guarantor coverage for Case #{caseCode ?? "—"}
+                {caseCode
+                  ? `Guarantor coverage for Case #${caseCode}`
+                  : `Guarantor coverage for Encounter #${transactionId ?? "—"}`}
               </CardDescription>
             </div>
           </div>

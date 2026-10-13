@@ -34,7 +34,11 @@ export function adaptAssessment(api: ApiAssessment): Assessment {
 
   return {
     id: api.id,
-    caseId: api.case_id,
+    caseId: api.case_id ?? null,
+    patientId: api.patient_id ?? null,
+    hisTransactionId: api.his_transaction_id ?? null,
+    transactionType: api.transaction_type ?? null,
+    encounterDate: api.encounter_date ?? null,
     createdBy: api.created_by,
     createdByName: api.created_by_user?.name || null,
     parentAssessmentId: api.parent_assessment_id ?? null,

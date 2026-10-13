@@ -600,8 +600,6 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
         encounter={activeEncounter}
         patient={patient}
         caseId={activeCase?.id ?? patient.latestCaseId}
-        caseCode={activeCase?.caseCode}
-        onOpenCaseNeeded={() => setOpenCaseOpen(true)}
       />
     </>
   )

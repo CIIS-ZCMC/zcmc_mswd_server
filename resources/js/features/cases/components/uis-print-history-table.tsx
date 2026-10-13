@@ -8,21 +8,27 @@ import {
   TableHeader,
   TableRow,
 } from "@/components/ui/table"
-import { useCaseUisPrintHistory } from "../hooks/use-uis-prints"
+import { useUisPrintHistory } from "../hooks/use-uis-prints"
 import { AlertCircle, Clock, History, Loader2, User } from "lucide-react"
 
 export interface UisPrintHistoryTableProps {
+  /** A case's prints; ignored when `assessmentId` is given. */
   caseId?: number | string | null
+  /** The prints of an intake assessment's encounter. */
+  assessmentId?: number | null
   className?: string
   emptyAction?: React.ReactNode
 }
 
 export const UisPrintHistoryTable: React.FC<UisPrintHistoryTableProps> = ({
   caseId,
+  assessmentId,
   className = "",
   emptyAction,
 }) => {
-  const { data: prints = [], isLoading, error } = useCaseUisPrintHistory(caseId)
+  const { data: prints = [], isLoading, error } = useUisPrintHistory(
+    assessmentId ? { assessmentId } : caseId ? { caseId } : null
+  )
 
   if (isLoading) {
     return (

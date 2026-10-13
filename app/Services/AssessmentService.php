@@ -7,6 +7,7 @@ use App\Actions\EnsureWatcherRequirementSatisfied;
 use App\DTOs\AssessmentDto;
 use App\Models\Assessment;
 use App\Models\CaseModel;
+use App\Models\Patient;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -30,12 +31,21 @@ class AssessmentService
         return $this->repository->findOrFail($id);
     }
 
-    public function create(AssessmentDto $dto): Assessment
+    /**
+     * @param  array<string, mixed>  $encounter  an intake with no case: its
+     *                                           patient_id, his_transaction_id and HIS labels (IntakeAssessmentService)
+     */
+    public function create(AssessmentDto $dto, array $encounter = []): Assessment
     {
-        $case = CaseModel::with(['patient.familyMembers'])->findOrFail($dto->case_id);
-        ($this->ensureWatcherRequirement)($case, 'have an assessment recorded');
+        $case = $dto->case_id === null ? null : CaseModel::with(['patient.familyMembers'])->findOrFail($dto->case_id);
 
-        $data = $dto->toArray();
+        if ($case !== null) {
+            ($this->ensureWatcherRequirement)($case, 'have an assessment recorded');
+        }
+
+        $patient = $case?->patient ?? Patient::findOrFail($encounter['patient_id']);
+
+        $data = array_merge($dto->toArray(), $encounter);
         $expenses = $dto->expenses ?? [];
 
         // Calculate socio-economic metrics against the expense lines being created
@@ -43,7 +53,7 @@ class AssessmentService
         $metrics = $this->calculateClassification->execute(
             totalFamilyIncome: $dto->total_family_income,
             expensesSum: (float) collect($expenses)->sum(fn (array $line) => (float) ($line['amount'] ?? 0)),
-            case: $case,
+            patient: $patient,
         );
 
         $data['net_per_capita_income'] = $metrics['net_per_capita_income'];
@@ -71,7 +81,6 @@ class AssessmentService
     public function update(Assessment $assessment, AssessmentDto $dto): Assessment
     {
         $data = $dto->toArray();
-        $case = $assessment->case()->with(['patient.familyMembers'])->first();
 
         $income = $dto->total_family_income ?? (float) $assessment->total_family_income;
         $expensesSum = (float) $assessment->expenses()->sum('amount');
@@ -79,7 +88,7 @@ class AssessmentService
         $metrics = $this->calculateClassification->execute(
             totalFamilyIncome: $income,
             expensesSum: $expensesSum,
-            case: $case,
+            patient: $this->householdOf($assessment),
         );
 
         $data['net_per_capita_income'] = $metrics['net_per_capita_income'];
@@ -108,12 +117,11 @@ class AssessmentService
     public function recalculateClassification(Assessment $assessment): Assessment
     {
         $hadOverride = $assessment->hasOverride();
-        $case = $assessment->case()->with(['patient.familyMembers'])->first();
 
         $metrics = $this->calculateClassification->execute(
             totalFamilyIncome: (float) $assessment->total_family_income,
             expensesSum: (float) $assessment->expenses()->sum('amount'),
-            case: $case,
+            patient: $this->householdOf($assessment),
         );
 
         $data = [
@@ -127,6 +135,12 @@ class AssessmentService
         }
 
         return $this->repository->update($assessment, $data);
+    }
+
+    /** The patient whose household the classification counts. */
+    private function householdOf(Assessment $assessment): ?Patient
+    {
+        return $assessment->patient ?? $assessment->case?->patient;
     }
 
     public function createReassessment(CaseModel $case, AssessmentDto $dto, string $reason): Assessment
