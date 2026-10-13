@@ -121,8 +121,17 @@ export interface ApiPatientUisInfo {
   assessment: import("@/features/patients/types/api.types").ApiAssessment | null
 }
 
+export interface ApiPatientUisEncounter {
+  transaction_id: number | null
+  transaction_type: string | null
+  date: string | null
+}
+
 export interface ApiPatientUisRow {
-  case: ApiPatientUisCase
+  encounter: ApiPatientUisEncounter
+  /** null for an intake taken before any case was opened. */
+  case: ApiPatientUisCase | null
+  guarantees: { count: number; total: number | string }
   uis: ApiPatientUisInfo
 }
 

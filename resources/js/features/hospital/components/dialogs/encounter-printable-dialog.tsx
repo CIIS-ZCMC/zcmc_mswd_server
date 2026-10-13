@@ -27,6 +27,9 @@ import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import { AcknowledgementSlipDialog } from "@/features/guarantees"
 import { CityMayorSlipDialog } from "./city-mayor-slip-dialog"
 import { IndigencyCertificateDialog } from "./indigency-certificate-dialog"
+import { usePatientUis } from "@/features/cases/hooks/use-uis-prints"
+import { usePermission } from "@/features/auth/hooks/use-permission"
+import { NewIntakeAssessmentDialog } from "@/features/cases/components/dialogs/new-intake-assessment-dialog"
 import { ApiError } from "@/lib/api-client"
 import { openPdfInNewTab } from "@/lib/open-pdf"
 
@@ -38,28 +41,24 @@ interface EncounterPrintableDialogProps {
   type: PrintableType
   encounter: HospitalEncounter | null
   patient: PatientRecord
+  /** The case whose assessment prefills the indigency classification. */
   caseId?: number | null
-  caseCode?: string | null
-  onOpenCaseNeeded?: () => void
 }
 
 export const EncounterPrintableDialog: React.FC<
   EncounterPrintableDialogProps
-> = ({
-  open,
-  onOpenChange,
-  type,
-  encounter,
-  patient,
-  caseId,
-  caseCode,
-  onOpenCaseNeeded,
-}) => {
+> = ({ open, onOpenChange, type, encounter, patient, caseId }) => {
   const [remarks, setRemarks] = useState<string>("")
   const [isGenerating, setIsGenerating] = useState<boolean>(false)
   const [error, setError] = useState<string | null>(null)
   // The case has no intake assessment yet (409): offer that case's blank form.
   const [offerBlank, setOfferBlank] = useState(false)
+  const [isNewIntakeOpen, setIsNewIntakeOpen] = useState(false)
+  const canAssess = usePermission("cases.create")
+  // The encounter's own intake, with or without a case (docs/INTAKE_ASSESSMENT_PLAN.md).
+  const { data: uisRows = [] } = usePatientUis(
+    open && type === "uis" ? patient.id : null
+  )
 
   useEffect(() => {
     if (open) {
@@ -69,6 +68,13 @@ export const EncounterPrintableDialog: React.FC<
   }, [open, type])
 
   if (!encounter) return null
+
+  // This encounter's UIS row: its intake and/or its case.
+  const encounterRow = uisRows.find(
+    (row) => String(row.encounter.transactionId) === String(encounter.id)
+  )
+  const intakeId = encounterRow?.uis.assessmentId ?? null
+  const uisCaseId = encounterRow?.case?.id ?? null
 
   // The MAIFIP slip prints from a guarantee on this encounter, so it has its own
   // dialog (guarantee picker, times) — see docs/ACKNOWLEDGEMENT_SLIP_PLAN.md.
@@ -119,10 +125,16 @@ export const EncounterPrintableDialog: React.FC<
           subtitle: "Official MSWD Unified Intake Sheet assessment form",
           icon: FileText,
           badgeColor: "bg-primary/15 text-primary border-primary/30",
-          notice: caseId
-            ? `Generates the official populated intake assessment for Case ${caseCode || `#${caseId}`}.`
-            : "No social case is linked to this encounter yet. The UIS prints from a case — open a case first.",
-          pdfPath: caseId ? `/cases/${caseId}/uis/pdf` : null,
+          notice: intakeId
+            ? "Generates the intake assessment of this encounter."
+            : uisCaseId
+              ? `Case ${encounterRow?.case?.caseCode ?? `#${uisCaseId}`} has no intake assessment yet; you can print its blank form.`
+              : "This encounter has no intake assessment yet. Take one first; no case is needed.",
+          pdfPath: intakeId
+            ? `/assessments/${intakeId}/uis/pdf`
+            : uisCaseId
+              ? `/cases/${uisCaseId}/uis/pdf`
+              : null,
         }
     }
   }
@@ -235,8 +247,8 @@ export const EncounterPrintableDialog: React.FC<
             </Alert>
           )}
 
-          {/* Case Unlinked Notice for UIS */}
-          {type === "uis" && !caseId && onOpenCaseNeeded && (
+          {/* No intake on this encounter yet: take one (no case needed) */}
+          {type === "uis" && !intakeId && canAssess && (
             <div className="flex items-center justify-between gap-3 rounded-lg border border-amber-500/30 bg-amber-500/10 p-3">
               <div className="text-xs text-amber-900 dark:text-amber-200">
                 Want to populate the patient assessment on this form?
@@ -245,14 +257,11 @@ export const EncounterPrintableDialog: React.FC<
                 type="button"
                 size="sm"
                 variant="default"
-                onClick={() => {
-                  onOpenChange(false)
-                  onOpenCaseNeeded()
-                }}
+                onClick={() => setIsNewIntakeOpen(true)}
                 className="h-7 shrink-0 gap-1 text-xs font-bold"
               >
                 <Sparkles className="size-3" />
-                Open Case
+                Take Intake Assessment
               </Button>
             </div>
           )}
@@ -302,6 +311,12 @@ export const EncounterPrintableDialog: React.FC<
           </Button>
         </DialogFooter>
       </DialogContent>
+      <NewIntakeAssessmentDialog
+        open={isNewIntakeOpen}
+        onOpenChange={setIsNewIntakeOpen}
+        patient={patient}
+        initialTransactionId={encounter.id}
+      />
     </Dialog>
   )
 }

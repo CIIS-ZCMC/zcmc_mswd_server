@@ -53,6 +53,7 @@ import { UisPrintHistoryTable } from "@/features/cases/components/uis-print-hist
 import { PrintUisDialog } from "@/features/cases/components/dialogs/print-uis-dialog"
 import { IntakeAssessmentDialog } from "@/features/cases/components/dialogs/intake-assessment-dialog"
 import { UisPdfPreviewDialog } from "@/features/cases/components/dialogs/uis-pdf-preview-dialog"
+import { CaseGuarantorsTab } from "@/features/cases/components/case-guarantors-tab"
 import type { PatientRecord } from "@/features/patients/types/patient.types"
 import type { PatientUisRow } from "@/features/cases/types/uis.types"
 import { ApiError } from "@/lib/api-client"
@@ -73,6 +74,7 @@ import {
   ShieldAlert,
   User,
   Users,
+  Wallet,
 } from "lucide-react"
 
 interface UisSheetDialogProps {
@@ -103,15 +105,21 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
-  const caseId = row?.case.id ?? 0
+  const caseId = row?.case?.id ?? 0
   const deleteAssessmentMutation = useDeleteAssessment(caseId)
   const { data: modeOptions = [] } = useModeOfAssistanceOptions(false)
   const { data: fundSourceOptions = [] } = useFundSourceOptions(false)
 
   if (!row) return null
 
-  const { case: caseData, uis } = row
+  // An intake taken before any case was opened has no case (caseData null).
+  const { case: caseData, encounter, guarantees, uis } = row
   const assessment = uis.assessment
+  const uisLabel =
+    caseData?.caseCode ??
+    (encounter.transactionId
+      ? `Encounter #${encounter.transactionId}`
+      : "Intake Assessment")
   const hasAssessment = uis.hasAssessment && Boolean(assessment)
 
   const handleDeleteAssessment = async () => {
@@ -148,8 +156,9 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
   const informantEffectiveContact =
     assessment?.informantContact || patient.contactNo || "—"
 
-  const dateStr = caseData.dateOpened
-    ? new Date(caseData.dateOpened).toLocaleDateString(undefined, {
+  const encounterDate = encounter.date ?? caseData?.dateOpened ?? null
+  const dateStr = encounterDate
+    ? new Date(encounterDate).toLocaleDateString(undefined, {
         month: "short",
         day: "numeric",
         year: "numeric",
@@ -224,12 +233,22 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
           <div className="space-y-1">
             <div className="flex flex-wrap items-center gap-2">
               <DialogTitle className="font-mono text-lg font-bold text-foreground">
-                {caseData.caseCode}
+                {uisLabel}
               </DialogTitle>
               <span className="text-muted-foreground">·</span>
               <span className="text-xs font-semibold text-foreground/90">
-                {formatTransactionType(caseData.transactionType)}
+                {formatTransactionType(
+                  encounter.transactionType ?? caseData?.transactionType
+                )}
               </span>
+              {!caseData && (
+                <Badge
+                  variant="outline"
+                  className="text-xs font-semibold text-muted-foreground"
+                >
+                  No case
+                </Badge>
+              )}
               <span className="text-muted-foreground">·</span>
               <span className="text-xs text-muted-foreground">{dateStr}</span>
 
@@ -274,8 +293,8 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
               <div className="flex items-center gap-2 font-medium text-primary">
                 <Info className="size-4 shrink-0" />
                 <span>
-                  No intake assessment has been conducted yet for this case
-                  episode.
+                  No intake assessment has been conducted yet for this
+                  encounter.
                 </span>
               </div>
               {canCreate && (
@@ -321,9 +340,9 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
           onValueChange={setActiveSubTab}
           className="flex min-h-0 flex-1 flex-col overflow-hidden"
         >
-          {/* Responsive 4-Column Tabs Bar */}
+          {/* Responsive 5-Column Tabs Bar */}
           <div className="shrink-0 border-b border-border/50 bg-muted/20 px-4 py-2.5 sm:px-5">
-            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/70 p-1 sm:grid-cols-4">
+            <TabsList className="grid h-auto w-full grid-cols-2 gap-1 rounded-xl bg-muted/70 p-1 sm:grid-cols-5">
               <TabsTrigger
                 value="identifying-family"
                 className="cursor-pointer gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-all data-[state=active]:bg-background data-[state=active]:shadow-xs"
@@ -358,12 +377,30 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
               </TabsTrigger>
 
               <TabsTrigger
+                value="guarantors"
+                className="cursor-pointer gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-all data-[state=active]:bg-background data-[state=active]:shadow-xs"
+              >
+                <Wallet className="size-3.5 shrink-0 text-primary" />
+                <span className="truncate">
+                  4. Guarantors
+                  {guarantees.count > 0 && (
+                    <Badge
+                      variant="secondary"
+                      className="ml-1 px-1 py-0 font-mono text-[10px]"
+                    >
+                      {guarantees.count}
+                    </Badge>
+                  )}
+                </span>
+              </TabsTrigger>
+
+              <TabsTrigger
                 value="print-history"
                 className="cursor-pointer gap-1.5 rounded-lg py-1.5 text-xs font-bold transition-all data-[state=active]:bg-background data-[state=active]:shadow-xs"
               >
                 <Printer className="size-3.5 shrink-0 text-primary" />
                 <span className="truncate">
-                  4. Prints
+                  5. Prints
                   {uis.printCount > 0 && (
                     <Badge
                       variant="secondary"
@@ -965,13 +1002,28 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
               )}
             </TabsContent>
 
-            {/* Sub-Tab 4: Print History */}
+            {/* Sub-Tab 4: Guarantors on the encounter, shared with its case */}
+            <TabsContent value="guarantors" className="mt-0 space-y-4">
+              {encounter.transactionId ? (
+                <CaseGuarantorsTab
+                  patientId={patient.id}
+                  transactionId={encounter.transactionId}
+                  caseCode={caseData?.caseCode}
+                />
+              ) : (
+                <div className="rounded-lg border border-dashed p-6 text-center text-xs text-muted-foreground">
+                  This case has no hospital encounter, so it has no guarantors.
+                </div>
+              )}
+            </TabsContent>
+
+            {/* Sub-Tab 5: Print History */}
             <TabsContent value="print-history" className="mt-0 space-y-4">
               <Card className="border shadow-2xs">
                 <CardHeader className="flex flex-row items-center justify-between border-b bg-muted/30 p-3.5">
                   <CardTitle className="flex items-center gap-2 text-xs font-bold sm:text-sm">
                     <Printer className="size-4 text-primary" />
-                    Print History for {caseData.caseCode}
+                    Print History for {uisLabel}
                   </CardTitle>
                   <Button
                     variant="outline"
@@ -984,7 +1036,10 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                   </Button>
                 </CardHeader>
                 <CardContent className="p-0">
-                  <UisPrintHistoryTable caseId={caseData.id} />
+                  <UisPrintHistoryTable
+                    assessmentId={uis.assessmentId}
+                    caseId={caseData?.id}
+                  />
                 </CardContent>
               </Card>
             </TabsContent>
@@ -1088,21 +1143,23 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
         <IntakeAssessmentDialog
           open={isIntakeDialogOpen}
           onOpenChange={setIsIntakeDialogOpen}
-          caseId={caseData.id}
-          caseCode={caseData.caseCode}
+          caseId={caseData?.id}
+          patientId={patient.id}
+          caseCode={caseData?.caseCode}
           patientName={patient.fullName}
           patientAddress={patient.address}
           patientContact={patient.contactNo}
           patientMonthlyIncome={patient.monthlyIncome}
           existingAssessment={assessment}
-          transactionId={caseData.transactionId}
+          transactionId={encounter.transactionId ?? caseData?.transactionId}
         />
 
         <PrintUisDialog
           open={isPrintDialogOpen}
           onOpenChange={setIsPrintDialogOpen}
-          caseId={caseData.id}
-          caseCode={caseData.caseCode}
+          assessmentId={uis.assessmentId}
+          caseId={caseData?.id}
+          caseCode={caseData?.caseCode}
           patientName={patient.fullName}
           onAssessNeeded={() => {
             setIsPrintDialogOpen(false)
@@ -1113,8 +1170,9 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
         <UisPdfPreviewDialog
           open={isPreviewDialogOpen}
           onOpenChange={setIsPreviewDialogOpen}
-          caseId={caseData.id}
-          caseCode={caseData.caseCode}
+          assessmentId={uis.assessmentId}
+          caseId={caseData?.id}
+          caseCode={caseData?.caseCode}
         />
 
         {/* Delete Confirmation Alert Dialog */}
@@ -1130,10 +1188,10 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
               </AlertDialogTitle>
               <AlertDialogDescription className="space-y-2">
                 <p>
-                  Are you sure you want to delete the intake assessment for case{" "}
-                  <strong>{caseData.caseCode}</strong>? This action will
-                  permanently remove all assessed economic data, problem
-                  details, and MSWD classification for this encounter.
+                  Are you sure you want to delete the intake assessment for{" "}
+                  <strong>{uisLabel}</strong>? This action will permanently
+                  remove all assessed economic data, problem details, and MSWD
+                  classification for this encounter.
                 </p>
                 {deleteError && (
                   <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">

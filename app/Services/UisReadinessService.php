@@ -6,25 +6,52 @@ use App\Models\Assessment;
 use App\Models\CaseModel;
 
 /**
- * Tells a client whether a case's Unified Intake Sheet is ready to print, so it
- * can offer "Assess" or "Print". Read-only: the sheet itself is rendered by
+ * Tells a client whether an Unified Intake Sheet is ready to print, so it can
+ * offer "Assess" or "Print". Read-only: the sheet itself is rendered by
  * UnifiedIntakeSheetPdfService.
  */
 class UisReadinessService
 {
-    public function __construct(protected UnifiedIntakeSheetPdfService $sheet) {}
+    public function __construct(
+        protected UnifiedIntakeSheetPdfService $sheet,
+        protected UisPrintLogService $prints,
+    ) {}
 
     /**
      * @return array<string, mixed>
      */
     public function summary(CaseModel $case): array
     {
+        $assessment = $this->sheet->intakeAssessment($case);
+        $prints = $this->prints->forEncounter($case->patient_id, $case->transaction_id, $case->id);
+
         return $this->build(
-            assessment: $this->sheet->intakeAssessment($case),
+            assessment: $assessment,
             hasFamily: (bool) $case->patient?->familyMembers()->exists(),
-            hasAssistance: $case->patientAssistances()->exists(),
-            printCount: $case->uisPrintLogs()->count(),
-            lastPrintedAt: $case->uisPrintLogs()->max('printed_at'),
+            hasAssistance: $case->patient !== null
+                && $this->sheet->assistanceLines($case->patient, $case->transaction_id, $case)->isNotEmpty(),
+            printCount: (clone $prints)->count(),
+            lastPrintedAt: $prints->max('printed_at'),
+        );
+    }
+
+    /**
+     * The same summary for an intake assessment, with or without a case.
+     *
+     * @return array<string, mixed>
+     */
+    public function summaryForAssessment(Assessment $assessment): array
+    {
+        $patient = $assessment->patient;
+        $prints = $this->prints->forEncounter($assessment->patient_id, $assessment->his_transaction_id, $assessment->case_id);
+
+        return $this->build(
+            assessment: $assessment,
+            hasFamily: (bool) $patient?->familyMembers()->exists(),
+            hasAssistance: $patient !== null
+                && $this->sheet->assistanceLines($patient, $assessment->his_transaction_id, $assessment->case)->isNotEmpty(),
+            printCount: (clone $prints)->count(),
+            lastPrintedAt: $prints->max('printed_at'),
         );
     }
 

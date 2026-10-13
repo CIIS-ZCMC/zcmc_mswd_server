@@ -50,7 +50,23 @@ export interface PatientUisInfo {
   assessment: Assessment | null
 }
 
+/** The HIS encounter an intake (or an unassessed case) is for. */
+export interface PatientUisEncounter {
+  transactionId: number | null
+  transactionType: string | null
+  date: string | null
+}
+
+/**
+ * One UIS of the patient: an Intake Assessment of an encounter, with or
+ * without a case, or a case with no intake yet. See docs/INTAKE_ASSESSMENT_PLAN.md.
+ */
 export interface PatientUisRow {
-  case: PatientUisCase
+  /** Stable row id: the assessment, else the case. */
+  key: string
+  encounter: PatientUisEncounter
+  case: PatientUisCase | null
+  /** The guarantors recorded on the encounter. */
+  guarantees: { count: number; total: number }
   uis: PatientUisInfo
 }

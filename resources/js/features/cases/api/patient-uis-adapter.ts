@@ -13,13 +13,27 @@ function slotAmount(value: number | string | null | undefined): number | null {
 
 export function adaptPatientUisRow(api: ApiPatientUisRow): PatientUisRow {
   return {
-    case: {
-      id: api.case.id,
-      caseCode: api.case.case_code,
-      status: api.case.status,
-      transactionId: api.case.transaction_id,
-      transactionType: api.case.transaction_type,
-      dateOpened: api.case.date_opened,
+    key: api.uis.assessment_id
+      ? `assessment-${api.uis.assessment_id}`
+      : `case-${api.case?.id}`,
+    encounter: {
+      transactionId: api.encounter?.transaction_id ?? null,
+      transactionType: api.encounter?.transaction_type ?? null,
+      date: api.encounter?.date ?? null,
+    },
+    case: api.case
+      ? {
+          id: api.case.id,
+          caseCode: api.case.case_code,
+          status: api.case.status,
+          transactionId: api.case.transaction_id,
+          transactionType: api.case.transaction_type,
+          dateOpened: api.case.date_opened,
+        }
+      : null,
+    guarantees: {
+      count: Number(api.guarantees?.count ?? 0),
+      total: Number(api.guarantees?.total ?? 0),
     },
     uis: {
       hasAssessment: Boolean(api.uis.has_assessment),

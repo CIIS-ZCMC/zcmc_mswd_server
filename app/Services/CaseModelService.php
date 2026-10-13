@@ -28,6 +28,7 @@ class CaseModelService
         protected CaseModelRepositoryInterface $repository,
         protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
         protected PatientTransactionService $transactions,
+        protected IntakeAssessmentService $intakes,
     ) {}
 
     public function list(?ListQuery $query = null): LengthAwarePaginator
@@ -98,6 +99,9 @@ class CaseModelService
 
             /** @var CaseModel $case */
             $case = $this->repository->create($attributes);
+
+            // An intake already taken on this encounter becomes the case's.
+            $this->intakes->linkCase($case);
 
             $this->recordActivity($case, $worker, 'case_opened', "Case {$case->case_code} opened");
 

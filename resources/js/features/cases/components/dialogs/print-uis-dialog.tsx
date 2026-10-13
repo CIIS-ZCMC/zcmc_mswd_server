@@ -14,11 +14,15 @@ import { Textarea } from "@/components/ui/textarea"
 import { Badge } from "@/components/ui/badge"
 import { AlertCircle, ExternalLink, FileText, Loader2, Printer, Sparkles } from "lucide-react"
 import { ApiError } from "@/lib/api-client"
-import { useCaseUisReadiness, usePrintCaseUis } from "../../hooks/use-uis-prints"
+import { usePrintUis, useUisReadiness } from "../../hooks/use-uis-prints"
+import type { UisTarget } from "../../api/uis-print-api"
 import { MISSING_SECTION_LABELS } from "../../lib/uis-labels"
 
 interface PrintUisDialogProps {
-  caseId: number | string
+  /** A case's intake; ignored when `assessmentId` is given. */
+  caseId?: number | string | null
+  /** An intake assessment, with or without a case. */
+  assessmentId?: number | null
   caseCode?: string
   patientName?: string
   open: boolean
@@ -28,6 +32,7 @@ interface PrintUisDialogProps {
 
 export const PrintUisDialog: React.FC<PrintUisDialogProps> = ({
   caseId,
+  assessmentId,
   caseCode,
   patientName,
   open,
@@ -40,8 +45,17 @@ export const PrintUisDialog: React.FC<PrintUisDialogProps> = ({
   const [isNoAssessmentError, setIsNoAssessmentError] = useState<boolean>(false)
   const [activeAction, setActiveAction] = useState<"print" | "preview" | "blank" | null>(null)
 
-  const { data: readiness, isLoading: isReadinessLoading } = useCaseUisReadiness(caseId)
-  const printMutation = usePrintCaseUis(caseId, caseCode)
+  const target: UisTarget | null = assessmentId
+    ? { assessmentId }
+    : caseId
+      ? { caseId }
+      : null
+  const { data: readiness, isLoading: isReadinessLoading } =
+    useUisReadiness(target)
+  const printMutation = usePrintUis(
+    target,
+    caseCode ? `UIS-${caseCode}.pdf` : undefined
+  )
 
   const handleAction = async (action: "print" | "preview" | "blank") => {
     setError("")

@@ -35,7 +35,7 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 - `auth`: session login, auth state, permission checks (`usePermission`, `useHasRole`).
 - `patients`: registry list, master-detail view, 11-tab patient profile.
 - `socioeconomic`: itemized living expenses and family income.
-- `cases`: caseload, episodes, progress notes, signoff, assessments.
+- `cases`: caseload, episodes, progress notes, signoff, assessments. The Intake Assessment (UIS) belongs to a patient's HIS encounter with an optional case (`POST /patients/{patient}/intake-assessments`, `/assessments/{id}/uis*`, `NewIntakeAssessmentDialog`); see `docs/INTAKE_ASSESSMENT_PLAN.md`.
 - `hospital`: encounters, admission details, HIS patient search & 1-click import (`POST /hospital-patients/{id}/import`), hospital integration.
 - `guarantees`: MSWD patient guarantors per HIS encounter with their assistance breakdown; prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`).
 - Encounter printables (`hospital/components/dialogs/`): the City Mayor Acknowledgement Slip, ZCMC-F-MSS-04 (`GET /patient-transactions/{id}/city-mayor-slip/pdf`, `CityMayorSlipDialog`); the Certificate of Eligibility (Indigency), Annex A (`GET /patient-transactions/{id}/indigency-certificate/pdf`, `IndigencyCertificateDialog`; signed by the Library `mswd_head` signatory).

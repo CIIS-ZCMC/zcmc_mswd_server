@@ -6,6 +6,7 @@ use App\Http\Controllers\AmendSocialCaseController;
 use App\Http\Controllers\ApproveAssistanceController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssessmentExpenseController;
+use App\Http\Controllers\AssessmentUisController;
 use App\Http\Controllers\AssessPatientTransactionController;
 use App\Http\Controllers\AssignCaseController;
 use App\Http\Controllers\AssistanceHistoryController;
@@ -46,6 +47,7 @@ use App\Http\Controllers\HospitalPatientController;
 use App\Http\Controllers\HospitalPlanController;
 use App\Http\Controllers\ImportHospitalPatientController;
 use App\Http\Controllers\IndigencyCertificatePdfController;
+use App\Http\Controllers\IntakeAssessmentController;
 use App\Http\Controllers\InterventionController;
 use App\Http\Controllers\InterventionTypeController;
 use App\Http\Controllers\IssueWatcherPassController;
@@ -282,6 +284,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('cases/{case}/uis', CaseUisReadinessController::class);
     Route::get('cases/{case}/uis/pdf', CaseIntakeSheetPdfController::class);
     Route::get('cases/{case}/uis/prints', CaseUisPrintHistoryController::class);
+
+    // Intake Assessment (UIS) for a patient's HIS encounter, with or without a case
+    // (docs/INTAKE_ASSESSMENT_PLAN.md). Written under cases.create, like a case's
+    // assessment; its sheet routes need intake.view (on the controller).
+    Route::post('patients/{patient}/intake-assessments', [IntakeAssessmentController::class, 'store']);
+    Route::get('assessments/{assessment}/uis', [AssessmentUisController::class, 'readiness']);
+    Route::get('assessments/{assessment}/uis/pdf', [AssessmentUisController::class, 'pdf']);
+    Route::get('assessments/{assessment}/uis/prints', [AssessmentUisController::class, 'prints']);
 
     Route::middleware('permission:cases.update')->group(function () {
         Route::post('cases/{case}/assign', AssignCaseController::class);
