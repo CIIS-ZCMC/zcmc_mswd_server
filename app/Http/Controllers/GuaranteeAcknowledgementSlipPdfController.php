@@ -40,6 +40,8 @@ class GuaranteeAcknowledgementSlipPdfController extends Controller implements Ha
             $request->user(),
             $request->validated('time_started'),
             $request->validated('time_ended'),
+            $request->validated('fund') ?? 'doh_maifip',
+            $request->validated('fund_other'),
         );
 
         if (! $request->boolean('preview')) {

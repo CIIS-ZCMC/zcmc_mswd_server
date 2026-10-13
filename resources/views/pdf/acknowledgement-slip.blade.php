@@ -127,11 +127,20 @@
         </tr>
     </table>
 
-    {{-- The form is the DOH-MAIFIP form: that box is always ticked. --}}
+    {{-- The fund selection box --}}
+    @php
+        $selectedFund = $fund ?? 'doh_maifip';
+    @endphp
     <div class="funds">
-        {!! $box(true, 'DOH-MAIFIP') !!}
-        {!! $box(false, 'OPAV-SOCIO CIVIC FUND') !!}
-        <div class="opt"><span class="cb">&nbsp;</span> <b>OTHERS:</b> <span class="others">&nbsp;</span></div>
+        {!! $box($selectedFund === 'doh_maifip', 'DOH-MAIFIP') !!}
+        {!! $box($selectedFund === 'opav_socio_civid_fund', 'OPAV-SOCIO CIVID FUND') !!}
+        <div class="opt">
+            <span class="cb">{!! $selectedFund === 'others' ? '&#10003;' : '&nbsp;' !!}</span>
+            <b>OTHERS:</b>
+            <span class="others" style="display: inline-block; width: 140px; border-bottom: 1px solid #000; text-align: center; font-weight: bold; font-size: 8.5px; vertical-align: bottom;">
+                {{ $selectedFund === 'others' && filled($fundOther ?? null) ? $fundOther : '' }}&nbsp;
+            </span>
+        </div>
     </div>
 
     {{-- Patient (signer) and date, right column. --}}

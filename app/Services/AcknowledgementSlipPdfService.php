@@ -32,6 +32,13 @@ class AcknowledgementSlipPdfService
     /** The approver printed under "Inaprobahan ni". */
     public const APPROVER_ROLE = 'allied_health_chief';
 
+    /** The slip's fund boxes, in the paper form's order: key => printed label. */
+    public const FUNDS = [
+        'doh_maifip' => 'DOH-MAIFIP',
+        'opav_socio_civid_fund' => 'OPAV-SOCIO CIVID FUND',
+        'others' => 'OTHERS',
+    ];
+
     public function __construct(protected PatientTransactionService $transactions) {}
 
     // ---- From an MSWD guarantee ----------------------------------------------------
@@ -41,8 +48,10 @@ class AcknowledgementSlipPdfService
         ?User $printedBy = null,
         ?string $timeStarted = null,
         ?string $timeEnded = null,
+        string $fund = 'doh_maifip',
+        ?string $fundOther = null,
     ): DomPdf {
-        return $this->pdf($this->slip($guarantee, $printedBy, $timeStarted, $timeEnded));
+        return $this->pdf($this->slip($guarantee, $printedBy, $timeStarted, $timeEnded, $fund, $fundOther));
     }
 
     public function filename(PatientGuarantee $guarantee): string
@@ -74,6 +83,8 @@ class AcknowledgementSlipPdfService
         ?User $printedBy = null,
         ?string $timeStarted = null,
         ?string $timeEnded = null,
+        string $fund = 'doh_maifip',
+        ?string $fundOther = null,
     ): array {
         $guarantee->loadMissing(['patient', 'items.assistanceType']);
 
@@ -93,6 +104,8 @@ class AcknowledgementSlipPdfService
             $timeStarted,
             $timeEnded,
             fallbackHospitalNumber: $guarantee->hospital_id,
+            fund: $fund,
+            fundOther: $fundOther,
         );
     }
 
@@ -129,8 +142,10 @@ class AcknowledgementSlipPdfService
         ?string $timeStarted = null,
         ?string $timeEnded = null,
         array $assistantTypeIds = [],
+        string $fund = 'doh_maifip',
+        ?string $fundOther = null,
     ): DomPdf {
-        return $this->pdf($this->slipFromHis($encounter, $entry, $printedBy, $timeStarted, $timeEnded, $assistantTypeIds));
+        return $this->pdf($this->slipFromHis($encounter, $entry, $printedBy, $timeStarted, $timeEnded, $assistantTypeIds, $fund, $fundOther));
     }
 
     public function filenameFromHis(PatientTransaction $encounter, PatientGuarantors $entry): string
@@ -158,6 +173,8 @@ class AcknowledgementSlipPdfService
         ?string $timeStarted = null,
         ?string $timeEnded = null,
         array $assistantTypeIds = [],
+        string $fund = 'doh_maifip',
+        ?string $fundOther = null,
     ): array {
         return $this->fields(
             $this->patientFor($encounter),
@@ -169,6 +186,69 @@ class AcknowledgementSlipPdfService
             $timeStarted,
             $timeEnded,
             fallbackHospitalNumber: $encounter->patient?->patid,
+            fund: $fund,
+            fundOther: $fundOther,
+        );
+    }
+
+    // ---- Direct from Encounter (no guarantee or manual entry) --------------------------
+
+    public function renderFromEncounter(
+        PatientTransaction $encounter,
+        ?User $printedBy = null,
+        ?string $timeStarted = null,
+        ?string $timeEnded = null,
+        ?float $amount = null,
+        array $assistantTypeIds = [],
+        string $fund = 'doh_maifip',
+        ?string $fundOther = null,
+    ): DomPdf {
+        return $this->pdf($this->slipFromEncounter($encounter, $printedBy, $timeStarted, $timeEnded, $amount, $assistantTypeIds, $fund, $fundOther));
+    }
+
+    public function filenameFromEncounter(PatientTransaction $encounter): string
+    {
+        return "ACK-SLIP-{$encounter->patient?->patid}-ENC-{$encounter->getKey()}.pdf";
+    }
+
+    public function recordEncounterPrint(
+        PatientTransaction $encounter,
+        User $user,
+        int $copies = 1,
+        ?string $remarks = null,
+    ): AcknowledgementSlipPrintLog {
+        return $this->log([
+            'patient_id' => $this->registryPatient($encounter)?->id,
+            'his_transaction_id' => $encounter->getKey(),
+        ], $user, $copies, $remarks);
+    }
+
+    /**
+     * @param  list<int>  $assistantTypeIds  the "para sa" types, in the order picked
+     * @return array<string, mixed>
+     */
+    public function slipFromEncounter(
+        PatientTransaction $encounter,
+        ?User $printedBy = null,
+        ?string $timeStarted = null,
+        ?string $timeEnded = null,
+        ?float $amount = null,
+        array $assistantTypeIds = [],
+        string $fund = 'doh_maifip',
+        ?string $fundOther = null,
+    ): array {
+        return $this->fields(
+            $this->patientFor($encounter),
+            now(),
+            $amount,
+            $this->typeNames($assistantTypeIds),
+            $this->encounterDiagnosis($encounter),
+            $printedBy,
+            $timeStarted,
+            $timeEnded,
+            fallbackHospitalNumber: $encounter->patient?->patid,
+            fund: $fund,
+            fundOther: $fundOther,
         );
     }
 
@@ -215,13 +295,15 @@ class AcknowledgementSlipPdfService
     private function fields(
         ?Patient $patient,
         Carbon $date,
-        float $amount,
+        ?float $amount,
         ?string $purpose,
         ?string $diagnosis,
         ?User $printedBy,
         ?string $timeStarted,
         ?string $timeEnded,
         int|string|null $fallbackHospitalNumber = null,
+        string $fund = 'doh_maifip',
+        ?string $fundOther = null,
     ): array {
         $name = collect([$patient?->first_name, $patient?->middle_name, $patient?->last_name, $patient?->extension_name])
             ->filter()->join(' ');
@@ -244,7 +326,7 @@ class AcknowledgementSlipPdfService
             'civilStatus' => mb_strtoupper((string) $patient?->civil_status),
             'address' => mb_strtoupper((string) $address),
             'diagnosis' => mb_strtoupper((string) $diagnosis),
-            'amount' => number_format($amount, 2),
+            'amount' => $amount !== null ? number_format($amount, 2) : '',
             'purpose' => mb_strtoupper((string) $purpose),
             'date' => $date->format('j-M-y'),
             'socialWorker' => $printedBy?->employee_name,
@@ -254,6 +336,8 @@ class AcknowledgementSlipPdfService
             'mswdNumber' => $patient?->mswd_id,
             'timeStarted' => $this->clock($timeStarted),
             'timeEnded' => $this->clock($timeEnded),
+            'fund' => array_key_exists($fund, self::FUNDS) ? $fund : 'doh_maifip',
+            'fundOther' => $fund === 'others' && filled($fundOther) ? mb_strtoupper($fundOther) : null,
         ];
     }
 

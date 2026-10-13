@@ -19,13 +19,19 @@ export function slipPurpose(guarantee: PatientGuarantee): string {
   return [...new Set(names)].join("/").toUpperCase()
 }
 
+export type AcknowledgementSlipFund =
+  "doh_maifip" | "opav_socio_civid_fund" | "others"
+
 export interface AcknowledgementSlipOptions {
   remarks?: string
   timeStarted?: string
   timeEnded?: string
   preview?: boolean
-  /** HIS source only: the "para sa" types (Library ids), in the order picked. */
+  /** HIS / manual source only: the "para sa" types (Library ids), in the order picked. */
   assistantTypeIds?: number[]
+  fund?: AcknowledgementSlipFund
+  fundOther?: string
+  amount?: number
 }
 
 /** Open GET /api/guarantees/{id}/acknowledgement-slip/pdf in a new tab. */
@@ -40,6 +46,8 @@ export function openAcknowledgementSlip(
       time_started: options.timeStarted || undefined,
       time_ended: options.timeEnded || undefined,
       preview: options.preview ? 1 : undefined,
+      fund: options.fund || undefined,
+      fund_other: options.fundOther?.trim() || undefined,
     }
   )
 }
@@ -64,6 +72,34 @@ export function openHisAcknowledgementSlip(
       time_started: options.timeStarted || undefined,
       time_ended: options.timeEnded || undefined,
       preview: options.preview ? 1 : undefined,
+      fund: options.fund || undefined,
+      fund_other: options.fundOther?.trim() || undefined,
+      amount: options.amount != null ? options.amount : undefined,
+    }
+  )
+}
+
+/**
+ * Open GET /api/patient-transactions/{id}/acknowledgement-slip/pdf: the slip directly
+ * from the encounter without a specific ledger entry.
+ */
+export function openEncounterAcknowledgementSlip(
+  transactionId: number | string,
+  options: AcknowledgementSlipOptions = {}
+): Promise<void> {
+  return openPdfInNewTab(
+    `/patient-transactions/${transactionId}/acknowledgement-slip/pdf`,
+    {
+      assistant_type_ids: options.assistantTypeIds?.length
+        ? options.assistantTypeIds.join(",")
+        : undefined,
+      remarks: options.remarks?.trim() || undefined,
+      time_started: options.timeStarted || undefined,
+      time_ended: options.timeEnded || undefined,
+      preview: options.preview ? 1 : undefined,
+      fund: options.fund || undefined,
+      fund_other: options.fundOther?.trim() || undefined,
+      amount: options.amount != null ? options.amount : undefined,
     }
   )
 }

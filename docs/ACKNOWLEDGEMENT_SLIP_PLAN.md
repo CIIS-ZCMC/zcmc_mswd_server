@@ -117,3 +117,14 @@ has not recorded its own guarantee. The user chose to print from the HIS entry d
   - Use the row's Print button → times → Preview, then Print, and check that one log row appears.
   - Print Documents → Acknowledgement Slip from the encounter.
   - A PCSO row shows no Print button.
+
+## Follow-up: fund selection and encounter-only print
+
+- **Fund box:** picked in the dialog: DOH-MAIFIP (the default), OPAV-SOCIO CIVID FUND (spelled as on the paper form),
+  or OTHERS with a specify text.
+  - Sent as `fund` (`AcknowledgementSlipPdfService::FUNDS`) and `fund_other`, and printed only.
+- **No MAIFIP entry:** `GET /api/patient-transactions/{id}/acknowledgement-slip/pdf` no longer answers 422
+  `no_his_maifip`. It prints from the encounter instead, with an optional typed `amount` and "para sa" type.
+  - Blank values keep the line for handwriting.
+  - The print log has no ledger entry.
+  - A typed `amount` also takes this path when a ledger entry exists.

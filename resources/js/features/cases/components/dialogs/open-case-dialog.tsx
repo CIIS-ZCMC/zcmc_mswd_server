@@ -18,13 +18,27 @@ import {
   SelectValue,
 } from "@/components/ui/select"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { AlertCircle, Building2, FileText, FolderPlus, Loader2, Stethoscope } from "lucide-react"
+import {
+  AlertCircle,
+  Building2,
+  FileText,
+  FolderPlus,
+  Loader2,
+  Stethoscope,
+} from "lucide-react"
 import { ApiError } from "@/lib/api-client"
 import { useCaseMutations } from "../../hooks/use-case-mutations"
 import { CARD_COLORS } from "../../lib/case-card-color"
-import type { CaseCardColor, CasePriority, CaseRecord } from "../../types/case.types"
+import type {
+  CaseCardColor,
+  CasePriority,
+  CaseRecord,
+} from "../../types/case.types"
 import { usePatients } from "@/features/patients/hooks/use-patients"
-import { useHospitalEncounter, useHospitalEncounters } from "@/features/hospital/hooks/use-hospital-encounters"
+import {
+  useHospitalEncounter,
+  useHospitalEncounters,
+} from "@/features/hospital/hooks/use-hospital-encounters"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import type { HospitalEncounter } from "@/features/hospital/types"
 
@@ -53,7 +67,9 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
   transactionType: initialTransactionType,
   onCaseOpened,
 }) => {
-  const [selectedPatientId, setSelectedPatientId] = useState<string>(patientId ? String(patientId) : "")
+  const [selectedPatientId, setSelectedPatientId] = useState<string>(
+    patientId ? String(patientId) : ""
+  )
   const [selectedEncounterId, setSelectedEncounterId] = useState<string>(
     initialTransactionId ? String(initialTransactionId) : ""
   )
@@ -71,20 +87,18 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
     return patients.find((p) => String(p.id) === id)
   }, [patients, selectedPatientId, patientId])
 
-  const activeHospitalNumber = hospitalNumber ?? currentPatient?.hospitalId ?? currentPatient?.hospitalNo
+  const activeHospitalNumber =
+    hospitalNumber ?? currentPatient?.hospitalId ?? currentPatient?.hospitalNo
 
   // Load encounters list for active patient
-  const { data: encounters = [], isLoading: isEncountersLoading } = useHospitalEncounters(
-    activeHospitalNumber
-  )
+  const { data: encounters = [], isLoading: isEncountersLoading } =
+    useHospitalEncounters(activeHospitalNumber)
 
   const activeEncounterId = Number(selectedEncounterId || initialTransactionId)
 
   // Load full encounter single detail (with lookups: admissionCaseType, transactionType, serviceType)
-  const { data: detailedEncounter, isLoading: isDetailLoading } = useHospitalEncounter(
-    activeEncounterId,
-    Boolean(activeEncounterId && open)
-  )
+  const { data: detailedEncounter, isLoading: isDetailLoading } =
+    useHospitalEncounter(activeEncounterId, Boolean(activeEncounterId && open))
 
   // Find encounter item from list as fallback
   const listEncounter: HospitalEncounter | undefined = useMemo(() => {
@@ -164,7 +178,9 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
       if (err instanceof ApiError) {
         setError(err.firstValidationMessage ?? err.message)
       } else {
-        setError(err instanceof Error ? err.message : "Failed to open case episode.")
+        setError(
+          err instanceof Error ? err.message : "Failed to open case episode."
+        )
       }
     }
   }
@@ -173,19 +189,21 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent className="sm:max-w-[560px]">
         <DialogHeader className="space-y-1.5">
-          <DialogTitle className="text-lg sm:text-xl font-bold flex items-center gap-2 text-primary">
-            <FolderPlus className="size-5 text-primary shrink-0" />
+          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-primary sm:text-xl">
+            <FolderPlus className="size-5 shrink-0 text-primary" />
             Open Social Case Episode
           </DialogTitle>
-          <DialogDescription className="text-xs sm:text-sm font-medium leading-relaxed">
-            Create a new social case episode attached to a hospital encounter. Admission Case Type and Transaction Type are derived directly from the HIS encounter.
+          <DialogDescription className="text-xs leading-relaxed font-medium sm:text-sm">
+            Create a new social case episode attached to a hospital encounter.
+            Admission Case Type and Transaction Type are derived directly from
+            the HIS encounter.
           </DialogDescription>
         </DialogHeader>
 
         <form onSubmit={handleSubmit} className="space-y-4 py-2">
           {error && (
-            <div className="rounded-lg bg-destructive/10 border border-destructive/30 p-3 flex gap-2.5 items-start text-xs font-semibold text-destructive">
-              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+            <div className="flex items-start gap-2.5 rounded-lg border border-destructive/30 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+              <AlertCircle className="mt-0.5 size-4 shrink-0" />
               <span>{error}</span>
             </div>
           )}
@@ -193,7 +211,7 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
           {/* Patient Selection (if not pre-locked) */}
           {!patientId ? (
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider">
+              <Label className="text-xs font-bold tracking-wider uppercase">
                 Patient <span className="text-destructive">*</span>
               </Label>
               <Select
@@ -203,12 +221,16 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
                   setSelectedEncounterId("")
                 }}
               >
-                <SelectTrigger className="h-10 text-sm font-medium border">
+                <SelectTrigger className="h-10 border text-sm font-medium">
                   <SelectValue placeholder="Select patient" />
                 </SelectTrigger>
                 <SelectContent className="max-h-60">
                   {patients.map((p) => (
-                    <SelectItem key={p.id} value={String(p.id)} className="text-sm">
+                    <SelectItem
+                      key={p.id}
+                      value={String(p.id)}
+                      className="text-sm"
+                    >
                       {p.fullName} (Hosp #{p.hospitalNo} · {p.mswdNo})
                     </SelectItem>
                   ))}
@@ -216,10 +238,14 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
               </Select>
             </div>
           ) : (
-            <div className="p-3 bg-muted/40 rounded-lg border text-xs space-y-1">
-              <span className="font-semibold uppercase tracking-wider text-muted-foreground">Patient:</span>
+            <div className="space-y-1 rounded-lg border bg-muted/40 p-3 text-xs">
+              <span className="font-semibold tracking-wider text-muted-foreground uppercase">
+                Patient:
+              </span>
               <div className="text-sm font-bold text-foreground">
-                {patientName ?? currentPatient?.fullName ?? `Patient #${patientId}`}
+                {patientName ??
+                  currentPatient?.fullName ??
+                  `Patient #${patientId}`}
                 {activeHospitalNumber ? ` (Hosp #${activeHospitalNumber})` : ""}
               </div>
             </div>
@@ -227,42 +253,77 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
 
           {/* Encounter Selection / Display */}
           {initialTransactionId ? (
-            <div className="p-3 bg-primary/5 rounded-lg border border-primary/20 text-xs space-y-1">
-              <span className="font-semibold uppercase tracking-wider text-primary">Attached Encounter:</span>
-              <div className="text-sm font-bold text-foreground flex items-center gap-2">
-                <Building2 className="size-4 text-primary shrink-0" />
-                Encounter #{initialTransactionId} {derivedTransactionType ? `· ${formatTransactionType(derivedTransactionType)}` : ""}
+            <div className="space-y-1 rounded-lg border border-primary/20 bg-primary/5 p-3 text-xs">
+              <span className="font-semibold tracking-wider text-primary uppercase">
+                Attached Encounter:
+              </span>
+              <div className="flex items-center gap-2 text-sm font-bold text-foreground">
+                <Building2 className="size-4 shrink-0 text-primary" />
+                {detailedEncounter?.registrationDate
+                  ? `${detailedEncounter.registrationDate.slice(0, 10)} · `
+                  : ""}
+                {derivedTransactionType
+                  ? formatTransactionType(derivedTransactionType)
+                  : `Encounter #${initialTransactionId}`}
               </div>
             </div>
           ) : (
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider">
+              <Label className="text-xs font-bold tracking-wider uppercase">
                 Hospital Encounter <span className="text-destructive">*</span>
               </Label>
               {isEncountersLoading ? (
-                <div className="flex items-center gap-2 text-xs font-medium text-muted-foreground p-2.5 bg-muted/30 rounded border">
-                  <Loader2 className="size-3.5 animate-spin" /> Loading hospital encounters…
+                <div className="flex items-center gap-2 rounded border bg-muted/30 p-2.5 text-xs font-medium text-muted-foreground">
+                  <Loader2 className="size-3.5 animate-spin" /> Loading hospital
+                  encounters…
                 </div>
               ) : encounters.length === 0 ? (
-                <Alert className="border p-3 text-xs bg-amber-500/10 border-amber-500/30 text-amber-900 dark:text-amber-200">
+                <Alert className="border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-900 dark:text-amber-200">
                   <AlertCircle className="size-4 text-amber-600 dark:text-amber-400" />
-                  <AlertTitle className="text-xs font-bold">No Hospital Encounters Found</AlertTitle>
+                  <AlertTitle className="text-xs font-bold">
+                    No Hospital Encounters Found
+                  </AlertTitle>
                   <AlertDescription className="text-xs">
-                    This patient has no HIS encounters on file. Cases must be opened against a hospital encounter.
+                    This patient has no HIS encounters on file. Cases must be
+                    opened against a hospital encounter.
                   </AlertDescription>
                 </Alert>
               ) : (
-                <Select value={selectedEncounterId} onValueChange={(val) => setSelectedEncounterId(val || "")}>
-                  <SelectTrigger className="h-10 text-sm font-medium border">
-                    <SelectValue placeholder="Select HIS encounter" />
+                <Select
+                  value={selectedEncounterId}
+                  onValueChange={(val) => setSelectedEncounterId(val || "")}
+                >
+                  <SelectTrigger className="h-10 border text-sm font-medium">
+                    <SelectValue placeholder="Select HIS encounter">
+                      {(value: string | null) => {
+                        if (!value) return "Select HIS encounter"
+                        const enc = encounters.find(
+                          (e) => String(e.id) === value
+                        )
+                        if (!enc) return value
+                        const date = enc.registrationDate
+                          ? enc.registrationDate.slice(0, 10)
+                          : "No date"
+                        return `${date} · ${formatTransactionType(enc.patientTransactionType)}`
+                      }}
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent className="max-h-60">
-                    {encounters.map((enc) => (
-                      <SelectItem key={enc.id} value={String(enc.id)} className="text-sm">
-                        Encounter #{enc.id} · {formatTransactionType(enc.patientTransactionType)} (
-                        {enc.registrationDate ?? "No date"})
-                      </SelectItem>
-                    ))}
+                    {encounters.map((enc) => {
+                      const date = enc.registrationDate
+                        ? enc.registrationDate.slice(0, 10)
+                        : "No date"
+                      return (
+                        <SelectItem
+                          key={enc.id}
+                          value={String(enc.id)}
+                          className="text-sm"
+                        >
+                          {date} ·{" "}
+                          {formatTransactionType(enc.patientTransactionType)}
+                        </SelectItem>
+                      )
+                    })}
                   </SelectContent>
                 </Select>
               )}
@@ -270,10 +331,11 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
           )}
 
           {/* Read-Only Encounter-derived Fields (Admission Case Type & Transaction Type) */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 p-3.5 bg-muted/40 rounded-xl border text-xs">
+          <div className="grid grid-cols-1 gap-3.5 rounded-xl border bg-muted/40 p-3.5 text-xs sm:grid-cols-2">
             <div className="space-y-1">
-              <span className="font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Building2 className="size-3.5 text-primary" /> Admission Case Type:
+              <span className="flex items-center gap-1.5 font-semibold tracking-wider text-muted-foreground uppercase">
+                <Building2 className="size-3.5 text-primary" /> Admission Case
+                Type:
               </span>
               <div className="text-sm font-bold text-foreground">
                 {isDetailLoading ? "Loading…" : derivedAdmissionType}
@@ -281,8 +343,9 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
             </div>
 
             <div className="space-y-1">
-              <span className="font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
-                <Stethoscope className="size-3.5 text-primary" /> Transaction Type:
+              <span className="flex items-center gap-1.5 font-semibold tracking-wider text-muted-foreground uppercase">
+                <Stethoscope className="size-3.5 text-primary" /> Transaction
+                Type:
               </span>
               <div className="text-sm font-bold text-foreground">
                 {isDetailLoading ? "Loading…" : derivedTransactionType}
@@ -290,44 +353,73 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
             </div>
 
             {derivedServiceType && (
-              <div className="space-y-1 sm:col-span-2 pt-1 border-t border-border/50">
-                <span className="font-semibold uppercase tracking-wider text-muted-foreground flex items-center gap-1.5">
+              <div className="space-y-1 border-t border-border/50 pt-1 sm:col-span-2">
+                <span className="flex items-center gap-1.5 font-semibold tracking-wider text-muted-foreground uppercase">
                   <FileText className="size-3.5 text-primary" /> Service Type:
                 </span>
-                <div className="text-sm font-semibold text-foreground">{derivedServiceType}</div>
+                <div className="text-sm font-semibold text-foreground">
+                  {derivedServiceType}
+                </div>
               </div>
             )}
           </div>
 
-
           {/* Worker Input Fields: Priority & Card Color */}
-          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+          <div className="grid grid-cols-1 gap-3.5 sm:grid-cols-2">
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider">Priority Level</Label>
-              <Select value={priorityLevel} onValueChange={(val) => setPriorityLevel((val || "Medium") as CasePriority)}>
-                <SelectTrigger className="h-10 text-sm font-medium border">
+              <Label className="text-xs font-bold tracking-wider uppercase">
+                Priority Level
+              </Label>
+              <Select
+                value={priorityLevel}
+                onValueChange={(val) =>
+                  setPriorityLevel((val || "Medium") as CasePriority)
+                }
+              >
+                <SelectTrigger className="h-10 border text-sm font-medium">
                   <SelectValue placeholder="Priority level" />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="Low" className="text-sm font-medium">Low</SelectItem>
-                  <SelectItem value="Medium" className="text-sm font-medium">Medium</SelectItem>
-                  <SelectItem value="High" className="text-sm font-medium">High</SelectItem>
-                  <SelectItem value="Urgent" className="text-sm font-medium">Urgent</SelectItem>
+                  <SelectItem value="Low" className="text-sm font-medium">
+                    Low
+                  </SelectItem>
+                  <SelectItem value="Medium" className="text-sm font-medium">
+                    Medium
+                  </SelectItem>
+                  <SelectItem value="High" className="text-sm font-medium">
+                    High
+                  </SelectItem>
+                  <SelectItem value="Urgent" className="text-sm font-medium">
+                    Urgent
+                  </SelectItem>
                 </SelectContent>
               </Select>
             </div>
 
             <div className="space-y-1.5">
-              <Label className="text-xs font-bold uppercase tracking-wider">Card Colour</Label>
-              <Select value={cardColor} onValueChange={(val) => setCardColor((val || "white") as CaseCardColor)}>
-                <SelectTrigger className="h-10 text-sm font-medium border">
+              <Label className="text-xs font-bold tracking-wider uppercase">
+                Card Colour
+              </Label>
+              <Select
+                value={cardColor}
+                onValueChange={(val) =>
+                  setCardColor((val || "white") as CaseCardColor)
+                }
+              >
+                <SelectTrigger className="h-10 border text-sm font-medium">
                   <SelectValue placeholder="Select card color" />
                 </SelectTrigger>
                 <SelectContent>
                   {Object.values(CARD_COLORS).map((cfg) => (
-                    <SelectItem key={cfg.color} value={cfg.color} className="text-sm font-medium">
+                    <SelectItem
+                      key={cfg.color}
+                      value={cfg.color}
+                      className="text-sm font-medium"
+                    >
                       <span className="flex items-center gap-2">
-                        <span className={`size-2.5 rounded-full ${cfg.dotClass}`} />
+                        <span
+                          className={`size-2.5 rounded-full ${cfg.dotClass}`}
+                        />
                         {cfg.label}
                       </span>
                     </SelectItem>
@@ -339,7 +431,9 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
 
           {/* Optional Notes */}
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider">Intake Notes</Label>
+            <Label className="text-xs font-bold tracking-wider uppercase">
+              Intake Notes
+            </Label>
             <Input
               placeholder="Optional clinical notes or initial intake observations"
               value={notes}
@@ -348,20 +442,22 @@ export const OpenCaseDialog: React.FC<OpenCaseDialogProps> = ({
             />
           </div>
 
-          <DialogFooter className="gap-2 sm:gap-2 pt-2">
+          <DialogFooter className="gap-2 pt-2 sm:gap-2">
             <Button
               type="button"
               variant="outline"
               onClick={() => onOpenChange(false)}
               disabled={isOpenPending}
-              className="font-bold text-sm h-10 px-4"
+              className="h-10 px-4 text-sm font-bold"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              disabled={isOpenPending || (!selectedEncounterId && !initialTransactionId)}
-              className="font-extrabold text-sm h-10 px-5 shadow-sm transition-all gap-1.5"
+              disabled={
+                isOpenPending || (!selectedEncounterId && !initialTransactionId)
+              }
+              className="h-10 gap-1.5 px-5 text-sm font-extrabold shadow-sm transition-all"
             >
               {isOpenPending && <Loader2 className="size-4 animate-spin" />}
               Open Case Episode
