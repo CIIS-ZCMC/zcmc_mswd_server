@@ -24,6 +24,7 @@ class StoreSignatoryRequest extends FormRequest
         return [
             'name' => ['required', 'string', 'max:255'],
             'title' => ['nullable', 'string', 'max:1000'],
+            'license_no' => ['nullable', 'string', 'max:50'],
             'role' => ['required', 'string', Rule::in(array_keys(Signatory::ROLES))],
             'is_active' => ['sometimes', 'boolean'],
             'sort_order' => ['sometimes', 'integer', 'min:0'],

@@ -17,6 +17,7 @@ class SignatoryResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'title' => $this->title,
+            'license_no' => $this->license_no,
             'role' => $this->role,
             'role_label' => Signatory::ROLES[$this->role] ?? $this->role,
             'is_active' => $this->is_active,

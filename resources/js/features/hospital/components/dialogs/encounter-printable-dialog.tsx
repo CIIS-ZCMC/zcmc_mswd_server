@@ -26,10 +26,11 @@ import type { PatientRecord } from "@/features/patients/types"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import { AcknowledgementSlipDialog } from "@/features/guarantees"
 import { CityMayorSlipDialog } from "./city-mayor-slip-dialog"
+import { IndigencyCertificateDialog } from "./indigency-certificate-dialog"
 import { ApiError } from "@/lib/api-client"
 import { openPdfInNewTab } from "@/lib/open-pdf"
 
-export type PrintableType = "uis" | "maifip" | "cga"
+export type PrintableType = "uis" | "maifip" | "cga" | "indigency"
 
 interface EncounterPrintableDialogProps {
   open: boolean
@@ -91,6 +92,20 @@ export const EncounterPrintableDialog: React.FC<
         onOpenChange={onOpenChange}
         encounter={encounter}
         patient={patient}
+      />
+    )
+  }
+
+  // The Certificate of Eligibility (Indigency) takes its classification and
+  // services in its own dialog — see docs/INDIGENCY_CERTIFICATE_PLAN.md.
+  if (type === "indigency") {
+    return (
+      <IndigencyCertificateDialog
+        open={open}
+        onOpenChange={onOpenChange}
+        encounter={encounter}
+        patient={patient}
+        caseId={caseId}
       />
     )
   }

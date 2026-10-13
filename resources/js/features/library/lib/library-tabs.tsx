@@ -72,6 +72,8 @@ export function getCategoryConfig(
 export const SIGNATORY_ROLES: Record<string, string> = {
   allied_health_chief:
     "Chief of Allied Health Professional Services (approver)",
+  mswd_head:
+    "Head of the Medical Social Work Department (indigency certificate)",
 }
 
 export interface LibraryTabDefinition {

@@ -133,6 +133,7 @@ export function toSignatory(raw: ApiSignatory): Signatory {
     id: raw.id,
     name: raw.name ?? "",
     title: raw.title ?? null,
+    licenseNo: raw.license_no ?? null,
     role: raw.role,
     roleLabel: raw.role_label ?? raw.role,
     isActive: Boolean(raw.is_active),
@@ -146,6 +147,7 @@ export function toApiSaveSignatoryPayload(
   return {
     name: input.name.trim(),
     title: input.title?.trim() || null,
+    license_no: input.licenseNo?.trim() || null,
     role: input.role,
     is_active: input.isActive,
   }

@@ -22,6 +22,8 @@ Medical Social Work Department (MSWD) officers frequently generate official prin
    `CgaSlipPdfService` rows below are superseded.
    - Guarantee / endorsement slip for City Government of Zamboanga assistance.
    - Backend service and Blade template to render patient, transaction, diagnosis, and allocation lines.
+4. **Certificate of Eligibility (Indigency), Annex A**: see `docs/INDIGENCY_CERTIFICATE_PLAN.md`
+   (`GET /api/patient-transactions/{id}/indigency-certificate/pdf`, `IndigencyCertificateDialog`).
 
 ---
 

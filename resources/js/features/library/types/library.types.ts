@@ -156,6 +156,7 @@ export interface ApiSignatory {
   id: number
   name: string
   title: string | null
+  license_no?: string | null
   role: string
   role_label?: string
   is_active: boolean
@@ -169,6 +170,7 @@ export interface Signatory {
   id: number
   name: string
   title: string | null
+  licenseNo: string | null
   role: string
   roleLabel: string
   isActive: boolean
@@ -178,6 +180,7 @@ export interface Signatory {
 export interface ApiSaveSignatoryPayload {
   name: string
   title?: string | null
+  license_no?: string | null
   role: string
   is_active?: boolean
 }
@@ -185,6 +188,7 @@ export interface ApiSaveSignatoryPayload {
 export interface SaveSignatoryInput {
   name: string
   title?: string | null
+  licenseNo?: string | null
   role: string
   isActive?: boolean
 }

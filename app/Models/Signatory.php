@@ -19,11 +19,13 @@ class Signatory extends Model
     /** Printed roles: key => label. */
     public const ROLES = [
         'allied_health_chief' => 'Chief of Allied Health Professional Services (approver)',
+        'mswd_head' => 'Head of the Medical Social Work Department (indigency certificate)',
     ];
 
     protected $fillable = [
         'name',
         'title',
+        'license_no',
         'role',
         'is_active',
         'sort_order',

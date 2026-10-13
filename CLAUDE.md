@@ -38,7 +38,7 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 - `cases`: caseload, episodes, progress notes, signoff, assessments.
 - `hospital`: encounters, admission details, HIS patient search & 1-click import (`POST /hospital-patients/{id}/import`), hospital integration.
 - `guarantees`: MSWD patient guarantors per HIS encounter with their assistance breakdown; prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`).
-- Encounter printables (`hospital/components/dialogs/`): the City Mayor Acknowledgement Slip, ZCMC-F-MSS-04 (`GET /patient-transactions/{id}/city-mayor-slip/pdf`, `CityMayorSlipDialog`).
+- Encounter printables (`hospital/components/dialogs/`): the City Mayor Acknowledgement Slip, ZCMC-F-MSS-04 (`GET /patient-transactions/{id}/city-mayor-slip/pdf`, `CityMayorSlipDialog`); the Certificate of Eligibility (Indigency), Annex A (`GET /patient-transactions/{id}/indigency-certificate/pdf`, `IndigencyCertificateDialog`; signed by the Library `mswd_head` signatory).
 - `dar`: Daily Accomplishment Report manual entries, printable PDF and CSV export (`GET /dar`, `useDarEntries`).
 - `library`: Library settings (guarantors, types of assistance, modes, fund sources, signatories printed on forms).
 - `audit`: system-wide activity logs.

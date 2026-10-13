@@ -24,6 +24,7 @@ import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import type { HospitalEncounter } from "@/features/hospital/types"
 import {
   AlertCircle,
+  BadgeCheck,
   Building2,
   Calendar,
   ChevronDown,
@@ -401,6 +402,13 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                                 >
                                   <Building2 className="size-5 text-primary shrink-0" />
                                   <span>City Mayor Acknowledgement Slip</span>
+                                </DropdownMenuItem>
+                                <DropdownMenuItem
+                                  onClick={() => handleOpenPrint(enc, "indigency")}
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
+                                >
+                                  <BadgeCheck className="size-5 text-primary shrink-0" />
+                                  <span>Certificate of Eligibility (Indigency)</span>
                                 </DropdownMenuItem>
                               </DropdownMenuContent>
                             </DropdownMenu>

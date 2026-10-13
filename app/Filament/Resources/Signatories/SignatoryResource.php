@@ -56,6 +56,9 @@ class SignatoryResource extends Resource
                     ->rows(2)
                     ->maxLength(1000)
                     ->helperText('Printed under the name. Line breaks are kept.'),
+                TextInput::make('license_no')
+                    ->label('License No.')
+                    ->maxLength(50),
                 Select::make('role')
                     ->options(Signatory::ROLES)
                     ->required(),
@@ -89,6 +92,9 @@ class SignatoryResource extends Resource
                     ->sortable(),
                 TextColumn::make('title')
                     ->wrap()
+                    ->placeholder('—'),
+                TextColumn::make('license_no')
+                    ->label('License No.')
                     ->placeholder('—'),
                 TextColumn::make('role')
                     ->formatStateUsing(fn (string $state) => Signatory::ROLES[$state] ?? $state),
