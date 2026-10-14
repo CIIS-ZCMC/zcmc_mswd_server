@@ -190,8 +190,15 @@ swap, and the protective-case exclusion with its `protective_excluded` flag. It 
   - a daily trend
   - CSV and PDF export
 - **Time in from the board:** a button that opens a patient and encounter picker, reusing the registry's HIS search.
-  **Not built.** Patients are timed in from the encounter's Queue & TAT tab only; the board starts, completes and
-  cancels visits.
+  **Done (issue #266, PR #267, after Phase 6):**
+  - The **Time In** button sits on today's board only and needs `queue.manage`. It opens `TimeInDialog`
+    (`features/queue/components/time-in-dialog.tsx`):
+    1. **Patient:** a registry patient, found with `useRegistryQuickSearch` as in the DAR dialog. Patients not in the
+       registry are imported first with "Search or Import Patient".
+    2. **Encounter:** their HIS encounters (`useHospitalEncounters`), active first and newest first. Encounters with an
+       open visit are disabled as "Already in queue".
+    3. **Details:** purpose and remarks, then `useTimeInVisit`.
+  - Checked in the browser: time in, the new Waiting card, "Already in queue", and the button hidden on a past date.
 
 ## Phase 6 — Tests & docs
 

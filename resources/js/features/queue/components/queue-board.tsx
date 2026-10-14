@@ -23,6 +23,7 @@ import {
   CheckCircle2,
   Hourglass,
   Loader2,
+  LogIn,
   Play,
   RefreshCw,
   Search,
@@ -35,6 +36,7 @@ import {
   useStartVisit,
 } from "../hooks/use-queue"
 import { QueueCard } from "./queue-card"
+import { TimeInDialog } from "./time-in-dialog"
 import type { ServiceVisit } from "../types"
 
 function getTodayString(): string {
@@ -49,6 +51,9 @@ export const QueueBoard: React.FC = () => {
   const canManage = usePermission("queue.manage")
   const [selectedDate, setSelectedDate] = useState<string>(getTodayString)
   const [searchQuery, setSearchQuery] = useState("")
+  const [timeInOpen, setTimeInOpen] = useState(false)
+  // Arrival is stamped "now" by the server, so time-in belongs on today's board only.
+  const isToday = selectedDate === getTodayString()
 
   const {
     data: queueData,
@@ -211,6 +216,17 @@ export const QueueBoard: React.FC = () => {
                 className="bg-transparent text-xs font-semibold text-foreground focus:outline-none"
               />
             </div>
+
+            {canManage && isToday && (
+              <Button
+                size="sm"
+                onClick={() => setTimeInOpen(true)}
+                className="h-9 gap-1.5 text-xs font-semibold"
+              >
+                <LogIn className="size-3.5" />
+                Time In
+              </Button>
+            )}
 
             <Button
               size="sm"
@@ -521,6 +537,8 @@ export const QueueBoard: React.FC = () => {
           </form>
         </DialogContent>
       </Dialog>
+
+      <TimeInDialog open={timeInOpen} onOpenChange={setTimeInOpen} />
     </div>
   )
 }
