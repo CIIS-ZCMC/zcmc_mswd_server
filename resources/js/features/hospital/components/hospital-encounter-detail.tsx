@@ -4,6 +4,7 @@ import { Card, CardContent } from "@/components/ui/card"
 import type { HospitalEncounter, HospitalLookup } from "../types/hospital-transaction.types"
 import { Calendar, CreditCard, FileText, Stethoscope } from "lucide-react"
 import { EncounterGuaranteesCard } from "@/features/guarantees"
+import { ServiceVisitPanel } from "@/features/queue"
 
 const PLACEHOLDER = "—"
 
@@ -150,6 +151,14 @@ export const HospitalEncounterDetail: React.FC<HospitalEncounterDetailProps> = (
       {/* MSWD Patient Guarantors */}
       {patientId && (
         <EncounterGuaranteesCard
+          patientId={patientId}
+          transactionId={encounter.id}
+        />
+      )}
+
+      {/* MSWD Service Visit (Queue & Turnaround Time) */}
+      {patientId && (
+        <ServiceVisitPanel
           patientId={patientId}
           transactionId={encounter.id}
         />

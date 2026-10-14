@@ -6,6 +6,7 @@ use App\Http\Controllers\Web\CasesPageController;
 use App\Http\Controllers\Web\DarPageController;
 use App\Http\Controllers\Web\LibraryPageController;
 use App\Http\Controllers\Web\PatientsPageController;
+use App\Http\Controllers\Web\QueuePageController;
 use App\Http\Controllers\Web\ReportsPageController;
 use Illuminate\Support\Facades\Route;
 
@@ -32,9 +33,17 @@ Route::middleware('auth')->group(function () {
         ->middleware('permission:dar.manage')
         ->name('dar.index');
 
+    // Turnaround Time Queue Board
+    Route::get('/queue', [QueuePageController::class, 'index'])
+        ->middleware('permission:queue.manage')
+        ->name('queue.index');
+
     // Reports
     Route::get('/reports', [ReportsPageController::class, 'index'])->name('reports.index');
     Route::get('/reports/social-cases', [ReportsPageController::class, 'socialCases'])->name('reports.social-cases');
+    Route::get('/reports/turnaround', [ReportsPageController::class, 'turnaround'])
+        ->middleware('permission:reports.view')
+        ->name('reports.turnaround');
 
     // Audit Log
     Route::get('/audit', [AuditPageController::class, 'index'])->name('audit.index');

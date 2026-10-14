@@ -33,6 +33,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Skeleton } from "@/components/ui/skeleton"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
+import { ReportsSubnav } from "./reports-subnav"
 import { useReportExport, useSocialCaseReports } from "../hooks/use-social-case-reports"
 import type { SocialCaseReportParams } from "../types/report.types"
 
@@ -96,6 +97,9 @@ export const SocialCaseReportsPage: React.FC = () => {
 
   return (
     <div className="flex h-full flex-col overflow-y-auto bg-background text-foreground transition-colors duration-200">
+      {/* Sub Navigation */}
+      <ReportsSubnav />
+
       {/* Header Banner */}
       <div className="border-b border-border bg-card p-5 sm:p-6 shadow-2xs">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 max-w-7xl mx-auto">

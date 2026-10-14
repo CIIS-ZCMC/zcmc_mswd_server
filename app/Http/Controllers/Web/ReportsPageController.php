@@ -24,4 +24,12 @@ class ReportsPageController extends Controller
     {
         return Inertia::render('Reports/SocialCases');
     }
+
+    /**
+     * Render the turnaround time report view.
+     */
+    public function turnaround(Request $request): Response
+    {
+        return Inertia::render('Reports/Turnaround');
+    }
 }

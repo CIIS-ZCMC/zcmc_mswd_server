@@ -36,8 +36,8 @@ branch (`feat/turnaround-time`) and one PR.
 | 1. Schema, `ServiceVisit` model, `queue.manage` permission | server | — | ☑ done (#253) |
 | 2. Visit API: time in / start / complete / cancel, queue, encounter history | server | 1 | ☑ done (#253) |
 | 3. TAT targets (Library) | server + client | 1 | ☑ done (#255) |
-| 4. Report service, API, CSV/PDF | server | 1, 3 | ☑ done |
-| 5. Client: encounter panel, queue board, report page (and its `/reports/turnaround` web route) | client | 2–4 | ☐ |
+| 4. Report service, API, CSV/PDF | server | 1, 3 | ☑ done (#257) |
+| 5. Client: encounter panel, queue board, report page (and its `/reports/turnaround` web route) | client | 2–4 | ☑ done |
 | 6. Tests & docs | both | all | ☐ |
 
 ## Phase 1 — Schema, model, permission
@@ -218,6 +218,32 @@ swap, and the protective-case exclusion with its `protective_excluded` flag. It 
   - Inactive target handling and null flags on cancelled visits
   - Filament `TurnaroundTargetResource` under Reference Data
 - Added `TurnaroundTargetsPanel` and "TAT Targets" tab in `resources/js/features/library`.
+
+**Done with Phase 5:**
+- **Results:** Lint and Pint clean, TypeScript check clean for all queue and turnaround components, 14 web route tests passing in `QueuePageTest.php`.
+- **Web Routes & Controllers:**
+  - `GET /queue` handled by `QueuePageController@index` rendering `Queue/Index`, gated by `queue.manage`.
+  - `GET /reports/turnaround` handled by `ReportsPageController@turnaround` rendering `Reports/Turnaround`, gated by `reports.view`.
+  - Feature tests in `tests/Feature/QueuePageTest.php` (14 tests, 86 assertions) covering role permissions (`Admin`, `MSS Head`, `Supervisor`, `Case Manager`, `Processor`), unauthorized user 403s, and unauthenticated redirects.
+- **Queue Feature (`resources/js/features/queue/`):**
+  - Types (`queue.types.ts`), adapter (`queue-adapter.ts`), API client (`queue-api.ts`), and React Query hooks (`use-queue.ts` with 30s queue polling and query invalidation).
+  - `ServiceVisitPanel`: Live elapsed timer (SSR-safe), Time In, Start, Complete, Cancel dialogs with validation and feedback, past visit history table with target compliance badges.
+  - `QueueCard`: Interactive cards for Waiting, In Progress, and Served Today columns with real-time timers, overdue styling, and direct action modals.
+  - `QueueBoard`: 3-column live queue board with date navigation, patient search filter, summary metrics, manual refresh, and modal workflows.
+  - Sidebar: Added `Queue` navigation item gated by `queue.manage`.
+- **Encounter Integration:**
+  - `HospitalEncounterDetailDialog`: Added "Queue & TAT" tab with live status pulse badge in tab header and full `ServiceVisitPanel` content.
+  - `HospitalEncounterDetail`: Embedded `ServiceVisitPanel` below `EncounterGuaranteesCard`.
+- **Turnaround Reports Feature (`resources/js/features/reports/`):**
+  - Types (`turnaround-report.types.ts`), API (`turnaround-reports-api.ts`), and hooks (`use-turnaround-reports.ts` with blob downloads for CSV and PDF).
+  - `ReportsSubnav`: Tab bar switching between Social Cases and Turnaround Time reports across `/reports` routes.
+  - `TurnaroundReportsPage`: Date range picker, quick presets, protective case exclusion indicator banner, KPI tiles with compliance percentage bars, benchmarks table, employee breakdown table, daily trend table, and CSV/PDF export buttons.
+- **Review fixes before merge:**
+  - **`queue.manage` gating.** Without it, `ServiceVisitPanel` renders nothing and the encounter dialog hides its
+    "Queue & TAT" tab. `usePatientVisits` takes an `enabled` flag, so neither one fetches visits it can't read; before,
+    a user without the permission got 403s.
+  - **Report payload.** `getTurnaroundReport` unwraps `{ data }`. `apiClient` doesn't unwrap it, so the page had been
+    reading `undefined` fields.
 
 ## Verification
 
