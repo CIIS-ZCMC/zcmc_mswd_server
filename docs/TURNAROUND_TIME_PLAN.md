@@ -35,9 +35,9 @@ branch (`feat/turnaround-time`) and one PR.
 |-------|------|------------|--------|
 | 1. Schema, `ServiceVisit` model, `queue.manage` permission | server | — | ☑ done (#253) |
 | 2. Visit API: time in / start / complete / cancel, queue, encounter history | server | 1 | ☑ done (#253) |
-| 3. TAT targets (Library) | server + client | 1 | ☑ done |
-| 4. Report service, API, CSV/PDF | server | 1, 3 | ☐ |
-| 5. Client: encounter panel, queue board, report page | client | 2–4 | ☐ |
+| 3. TAT targets (Library) | server + client | 1 | ☑ done (#255) |
+| 4. Report service, API, CSV/PDF | server | 1, 3 | ☑ done |
+| 5. Client: encounter panel, queue board, report page (and its `/reports/turnaround` web route) | client | 2–4 | ☐ |
 | 6. Tests & docs | both | all | ☐ |
 
 ## Phase 1 — Schema, model, permission
@@ -150,6 +150,27 @@ swap, and the protective-case exclusion with its `protective_excluded` flag. It 
   - `GET reports/turnaround` (`reports.view`)
   - `GET reports/turnaround/export?format=csv|pdf` (`reports.generate`)
   - the web page `GET /reports/turnaround`
+
+**Done with Phase 4:**
+- **`TurnaroundReportService::summary()`:**
+  - Returns `{ from, to, protective_excluded, targets, completed, cancelled, stages, by_employee, by_day }`.
+  - Each of `stages.{waiting,processing,total}` and every `by_employee` and `by_day` row carries the same block:
+    `{ count, avg, median, p90, max, within_target_pct }`.
+  - Worker and day rows measure the **total** turnaround.
+  - `within_target_pct` is null when the stage's target is inactive.
+- **Counting rules:**
+  - A visit counts on the day it was **completed**; cancelled visits count on the day they were cancelled.
+  - p90 is nearest-rank.
+- **How it's computed:** the range's completed visits are loaded once and every figure is computed in PHP. This
+  replaces the grouped queries planned above: medians and percentiles have no portable SQL form, and the volume is
+  small.
+- **Protective exclusion:** a visit has no case of its own, so the filter works at the patient. Any protective case,
+  even a deleted one, keeps that patient's visits out unless the viewer holds `audit.view_protective`.
+- **Routes:** `GET /api/reports/turnaround` (`reports.view`) and `GET /api/reports/turnaround/export` (`reports.generate`).
+  The export is CSV by default; `format=pdf` gives the `pdf.turnaround-report` view, inline unless `download=1`.
+  `from` and `to` must be `Y-m-d`. OpenAPI: `TurnaroundReportDocs`.
+- **Moved to Phase 5:** the `/reports/turnaround` web page, which needs the React page.
+- **Tests:** `tests/Feature/TurnaroundReportTest.php` (14 tests).
 
 ## Phase 5 — Client (`resources/js/features/queue/{api,components,hooks,types}`)
 

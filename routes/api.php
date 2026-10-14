@@ -105,6 +105,8 @@ use App\Http\Controllers\StoreWatcherWaiverController;
 use App\Http\Controllers\SubmitSocialCaseController;
 use App\Http\Controllers\SyncUserRolesController;
 use App\Http\Controllers\TransactionTypeController;
+use App\Http\Controllers\TurnaroundReportController;
+use App\Http\Controllers\TurnaroundReportExportController;
 use App\Http\Controllers\TurnaroundTargetController;
 use App\Http\Controllers\UnassignCaretakerController;
 use App\Http\Controllers\UnmergePatientController;
@@ -397,6 +399,9 @@ Route::middleware('auth:sanctum')->group(function () {
     // extract takes reports.generate, which Case Manager does not hold.
     Route::get('reports/social-cases', SocialCaseReportController::class)->middleware('permission:reports.view');
     Route::get('reports/social-cases/export', SocialCaseReportExportController::class)->middleware('permission:reports.generate');
+    // Turnaround time: same split, dashboard on reports.view, extract on reports.generate.
+    Route::get('reports/turnaround', TurnaroundReportController::class)->middleware('permission:reports.view');
+    Route::get('reports/turnaround/export', TurnaroundReportExportController::class)->middleware('permission:reports.generate');
 
     // Daily Accomplishment Report: the caller's own lines only (dar.manage, set in the controllers).
     Route::get('dar', [DarEntryController::class, 'index']);
