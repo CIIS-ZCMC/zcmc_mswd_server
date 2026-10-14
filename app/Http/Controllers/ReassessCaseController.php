@@ -33,4 +33,3 @@ class ReassessCaseController extends Controller
         return AssessmentResource::make($assessment)->response()->setStatusCode(Response::HTTP_CREATED);
     }
 }
-

@@ -18,4 +18,3 @@ class MswdClassificationMatrixController extends Controller
         ]);
     }
 }
-

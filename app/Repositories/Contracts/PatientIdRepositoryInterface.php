@@ -2,6 +2,4 @@
 
 namespace App\Repositories\Contracts;
 
-interface PatientIdRepositoryInterface extends RepositoryInterface
-{
-}
+interface PatientIdRepositoryInterface extends RepositoryInterface {}

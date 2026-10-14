@@ -7,24 +7,26 @@ use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
+use Inertia\Inertia;
 
 class AuthController extends Controller
 {
     /**
      * Show the login page.
      */
-    public function showLogin(): \Inertia\Response|\Illuminate\Http\RedirectResponse
+    public function showLogin(): \Inertia\Response|RedirectResponse
     {
         if (Auth::check()) {
             return redirect()->intended('/');
         }
 
-        return \Inertia\Inertia::render('Auth/Login');
+        return Inertia::render('Auth/Login');
     }
 
     /**

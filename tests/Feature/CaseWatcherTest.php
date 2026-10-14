@@ -11,6 +11,7 @@ use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\WatcherRelationshipTypeSeeder;
 use Illuminate\Database\QueryException;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Carbon;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
@@ -51,8 +52,8 @@ it('creates a case watcher with the expected attributes and casts', function () 
     expect($watcher->is_primary)->toBeTrue()
         ->and($watcher->is_informant)->toBeTrue()
         ->and($watcher->pass_status)->toBe('active') // DB default
-        ->and($watcher->pass_valid_until)->toBeInstanceOf(Illuminate\Support\Carbon::class)
-        ->and($watcher->present_from)->toBeInstanceOf(Illuminate\Support\Carbon::class);
+        ->and($watcher->pass_valid_until)->toBeInstanceOf(Carbon::class)
+        ->and($watcher->present_from)->toBeInstanceOf(Carbon::class);
 });
 
 it('resolves case, patientWatcher and addedBy relations', function () {

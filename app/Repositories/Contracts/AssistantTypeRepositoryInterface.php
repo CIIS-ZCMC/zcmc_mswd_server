@@ -2,6 +2,4 @@
 
 namespace App\Repositories\Contracts;
 
-interface AssistantTypeRepositoryInterface extends RepositoryInterface
-{
-}
+interface AssistantTypeRepositoryInterface extends RepositoryInterface {}

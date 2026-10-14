@@ -2,6 +2,4 @@
 
 namespace App\Repositories\Contracts;
 
-interface GuarantorRepositoryInterface extends RepositoryInterface
-{
-}
+interface GuarantorRepositoryInterface extends RepositoryInterface {}

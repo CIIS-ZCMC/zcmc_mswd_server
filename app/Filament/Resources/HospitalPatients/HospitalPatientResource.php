@@ -100,7 +100,7 @@ class HospitalPatientResource extends Resource
             // a live sqlsrv query, so the list survives an unreachable HIS and
             // is testable by mocking the repository.
             ->records(fn (int $page, int $recordsPerPage, ?string $search): LengthAwarePaginator => app(HospitalPatientService::class)
-            ->paginateForPanel($search, $recordsPerPage, $page))
+                ->paginateForPanel($search, $recordsPerPage, $page))
             ->columns([
                 TextColumn::make('hospital_number')
                     ->label('Hospital number')

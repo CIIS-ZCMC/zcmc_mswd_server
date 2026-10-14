@@ -3,10 +3,8 @@
 use App\Enums\HospitalPatientImportStatus;
 use App\Models\Bizbox\HospitalPatient;
 use App\Models\Bizbox\PatientPersonalData;
-use App\Models\HospitalPatientImportBatch;
 use App\Models\HospitalPatientImportResult;
 use App\Models\Patient;
-use App\Models\Sector;
 use App\Models\User;
 use App\Repositories\Contracts\HospitalPatientRepositoryInterface;
 use App\Services\HospitalPatientImportService;

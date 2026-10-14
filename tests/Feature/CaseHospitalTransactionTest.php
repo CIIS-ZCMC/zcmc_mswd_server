@@ -8,6 +8,7 @@ use App\Models\Bizbox\PatientTransaction;
 use App\Models\CaseActivity;
 use App\Models\CaseHospitalTransaction;
 use App\Models\CaseModel;
+use App\Models\Diagnostic;
 use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\User;
@@ -277,7 +278,7 @@ it('prefills a local diagnostic from the HIS final diagnosis on attach', functio
 
     app(CaseHospitalTransactionService::class)->attach($case, 9, $this->worker);
 
-    $diagnostic = App\Models\Diagnostic::where('case_id', $case->id)->first();
+    $diagnostic = Diagnostic::where('case_id', $case->id)->first();
 
     expect($diagnostic)->not->toBeNull()
         ->and($diagnostic->diagnosis_name)->toBe('Pneumonia')
@@ -294,7 +295,7 @@ it('does not prefill a diagnostic when the encounter has no final diagnosis', fu
 
     app(CaseHospitalTransactionService::class)->attach($case, 9, $this->worker);
 
-    expect(App\Models\Diagnostic::where('case_id', $case->id)->count())->toBe(0);
+    expect(Diagnostic::where('case_id', $case->id)->count())->toBe(0);
 });
 
 it('does not duplicate a diagnostic of the same name across encounters', function () {
@@ -310,5 +311,5 @@ it('does not duplicate a diagnostic of the same name across encounters', functio
     $service->attach($case, 9, $this->worker);
     $service->attach($case, 10, $this->worker);
 
-    expect(App\Models\Diagnostic::where('case_id', $case->id)->count())->toBe(1);
+    expect(Diagnostic::where('case_id', $case->id)->count())->toBe(1);
 });

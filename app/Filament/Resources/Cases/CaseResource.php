@@ -2,6 +2,7 @@
 
 namespace App\Filament\Resources\Cases;
 
+use App\Enums\CardColor;
 use App\Filament\Resources\Cases\Pages\CreateCase;
 use App\Filament\Resources\Cases\Pages\EditCase;
 use App\Filament\Resources\Cases\Pages\ListCases;
@@ -13,7 +14,6 @@ use App\Filament\Resources\Cases\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\HistoryRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\HospitalTransactionsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\InterventionsRelationManager;
-use App\Enums\CardColor;
 use App\Models\CaseModel;
 use App\Models\Patient;
 use App\Models\User;
