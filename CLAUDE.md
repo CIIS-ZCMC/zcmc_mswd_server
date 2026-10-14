@@ -19,7 +19,7 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 
 - **Inertia Layer (`resources/js/pages/`)**:
   - Owns routing, auth session state, shared user props (`auth.user`, `auth.roles`, `auth.permissions`), and initial page renders.
-  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /dar`, `GET /reports`, `GET /reports/social-cases`, `GET /audit`.
+  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /dar`, `GET /queue`, `GET /reports`, `GET /reports/social-cases`, `GET /reports/turnaround`, `GET /audit`.
   - Main persistent layout is `resources/js/components/layout/main-layout.tsx`.
 - **API & TanStack Query Layer**:
   - `resources/js/lib/api-client.ts` uses Sanctum cookie sessions (`credentials: "same-origin"`, `X-XSRF-TOKEN`).
@@ -40,7 +40,8 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 - `guarantees`: MSWD patient guarantors per HIS encounter with their assistance breakdown; prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`).
 - Encounter printables (`hospital/components/dialogs/`): the City Mayor Acknowledgement Slip, ZCMC-F-MSS-04 (`GET /patient-transactions/{id}/city-mayor-slip/pdf`, `CityMayorSlipDialog`); the Certificate of Eligibility (Indigency), Annex A (`GET /patient-transactions/{id}/indigency-certificate/pdf`, `IndigencyCertificateDialog`; signed by the Library `mswd_head` signatory).
 - `dar`: Daily Accomplishment Report manual entries, printable PDF and CSV export (`GET /dar`, `useDarEntries`).
-- `library`: Library settings (guarantors, types of assistance, modes, fund sources, signatories printed on forms).
+- `queue`: turnaround time (TAT) of MSWD service per HIS encounter visit. Time in → Start → Complete (or Cancel), stamped by the server (`ServiceVisit`, `ServiceVisitService`, `/service-visits/*`, `queue.manage`). Covers the `/queue` board (`QueueBoard`) and the encounter dialog's Queue & TAT tab (`ServiceVisitPanel`). The TAT report lives in `reports` (`GET /reports/turnaround`, `TurnaroundReportService`, CSV/PDF export). See `docs/TURNAROUND_TIME_PLAN.md`.
+- `library`: Library settings (guarantors, types of assistance, modes, fund sources, signatories printed on forms, and the TAT targets per stage, `turnaround_targets`).
 - `audit`: system-wide activity logs.
 
 ### UI & Styling
