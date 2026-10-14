@@ -105,6 +105,7 @@ use App\Http\Controllers\StoreWatcherWaiverController;
 use App\Http\Controllers\SubmitSocialCaseController;
 use App\Http\Controllers\SyncUserRolesController;
 use App\Http\Controllers\TransactionTypeController;
+use App\Http\Controllers\TurnaroundTargetController;
 use App\Http\Controllers\UnassignCaretakerController;
 use App\Http\Controllers\UnmergePatientController;
 use App\Http\Controllers\UserController;
@@ -133,6 +134,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::apiResource('fund-sources', FundSourceController::class)->except(['create', 'edit'])->parameters(['fund-sources' => 'fundSource']);
     // Library: officers printed on MSWD forms; read by everyone, written by library.manage.
     Route::apiResource('signatories', SignatoryController::class)->except(['create', 'edit']);
+    // Library: turnaround time targets; read by everyone, written by library.manage.
+    Route::apiResource('turnaround-targets', TurnaroundTargetController::class)->only(['index', 'show', 'update'])->parameters(['turnaround-targets' => 'turnaroundTarget']);
     Route::apiResource('watcher-relationship-types', WatcherRelationshipTypeController::class)->only(['index', 'show'])->parameters(['watcher-relationship-types' => 'watcherRelationshipType']);
 
     // Users (read-only) + role assignment

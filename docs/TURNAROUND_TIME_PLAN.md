@@ -33,9 +33,9 @@ branch (`feat/turnaround-time`) and one PR.
 
 | Phase | Side | Depends on | Status |
 |-------|------|------------|--------|
-| 1. Schema, `ServiceVisit` model, `queue.manage` permission | server | — | ☑ done |
-| 2. Visit API: time in / start / complete / cancel, queue, encounter history | server | 1 | ☑ done |
-| 3. TAT targets (Library) | server + client | 1 | ☐ |
+| 1. Schema, `ServiceVisit` model, `queue.manage` permission | server | — | ☑ done (#253) |
+| 2. Visit API: time in / start / complete / cancel, queue, encounter history | server | 1 | ☑ done (#253) |
+| 3. TAT targets (Library) | server + client | 1 | ☑ done |
 | 4. Report service, API, CSV/PDF | server | 1, 3 | ☐ |
 | 5. Client: encounter panel, queue board, report page | client | 2–4 | ☐ |
 | 6. Tests & docs | both | all | ☐ |
@@ -120,6 +120,19 @@ controller.
   resource as well.
 - **Client:** a new tab in `resources/js/features/library/lib/library-tabs.tsx`.
 
+**Done with Phase 3:**
+- **Data:**
+  - The `turnaround_targets` migration inserts the three default rows, so existing databases get them without a
+    seeder run. `TurnaroundTargetSeeder` uses `firstOrCreate` and keeps whatever MSWD has tuned.
+  - The stages are fixed, so the API is `index`/`show`/`update` only. Reads are open; `update` needs `library.manage`.
+    The Filament resource is edit-only and gated by `library.manage`.
+- **Compliance flags:**
+  - `ServiceVisit::isWithinTarget($stage)` uses `TurnaroundTarget::activeMinutes()`, which is memoized per request.
+  - `ServiceVisitResource` returns `within_target: { waiting, processing, total }`. A flag is null when the visit is
+    cancelled, the stage hasn't started, or the target is inactive.
+- **Client:** the Library gets a "TAT Targets" tab (`TurnaroundTargetsPanel`) with an edit dialog.
+- **Tests:** `tests/Feature/TurnaroundTargetTest.php` (13 tests).
+
 ## Phase 4 — Report
 
 `app/Services/TurnaroundReportService.php` mirrors `SocialCaseReportService`. It reuses the `range()` default and
@@ -172,6 +185,18 @@ swap, and the protective-case exclusion with its `protective_excluded` flag. It 
   - the audit row
 - `RolesAndPermissionsTest`, `AuditCoverageTest` and `ActivityOwnershipResolverTest` cover the new permission and
   model.
+
+**Done with Phase 3:**
+- **Results:** the full suite passed (997 tests), and Pint is clean. OpenAPI is in `app/Http/Docs/TurnaroundTargetDocs.php` and `app/Http/Docs/ServiceVisitDocs.php`.
+- `tests/Feature/TurnaroundTargetTest.php` has 13 tests, covering:
+  - Seeding of Citizen's Charter stages (waiting 30, processing 60, total 90 minutes)
+  - Open `GET /api/turnaround-targets` and `GET /api/turnaround-targets/{id}`
+  - Gated `PUT /api/turnaround-targets/{id}` requiring `library.manage`
+  - Rejection of `POST` and `DELETE` (stages are fixed)
+  - `ServiceVisitResource` dynamic `within_target` flags (`waiting`, `processing`, `total`)
+  - Inactive target handling and null flags on cancelled visits
+  - Filament `TurnaroundTargetResource` under Reference Data
+- Added `TurnaroundTargetsPanel` and "TAT Targets" tab in `resources/js/features/library`.
 
 ## Verification
 

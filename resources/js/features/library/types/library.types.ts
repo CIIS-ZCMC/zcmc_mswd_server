@@ -151,6 +151,7 @@ export type LibraryTabKey =
   | "mode-of-assistance"
   | "fund-sources"
   | "signatories"
+  | "turnaround-targets"
 
 export interface ApiSignatory {
   id: number
@@ -190,5 +191,37 @@ export interface SaveSignatoryInput {
   title?: string | null
   licenseNo?: string | null
   role: string
+  isActive?: boolean
+}
+
+export interface ApiTurnaroundTarget {
+  id: number
+  stage: "waiting" | "processing" | "total" | string
+  label: string
+  description: string
+  minutes: number
+  is_active: boolean
+  created_at?: string
+  updated_at?: string
+}
+
+export interface TurnaroundTarget {
+  id: number
+  stage: "waiting" | "processing" | "total" | string
+  label: string
+  description: string
+  minutes: number
+  isActive: boolean
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApiSaveTurnaroundTargetPayload {
+  minutes?: number
+  is_active?: boolean
+}
+
+export interface SaveTurnaroundTargetInput {
+  minutes?: number
   isActive?: boolean
 }

@@ -15,7 +15,11 @@ import type {
   SaveAssistantTypeInput,
   SaveGuarantorInput,
   SaveSignatoryInput,
+  SaveTurnaroundTargetInput,
   Signatory,
+  TurnaroundTarget,
+  ApiSaveTurnaroundTargetPayload,
+  ApiTurnaroundTarget,
 } from "../types"
 
 export function toAssessmentLookup(raw: ApiAssessmentLookup): AssessmentLookup {
@@ -151,4 +155,30 @@ export function toApiSaveSignatoryPayload(
     role: input.role,
     is_active: input.isActive,
   }
+}
+
+export function toTurnaroundTarget(raw: ApiTurnaroundTarget): TurnaroundTarget {
+  return {
+    id: raw.id,
+    stage: raw.stage,
+    label: raw.label ?? raw.stage,
+    description: raw.description ?? "",
+    minutes: Number(raw.minutes ?? 0),
+    isActive: Boolean(raw.is_active),
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+  }
+}
+
+export function toApiSaveTurnaroundTargetPayload(
+  input: SaveTurnaroundTargetInput
+): ApiSaveTurnaroundTargetPayload {
+  const payload: ApiSaveTurnaroundTargetPayload = {}
+  if (input.minutes !== undefined) {
+    payload.minutes = input.minutes
+  }
+  if (input.isActive !== undefined) {
+    payload.is_active = input.isActive
+  }
+  return payload
 }
