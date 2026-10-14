@@ -15,17 +15,20 @@ import {
   getGuarantors,
   getModeOfAssistances,
   getSignatories,
+  getTurnaroundTargets,
   updateAssistantType,
   updateFundSource,
   updateGuarantor,
   updateModeOfAssistance,
   updateSignatory,
+  updateTurnaroundTarget,
 } from "../api/library-api"
 import type {
   SaveAssessmentLookupInput,
   SaveAssistantTypeInput,
   SaveGuarantorInput,
   SaveSignatoryInput,
+  SaveTurnaroundTargetInput,
 } from "../types"
 import { guarantorOptionKeys } from "@/features/guarantees/hooks/use-guarantor-options"
 import { guaranteeKeys } from "@/features/guarantees/hooks/use-guarantees"
@@ -60,6 +63,9 @@ export const libraryKeys = {
   },
   signatories: {
     all: ["library", "signatories"] as const,
+  },
+  turnaroundTargets: {
+    all: ["library", "turnaround-targets"] as const,
   },
 }
 
@@ -309,6 +315,36 @@ export function useDeleteSignatory() {
     mutationFn: (id: number | string) => deleteSignatory(id),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: libraryKeys.signatories.all })
+    },
+  })
+}
+
+/**
+ * Turnaround Targets Hooks
+ */
+export function useTurnaroundTargets(enabled = true) {
+  return useQuery({
+    queryKey: libraryKeys.turnaroundTargets.all,
+    queryFn: getTurnaroundTargets,
+    enabled,
+  })
+}
+
+export function useUpdateTurnaroundTarget() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: number | string
+      input: SaveTurnaroundTargetInput
+    }) => updateTurnaroundTarget(id, input),
+    onSuccess: () => {
+      queryClient.invalidateQueries({
+        queryKey: libraryKeys.turnaroundTargets.all,
+      })
+      queryClient.invalidateQueries({ queryKey: ["service-visits"] })
     },
   })
 }

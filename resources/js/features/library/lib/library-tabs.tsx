@@ -6,6 +6,7 @@ import {
   HeartHandshake,
   Layers,
   PenLine,
+  Timer,
 } from "lucide-react"
 
 export interface AssistantTypeCategoryOption {
@@ -165,6 +166,23 @@ export const LIBRARY_TABS: LibraryTabDefinition[] = [
     description:
       "Officers whose name and title print on MSWD forms (e.g. the Acknowledgement Slip approver).",
     icon: PenLine,
+    writePermission: "library.manage",
+    defaultSort: "name",
+    showCode: false,
+    showSortOrder: false,
+    showCategory: false,
+    showAddress: false,
+    showRequiresSpecify: false,
+    showUsageCount: false,
+  },
+  {
+    // Rendered by TurnaroundTargetsPanel, not LookupTable; the show* flags are unused.
+    key: "turnaround-targets",
+    label: "TAT Targets",
+    singularLabel: "TAT Target",
+    description:
+      "Citizen's Charter turnaround time targets for each service stage (waiting, processing, total).",
+    icon: Timer,
     writePermission: "library.manage",
     defaultSort: "name",
     showCode: false,

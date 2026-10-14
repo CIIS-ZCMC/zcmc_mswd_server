@@ -26,6 +26,16 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'waiting_minutes', type: 'integer', nullable: true, description: 'Arrival to start; counts up to now while waiting.'),
         new OA\Property(property: 'processing_minutes', type: 'integer', nullable: true, description: 'Start to completion; counts up to now while in progress.'),
         new OA\Property(property: 'total_minutes', type: 'integer', nullable: true, description: 'Arrival to completion (the turnaround time); null when cancelled.'),
+        new OA\Property(
+            property: 'within_target',
+            type: 'object',
+            properties: [
+                new OA\Property(property: 'waiting', type: 'boolean', nullable: true),
+                new OA\Property(property: 'processing', type: 'boolean', nullable: true),
+                new OA\Property(property: 'total', type: 'boolean', nullable: true),
+            ],
+            description: 'Whether stage durations meet the Citizen\'s Charter targets. Null when cancelled or target is inactive.',
+        ),
         new OA\Property(property: 'received_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),
         new OA\Property(property: 'served_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),
         new OA\Property(property: 'completed_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),

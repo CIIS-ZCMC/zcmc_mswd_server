@@ -4,6 +4,7 @@ import type {
   ApiAssistantType,
   ApiGuarantor,
   ApiSignatory,
+  ApiTurnaroundTarget,
   AssessmentLookup,
   AssistantType,
   Guarantor,
@@ -12,19 +13,23 @@ import type {
   SaveAssistantTypeInput,
   SaveGuarantorInput,
   SaveSignatoryInput,
+  SaveTurnaroundTargetInput,
   Signatory,
+  TurnaroundTarget,
 } from "../types"
 import {
   toApiSaveAssessmentLookupPayload,
   toApiSaveAssistantTypePayload,
   toApiSaveGuarantorPayload,
   toApiSaveSignatoryPayload,
+  toApiSaveTurnaroundTargetPayload,
   toAssessmentLookup,
   toAssistantType,
   toAssistantTypeLookupOption,
   toGuarantor,
   toLookupOption,
   toSignatory,
+  toTurnaroundTarget,
 } from "./library-adapter"
 
 /**
@@ -249,4 +254,26 @@ export async function updateSignatory(
 
 export async function deleteSignatory(id: number | string): Promise<void> {
   await apiClient.delete(`/signatories/${id}`)
+}
+
+/**
+ * Turnaround Targets API (/api/turnaround-targets) — Citizen's Charter timing targets.
+ */
+export async function getTurnaroundTargets(): Promise<TurnaroundTarget[]> {
+  const res = await apiClient.get<{ data: ApiTurnaroundTarget[] }>(
+    "/turnaround-targets"
+  )
+  const list = Array.isArray(res.data) ? res.data : []
+  return list.map(toTurnaroundTarget)
+}
+
+export async function updateTurnaroundTarget(
+  id: number | string,
+  input: SaveTurnaroundTargetInput
+): Promise<TurnaroundTarget> {
+  const res = await apiClient.put<{ data: ApiTurnaroundTarget }>(
+    `/turnaround-targets/${id}`,
+    toApiSaveTurnaroundTargetPayload(input)
+  )
+  return toTurnaroundTarget(res.data)
 }

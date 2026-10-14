@@ -22,6 +22,7 @@ class DatabaseSeeder extends Seeder
         $this->call(FundSourceSeeder::class);
         $this->call(AssistantTypeSeeder::class);
         $this->call(SignatorySeeder::class);
+        $this->call(TurnaroundTargetSeeder::class);
         // $this->call(SamplePatientSeeder::class);
 
         // User::factory(10)->create();

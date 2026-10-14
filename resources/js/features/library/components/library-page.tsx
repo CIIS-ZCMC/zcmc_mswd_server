@@ -17,6 +17,7 @@ import {
   useGuarantors,
   useModeOfAssistances,
   useSignatories,
+  useTurnaroundTargets,
   useUpdateAssistantType,
   useUpdateFundSource,
   useUpdateGuarantor,
@@ -24,6 +25,7 @@ import {
 } from "../hooks/use-library"
 import { LookupTable } from "./lookup-table"
 import { SignatoriesPanel } from "./signatories-panel"
+import { TurnaroundTargetsPanel } from "./turnaround-targets-panel"
 import type { LookupFormItem } from "./dialogs/lookup-item-dialog"
 import type { LibraryTabKey } from "../types"
 import { LIBRARY_TABS, getTabConfig } from "../lib/library-tabs"
@@ -65,6 +67,9 @@ export const LibraryPage: React.FC = () => {
   // Signatories (the panel owns its own writes)
   const { data: signatories = [] } = useSignatories()
 
+  // Turnaround Targets (the panel owns its own writes)
+  const { data: turnaroundTargets = [] } = useTurnaroundTargets()
+
   const getTabCount = (key: LibraryTabKey) => {
     switch (key) {
       case "guarantors":
@@ -77,6 +82,8 @@ export const LibraryPage: React.FC = () => {
         return fundSources.length
       case "signatories":
         return signatories.length
+      case "turnaround-targets":
+        return turnaroundTargets.length
     }
   }
 
@@ -338,6 +345,26 @@ export const LibraryPage: React.FC = () => {
             </Alert>
 
             <SignatoriesPanel canManage={canManageLibrary} />
+          </TabsContent>
+
+          {/* Turnaround Targets Tab */}
+          <TabsContent
+            value="turnaround-targets"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
+          >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Turnaround Targets
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                Citizen&apos;s Charter standard timing thresholds for MSWD
+                service delivery. Visits that exceed these targets are flagged
+                on the queue board and in performance compliance reports.
+              </AlertDescription>
+            </Alert>
+
+            <TurnaroundTargetsPanel canManage={canManageLibrary} />
           </TabsContent>
         </Tabs>
       </div>

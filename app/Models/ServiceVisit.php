@@ -126,6 +126,39 @@ class ServiceVisit extends Model
         return self::minutesBetween($this->arrived_at, $this->completed_at);
     }
 
+    /**
+     * Whether the duration of the given stage is within the configured target.
+     * Returns null when the visit is cancelled, the stage duration is null,
+     * or the target is inactive/missing.
+     *
+     * @param  array<string, int>|null  $activeTargets
+     */
+    public function isWithinTarget(string $stage, ?array $activeTargets = null): ?bool
+    {
+        if ($this->status === self::STATUS_CANCELLED) {
+            return null;
+        }
+
+        $activeTargets ??= TurnaroundTarget::activeMinutes();
+
+        if (! array_key_exists($stage, $activeTargets)) {
+            return null;
+        }
+
+        $minutes = match ($stage) {
+            TurnaroundTarget::STAGE_WAITING => $this->waitingMinutes(),
+            TurnaroundTarget::STAGE_PROCESSING => $this->processingMinutes(),
+            TurnaroundTarget::STAGE_TOTAL => $this->totalMinutes(),
+            default => null,
+        };
+
+        if ($minutes === null) {
+            return null;
+        }
+
+        return $minutes <= $activeTargets[$stage];
+    }
+
     /** Whole minutes from $from to $to (or to now while the stage is open). */
     private static function minutesBetween(?Carbon $from, ?Carbon $to): ?int
     {

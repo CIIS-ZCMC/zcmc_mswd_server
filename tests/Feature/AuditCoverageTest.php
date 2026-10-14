@@ -32,6 +32,7 @@ use App\Models\PatientWatcher;
 use App\Models\Sector;
 use App\Models\ServiceVisit;
 use App\Models\Signatory;
+use App\Models\TurnaroundTarget;
 use App\Models\User;
 use App\Models\WatcherRelationshipType;
 
@@ -71,6 +72,7 @@ $audited = [
     FundSource::class,
     AssistantType::class,
     Signatory::class,
+    TurnaroundTarget::class,
 ];
 
 it('records an audit trail on every model the caretake module covers', function (string $model) {

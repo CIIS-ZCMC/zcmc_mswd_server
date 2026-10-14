@@ -3,6 +3,7 @@
 namespace App\Http\Resources;
 
 use App\Models\ServiceVisit;
+use App\Models\TurnaroundTarget;
 use App\Models\User;
 use App\Services\DarReportService;
 use Illuminate\Http\Request;
@@ -36,6 +37,11 @@ class ServiceVisitResource extends JsonResource
             'waiting_minutes' => $this->waitingMinutes(),
             'processing_minutes' => $this->processingMinutes(),
             'total_minutes' => $this->totalMinutes(),
+            'within_target' => [
+                'waiting' => $this->isWithinTarget(TurnaroundTarget::STAGE_WAITING),
+                'processing' => $this->isWithinTarget(TurnaroundTarget::STAGE_PROCESSING),
+                'total' => $this->isWithinTarget(TurnaroundTarget::STAGE_TOTAL),
+            ],
             'received_by' => $this->whenLoaded('receivedBy', fn () => self::user($this->receivedBy)),
             'served_by' => $this->whenLoaded('servedBy', fn () => self::user($this->servedBy)),
             'completed_by' => $this->whenLoaded('completedBy', fn () => self::user($this->completedBy)),
