@@ -106,9 +106,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
               <span>
                 Hospital No:{" "}
                 <strong className="font-mono text-foreground">
-                  {visit.patient?.hospitalNo ||
-                    visit.patient?.hospital_no ||
-                    "—"}
+                  {visit.patient?.hospital_id ?? "—"}
                 </strong>
               </span>
               <span>•</span>

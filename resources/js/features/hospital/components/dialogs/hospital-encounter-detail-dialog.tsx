@@ -240,14 +240,15 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                   className="text-xs sm:text-sm font-bold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-xs"
                 >
                   <Stethoscope className="w-4 h-4 text-primary shrink-0" />
-                  <span className="hidden sm:inline">Overview &</span> Admission
+                  {/* Five tabs don't fit the long labels in this 3xl dialog. */}
+                  {!canManageQueue && <span className="hidden sm:inline">Overview &</span>} Admission
                 </TabsTrigger>
                 <TabsTrigger
                   value="clinical"
                   className="text-xs sm:text-sm font-bold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-xs"
                 >
                   <FileText className="w-4 h-4 text-primary shrink-0" />
-                  <span className="hidden sm:inline">Diagnosis &</span> Discharge
+                  {!canManageQueue && <span className="hidden sm:inline">Diagnosis &</span>} Discharge
                 </TabsTrigger>
                 <TabsTrigger
                   value="financial"

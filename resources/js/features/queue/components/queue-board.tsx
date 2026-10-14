@@ -159,7 +159,7 @@ export const QueueBoard: React.FC = () => {
       (v) =>
         v.patient?.name?.toLowerCase().includes(q) ||
         String(v.hisTransactionId).includes(q) ||
-        v.patient?.hospital_no?.toLowerCase().includes(q) ||
+        String(v.patient?.hospital_id ?? "").includes(q) ||
         v.purpose?.toLowerCase().includes(q)
     )
   }
@@ -268,8 +268,9 @@ export const QueueBoard: React.FC = () => {
       </div>
 
       {/* 3 Columns Queue Grid */}
-      <div className="flex-1 overflow-x-auto p-6">
-        <div className="grid h-full min-w-[900px] grid-cols-1 gap-5 md:grid-cols-3">
+      {/* Stacks below xl: beside the sidebar, three columns don't fit a laptop screen. */}
+      <div className="flex-1 p-6">
+        <div className="grid h-full grid-cols-1 gap-5 xl:grid-cols-3">
           {/* Column 1: Waiting */}
           <div className="flex flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/20 shadow-2xs">
             <div className="flex items-center justify-between border-b border-border/80 bg-amber-500/10 px-4 py-3">

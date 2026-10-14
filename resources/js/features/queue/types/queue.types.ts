@@ -6,20 +6,15 @@ export interface ServiceVisitUser {
   name: string
 }
 
+/** The patient as ServiceVisitResource sends it (DarReportService::patient). */
 export interface ServiceVisitPatient {
-  id?: number
-  name?: string
-  hospital_no?: string
-  hospitalNo?: string
-  sex?: string
-  birth_date?: string
-  birthDate?: string
-  age?: number
-  case_number?: string
-  caseNumber?: string
-  sector?: string
-  category?: string
-  classification?: string
+  id: number
+  name: string
+  hospital_id: number | null
+  mswd_id: string | null
+  age: number | null
+  sex: string | null
+  address: string | null
 }
 
 export interface ApiServiceVisit {
