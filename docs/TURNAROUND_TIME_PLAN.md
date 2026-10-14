@@ -244,6 +244,15 @@ swap, and the protective-case exclusion with its `protective_excluded` flag. It 
     a user without the permission got 403s.
   - **Report payload.** `getTurnaroundReport` unwraps `{ data }`. `apiClient` doesn't unwrap it, so the page had been
     reading `undefined` fields.
+- **Fixes after the browser walkthrough (local, as Admin):** time in, start, complete, cancel (an empty reason is blocked),
+  the queue board, the report page and both exports all work. Three bugs were fixed:
+  - **Queue card hospital number.** The card read `hospital_no`, but the resource sends `hospital_id` (as the DAR does),
+    so it always showed "—". `ServiceVisitPatient` now matches the server shape, and the board search uses
+    `hospital_id`.
+  - **Queue board width.** A forced `min-w-[900px]` pushed the third column off-screen beside the sidebar. The columns
+    now stack below `xl`.
+  - **Encounter dialog tabs.** Five tabs don't fit "Overview & Admission" and "Diagnosis & Discharge" in the `max-w-3xl`
+    dialog, so the labels overlapped. With the Queue tab shown, those two tabs drop their "… &" prefixes.
 
 ## Verification
 
