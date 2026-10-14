@@ -22,6 +22,7 @@ import {
   Briefcase,
   BarChart3,
   ClipboardList,
+  Timer,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
 
@@ -70,9 +71,11 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const canViewCases = usePermission("cases.view")
   const canViewReports = usePermission("reports.view")
   const canManageDar = usePermission("dar.manage")
+  const canManageQueue = usePermission("queue.manage")
 
   const isPatientsRoute = pathname === "/" || pathname.startsWith("/patients")
   const isCaseloadRoute = pathname.startsWith("/caseload") || pathname.startsWith("/cases")
+  const isQueueRoute = pathname.startsWith("/queue")
   const isReportsRoute = pathname.startsWith("/reports")
   const isDarRoute = pathname.startsWith("/dar")
   const isAuditRoute = pathname.startsWith("/audit")
@@ -126,6 +129,22 @@ export const Sidebar: React.FC<SidebarProps> = ({
             )}
           >
             <Briefcase className="size-3.5" /> Caseload
+          </button>
+        )}
+
+        {canManageQueue && (
+          <button
+            onClick={() => {
+              navigate("/queue")
+            }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer border min-w-20",
+              isQueueRoute
+                ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                : "bg-background text-muted-foreground border-border hover:bg-muted"
+            )}
+          >
+            <Timer className="size-3.5" /> Queue
           </button>
         )}
 

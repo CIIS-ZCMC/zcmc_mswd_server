@@ -42,6 +42,7 @@ import {
   CheckCircle2,
   ChevronDown,
   ClipboardCheck,
+  Clock,
   CreditCard,
   ExternalLink,
   FileCheck2,
@@ -54,6 +55,8 @@ import {
   XCircle,
 } from "lucide-react"
 import { useNavigate } from "@/lib/inertia-router-hooks"
+import { ServiceVisitPanel, usePatientVisits } from "@/features/queue"
+import { usePermission } from "@/features/auth/hooks/use-permission"
 
 const PLACEHOLDER = "—"
 
@@ -117,6 +120,13 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
   const encounterId = encounter?.id ?? 0
   const { data: detail, isLoading, error } = useHospitalEncounter(encounterId, open && encounterId > 0)
   const { data: assignableCases = [] } = useAssignableCases(encounterId, open && encounterId > 0)
+  const canManageQueue = usePermission("queue.manage")
+  const { data: visits = [] } = usePatientVisits(
+    patient?.id,
+    encounterId > 0 ? encounterId : undefined,
+    open && canManageQueue
+  )
+  const activeVisit = visits.find((v) => v.status === "waiting" || v.status === "in_progress") ?? null
 
   // Reset tab on open
   React.useEffect(() => {
@@ -224,7 +234,7 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
             className="flex-1 flex flex-col min-h-0 overflow-hidden"
           >
             <div className="px-5 py-3.5 border-b bg-background shrink-0">
-              <TabsList className="grid grid-cols-4 w-full h-10 p-1 bg-muted/60">
+              <TabsList className={`grid ${canManageQueue ? "grid-cols-5" : "grid-cols-4"} w-full h-10 p-1 bg-muted/60`}>
                 <TabsTrigger
                   value="overview"
                   className="text-xs sm:text-sm font-bold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-xs"
@@ -258,6 +268,21 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                   <FileCheck2 className="w-4 h-4 text-primary shrink-0" />
                   MSWD <span className="hidden sm:inline">& UIS</span>
                 </TabsTrigger>
+                {canManageQueue && (
+                <TabsTrigger
+                  value="queue"
+                  className="text-xs sm:text-sm font-bold gap-1.5 data-[state=active]:bg-background data-[state=active]:shadow-xs"
+                >
+                  <Clock className="w-4 h-4 text-primary shrink-0" />
+                  <span>Queue <span className="hidden sm:inline">& TAT</span></span>
+                  {activeVisit?.status === "waiting" && (
+                    <span className="size-2 rounded-full bg-amber-500 animate-pulse ml-0.5" title="Waiting in Queue" />
+                  )}
+                  {activeVisit?.status === "in_progress" && (
+                    <span className="size-2 rounded-full bg-emerald-500 animate-pulse ml-0.5" title="Service In Progress" />
+                  )}
+                </TabsTrigger>
+                )}
               </TabsList>
             </div>
 
@@ -489,6 +514,16 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                   onOpenCaseNeeded={() => setOpenCaseOpen(true)}
                 />
               </TabsContent>
+
+              {/* TAB 5: QUEUE & TAT SERVICE VISITS */}
+              {canManageQueue && (
+                <TabsContent value="queue" className="m-0 space-y-4 focus-visible:outline-none">
+                  <ServiceVisitPanel
+                    patientId={patient.id}
+                    transactionId={activeEncounter.id}
+                  />
+                </TabsContent>
+              )}
             </div>
           </Tabs>
 
