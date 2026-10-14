@@ -92,6 +92,7 @@ use App\Http\Controllers\RevokeWatcherPassController;
 use App\Http\Controllers\RoleController;
 use App\Http\Controllers\SectorController;
 use App\Http\Controllers\ServiceTypeController;
+use App\Http\Controllers\ServiceVisitController;
 use App\Http\Controllers\ShowHospitalPatientImportBatchController;
 use App\Http\Controllers\SignatoryController;
 use App\Http\Controllers\SocialCaseController;
@@ -400,6 +401,14 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('dar-entries', [DarEntryController::class, 'store']);
     Route::patch('dar-entries/{entry}', [DarEntryController::class, 'update']);
     Route::delete('dar-entries/{entry}', [DarEntryController::class, 'destroy']);
+
+    // Turnaround time: timed MSWD visits per HIS encounter (queue.manage, set in the controller).
+    Route::get('service-visits/queue', [ServiceVisitController::class, 'queue']);
+    Route::get('patients/{patient}/service-visits', [ServiceVisitController::class, 'index']);
+    Route::post('patients/{patient}/service-visits', [ServiceVisitController::class, 'store']);
+    Route::post('service-visits/{visit}/start', [ServiceVisitController::class, 'start']);
+    Route::post('service-visits/{visit}/complete', [ServiceVisitController::class, 'complete']);
+    Route::post('service-visits/{visit}/cancel', [ServiceVisitController::class, 'cancel']);
 
     // Released-aid report snapshots
     Route::get('assistances/{assistance}/reports', [PatientAssistanceReportController::class, 'forAssistance']);

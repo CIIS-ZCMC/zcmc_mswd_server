@@ -30,6 +30,7 @@ use App\Models\PatientMerge;
 use App\Models\PatientSocioeconomicProfile;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
+use App\Models\ServiceVisit;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -135,6 +136,10 @@ dataset('resolvers', [
         'user_id' => test()->worker->id, 'patient_id' => test()->patient->id,
         'entry_date' => now()->toDateString(), 'activity' => 'interview',
     ]), true, false],
+    'ServiceVisit' => [fn () => ServiceVisit::create([
+        'patient_id' => test()->patient->id, 'his_transaction_id' => 9, 'status' => ServiceVisit::STATUS_WAITING,
+        'arrived_at' => now(), 'received_by' => test()->worker->id,
+    ]), true, false],
 
     'CaseModel' => [fn () => test()->case, true, true],
     'CaseHospitalTransaction' => [fn () => CaseHospitalTransaction::create([
@@ -224,7 +229,7 @@ it('covers every model that declares a resolver', function () {
     // The models the dataset above exercises, one row each.
     $covered = collect([
         'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
-        'PatientMerge', 'PatientSocioeconomicProfile', 'PatientGuarantee', 'PatientGuaranteeItem', 'DarEntry', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
+        'PatientMerge', 'PatientSocioeconomicProfile', 'PatientGuarantee', 'PatientGuaranteeItem', 'DarEntry', 'ServiceVisit', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document',
     ])->sort()->values();

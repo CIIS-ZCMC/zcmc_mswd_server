@@ -30,6 +30,7 @@ use App\Models\PatientMerge;
 use App\Models\PatientSocioeconomicProfile;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
+use App\Models\ServiceVisit;
 use App\Models\Signatory;
 use App\Models\User;
 use App\Models\WatcherRelationshipType;
@@ -51,6 +52,7 @@ $audited = [
     PatientGuarantee::class,
     PatientGuaranteeItem::class,
     DarEntry::class,
+    ServiceVisit::class,
     // Episode-level
     CaseModel::class,
     CaseWatcher::class,
