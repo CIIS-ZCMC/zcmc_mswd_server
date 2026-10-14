@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Enums\WatcherRequirement;
 use App\Models\CaseModel;
 use App\Models\Patient;
+use Illuminate\Support\Carbon;
 
 /**
  * One source of truth for whether a case needs a registered watcher,
@@ -42,7 +43,7 @@ class WatcherRequirementService
     }
 
     /**
-     * @return array{requirement: string, has_primary: bool, satisfied: bool, blocking: bool, waiver: array{reason: string, note: string|null, waived_by: string|null, waived_by_id: int|null, waived_at: \Illuminate\Support\Carbon|null}|null}
+     * @return array{requirement: string, has_primary: bool, satisfied: bool, blocking: bool, waiver: array{reason: string, note: string|null, waived_by: string|null, waived_by_id: int|null, waived_at: Carbon|null}|null}
      */
     public function status(CaseModel $case): array
     {
@@ -67,7 +68,7 @@ class WatcherRequirementService
      * banner, or null when the case has no explicit waiver. A legacy-exempt case
      * resolves to `waived` but carries no waiver record, so it returns null too.
      *
-     * @return array{reason: string, note: string|null, waived_by: string|null, waived_by_id: int|null, waived_at: \Illuminate\Support\Carbon|null}|null
+     * @return array{reason: string, note: string|null, waived_by: string|null, waived_by_id: int|null, waived_at: Carbon|null}|null
      */
     private function waiver(CaseModel $case): ?array
     {

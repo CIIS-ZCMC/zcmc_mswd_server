@@ -15,7 +15,7 @@ use Illuminate\Http\Resources\Json\JsonResource;
 class PatientTransactionResource extends JsonResource
 {
     /**
-     * @return array<string, mixed> 
+     * @return array<string, mixed>
      */
     public function toArray(Request $request): array
     {
@@ -25,7 +25,7 @@ class PatientTransactionResource extends JsonResource
             'patient_name' => $this->whenLoaded('patient', fn () => $this->patient?->displayName()),
             'hospital_number' => $this->whenLoaded('patient', fn () => $this->patient?->hospital_number),
             'patient_guarantors' => PatientGuarantorResource::collection($this->whenLoaded('guarantors')),
-            
+
             'patient_details' => $this->whenLoaded('patient', fn () => HospitalPatientResource::make($this->patient)),      // FK_emdPatients
             'hospital_plan' => $this->lookup('hospitalPlan', HospitalPlanResource::class),                                  // FK_mscHospPlan
             'discount' => $this->lookup('discount', DiscountResource::class),                                               // FK_mscDiscounts

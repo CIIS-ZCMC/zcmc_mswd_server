@@ -7,8 +7,6 @@ use App\Models\User;
 use App\Services\PatientCaretakerService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
-use Illuminate\Support\Facades\Schema;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);

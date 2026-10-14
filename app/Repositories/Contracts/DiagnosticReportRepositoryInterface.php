@@ -2,6 +2,4 @@
 
 namespace App\Repositories\Contracts;
 
-interface DiagnosticReportRepositoryInterface extends RepositoryInterface
-{
-}
+interface DiagnosticReportRepositoryInterface extends RepositoryInterface {}

@@ -33,4 +33,3 @@ class MswdClassificationMatrix extends Model
         ];
     }
 }
-

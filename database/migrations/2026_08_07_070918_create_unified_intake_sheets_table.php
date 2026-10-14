@@ -23,11 +23,11 @@ return new class extends Migration
             $table->string('relationship_to_patient');
 
             $table->string('status')->default('draft');          // draft, submitted, finalized, cancelled
-            
+
             // $table->dateTime('submitted_at')->nullable();
             // $table->dateTime('finalized_at')->nullable();
             // $table->foreignId('finalized_by')->nullable()->constrained('users');
-            
+
             $table->text('remarks')->nullable();
             $table->timestamps();
             $table->softDeletes();

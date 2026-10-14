@@ -116,7 +116,7 @@ class PatientTransactionsRelationManager extends RelationManager
      * 500. Only when the relation was not pre-loaded does it fall back to the
      * default relationship query, still degrading to an empty page on failure.
      */
-    public function getTableRecords(): Collection | Paginator | CursorPaginator
+    public function getTableRecords(): Collection|Paginator|CursorPaginator
     {
         $owner = $this->getOwnerRecord();
 

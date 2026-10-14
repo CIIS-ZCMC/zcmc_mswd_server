@@ -5,6 +5,7 @@ use App\Filament\Resources\Cases\Pages\ViewCase;
 use App\Filament\Resources\Cases\RelationManagers\AssessmentsRelationManager;
 use App\Filament\Resources\Cases\RelationManagers\InterventionsRelationManager;
 use App\Models\Assessment;
+use App\Models\CaseActivity;
 use App\Models\CaseModel;
 use App\Models\Intervention;
 use App\Models\InterventionType;
@@ -190,7 +191,7 @@ it('records the assessment_completed milestone on create', function () {
         ->callTableAction('create', data: ['total_family_income' => 1000])
         ->assertHasNoTableActionErrors();
 
-    expect(App\Models\CaseActivity::where('case_id', $case->id)->where('activity_type', 'assessment_completed')->exists())->toBeTrue();
+    expect(CaseActivity::where('case_id', $case->id)->where('activity_type', 'assessment_completed')->exists())->toBeTrue();
 });
 
 it('refuses to assess an inpatient case that has no watcher yet', function () {

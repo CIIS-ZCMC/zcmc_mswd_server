@@ -1,5 +1,6 @@
 <?php
 
+use App\DTOs\CaseModelDto;
 use App\Enums\CardColor;
 use App\Models\Bizbox\HospitalCaseType;
 use App\Models\Bizbox\HospitalPatient;
@@ -10,6 +11,7 @@ use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\User;
 use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
+use App\Services\CaseModelService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -87,8 +89,8 @@ it('defaults created_by to the opener and card_color to white', function () {
 it('keeps created_by fixed when the case is reassigned', function () {
     $worker = cmrUser('MSS Head');
     Sanctum::actingAs($worker);
-    $case = app(App\Services\CaseModelService::class)->create(
-        App\DTOs\CaseModelDto::fromArray([
+    $case = app(CaseModelService::class)->create(
+        CaseModelDto::fromArray([
             'patient_id' => $this->patient->id, 'case_type' => 'medical',
             'priority_level' => 'high', 'admission_type' => 'ER',
         ]),
@@ -227,8 +229,8 @@ it('requires admission_type only when no transaction_id is given', function () {
 it('exposes the new fields with created_by_user on the show route', function () {
     $worker = cmrUser('MSS Head');
     Sanctum::actingAs($worker);
-    $case = app(App\Services\CaseModelService::class)->create(
-        App\DTOs\CaseModelDto::fromArray([
+    $case = app(CaseModelService::class)->create(
+        CaseModelDto::fromArray([
             'patient_id' => $this->patient->id, 'case_type' => 'medical',
             'priority_level' => 'high', 'admission_type' => 'ER', 'card_color' => 'green',
         ]),

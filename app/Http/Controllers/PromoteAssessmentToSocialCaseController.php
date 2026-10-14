@@ -22,4 +22,3 @@ class PromoteAssessmentToSocialCaseController extends Controller
         return AssessmentResource::make($promoted);
     }
 }
-

@@ -1,6 +1,7 @@
 <?php
 
 use App\DTOs\CaseModelDto;
+use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\InterventionType;
 use App\Models\Patient;
@@ -122,7 +123,7 @@ it('leaves assessment_notes untouched when the key is omitted on update', functi
 
     $this->putJson("/api/assessments/{$id}", ['classification' => 'low_income'])->assertOk();
 
-    expect(\App\Models\Assessment::find($id)->assessment_notes)->toBe('Initial note.');
+    expect(Assessment::find($id)->assessment_notes)->toBe('Initial note.');
 });
 
 it('clears assessment_notes when explicitly set to null on update', function () {
@@ -135,7 +136,7 @@ it('clears assessment_notes when explicitly set to null on update', function () 
 
     $this->putJson("/api/assessments/{$id}", ['assessment_notes' => null])->assertOk();
 
-    expect(\App\Models\Assessment::find($id)->assessment_notes)->toBeNull();
+    expect(Assessment::find($id)->assessment_notes)->toBeNull();
 });
 
 it('forbids adding a record without cases.create', function () {
