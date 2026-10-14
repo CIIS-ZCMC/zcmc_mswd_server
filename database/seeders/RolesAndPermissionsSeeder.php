@@ -76,6 +76,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'reports.generate',
         // Daily Accomplishment Report: a worker's own log of patients served
         'dar.manage',
+        // Turnaround time: timing patients in, starting and completing their service
+        'queue.manage',
         // Reference / lookup data
         'settings.manage',
         // In-app Library: modes of assistance and fund sources offered on the UIS
@@ -105,7 +107,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
-            'dar.manage',
+            'dar.manage', 'queue.manage',
             'settings.manage',
             'library.manage',
             'users.view',
@@ -120,7 +122,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'guarantee.view', 'guarantee.create', 'guarantee.update',
             'audit.view',
             'reports.view', 'reports.generate',
-            'dar.manage',
+            'dar.manage', 'queue.manage',
             'library.manage',
             'panel.access',
         ],
@@ -132,7 +134,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
             'guarantee.view', 'guarantee.create', 'guarantee.update',
             'reports.view',
-            'dar.manage',
+            'dar.manage', 'queue.manage',
         ],
         'Processor' => [
             'patients.view', 'hospital-patients.view',
@@ -142,7 +144,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'socioeconomic.view',
             'guarantee.view',
             'reports.view',
-            'dar.manage',
+            'dar.manage', 'queue.manage',
         ],
     ];
 

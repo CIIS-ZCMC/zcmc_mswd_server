@@ -44,7 +44,7 @@ it('seeds every default role with the expected permission counts', function () {
             'socioeconomic.view',
             'guarantee.view',
             'reports.view',
-            'dar.manage',
+            'dar.manage', 'queue.manage',
         ]);
 });
 
@@ -70,6 +70,8 @@ test('role permission matrix', function (string $role, string $permission, bool 
     'supervisor keeps a DAR' => ['Supervisor', 'dar.manage', true],
     'case manager keeps a DAR' => ['Case Manager', 'dar.manage', true],
     'processor keeps a DAR' => ['Processor', 'dar.manage', true],
+    'case manager times the queue' => ['Case Manager', 'queue.manage', true],
+    'processor times the queue' => ['Processor', 'queue.manage', true],
     'case manager can create cases' => ['Case Manager', 'cases.create', true],
     'case manager cannot approve assistance' => ['Case Manager', 'assistance.approve', false],
     'processor cannot delete patients' => ['Processor', 'patients.delete', false],
