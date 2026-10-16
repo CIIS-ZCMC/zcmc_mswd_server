@@ -20,9 +20,30 @@ migration, and history survives repeated close → reopen cycles. Structured clo
 reasons and referral records come later in their own Closure and Referral plans.
 
 ## Delivery
-One issue, one branch (`fix/case-action-reasons`), one PR. The phases below are
-ordered commits inside that PR, not separate PRs. Each phase leaves the test suite
-green, so the branch can be reviewed or stopped after any phase.
+Issue #268. The server (phases 1-3) shipped in #269 and the client (phases 4-5) in
+#270, so the plan was delivered in two PRs, not one. Each phase leaves the test
+suite green.
+
+**Status legend:** ☐ not started · ◐ in progress · ☑ done
+
+| Phase | Side | Status |
+|---|---|---|
+| 1. Backend contract | Server | ☑ #269 |
+| 2. Filament admin | Server | ☑ #269 |
+| 3. Timeline API | Server | ☑ #269 |
+| 4. Frontend dialogs | Client | ☑ #270 |
+| 5. Activity tab display | Client | ☑ #270 |
+| 6. End-to-end verification | Both | ☑ see "Phase 6 results" |
+
+## Deviations from the plan as first written
+- **Reopen reason was required in two steps.** #269 kept `reason` optional on
+  `POST /cases/{id}/reopen`, because the then-current client reopen button sent no
+  body. #270 added the reopen dialog and made it required.
+- **Filament close and reopen have no bare confirmation.** The form modal replaces
+  `requiresConfirmation()`.
+- **`actor_name` is null for `case_reassigned`.** That row stores the new assignee in
+  `assigned_user_id`, not the person who reassigned. Showing the real actor needs a
+  new column on `case_activities`, which this plan avoided.
 
 ---
 
@@ -136,3 +157,37 @@ case_reopened, case_reassigned …, falling back to a title-cased type), then
 Structured closure reasons and closure checklist, referral records and letters,
 interventions tab, and the Social Case Study Report rewrite. Each gets its own
 `docs/*_PLAN.md`.
+
+## Phase 6 results
+Run on 2026-10-16 against a throwaway SQLite database (seeded with
+`RolesAndPermissionsSeeder` + `SamplePatientSeeder`), a second Laravel server on
+`127.0.0.1:8001`, and the built-in browser. The developer's MySQL database was not
+touched.
+
+Signed in as the seeded Case Manager on case `CS-2026-412`:
+
+| Step | Result |
+|---|---|
+| Assign to another worker, with notes | Status unchanged, assignee updated, timeline shows "Case reassigned" with the notes |
+| Refer to PCSO with reason and notes | Status `referred`, timeline shows agency, reason, notes and the acting worker |
+| Reopen with an empty reason | Blocked in the dialog: "Please state why this case episode is being reopened." |
+| Reopen with a reason | Status `ongoing`, timeline shows the reason |
+| Close with an empty reason | Blocked in the dialog: "Please state the closure reason." |
+| Close with reason and notes | Status `closed`, timeline shows both |
+
+Signed in as the seeded Supervisor at `/admin`:
+
+| Step | Result |
+|---|---|
+| Reopen with an empty reason | Blocked by the required field |
+| Reopen with a reason | Saved; the stored timeline row carries the reason |
+| Close modal | Shows required "Closure reason" and optional "Closure notes" |
+
+Not exercised in the browser: Filament **Refer** and **Assign** modals. Both are
+covered by the Pest tests (`CaseFilamentTest`, `CaseManagementTest`).
+
+Observations, not caused by this plan:
+- The Case Manager role has no `panel.access`, so `/admin` returns 403 for it. Only
+  Supervisor and above can use the Filament actions.
+- The browser console logs a React hydration warning for a `<button>` nested in a
+  `<button>` in the header theme-toggle tooltip.
