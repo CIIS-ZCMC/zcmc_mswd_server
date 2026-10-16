@@ -1,4 +1,4 @@
-import React, { useState } from "react"
+import React, { useMemo, useState } from "react"
 import { useSearchParams, useNavigate } from "@/lib/inertia-router-hooks"
 import { Avatar, AvatarFallback } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
@@ -7,14 +7,12 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs"
 import {
   Building2,
   ClipboardList,
+  Clock,
   CreditCard,
-  Edit,
   Eye,
   FileSpreadsheet,
   FileText,
-  FolderPlus,
   History,
-  Printer,
   Receipt,
   User,
   UserCheck,
@@ -28,6 +26,9 @@ import {
 import type { FamilyMember, PatientRecord } from "../types"
 import { FamilyMemberDialog } from "./dialogs/family-member-dialog"
 import { OpenCaseDialog } from "@/features/cases/components/dialogs/open-case-dialog"
+import { PatientQueueDialog } from "./dialogs/patient-queue-dialog"
+import { PatientActiveQueueStatusDialog } from "./dialogs/patient-active-queue-status-dialog"
+import { usePatientVisits } from "@/features/queue"
 import { DocumentsTab } from "./tabs/documents-tab"
 import { HistoryTab } from "./tabs/history-tab"
 import { HospitalEncountersTab } from "./tabs/hospital-encounters-tab"
@@ -66,7 +67,6 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
   const navigate = useNavigate()
-  const canCreateCase = usePermission("cases.create")
 
   // An unknown ?tab= (e.g. a bookmarked link to the removed intake-sheet tab)
   // falls back to the profile rather than rendering an empty pane.
@@ -95,6 +95,23 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
   const [isWaiverOpen, setIsWaiverOpen] = useState(false)
   const [editingFamilyMember, setEditingFamilyMember] =
     useState<FamilyMember | null>(null)
+  const [isQueueDialogOpen, setIsQueueDialogOpen] = useState(false)
+  const [isActiveQueueStatusOpen, setIsActiveQueueStatusOpen] = useState(false)
+
+  const canManageQueue = usePermission("queue.manage")
+
+  const { data: visits = [] } = usePatientVisits(
+    patient.id,
+    undefined,
+    canManageQueue
+  )
+  const activeVisit = useMemo(
+    () =>
+      visits.find(
+        (v) => v.status === "waiting" || v.status === "in_progress"
+      ) ?? null,
+    [visits]
+  )
 
   const watcherMutations = useCaseWatcherMutations({
     caseId: patient.latestCaseId ?? 0,
@@ -204,39 +221,40 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
             </div>
           </div>
 
-          <div className="flex items-center gap-3">
-            {canCreateCase && (
-              <Button
-                variant="default"
-                size="default"
-                className="h-11 gap-2 px-4 text-base font-bold shadow-sm"
-                onClick={() => {
-                  setOpenCaseTransactionId(undefined)
-                  setIsOpenCaseOpen(true)
-                }}
-              >
-                <FolderPlus className="size-5" />
-                Open Case
-              </Button>
-            )}
-            <Button
-              variant="outline"
-              size="default"
-              className="h-11 gap-2 px-4 text-base font-bold"
-              onClick={() => window.print()}
-            >
-              <Printer className="size-5" />
-              Print Case Study
-            </Button>
-            <Button
-              variant="outline"
-              size="default"
-              className="h-11 gap-2 px-4 text-base font-bold"
-            >
-              <Edit className="size-5" />
-              Edit Status
-            </Button>
-          </div>
+          {canManageQueue && (
+            <div className="flex items-center gap-3">
+              {activeVisit ? (
+                <Button
+                  variant="outline"
+                  size="default"
+                  className="h-11 gap-2.5 border-amber-500/40 bg-amber-500/10 px-4 text-base font-bold text-amber-600 shadow-sm transition-all hover:bg-amber-500/20 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-500/20"
+                  onClick={() => setIsActiveQueueStatusOpen(true)}
+                >
+                  <span className="size-2.5 animate-pulse rounded-full bg-amber-500" />
+                  <Clock className="size-5" />
+                  <span>In Queue</span>
+                  <Badge
+                    variant="outline"
+                    className="ml-1 border-amber-500/40 text-xs font-bold text-amber-600 dark:text-amber-400"
+                  >
+                    {activeVisit.status === "in_progress"
+                      ? "Serving"
+                      : "Waiting"}
+                  </Badge>
+                </Button>
+              ) : (
+                <Button
+                  variant="default"
+                  size="default"
+                  className="h-11 gap-2 px-4 text-base font-bold shadow-sm"
+                  onClick={() => setIsQueueDialogOpen(true)}
+                >
+                  <Clock className="size-5" />
+                  Queue Patient
+                </Button>
+              )}
+            </div>
+          )}
         </div>
       </div>
 
@@ -438,6 +456,19 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
             navigate(`/cases/${newCase.id}`)
           }
         }}
+      />
+
+      <PatientQueueDialog
+        open={isQueueDialogOpen}
+        onOpenChange={setIsQueueDialogOpen}
+        patient={patient}
+      />
+
+      <PatientActiveQueueStatusDialog
+        open={isActiveQueueStatusOpen}
+        onOpenChange={setIsActiveQueueStatusOpen}
+        patient={patient}
+        activeVisit={activeVisit}
       />
     </div>
   )
