@@ -14,6 +14,6 @@ class AssignCaseController extends Controller
     {
         $worker = User::findOrFail($request->validated('assigned_user_id'));
 
-        return CaseModelResource::make($service->assign($case, $worker, $request->user()));
+        return CaseModelResource::make($service->assign($case, $worker, $request->user(), $request->validated('notes')));
     }
 }

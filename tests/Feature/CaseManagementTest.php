@@ -97,22 +97,90 @@ it('closes a case, stamping the close date and milestone', function () {
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
-    $this->postJson("/api/cases/{$case->id}/close")
+    $this->postJson("/api/cases/{$case->id}/close", ['reason' => 'Goals met', 'notes' => 'Aid disbursed'])
         ->assertOk()
         ->assertJsonPath('data.status', 'closed');
 
     expect($case->fresh()->date_closed)->not->toBeNull()
-        ->and($case->activities()->where('activity_type', 'case_closed')->exists())->toBeTrue();
+        ->and($case->activities()->where('activity_type', 'case_closed')->value('notes'))
+        ->toBe("Case {$case->case_code} closed\nReason: Goals met\nNotes: Aid disbursed");
 });
 
-it('refers a case', function () {
+it('requires a reason to close a case', function () {
+    $worker = caseUser('MSS Head');
+    Sanctum::actingAs($worker);
+    $case = caseOpenFor($worker, $this->patient);
+
+    $this->postJson("/api/cases/{$case->id}/close")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('reason');
+
+    expect($case->fresh()->status)->toBe('open');
+});
+
+it('refers a case, recording the agency, reason and notes', function () {
+    $worker = caseUser('MSS Head');
+    Sanctum::actingAs($worker);
+    $case = caseOpenFor($worker, $this->patient);
+
+    $this->postJson("/api/cases/{$case->id}/refer", [
+        'referred_to' => 'LGU MSWDO', 'reason' => 'Needs community follow-up', 'notes' => 'Sent by letter',
+    ])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'referred');
+
+    expect($case->activities()->where('activity_type', 'case_referred')->value('notes'))
+        ->toBe("Case {$case->case_code} referred\nReferred to: LGU MSWDO\nReason: Needs community follow-up\nNotes: Sent by letter");
+});
+
+it('requires the agency and reason to refer a case', function () {
     $worker = caseUser('MSS Head');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
     $this->postJson("/api/cases/{$case->id}/refer", ['notes' => 'To LGU'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['referred_to', 'reason']);
+
+    expect($case->fresh()->status)->toBe('open');
+});
+
+it('reopens a case, recording the reason', function () {
+    $worker = caseUser('MSS Head');
+    Sanctum::actingAs($worker);
+    $case = caseOpenFor($worker, $this->patient);
+    app(CaseModelService::class)->close($case, $worker, 'Goals met');
+
+    $this->postJson("/api/cases/{$case->id}/reopen", ['reason' => 'Patient readmitted'])
         ->assertOk()
-        ->assertJsonPath('data.status', 'referred');
+        ->assertJsonPath('data.status', 'ongoing');
+
+    expect($case->activities()->where('activity_type', 'case_reopened')->value('notes'))
+        ->toBe("Case {$case->case_code} reopened\nReason: Patient readmitted");
+});
+
+it('records the notes given when reassigning a case', function () {
+    $worker = caseUser('MSS Head');
+    Sanctum::actingAs($worker);
+    $case = caseOpenFor($worker, $this->patient);
+    $other = caseUser('Case Manager');
+
+    $this->postJson("/api/cases/{$case->id}/assign", ['assigned_user_id' => $other->id, 'notes' => 'Renal team focal'])
+        ->assertOk();
+
+    expect($case->activities()->where('activity_type', 'case_reassigned')->value('notes'))
+        ->toBe("Reassigned to {$other->employee_name}\nNotes: Renal team focal");
+});
+
+it('names the acting worker on the case timeline', function () {
+    $worker = caseUser('MSS Head');
+    Sanctum::actingAs($worker);
+    $case = caseOpenFor($worker, $this->patient);
+
+    $this->getJson("/api/cases/{$case->id}/activities")
+        ->assertOk()
+        ->assertJsonPath('data.0.activity_type', 'case_opened')
+        ->assertJsonPath('data.0.actor_name', $worker->employee_name);
 });
 
 it('blocks archiving an open case but allows a closed one, then restores', function () {
@@ -125,7 +193,7 @@ it('blocks archiving an open case but allows a closed one, then restores', funct
     expect($case->fresh()->trashed())->toBeFalse();
 
     // Close then archive
-    app(CaseModelService::class)->close($case, $worker);
+    app(CaseModelService::class)->close($case, $worker, 'Goals met');
     $this->deleteJson("/api/cases/{$case->id}")->assertNoContent();
     expect($case->fresh()->trashed())->toBeTrue();
 

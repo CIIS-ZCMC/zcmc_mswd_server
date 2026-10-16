@@ -18,6 +18,7 @@ class AssignCaseRequest extends FormRequest
     {
         return [
             'assigned_user_id' => ['required', 'integer', 'exists:users,id'],
+            'notes' => ['nullable', 'string', 'max:2000'],
         ];
     }
 }

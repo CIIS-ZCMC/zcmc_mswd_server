@@ -22,6 +22,8 @@ class CaseActivityResource extends JsonResource
             'activity_type' => $this->activity_type,
             'activity_date' => $this->activity_date,
             'notes' => $this->notes,
+            // A reassignment stores the new assignee in assigned_user_id, not the actor.
+            'actor_name' => $this->activity_type === 'case_reassigned' ? null : $this->assignedUser?->employee_name,
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

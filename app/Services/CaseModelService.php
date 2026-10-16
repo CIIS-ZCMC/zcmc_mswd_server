@@ -189,9 +189,9 @@ class CaseModelService
     /**
      * (Re)assign the case to a worker, recording the previous assignee.
      */
-    public function assign(CaseModel $case, User $newWorker, User $actor): CaseModel
+    public function assign(CaseModel $case, User $newWorker, User $actor, ?string $notes = null): CaseModel
     {
-        return DB::transaction(function () use ($case, $newWorker) {
+        return DB::transaction(function () use ($case, $newWorker, $notes) {
             $previousId = $case->assigned_user_id;
 
             /** @var CaseModel $case */
@@ -203,14 +203,14 @@ class CaseModelService
                 'previous_user_id' => $previousId,
                 'activity_type' => 'case_reassigned',
                 'activity_date' => now(),
-                'notes' => "Reassigned to {$newWorker->employee_name}",
+                'notes' => $this->activityNotes("Reassigned to {$newWorker->employee_name}", ['Notes' => $notes]),
             ]);
 
             return $case;
         });
     }
 
-    public function close(CaseModel $case, User $actor): CaseModel
+    public function close(CaseModel $case, User $actor, string $reason, ?string $notes = null): CaseModel
     {
         if ($case->status === CaseModel::STATUS_CLOSED) {
             throw ValidationException::withMessages(['status' => 'This case is already closed.']);
@@ -218,38 +218,47 @@ class CaseModelService
 
         ($this->ensureWatcherRequirement)($case, 'be closed');
 
-        return DB::transaction(function () use ($case, $actor) {
+        return DB::transaction(function () use ($case, $actor, $reason, $notes) {
             /** @var CaseModel $case */
             $case = $this->repository->update($case, [
                 'status' => CaseModel::STATUS_CLOSED,
                 'date_closed' => now(),
             ]);
-            $this->recordActivity($case, $actor, 'case_closed', "Case {$case->case_code} closed");
+            $this->recordActivity($case, $actor, 'case_closed', $this->activityNotes(
+                "Case {$case->case_code} closed",
+                ['Reason' => $reason, 'Notes' => $notes],
+            ));
 
             return $case;
         });
     }
 
-    public function refer(CaseModel $case, User $actor, ?string $notes = null): CaseModel
+    public function refer(CaseModel $case, User $actor, string $referredTo, string $reason, ?string $notes = null): CaseModel
     {
-        return DB::transaction(function () use ($case, $actor, $notes) {
+        return DB::transaction(function () use ($case, $actor, $referredTo, $reason, $notes) {
             /** @var CaseModel $case */
             $case = $this->repository->update($case, ['status' => CaseModel::STATUS_REFERRED]);
-            $this->recordActivity($case, $actor, 'case_referred', $notes ?? "Case {$case->case_code} referred");
+            $this->recordActivity($case, $actor, 'case_referred', $this->activityNotes(
+                "Case {$case->case_code} referred",
+                ['Referred to' => $referredTo, 'Reason' => $reason, 'Notes' => $notes],
+            ));
 
             return $case;
         });
     }
 
-    public function reopen(CaseModel $case, User $actor): CaseModel
+    public function reopen(CaseModel $case, User $actor, ?string $reason = null): CaseModel
     {
-        return DB::transaction(function () use ($case, $actor) {
+        return DB::transaction(function () use ($case, $actor, $reason) {
             /** @var CaseModel $case */
             $case = $this->repository->update($case, [
                 'status' => CaseModel::STATUS_ONGOING,
                 'date_closed' => null,
             ]);
-            $this->recordActivity($case, $actor, 'case_reopened', "Case {$case->case_code} reopened");
+            $this->recordActivity($case, $actor, 'case_reopened', $this->activityNotes(
+                "Case {$case->case_code} reopened",
+                ['Reason' => $reason],
+            ));
 
             return $case;
         });
@@ -321,6 +330,25 @@ class CaseModelService
         $sequence = CaseModel::withTrashed()->whereYear('created_at', $year)->count() + 1;
 
         return sprintf('CASE-%d-%06d', $year, $sequence);
+    }
+
+    /**
+     * Build the multi-line timeline text: the headline, then one "Label: value"
+     * line per field the worker filled in.
+     *
+     * @param  array<string, string|null>  $fields
+     */
+    private function activityNotes(string $headline, array $fields): string
+    {
+        $lines = [$headline];
+
+        foreach ($fields as $label => $value) {
+            if (filled($value)) {
+                $lines[] = "{$label}: {$value}";
+            }
+        }
+
+        return implode("\n", $lines);
     }
 
     private function recordActivity(CaseModel $case, User $user, string $type, ?string $notes = null): void
