@@ -99,8 +99,12 @@ export interface AssignPayload {
 }
 
 export interface CloseCasePayload {
-  reason?: string
+  reason: string
   notes?: string
+}
+
+export interface ReopenPayload {
+  reason: string
 }
 
 export interface ReferPayload {

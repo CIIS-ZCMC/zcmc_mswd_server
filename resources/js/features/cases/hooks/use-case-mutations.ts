@@ -16,6 +16,7 @@ import type {
   CloseCasePayload,
   OpenCasePayload,
   ReferPayload,
+  ReopenPayload,
   UpdateCasePayload,
 } from "../types/case.types"
 
@@ -94,10 +95,10 @@ export function useCaseMutations(caseId?: number | string | null) {
   })
 
   const reopenMutation = useMutation({
-    mutationFn: async ({ id: targetId, notes }: { id?: number | string; notes?: string }) => {
+    mutationFn: async ({ id: targetId, payload }: { id?: number | string; payload: ReopenPayload }) => {
       const activeId = targetId ?? id
       if (!activeId) throw new Error("Case ID is required to reopen")
-      const raw = await reopenCase(activeId, notes)
+      const raw = await reopenCase(activeId, payload)
       return toCaseRecord(raw)
     },
     onSuccess: () => {

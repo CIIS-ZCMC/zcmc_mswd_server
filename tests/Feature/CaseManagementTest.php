@@ -159,6 +159,19 @@ it('reopens a case, recording the reason', function () {
         ->toBe("Case {$case->case_code} reopened\nReason: Patient readmitted");
 });
 
+it('requires a reason to reopen a case', function () {
+    $worker = caseUser('MSS Head');
+    Sanctum::actingAs($worker);
+    $case = caseOpenFor($worker, $this->patient);
+    app(CaseModelService::class)->close($case, $worker, 'Goals met');
+
+    $this->postJson("/api/cases/{$case->id}/reopen")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('reason');
+
+    expect($case->fresh()->status)->toBe('closed');
+});
+
 it('records the notes given when reassigning a case', function () {
     $worker = caseUser('MSS Head');
     Sanctum::actingAs($worker);

@@ -12,15 +12,12 @@ class ReopenCaseRequest extends FormRequest
     }
 
     /**
-     * The reason is optional only until the reopen dialog sends one (phase 4 of
-     * docs/CASE_ACTION_REASONS_PLAN.md); it becomes required then.
-     *
      * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'reason' => ['nullable', 'string', 'max:1000'],
+            'reason' => ['required', 'string', 'max:1000'],
         ];
     }
 }

@@ -3,6 +3,7 @@ import type { ApiEnvelope, ApiPaginated } from "@/features/patients/types/api.ty
 import type {
   AssignPayload,
   CloseCasePayload,
+  ReopenPayload,
   HospitalLookupItem,
   OpenCasePayload,
   ReferPayload,
@@ -103,9 +104,9 @@ export function referCase(id: number | string, payload: ReferPayload): Promise<a
 }
 
 /** POST /cases/{id}/reopen — reopen closed/referred case */
-export function reopenCase(id: number | string, notes?: string): Promise<any> {
+export function reopenCase(id: number | string, payload: ReopenPayload): Promise<any> {
   return apiClient
-    .post<ApiEnvelope<any>>(`/cases/${id}/reopen`, { notes })
+    .post<ApiEnvelope<any>>(`/cases/${id}/reopen`, payload)
     .then((res) => res.data)
 }
 
