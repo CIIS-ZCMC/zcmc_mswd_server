@@ -39,11 +39,16 @@ export const CloseCaseDialog: React.FC<CloseCaseDialogProps> = ({
     e.preventDefault()
     setError("")
 
+    if (!reason.trim()) {
+      setError("Please state the closure reason.")
+      return
+    }
+
     try {
       await closeCase({
         id: caseId,
         payload: {
-          reason: reason.trim() || undefined,
+          reason: reason.trim(),
           notes: notes.trim() || undefined,
         },
       })
@@ -80,7 +85,9 @@ export const CloseCaseDialog: React.FC<CloseCaseDialogProps> = ({
           )}
 
           <div className="space-y-1.5">
-            <Label className="text-xs font-bold uppercase tracking-wider">Closure Reason</Label>
+            <Label className="text-xs font-bold uppercase tracking-wider">
+              Closure Reason <span className="text-destructive">*</span>
+            </Label>
             <Input
               placeholder="e.g. Case objectives completed, Patient discharged, Financial aid disbursed"
               value={reason}

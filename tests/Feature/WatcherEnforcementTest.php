@@ -156,7 +156,7 @@ it('never blocks reopening a case, even with an unmet watcher requirement', func
     $case = enforcementCase(enforcementPatient(), $worker);
     $case->update(['status' => 'closed']);
 
-    $this->postJson("/api/cases/{$case->id}/reopen")->assertOk();
+    $this->postJson("/api/cases/{$case->id}/reopen", ['reason' => 'Patient readmitted'])->assertOk();
 });
 
 it('never blocks changing admission_type via PUT, even when it newly requires a watcher', function () {

@@ -47,6 +47,7 @@ import {
 import { AssignCaseDialog } from "./dialogs/assign-case-dialog"
 import { CloseCaseDialog } from "./dialogs/close-case-dialog"
 import { ReferCaseDialog } from "./dialogs/refer-case-dialog"
+import { ReopenCaseDialog } from "./dialogs/reopen-case-dialog"
 import { PrintUisDialog } from "./dialogs/print-uis-dialog"
 import { IntakeAssessmentDialog } from "./dialogs/intake-assessment-dialog"
 import { ReassessCaseDialog } from "./dialogs/reassess-case-dialog"
@@ -59,6 +60,22 @@ import { ProgressNotesTab } from "./progress-notes-tab"
 import { AssessmentHistoryTimeline } from "./assessment-history-timeline"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { cn } from "@/lib/utils"
+
+const ACTIVITY_LABELS: Record<string, string> = {
+  case_opened: "Case opened",
+  case_reassigned: "Case reassigned",
+  case_closed: "Case closed",
+  case_referred: "Case referred",
+  case_reopened: "Case reopened",
+}
+
+function formatActivityType(type?: string | null): string {
+  if (!type) return "Activity"
+  return (
+    ACTIVITY_LABELS[type] ??
+    type.replace(/_/g, " ").replace(/^\w/, (c) => c.toUpperCase())
+  )
+}
 
 export const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>()
@@ -84,11 +101,12 @@ export const CaseDetailPage: React.FC = () => {
   const { data: caseRecord, isLoading, error } = useCase(caseId)
   const { data: activities = [] } = useCaseActivities(caseId)
   const { data: assessments = [] } = useCaseAssessments(Number(caseId))
-  const { updateCase, reopenCase, archiveCase } = useCaseMutations(caseId)
+  const { updateCase, archiveCase } = useCaseMutations(caseId)
 
   const [isAssignOpen, setIsAssignOpen] = useState(false)
   const [isCloseOpen, setIsCloseOpen] = useState(false)
   const [isReferOpen, setIsReferOpen] = useState(false)
+  const [isReopenOpen, setIsReopenOpen] = useState(false)
   const [isPrintUisOpen, setIsPrintUisOpen] = useState(false)
   const [isIntakeAssessmentOpen, setIsIntakeAssessmentOpen] = useState(false)
   const [isReassessOpen, setIsReassessOpen] = useState(false)
@@ -149,12 +167,6 @@ export const CaseDetailPage: React.FC = () => {
       id: caseId,
       payload: { card_color: color },
     })
-  }
-
-  const handleReopen = async () => {
-    if (window.confirm("Are you sure you want to reopen this case episode?")) {
-      await reopenCase({ id: caseId })
-    }
   }
 
   const handleArchive = async () => {
@@ -370,7 +382,7 @@ export const CaseDetailPage: React.FC = () => {
               <Button
                 variant="default"
                 size="sm"
-                onClick={handleReopen}
+                onClick={() => setIsReopenOpen(true)}
                 className="font-bold text-xs sm:text-sm h-10 px-4 gap-1.5 shadow-sm"
               >
                 <RotateCcw className="size-4" />
@@ -545,15 +557,28 @@ export const CaseDetailPage: React.FC = () => {
                 </div>
               ) : (
                 <div className="space-y-3">
-                  {activities.map((act: any, idx: number) => (
-                    <div key={idx} className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border text-xs">
-                      <Activity className="size-4 text-primary shrink-0 mt-0.5" />
-                      <div className="space-y-0.5">
-                        <div className="font-semibold text-foreground">{act.description ?? act.event ?? "Activity"}</div>
-                        <div className="text-muted-foreground font-mono">{act.created_at ?? "—"}</div>
+                  {activities.map((act: any) => {
+                    const when = act.activity_date ?? act.created_at
+                    return (
+                      <div key={act.id} className="flex items-start gap-3 p-3 rounded-lg bg-muted/40 border text-xs">
+                        <Activity className="size-4 text-primary shrink-0 mt-0.5" />
+                        <div className="space-y-0.5 min-w-0">
+                          <div className="font-semibold text-foreground">
+                            {formatActivityType(act.activity_type)}
+                          </div>
+                          <div className="text-muted-foreground">
+                            {when ? new Date(when).toLocaleString() : "—"}
+                            {act.actor_name ? ` · ${act.actor_name}` : ""}
+                          </div>
+                          {act.notes && (
+                            <div className="whitespace-pre-line wrap-break-word text-foreground/80 pt-1">
+                              {act.notes}
+                            </div>
+                          )}
+                        </div>
                       </div>
-                    </div>
-                  ))}
+                    )
+                  })}
                 </div>
               )}
             </div>
@@ -581,6 +606,13 @@ export const CaseDetailPage: React.FC = () => {
         caseCode={caseRecord.caseCode}
         open={isReferOpen}
         onOpenChange={setIsReferOpen}
+      />
+
+      <ReopenCaseDialog
+        caseId={Number(caseId)}
+        caseCode={caseRecord.caseCode}
+        open={isReopenOpen}
+        onOpenChange={setIsReopenOpen}
       />
 
       <PrintUisDialog
