@@ -60,7 +60,7 @@ it('blocks closing an inpatient case with no registered watcher', function () {
     Sanctum::actingAs($worker);
     $case = enforcementCase(enforcementPatient(), $worker);
 
-    $response = $this->postJson("/api/cases/{$case->id}/close")->assertStatus(422);
+    $response = $this->postJson("/api/cases/{$case->id}/close", ['reason' => 'Goals met'])->assertStatus(422);
 
     $response->assertJsonPath('errors.watcher.0', fn ($m) => is_string($m) && str_contains($m, 'be closed'))
         ->assertJson(['watcher_status' => [
@@ -76,7 +76,7 @@ it('allows closing an inpatient case once a primary watcher is registered', func
     $case = enforcementCase(enforcementPatient(), $worker);
     registerPrimaryWatcher($case, $worker);
 
-    $this->postJson("/api/cases/{$case->id}/close")->assertOk();
+    $this->postJson("/api/cases/{$case->id}/close", ['reason' => 'Goals met'])->assertOk();
     expect($case->refresh()->status)->toBe('closed');
 });
 
@@ -86,7 +86,7 @@ it('allows closing an inpatient case once the watcher requirement is waived', fu
     $case = enforcementCase(enforcementPatient(), $worker);
 
     $this->postJson("/api/cases/{$case->id}/watcher-waiver", ['watcher_waiver_reason' => 'unaccompanied'])->assertOk();
-    $this->postJson("/api/cases/{$case->id}/close")->assertOk();
+    $this->postJson("/api/cases/{$case->id}/close", ['reason' => 'Goals met'])->assertOk();
 });
 
 it('allows closing an OPD case with no watcher at all, since none is required', function () {
@@ -94,7 +94,7 @@ it('allows closing an OPD case with no watcher at all, since none is required', 
     Sanctum::actingAs($worker);
     $case = enforcementCase(enforcementPatient(), $worker, ['admission_type' => 'OPD']);
 
-    $this->postJson("/api/cases/{$case->id}/close")->assertOk();
+    $this->postJson("/api/cases/{$case->id}/close", ['reason' => 'Goals met'])->assertOk();
 });
 
 // --- Approve assistance ---------------------------------------------------

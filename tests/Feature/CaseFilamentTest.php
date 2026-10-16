@@ -83,10 +83,40 @@ it('closes a case from the panel', function () {
     $case = panelCase($worker, $this->patient);
 
     Livewire::test(ViewCase::class, ['record' => $case->getKey()])
-        ->callAction('close');
+        ->callAction('close', ['reason' => 'Goals met', 'notes' => 'Aid disbursed']);
 
     expect($case->fresh()->status)->toBe('closed')
-        ->and($case->fresh()->date_closed)->not->toBeNull();
+        ->and($case->fresh()->date_closed)->not->toBeNull()
+        ->and($case->activities()->where('activity_type', 'case_closed')->value('notes'))
+        ->toBe("Case {$case->case_code} closed\nReason: Goals met\nNotes: Aid disbursed");
+});
+
+it('requires a reason to close a case from the panel', function () {
+    $worker = casePanelUser();
+    actingAs($worker);
+    $case = panelCase($worker, $this->patient);
+
+    Livewire::test(ViewCase::class, ['record' => $case->getKey()])
+        ->callAction('close', ['reason' => ''])
+        ->assertHasActionErrors(['reason' => 'required']);
+
+    expect($case->fresh()->status)->toBe('open');
+});
+
+it('refers and reopens a case from the panel with reasons', function () {
+    $worker = casePanelUser();
+    actingAs($worker);
+    $case = panelCase($worker, $this->patient);
+
+    Livewire::test(ViewCase::class, ['record' => $case->getKey()])
+        ->callAction('refer', ['referred_to' => 'PCSO', 'reason' => 'Needs dialysis funding'])
+        ->callAction('reopen', ['reason' => 'Funding approved']);
+
+    expect($case->fresh()->status)->toBe('ongoing')
+        ->and($case->activities()->where('activity_type', 'case_referred')->value('notes'))
+        ->toContain('Referred to: PCSO', 'Reason: Needs dialysis funding')
+        ->and($case->activities()->where('activity_type', 'case_reopened')->value('notes'))
+        ->toContain('Reason: Funding approved');
 });
 
 it('blocks archiving an open case from the panel', function () {

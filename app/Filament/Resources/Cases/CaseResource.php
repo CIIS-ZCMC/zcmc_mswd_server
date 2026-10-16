@@ -24,6 +24,7 @@ use Filament\Actions\Action;
 use Filament\Forms\Components\DatePicker;
 use Filament\Forms\Components\Select;
 use Filament\Forms\Components\Textarea;
+use Filament\Forms\Components\TextInput;
 use Filament\Infolists\Components\TextEntry;
 use Filament\Notifications\Notification;
 use Filament\Resources\Resource;
@@ -239,9 +240,10 @@ class CaseResource extends Resource
                     ->options(fn () => User::orderBy('employee_name')->pluck('employee_name', 'id'))
                     ->searchable()
                     ->required(),
+                Textarea::make('notes')->label('Notes')->maxLength(2000),
             ])
             ->action(function (CaseModel $record, array $data) {
-                app(CaseModelService::class)->assign($record, User::findOrFail($data['assigned_user_id']), auth()->user());
+                app(CaseModelService::class)->assign($record, User::findOrFail($data['assigned_user_id']), auth()->user(), $data['notes'] ?? null);
                 Notification::make()->title('Case reassigned')->success()->send();
             });
     }
@@ -251,12 +253,15 @@ class CaseResource extends Resource
         return Action::make('close')
             ->icon(Heroicon::OutlinedCheckCircle)
             ->color('success')
-            ->requiresConfirmation()
             ->visible(fn (CaseModel $record): bool => ! $record->trashed()
                 && $record->status !== CaseModel::STATUS_CLOSED
                 && (auth()->user()?->can('cases.update') ?? false))
-            ->action(function (CaseModel $record) {
-                app(CaseModelService::class)->close($record, auth()->user());
+            ->schema([
+                TextInput::make('reason')->label('Closure reason')->required()->maxLength(255),
+                Textarea::make('notes')->label('Closure notes')->maxLength(2000),
+            ])
+            ->action(function (CaseModel $record, array $data) {
+                app(CaseModelService::class)->close($record, auth()->user(), $data['reason'], $data['notes'] ?? null);
                 Notification::make()->title('Case closed')->success()->send();
             });
     }
@@ -267,9 +272,13 @@ class CaseResource extends Resource
             ->icon(Heroicon::OutlinedArrowUpRight)
             ->color('info')
             ->visible(fn (CaseModel $record): bool => ! $record->trashed() && (auth()->user()?->can('cases.update') ?? false))
-            ->schema([Textarea::make('notes')->label('Referral notes')])
+            ->schema([
+                TextInput::make('referred_to')->label('Referred to (agency / department)')->required()->maxLength(255),
+                Textarea::make('reason')->label('Reason for referral')->required()->maxLength(1000),
+                Textarea::make('notes')->label('Referral notes')->maxLength(2000),
+            ])
             ->action(function (CaseModel $record, array $data) {
-                app(CaseModelService::class)->refer($record, auth()->user(), $data['notes'] ?? null);
+                app(CaseModelService::class)->refer($record, auth()->user(), $data['referred_to'], $data['reason'], $data['notes'] ?? null);
                 Notification::make()->title('Case referred')->success()->send();
             });
     }
@@ -279,12 +288,14 @@ class CaseResource extends Resource
         return Action::make('reopen')
             ->icon(Heroicon::OutlinedArrowPath)
             ->color('warning')
-            ->requiresConfirmation()
             ->visible(fn (CaseModel $record): bool => ! $record->trashed()
                 && in_array($record->status, [CaseModel::STATUS_CLOSED, CaseModel::STATUS_REFERRED], true)
                 && (auth()->user()?->can('cases.update') ?? false))
-            ->action(function (CaseModel $record) {
-                app(CaseModelService::class)->reopen($record, auth()->user());
+            ->schema([
+                Textarea::make('reason')->label('Reason for reopening')->required()->maxLength(1000),
+            ])
+            ->action(function (CaseModel $record, array $data) {
+                app(CaseModelService::class)->reopen($record, auth()->user(), $data['reason']);
                 Notification::make()->title('Case reopened')->success()->send();
             });
     }
