@@ -60,7 +60,7 @@ Every rule (primary watcher, pass, presence, waiver, requirement) runs only on `
 | 3. Case assignment API, pass numbers, requirement status | server | 1, 2 | ☑ done |
 | 4. Pass expiry command | server | 3 | ☑ done |
 | 5. Client: patient watchers tab, assign dialog, case panel, bug fixes | client | 2, 3 | ☐ |
-| 6. Docs, OpenAPI, wrap-up | docs | 1–5 | ☐ |
+| 6. Docs, OpenAPI, wrap-up | docs | 1–5 | ☑ done |
 
 ## Phase 0: Plan doc
 
@@ -285,3 +285,16 @@ Update `CaseWatcherApiTest`, `CaseWatcherServiceTest`, `WatcherEnforcementTest` 
 3. Assign the watcher from the patient's Watchers tab, then from the case page.
 4. Make the watcher primary and issue a pass. Check that the banner and the close-case block clear.
 5. Close the case. Check that the assignment becomes read-only history.
+
+## Results
+
+Shipped as #276 (phases 1–3), #277 (phases 4–5) and the Phase 6 docs PR, all under #275.
+
+**What differs from the plan above**
+- **`open_cases` on the patient response was not added.** The patient profile already returns `cases`, so the client derives the open ones (`open` or `ongoing`) from it (`toOpenCases` in `patients-adapter.ts`). No server change was needed.
+- **The old flat request body still works.** `POST cases/{case}/watchers` with `name`/`relationship`/`contact_number`/`address` is treated as a nested `watcher`, and case watcher responses still carry flat `name`/`relationship`/`contact_number`/`address` copies next to the embedded `watcher`. Remove both once nothing reads them.
+- **`mss:backfill-case-watchers` was removed**, not kept: it wrote the columns this plan drops.
+- **`TurnaroundTargetDocs`** pointed at a response that does not exist (`Unprocessable`); it now uses `ValidationError`. OpenAPI generation failed on it, so `storage/api-docs/api-docs.json` had not been regenerated for a while. The regenerated file therefore also picks up unrelated endpoints.
+
+**Not verified**
+- The new watcher screens were typechecked and linted but not driven in a browser.

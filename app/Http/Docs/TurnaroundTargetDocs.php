@@ -78,7 +78,7 @@ final class TurnaroundTargetDocs
             new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
             new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
             new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
-            new OA\Response(response: 422, ref: '#/components/responses/Unprocessable'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
         ],
     )]
     public function update(): void {}

@@ -80,11 +80,12 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'case_id', type: 'integer'),
-        new OA\Property(property: 'patient_watcher_id', type: 'integer', nullable: true),
-        new OA\Property(property: 'name', type: 'string'),
-        new OA\Property(property: 'relationship', type: 'string', nullable: true),
-        new OA\Property(property: 'contact_number', type: 'string', nullable: true),
-        new OA\Property(property: 'address', type: 'string', nullable: true),
+        new OA\Property(property: 'patient_watcher_id', type: 'integer'),
+        new OA\Property(property: 'watcher', ref: '#/components/schemas/PatientWatcher', description: 'The person assigned. Present when the patient watcher was loaded.'),
+        new OA\Property(property: 'name', type: 'string', nullable: true, description: 'Copy of watcher.name, kept for older clients.'),
+        new OA\Property(property: 'relationship', type: 'string', nullable: true, description: 'Copy of watcher.relationship_code, kept for older clients.'),
+        new OA\Property(property: 'contact_number', type: 'string', nullable: true, description: 'Copy of watcher.contact_number, kept for older clients.'),
+        new OA\Property(property: 'address', type: 'string', nullable: true, description: 'Copy of watcher.address, kept for older clients.'),
         new OA\Property(property: 'is_primary', type: 'boolean'),
         new OA\Property(property: 'is_informant', type: 'boolean'),
         new OA\Property(property: 'pass_number', type: 'string', nullable: true),
@@ -99,13 +100,23 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'CaseWatcherStoreRequest',
-    description: 'Either link an existing patient_watcher_id or supply an inline person (name + relationship code).',
+    description: "Assigns a watcher to an open case: either an existing patient_watcher_id (the watcher must belong to the case's patient) or a nested `watcher` that is created for the patient and assigned in one step. The case must be open or ongoing.",
     properties: [
-        new OA\Property(property: 'patient_watcher_id', type: 'integer', nullable: true),
-        new OA\Property(property: 'name', type: 'string', maxLength: 255, description: 'Required without patient_watcher_id.'),
-        new OA\Property(property: 'relationship', type: 'string', description: 'Watcher relationship type code. Required without patient_watcher_id.'),
-        new OA\Property(property: 'contact_number', type: 'string', maxLength: 255, nullable: true),
-        new OA\Property(property: 'address', type: 'string', maxLength: 255, nullable: true),
+        new OA\Property(property: 'patient_watcher_id', type: 'integer', nullable: true, description: 'Required without `watcher`.'),
+        new OA\Property(
+            property: 'watcher',
+            type: 'object',
+            nullable: true,
+            description: 'A new person. Required without patient_watcher_id.',
+            required: ['name', 'relationship_code'],
+            properties: [
+                new OA\Property(property: 'name', type: 'string', maxLength: 255),
+                new OA\Property(property: 'relationship_code', type: 'string', description: 'A watcher relationship type code.'),
+                new OA\Property(property: 'contact_number', type: 'string', maxLength: 255, nullable: true),
+                new OA\Property(property: 'address', type: 'string', maxLength: 255, nullable: true),
+                new OA\Property(property: 'notes', type: 'string', nullable: true),
+            ],
+        ),
         new OA\Property(property: 'is_primary', type: 'boolean'),
         new OA\Property(property: 'is_informant', type: 'boolean'),
         new OA\Property(property: 'present_from', type: 'string', format: 'date', nullable: true),
@@ -115,11 +126,8 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'CaseWatcherUpdateRequest',
+    description: "Assignment fields only. The watcher's own details are edited with PUT /watchers/{watcher}.",
     properties: [
-        new OA\Property(property: 'name', type: 'string', maxLength: 255),
-        new OA\Property(property: 'relationship', type: 'string', description: 'Watcher relationship type code.'),
-        new OA\Property(property: 'contact_number', type: 'string', maxLength: 255, nullable: true),
-        new OA\Property(property: 'address', type: 'string', maxLength: 255, nullable: true),
         new OA\Property(property: 'is_informant', type: 'boolean'),
         new OA\Property(property: 'present_from', type: 'string', format: 'date', nullable: true),
         new OA\Property(property: 'present_until', type: 'string', format: 'date', nullable: true),
@@ -140,7 +148,8 @@ use OpenApi\Attributes as OA;
     type: 'object',
     properties: [
         new OA\Property(property: 'requirement', type: 'string', enum: ['required', 'recommended', 'optional', 'waived']),
-        new OA\Property(property: 'has_primary', type: 'boolean'),
+        new OA\Property(property: 'requirement_reason', type: 'string', enum: ['legacy', 'waived', 'minor', 'incapacitated', 'inpatient', 'er', 'opd'], description: 'Why the requirement is what it is.'),
+        new OA\Property(property: 'has_primary', type: 'boolean', description: 'True only for a primary assignment whose pass is not revoked and who has not left (present_until).'),
         new OA\Property(property: 'satisfied', type: 'boolean'),
         new OA\Property(property: 'blocking', type: 'boolean'),
         new OA\Property(

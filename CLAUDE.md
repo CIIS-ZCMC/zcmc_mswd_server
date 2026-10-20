@@ -33,7 +33,7 @@ This is the unified full-stack repository for the ZCMC Medical Social Work Depar
 
 `resources/js/features/<feature>/{api,components,hooks,types}`:
 - `auth`: session login, auth state, permission checks (`usePermission`, `useHasRole`).
-- `patients`: registry list, master-detail view, 11-tab patient profile.
+- `patients`: registry list, master-detail view, 11-tab patient profile. Watchers belong to the patient (`patient_watchers`, added with or without a case) and are assigned to an open case through `case_watchers`, which holds the primary/informant/pass/presence facts; see `docs/WATCHER_MODULE_PLAN.md`.
 - `socioeconomic`: itemized living expenses and family income.
 - `cases`: caseload, episodes, progress notes, signoff, assessments. The Intake Assessment (UIS) belongs to a patient's HIS encounter with an optional case (`POST /patients/{patient}/intake-assessments`, `/assessments/{id}/uis*`, `NewIntakeAssessmentDialog`); see `docs/INTAKE_ASSESSMENT_PLAN.md`.
 - `hospital`: encounters, admission details, HIS patient search & 1-click import (`POST /hospital-patients/{id}/import`), hospital integration.
