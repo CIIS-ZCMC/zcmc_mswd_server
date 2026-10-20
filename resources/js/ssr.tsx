@@ -1,7 +1,6 @@
-import { createInertiaApp } from "@inertiajs/react"
+import { createInertiaApp, type ResolvedComponent } from "@inertiajs/react"
 import createServer from "@inertiajs/react/server"
 import ReactDOMServer from "react-dom/server"
-import { resolvePageComponent } from "laravel-vite-plugin/inertia-helpers"
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query"
 import { ThemeProvider } from "@/providers/theme-provider"
 import { TooltipProvider } from "@/components/ui/tooltip"
@@ -13,11 +12,14 @@ createServer((page) =>
     page,
     render: ReactDOMServer.renderToString,
     title: (title) => (title ? `${title} - ${appName}` : appName),
-    resolve: (name) =>
-      resolvePageComponent(
-        `./pages/${name}.tsx`,
-        import.meta.glob("./pages/**/*.tsx")
-      ),
+    resolve: async (name) => {
+      const pages = import.meta.glob<{ default: ResolvedComponent }>(
+        "./pages/**/*.tsx"
+      )
+      const page = pages[`./pages/${name}.tsx`]
+      if (!page) throw new Error(`Page not found: ${name}`)
+      return (await page()).default
+    },
     setup: ({ App, props }) => {
       const queryClient = new QueryClient({
         defaultOptions: {
