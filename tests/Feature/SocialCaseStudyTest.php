@@ -3,7 +3,6 @@
 use App\Models\Assessment;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
-use App\Models\CaseWatcher;
 use App\Models\Document;
 use App\Models\Patient;
 use App\Models\Sector;
