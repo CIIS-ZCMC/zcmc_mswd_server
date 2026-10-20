@@ -33,10 +33,47 @@ interface WatcherDialogProps {
   isSubmitting?: boolean
 }
 
+function extract10DigitPhone(raw: string): string {
+  if (!raw) return ""
+  const digits = raw.replace(/\D/g, "")
+  if (digits.startsWith("63") && digits.length >= 12) {
+    return digits.slice(2, 12)
+  }
+  if (digits.startsWith("0") && digits.length >= 11) {
+    return digits.slice(1, 11)
+  }
+  return digits.slice(0, 10)
+}
+
+function parseWatcherFullName(fullName: string): { lastName: string; firstName: string; middleName: string } {
+  if (!fullName) return { lastName: "", firstName: "", middleName: "" }
+  const trimmed = fullName.trim()
+  if (trimmed.includes(",")) {
+    const [lastPart, restPart] = trimmed.split(",")
+    const rest = (restPart || "").trim().split(/\s+/)
+    return {
+      lastName: lastPart.trim(),
+      firstName: rest[0] || "",
+      middleName: rest.slice(1).join(" "),
+    }
+  }
+  const parts = trimmed.split(/\s+/)
+  if (parts.length === 1) {
+    return { lastName: parts[0], firstName: "", middleName: "" }
+  }
+  if (parts.length === 2) {
+    return { firstName: parts[0], middleName: "", lastName: parts[1] }
+  }
+  return {
+    firstName: parts[0],
+    middleName: parts.slice(1, -1).join(" "),
+    lastName: parts[parts.length - 1],
+  }
+}
+
 /**
- * Who a watcher is: last, first and middle name, relationship, contact number, address and notes. It
- * says nothing about any case; assigning the watcher to a case (primary, pass,
- * presence) is the assign dialog's job.
+ * Who a watcher is: name (last, first, middle), relationship, contact number,
+ * address and notes.
  */
 export const WatcherDialog: React.FC<WatcherDialogProps> = ({
   isOpen,
@@ -48,6 +85,28 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
 }) => {
   const { data: relationshipTypes = [], isLoading: isLoadingRelationships } =
     useWatcherRelationshipTypes()
+
+  const relationshipMap = React.useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const t of relationshipTypes) {
+      map[t.code] = t.name
+    }
+    return map
+  }, [relationshipTypes])
+
+  const formatRelationshipLabel = React.useCallback(
+    (code: string | null) => {
+      if (!code) return ""
+      const match = relationshipMap[code]
+      if (match) {
+        return match.replace(/_/g, " ")
+      }
+      return code
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+    },
+    [relationshipMap]
+  )
 
   const [formData, setFormData] = useState({
     lastName: "",
@@ -67,34 +126,35 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
   if (currentSyncKey !== prevSyncKey) {
     setPrevSyncKey(currentSyncKey)
     setError(null)
-    setFormData(
-      editingWatcher
-        ? {
-            lastName: editingWatcher.lastName,
-            firstName: editingWatcher.firstName,
-            middleName: editingWatcher.middleName,
-            relationshipCode: editingWatcher.relationshipCode,
-            contactNumber: editingWatcher.contactNo,
-            address: editingWatcher.address,
-            notes: editingWatcher.notes,
-          }
-        : {
-            lastName: "",
-            firstName: "",
-            middleName: "",
-            relationshipCode: relationshipTypes[0]?.code ?? "",
-            contactNumber: defaults?.contactNo ?? "",
-            address: defaults?.address ?? "",
-            notes: "",
-          }
-    )
+    if (editingWatcher) {
+      const parsed = parseWatcherFullName(editingWatcher.fullName)
+      setFormData({
+        lastName: editingWatcher.lastName || parsed.lastName,
+        firstName: editingWatcher.firstName || parsed.firstName,
+        middleName: editingWatcher.middleName || parsed.middleName,
+        relationshipCode: editingWatcher.relationshipCode,
+        contactNumber: extract10DigitPhone(editingWatcher.contactNo),
+        address: editingWatcher.address,
+        notes: editingWatcher.notes,
+      })
+    } else {
+      setFormData({
+        lastName: "",
+        firstName: "",
+        middleName: "",
+        relationshipCode: relationshipTypes[0]?.code ?? "",
+        contactNumber: extract10DigitPhone(defaults?.contactNo ?? ""),
+        address: defaults?.address ?? "",
+        notes: "",
+      })
+    }
   }
 
   const canSave =
     formData.lastName.trim() !== "" &&
     formData.firstName.trim() !== "" &&
     formData.relationshipCode !== "" &&
-    formData.contactNumber.trim() !== "" &&
+    formData.contactNumber.trim().length === 10 &&
     formData.address.trim() !== ""
 
   const handleSave = async () => {
@@ -102,13 +162,15 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
 
     try {
       setError(null)
+      const formattedContact = `+63-${formData.contactNumber.trim()}`
+
       await onSave(
         {
-          last_name: formData.lastName.trim(),
           first_name: formData.firstName.trim(),
           middle_name: formData.middleName.trim() || null,
+          last_name: formData.lastName.trim(),
           relationship_code: formData.relationshipCode,
-          contact_number: formData.contactNumber.trim(),
+          contact_number: formattedContact,
           address: formData.address.trim(),
           notes: formData.notes.trim() || null,
         },
@@ -141,7 +203,8 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
             </div>
           )}
 
-          <div className="grid grid-cols-3 gap-3">
+          {/* Three Name Inputs: Last Name, First Name, Middle Name */}
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <div>
               <Label className="text-xs font-semibold">Last Name *</Label>
               <Input
@@ -163,7 +226,7 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
             <div>
               <Label className="text-xs font-semibold">Middle Name</Label>
               <Input
-                placeholder="Optional"
+                placeholder="e.g. Santos"
                 value={formData.middleName}
                 onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
                 className="mt-1 h-10"
@@ -171,7 +234,7 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
             </div>
           </div>
 
-          <div className="grid grid-cols-2 gap-3">
+          <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <div>
               <Label className="text-xs font-semibold">Relationship *</Label>
               {isLoadingRelationships ? (
@@ -182,12 +245,16 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
                   onValueChange={(code) => code && setFormData({ ...formData, relationshipCode: code })}
                 >
                   <SelectTrigger className="mt-1 h-10">
-                    <SelectValue placeholder="Select relationship" />
+                    <SelectValue placeholder="Select relationship">
+                      {(val: string | null) =>
+                        val ? formatRelationshipLabel(val) : "Select relationship"
+                      }
+                    </SelectValue>
                   </SelectTrigger>
                   <SelectContent>
                     {relationshipTypes.map((type) => (
                       <SelectItem key={type.id} value={type.code}>
-                        {type.name}
+                        {formatRelationshipLabel(type.code) || type.name}
                       </SelectItem>
                     ))}
                   </SelectContent>
@@ -197,12 +264,28 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
 
             <div>
               <Label className="text-xs font-semibold">Contact Number *</Label>
-              <Input
-                placeholder="+63 9XX XXX XXXX"
-                value={formData.contactNumber}
-                onChange={(e) => setFormData({ ...formData, contactNumber: e.target.value })}
-                className="mt-1 h-10"
-              />
+              <div className="mt-1 flex items-stretch">
+                <div className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-3 text-xs font-bold text-muted-foreground select-none">
+                  +63 -
+                </div>
+                <Input
+                  type="tel"
+                  inputMode="numeric"
+                  placeholder="9XX XXX XXXX"
+                  maxLength={10}
+                  value={formData.contactNumber}
+                  onChange={(e) => {
+                    const cleaned = extract10DigitPhone(e.target.value)
+                    setFormData({ ...formData, contactNumber: cleaned })
+                  }}
+                  className="h-10 rounded-l-none font-mono tracking-wider"
+                />
+              </div>
+              {formData.contactNumber.length > 0 && formData.contactNumber.length < 10 && (
+                <p className="mt-1 text-[11px] text-muted-foreground">
+                  10-digit number required ({formData.contactNumber.length}/10)
+                </p>
+              )}
             </div>
           </div>
 
