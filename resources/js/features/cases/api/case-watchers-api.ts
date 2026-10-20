@@ -7,10 +7,12 @@ export interface CreateCaseWatcherPayload {
   patient_watcher_id?: number | null
   /** ...or create a new person for the case's patient and assign them. */
   watcher?: {
-    name: string
+    last_name: string
+    first_name: string
+    middle_name?: string | null
     relationship_code: string
-    contact_number?: string | null
-    address?: string | null
+    contact_number: string
+    address: string
   }
   is_primary?: boolean
   is_informant?: boolean

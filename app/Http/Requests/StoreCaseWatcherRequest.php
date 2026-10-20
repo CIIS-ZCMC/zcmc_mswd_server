@@ -26,18 +26,6 @@ class StoreCaseWatcherRequest extends FormRequest
         if ($this->route('case')) {
             $this->merge(['case_id' => $this->route('case')->id]);
         }
-
-        // Deprecated flat shape (name/relationship/contact_number/address on the
-        // request itself) is treated as a nested `watcher` until the client
-        // stops sending it.
-        if (! $this->filled('patient_watcher_id') && ! $this->has('watcher') && $this->filled('name')) {
-            $this->merge(['watcher' => [
-                'name' => $this->input('name'),
-                'relationship_code' => $this->input('relationship_code', $this->input('relationship')),
-                'contact_number' => $this->input('contact_number'),
-                'address' => $this->input('address'),
-            ]]);
-        }
     }
 
     /**
@@ -51,10 +39,12 @@ class StoreCaseWatcherRequest extends FormRequest
             'patient_watcher_id' => ['required_without:watcher', 'nullable', 'integer', 'exists:patient_watchers,id'],
 
             'watcher' => ['required_without:patient_watcher_id', 'nullable', 'array'],
-            'watcher.name' => ['required_with:watcher', 'string', 'max:255'],
+            'watcher.last_name' => ['required_with:watcher', 'string', 'max:255'],
+            'watcher.first_name' => ['required_with:watcher', 'string', 'max:255'],
+            'watcher.middle_name' => ['nullable', 'string', 'max:255'],
             'watcher.relationship_code' => ['required_with:watcher', 'string', Rule::exists('watcher_relationship_types', 'code')],
-            'watcher.contact_number' => ['nullable', 'string', 'max:255'],
-            'watcher.address' => ['nullable', 'string', 'max:255'],
+            'watcher.contact_number' => ['required_with:watcher', 'string', 'max:255'],
+            'watcher.address' => ['required_with:watcher', 'string', 'max:255'],
             'watcher.notes' => ['nullable', 'string'],
 
             'is_primary' => ['sometimes', 'boolean'],

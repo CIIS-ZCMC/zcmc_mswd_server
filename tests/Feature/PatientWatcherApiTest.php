@@ -37,22 +37,58 @@ function patientWatcherCase(array $overrides = []): CaseModel
 
 it('adds a watcher to a patient who has no case', function () {
     $this->postJson("/api/patients/{$this->patient->id}/watchers", [
-        'name' => 'Maria Reyes', 'relationship_code' => 'spouse', 'contact_number' => '0917', 'address' => 'Zone 1',
+        'last_name' => 'Reyes', 'first_name' => 'Maria', 'middle_name' => 'Lopez', 'relationship_code' => 'spouse',
+        'contact_number' => '0917', 'address' => 'Zone 1',
     ])->assertCreated()
-        ->assertJsonPath('data.name', 'Maria Reyes')
+        ->assertJsonPath('data.name', 'Maria L. Reyes')
+        ->assertJsonPath('data.last_name', 'Reyes')
+        ->assertJsonPath('data.first_name', 'Maria')
+        ->assertJsonPath('data.middle_name', 'Lopez')
         ->assertJsonPath('data.relationship_code', 'spouse')
         ->assertJsonPath('data.relationship_label', 'Spouse');
 
-    $watcher = PatientWatcher::firstWhere('name', 'Maria Reyes');
+    $watcher = PatientWatcher::firstWhere('name', 'Maria L. Reyes');
     expect($watcher->patient_id)->toBe($this->patient->id)->and($watcher->added_by)->toBe($this->worker->id);
 });
 
 it('requires a known relationship code', function () {
-    $this->postJson("/api/patients/{$this->patient->id}/watchers", ['name' => 'Maria'])
+    $person = ['last_name' => 'Reyes', 'first_name' => 'Maria', 'contact_number' => '0917', 'address' => 'Zone 1'];
+
+    $this->postJson("/api/patients/{$this->patient->id}/watchers", $person)
         ->assertUnprocessable()->assertJsonValidationErrorFor('relationship_code');
 
-    $this->postJson("/api/patients/{$this->patient->id}/watchers", ['name' => 'Maria', 'relationship_code' => 'best_friend'])
+    $this->postJson("/api/patients/{$this->patient->id}/watchers", $person + ['relationship_code' => 'best_friend'])
         ->assertUnprocessable()->assertJsonValidationErrorFor('relationship_code');
+});
+
+it('requires the last name, first name, contact number and address, but not the middle name', function () {
+    $this->postJson("/api/patients/{$this->patient->id}/watchers", ['relationship_code' => 'spouse'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['last_name', 'first_name', 'contact_number', 'address'])
+        ->assertJsonMissingValidationErrors(['middle_name']);
+});
+
+it('keeps the required details on update and recomposes the name from the parts', function () {
+    $watcher = PatientWatcher::create([
+        'patient_id' => $this->patient->id, 'last_name' => 'Reyes', 'first_name' => 'Maria', 'middle_name' => 'Lopez',
+        'relationship_code' => 'spouse', 'contact_number' => '0917', 'address' => 'Zone 1',
+    ]);
+
+    foreach (['last_name', 'first_name', 'contact_number', 'address'] as $field) {
+        $this->putJson("/api/watchers/{$watcher->id}", [$field => ''])
+            ->assertUnprocessable()->assertJsonValidationErrorFor($field);
+    }
+
+    $this->putJson("/api/watchers/{$watcher->id}", ['first_name' => 'Marie', 'middle_name' => null])
+        ->assertOk()->assertJsonPath('data.name', 'Marie Reyes')->assertJsonPath('data.middle_name', null);
+});
+
+it('splits the name of a watcher written without parts', function () {
+    $comma = PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Reyes, Maria Lopez', 'relationship_code' => 'spouse']);
+    $plain = PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria Reyes', 'relationship_code' => 'spouse']);
+
+    expect([$comma->last_name, $comma->first_name, $comma->middle_name])->toBe(['Reyes', 'Maria', 'Lopez'])
+        ->and([$plain->last_name, $plain->first_name, $plain->middle_name])->toBe(['Reyes', 'Maria', null]);
 });
 
 it("lists a patient's watchers with the cases they are assigned to", function () {
@@ -74,12 +110,12 @@ it('updates a watcher, clears a field on null, and cannot move it to another pat
         'sector_id' => $this->sector->id, 'first_name' => 'Bea', 'last_name' => 'Cruz', 'sex' => 'female',
     ]);
     $watcher = PatientWatcher::create([
-        'patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse', 'contact_number' => '0917',
+        'patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse', 'contact_number' => '0917', 'notes' => 'Night shift',
     ]);
 
-    $this->putJson("/api/watchers/{$watcher->id}", ['contact_number' => null, 'patient_id' => $other->id, 'relationship_code' => 'child'])
+    $this->putJson("/api/watchers/{$watcher->id}", ['notes' => null, 'patient_id' => $other->id, 'relationship_code' => 'child'])
         ->assertOk()
-        ->assertJsonPath('data.contact_number', null)
+        ->assertJsonPath('data.notes', null)
         ->assertJsonPath('data.relationship_code', 'child');
 
     expect($watcher->refresh()->patient_id)->toBe($this->patient->id);

@@ -17,7 +17,11 @@ export interface WatcherAssignment {
  */
 export interface Watcher {
   id: string
+  /** The composed full name, e.g. "Maria L. Reyes". */
   fullName: string
+  lastName: string
+  firstName: string
+  middleName: string
   /** Display label, e.g. "Barangay Official". */
   relationship: string
   /** Master-list code, e.g. "barangay_official" — what the API takes. */

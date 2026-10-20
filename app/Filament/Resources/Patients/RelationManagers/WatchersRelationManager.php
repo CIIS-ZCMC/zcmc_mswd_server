@@ -23,13 +23,15 @@ class WatchersRelationManager extends RelationManager
     public function form(Schema $schema): Schema
     {
         return $schema->components([
-            TextInput::make('name')->required(),
+            TextInput::make('last_name')->required(),
+            TextInput::make('first_name')->required(),
+            TextInput::make('middle_name'),
             Select::make('relationship_code')
                 ->label('Relationship')
                 ->options(fn () => WatcherRelationshipType::orderBy('name')->pluck('name', 'code'))
                 ->required(),
-            TextInput::make('contact_number'),
-            TextInput::make('address'),
+            TextInput::make('contact_number')->required(),
+            TextInput::make('address')->required(),
             Textarea::make('notes'),
         ]);
     }
@@ -38,7 +40,7 @@ class WatchersRelationManager extends RelationManager
     {
         return $table
             ->columns([
-                TextColumn::make('name')->searchable(),
+                TextColumn::make('name')->label('Name')->searchable(['last_name', 'first_name', 'middle_name']),
                 TextColumn::make('relationshipType.name')->label('Relationship'),
                 TextColumn::make('contact_number')->placeholder('—'),
             ])

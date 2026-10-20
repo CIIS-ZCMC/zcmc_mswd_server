@@ -10904,12 +10904,24 @@
                     "watcher": {
                         "description": "A new person. Required without patient_watcher_id.",
                         "required": [
-                            "name",
-                            "relationship_code"
+                            "last_name",
+                            "first_name",
+                            "relationship_code",
+                            "contact_number",
+                            "address"
                         ],
                         "properties": {
-                            "name": {
+                            "last_name": {
                                 "type": "string",
+                                "maxLength": 255
+                            },
+                            "first_name": {
+                                "type": "string",
+                                "maxLength": 255
+                            },
+                            "middle_name": {
+                                "type": "string",
+                                "nullable": true,
                                 "maxLength": 255
                             },
                             "relationship_code": {
@@ -10918,12 +10930,10 @@
                             },
                             "contact_number": {
                                 "type": "string",
-                                "nullable": true,
                                 "maxLength": 255
                             },
                             "address": {
                                 "type": "string",
-                                "nullable": true,
                                 "maxLength": 255
                             },
                             "notes": {
@@ -12366,7 +12376,20 @@
                         "type": "integer"
                     },
                     "name": {
+                        "description": "The composed full name, e.g. \"Maria L. Reyes\".",
                         "type": "string"
+                    },
+                    "last_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "middle_name": {
+                        "type": "string",
+                        "nullable": true
                     },
                     "relationship_code": {
                         "description": "A watcher relationship type code.",
@@ -12453,12 +12476,24 @@
             "PatientWatcherRequest": {
                 "description": "A patient's watcher. patient_id cannot be changed on update.",
                 "required": [
-                    "name",
-                    "relationship_code"
+                    "last_name",
+                    "first_name",
+                    "relationship_code",
+                    "contact_number",
+                    "address"
                 ],
                 "properties": {
-                    "name": {
+                    "last_name": {
                         "type": "string",
+                        "maxLength": 255
+                    },
+                    "first_name": {
+                        "type": "string",
+                        "maxLength": 255
+                    },
+                    "middle_name": {
+                        "type": "string",
+                        "nullable": true,
                         "maxLength": 255
                     },
                     "relationship_code": {
@@ -12467,12 +12502,10 @@
                     },
                     "contact_number": {
                         "type": "string",
-                        "nullable": true,
                         "maxLength": 255
                     },
                     "address": {
                         "type": "string",
-                        "nullable": true,
                         "maxLength": 255
                     },
                     "notes": {

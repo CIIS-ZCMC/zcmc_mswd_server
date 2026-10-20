@@ -202,7 +202,9 @@ it('manages patient records through nested endpoints', function () {
         ->assertJsonPath('data.educational_attainment', 'College graduate');
 
     // Watcher
-    $this->postJson("/api/patients/{$patient->id}/watchers", ['name' => 'Pedro', 'relationship_code' => 'parent'])
+    $this->postJson("/api/patients/{$patient->id}/watchers", [
+        'last_name' => 'Reyes', 'first_name' => 'Pedro', 'relationship_code' => 'parent', 'contact_number' => '0917', 'address' => 'Zone 1',
+    ])
         ->assertCreated();
 
     expect($patient->patientIds()->count())->toBe(1)

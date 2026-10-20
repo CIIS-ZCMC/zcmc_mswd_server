@@ -8,6 +8,7 @@ use App\Models\User;
 use App\Services\CaseWatcherService;
 use Database\Seeders\WatcherRelationshipTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Arr;
 use Illuminate\Validation\ValidationException;
 
 uses(RefreshDatabase::class);
@@ -31,12 +32,12 @@ beforeEach(function () {
 function serviceAssign(array $attributes)
 {
     $person = [
-        'name' => $attributes['name'], 'relationship_code' => $attributes['relationship'],
-        'contact_number' => $attributes['contact_number'] ?? null, 'address' => $attributes['address'] ?? null,
+        'last_name' => 'Reyes', 'first_name' => $attributes['name'], 'relationship_code' => $attributes['relationship'],
+        'contact_number' => $attributes['contact_number'] ?? '0917', 'address' => $attributes['address'] ?? 'Zone 1',
     ];
 
     return test()->service->create(
-        \Illuminate\Support\Arr::except($attributes, ['name', 'relationship', 'contact_number', 'address']),
+        Arr::except($attributes, ['name', 'relationship', 'contact_number', 'address']),
         $person,
     );
 }

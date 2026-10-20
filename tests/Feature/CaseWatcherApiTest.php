@@ -59,7 +59,8 @@ it('creates an inline watcher and its directory entry together', function () {
     $case = watcherApiCase(watcherApiPatient(), $worker);
 
     $response = $this->postJson("/api/cases/{$case->id}/watchers", [
-        'name' => 'Maria Reyes', 'relationship' => 'spouse', 'is_primary' => true,
+        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'spouse', 'contact_number' => '0917', 'address' => 'Zone 1'],
+        'is_primary' => true,
     ])->assertCreated();
 
     $response->assertJsonPath('data.name', 'Maria Reyes')
@@ -93,7 +94,7 @@ it('rejects a relationship not in the master list', function () {
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
 
-    $this->postJson("/api/cases/{$case->id}/watchers", ['name' => 'Maria', 'relationship' => 'best_friend'])
+    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'best_friend', 'contact_number' => '0917', 'address' => 'Zone 1']])
         ->assertUnprocessable()
         ->assertJsonValidationErrorFor('watcher.relationship_code');
 });
@@ -108,7 +109,8 @@ it('demotes the existing primary when a new one is created as primary', function
     ]);
 
     $this->postJson("/api/cases/{$case->id}/watchers", [
-        'name' => 'Second', 'relationship' => 'parent', 'is_primary' => true,
+        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Second', 'relationship_code' => 'parent', 'contact_number' => '0917', 'address' => 'Zone 1'],
+        'is_primary' => true,
     ])->assertCreated();
 
     expect($first->refresh()->is_primary)->toBeFalse();
@@ -124,15 +126,15 @@ it('updates a watcher and clears a field on an explicit null', function () {
     ]);
 
     // The person's own details are edited on the patient watcher...
-    $this->putJson("/api/watchers/{$watcher->patient_watcher_id}", ['contact_number' => null])
+    $this->putJson("/api/watchers/{$watcher->patient_watcher_id}", ['contact_number' => '0999', 'notes' => null])
         ->assertOk()
-        ->assertJsonPath('data.contact_number', null)
+        ->assertJsonPath('data.contact_number', '0999')
         ->assertJsonPath('data.name', 'Maria');
 
     // ...and show up on the case assignment, which is the same record.
     $this->getJson("/api/cases/{$case->id}/watchers")
         ->assertOk()
-        ->assertJsonPath('data.0.watcher.contact_number', null)
+        ->assertJsonPath('data.0.watcher.contact_number', '0999')
         ->assertJsonPath('data.0.name', 'Maria');
 
     // The assignment itself only takes its own fields.
@@ -310,12 +312,14 @@ it('creates and assigns a new person from a nested watcher', function () {
     $case = watcherApiCase($patient, $worker);
 
     $this->postJson("/api/cases/{$case->id}/watchers", [
-        'watcher' => ['name' => 'Lola', 'relationship_code' => 'grandparent', 'address' => 'Zone 1'],
+        'watcher' => ['last_name' => 'Cruz', 'first_name' => 'Lola', 'middle_name' => 'Santos', 'relationship_code' => 'grandparent', 'contact_number' => '0917', 'address' => 'Zone 1'],
         'is_informant' => true,
     ])->assertCreated()->assertJsonPath('data.watcher.relationship_code', 'grandparent');
 
-    $person = PatientWatcher::firstWhere('name', 'Lola');
-    expect($person->patient_id)->toBe($patient->id)->and($person->added_by)->toBe($worker->id);
+    $person = PatientWatcher::firstWhere('first_name', 'Lola');
+    expect($person->patient_id)->toBe($patient->id)->and($person->added_by)->toBe($worker->id)
+        ->and($person->name)->toBe('Lola S. Cruz')
+        ->and($person->last_name)->toBe('Cruz')->and($person->middle_name)->toBe('Santos');
 });
 
 it("refuses to assign another patient's watcher", function () {
@@ -363,15 +367,15 @@ it('treats assignments on a closed case as read-only history', function () {
     $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
     $assignment = assignWatcher(['case_id' => $case->id, 'patient_watcher_id' => $person->id, 'added_by' => $worker->id]);
 
-    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['name' => 'New', 'relationship_code' => 'friend']])
+    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'New', 'relationship_code' => 'friend', 'contact_number' => '0917', 'address' => 'Zone 1']])
         ->assertUnprocessable()->assertJsonValidationErrorFor('case');
     $this->postJson("/api/case-watchers/{$assignment->id}/promote")->assertUnprocessable();
     $this->postJson("/api/case-watchers/{$assignment->id}/issue-pass", [])->assertUnprocessable();
     $this->deleteJson("/api/case-watchers/{$assignment->id}")->assertUnprocessable();
 
     // Editing the person still shows on the old case.
-    $this->putJson("/api/watchers/{$person->id}", ['name' => 'Pedro Sr.'])->assertOk();
-    $this->getJson("/api/cases/{$case->id}/watchers")->assertJsonPath('data.0.name', 'Pedro Sr.');
+    $this->putJson("/api/watchers/{$person->id}", ['last_name' => 'Reyes', 'first_name' => 'Pedro'])->assertOk();
+    $this->getJson("/api/cases/{$case->id}/watchers")->assertJsonPath('data.0.name', 'Pedro Reyes');
 });
 
 it('unassigns without deleting the patient watcher and allows reassigning', function () {
