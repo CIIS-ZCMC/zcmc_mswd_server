@@ -29,7 +29,7 @@ class CaseWatcherService
      * assign them in one transaction.
      *
      * @param  array<string, mixed>  $attributes  Assignment fields (case_id, patient_watcher_id, is_primary, ...).
-     * @param  array<string, mixed>|null  $newWatcher  last_name, first_name, middle_name, relationship_code, contact_number, address, notes.
+     * @param  array<string, mixed>|null  $newWatcher  name, relationship_code, contact_number, address, notes.
      */
     public function create(array $attributes, ?array $newWatcher = null): CaseWatcher
     {
@@ -40,9 +40,10 @@ class CaseWatcherService
             if ($newWatcher !== null) {
                 $attributes['patient_watcher_id'] = PatientWatcher::create([
                     'patient_id' => $case->patient_id,
-                    'last_name' => $newWatcher['last_name'],
-                    'first_name' => $newWatcher['first_name'],
+                    'name' => $newWatcher['name'],
+                    'first_name' => $newWatcher['first_name'] ?? null,
                     'middle_name' => $newWatcher['middle_name'] ?? null,
+                    'last_name' => $newWatcher['last_name'] ?? null,
                     'relationship_code' => $newWatcher['relationship_code'],
                     'contact_number' => $newWatcher['contact_number'] ?? null,
                     'address' => $newWatcher['address'] ?? null,

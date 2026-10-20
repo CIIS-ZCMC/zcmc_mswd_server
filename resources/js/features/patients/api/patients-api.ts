@@ -196,9 +196,10 @@ export function updatePatientBackground(patientId: number, payload: UpdatePatien
 }
 
 export interface CreateWatcherPayload {
-  last_name: string
-  first_name: string
+  name: string
+  first_name?: string | null
   middle_name?: string | null
+  last_name?: string | null
   relationship_code: string
   contact_number: string
   address: string

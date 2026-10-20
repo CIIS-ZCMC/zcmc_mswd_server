@@ -162,10 +162,19 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
 
     try {
       setError(null)
+      const fullName = [
+        formData.firstName.trim(),
+        formData.middleName.trim(),
+        formData.lastName.trim(),
+      ]
+        .filter(Boolean)
+        .join(" ")
+
       const formattedContact = `+63-${formData.contactNumber.trim()}`
 
       await onSave(
         {
+          name: fullName,
           first_name: formData.firstName.trim(),
           middle_name: formData.middleName.trim() || null,
           last_name: formData.lastName.trim(),
