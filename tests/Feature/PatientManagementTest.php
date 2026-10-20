@@ -4,7 +4,6 @@ use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Document;
 use App\Models\Patient;
-use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\Sector;
 use App\Models\User;
@@ -255,22 +254,6 @@ it('removes a family member', function () {
 
     expect($patient->familyMembers()->count())->toBe(0)
         ->and(PatientFamilyMember::onlyTrashed()->whereKey($member->id)->exists())->toBeTrue();
-});
-
-it('assigns and unassigns a social worker (caretaker)', function () {
-    Sanctum::actingAs(patientUser());
-    $patient = makePatient();
-    $worker = User::factory()->create();
-
-    $id = $this->postJson("/api/patients/{$patient->id}/caretakers", [
-        'user_id' => $worker->id, 'role' => 'social_worker', 'assigned_date' => now()->toDateString(),
-    ])->assertCreated()->json('data.id');
-
-    $this->patchJson("/api/caretakers/{$id}/unassign")
-        ->assertOk()
-        ->assertJsonPath('data.is_active', false);
-
-    expect(PatientCaretaker::find($id)->unassigned_date)->not->toBeNull();
 });
 
 it('uploads and lists a document tied to a case', function () {

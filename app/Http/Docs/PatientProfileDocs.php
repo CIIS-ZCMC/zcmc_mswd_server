@@ -16,7 +16,7 @@ final class PatientProfileDocs
         operationId: 'patients.profile',
         tags: ['Patients'],
         summary: 'The patient profile aggregate',
-        description: 'The patient with sector, IDs, family, watchers, caretakers, cases, documents and latest case/assessment eager-loaded. Requires the `patients.view` permission.',
+        description: 'The patient with sector, IDs, family, watchers, cases, documents and latest case/assessment eager-loaded. Requires the `patients.view` permission.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'patient', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [

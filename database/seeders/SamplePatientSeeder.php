@@ -4,7 +4,6 @@ namespace Database\Seeders;
 
 use App\Models\CaseModel;
 use App\Models\Patient;
-use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
@@ -16,9 +15,8 @@ use Illuminate\Support\Carbon;
 use Illuminate\Support\Facades\Auth;
 
 /**
- * Five sample patients with custody, family, watchers and one open case each —
- * enough to exercise the Caretake tab, the handover chain and the audit trail
- * end to end.
+ * Five sample patients with family, watchers and one open case each —
+ * enough to exercise the profile tabs and the audit trail end to end.
  *
  * Called from DatabaseSeeder, so `migrate:fresh --seed` produces a usable
  * local dataset. It is demonstration data with invented names and addresses,
@@ -28,17 +26,8 @@ use Illuminate\Support\Facades\Auth;
  *     php artisan db:seed --class=SamplePatientSeeder
  *
  * Idempotent — every row is keyed on a natural identifier, so re-running adds
- * nothing and cannot trip the `uniq_active_patient_caretaker` index.
- *
- * The caretaker rows are deliberately varied rather than uniform, because the
- * tab's interesting states are the non-default ones:
- *
- *   - patient 2 carries a full handover: an ended row whose `replaced_by_id`
- *     points at the live one, which is the only shape that renders as a chain
- *   - patient 4 carries a plain unassignment, ended with a reason and no
- *     replacement — the case that must *not* render as a chain
- *   - patient 5 has a single caretaker and no family, so the empty states get
- *     exercised too
+ * nothing. Patient 5 has no family and no watchers, so the empty states get
+ * exercised too.
  */
 class SamplePatientSeeder extends Seeder
 {
@@ -128,10 +117,8 @@ class SamplePatientSeeder extends Seeder
     }
 
     /**
-     * Staff who hold and grant custody. Real users matter here beyond cosmetics:
-     * the caretaker picker reads `GET /users`, and `assigned_by` /
-     * `unassigned_by` are FKs that must resolve to a row for the Caretake tab to
-     * show who acted.
+     * Staff who handle the sample cases. Real users so each case has an
+     * `assigned_user` and the audit trail a named causer.
      *
      * @return array<string, User>
      */
@@ -209,10 +196,6 @@ class SamplePatientSeeder extends Seeder
                 'watchers' => [
                     ['name' => 'Ernesto San Juan', 'relationship' => 'spouse', 'contact_number' => '09181234567', 'is_primary' => true],
                 ],
-                'caretakers' => [
-                    ['user' => 'santos', 'role' => 'social_worker', 'assigned_by' => 'maguyon', 'months_ago' => 3, 'reason' => 'Primary handling social worker for the cardiac assistance request.'],
-                    ['user' => 'torres', 'role' => 'nurse', 'assigned_by' => 'maguyon', 'months_ago' => 2, 'reason' => 'Ward coordination for post-procedure monitoring.'],
-                ],
             ],
             [
                 'key' => 'mercado',
@@ -244,16 +227,6 @@ class SamplePatientSeeder extends Seeder
                 ],
                 'watchers' => [
                     ['name' => 'Liezl Mercado-Fajardo', 'relationship' => 'child', 'contact_number' => '09175558822', 'is_primary' => true],
-                ],
-                /**
-                 * The handover case. `replaced_by` names the key of the row
-                 * that supersedes this one; seedCaretakers resolves it to an id
-                 * after both rows exist.
-                 */
-                'caretakers' => [
-                    ['key' => 'outgoing', 'user' => 'santos', 'role' => 'social_worker', 'assigned_by' => 'maguyon', 'months_ago' => 6, 'reason' => 'Initial custody on admission for dialysis assistance.', 'ended_months_ago' => 2, 'unassigned_by' => 'maguyon', 'unassigned_reason' => 'Caseload rebalancing — transferred to the renal team focal person.', 'replaced_by' => 'incoming'],
-                    ['key' => 'incoming', 'user' => 'villaflor', 'role' => 'social_worker', 'assigned_by' => 'maguyon', 'months_ago' => 2, 'reason' => 'Accepted handover as renal team focal person.'],
-                    ['user' => 'torres', 'role' => 'case_manager', 'assigned_by' => 'maguyon', 'months_ago' => 5, 'reason' => 'Coordinates the PhilHealth and MAIFIP filings.'],
                 ],
             ],
             [
@@ -289,10 +262,6 @@ class SamplePatientSeeder extends Seeder
                     ['name' => 'Corazon Bautista Ong', 'relationship' => 'parent', 'contact_number' => '09332221145', 'is_primary' => true],
                     ['name' => 'Jomar Bautista Ong', 'relationship' => 'sibling', 'contact_number' => '09332221146', 'is_primary' => false],
                 ],
-                'caretakers' => [
-                    ['user' => 'torres', 'role' => 'social_worker', 'assigned_by' => 'santos', 'months_ago' => 4, 'reason' => 'Assigned at intake for the dialysis subsidy workup.'],
-                    ['user' => 'maguyon', 'role' => 'counselor', 'assigned_by' => 'santos', 'months_ago' => 1, 'reason' => 'Psychosocial support during treatment adjustment.'],
-                ],
             ],
             [
                 'key' => 'rivera',
@@ -325,14 +294,6 @@ class SamplePatientSeeder extends Seeder
                 'watchers' => [
                     ['name' => 'Remedios Salazar Rivera', 'relationship' => 'spouse', 'contact_number' => '09265553312', 'is_primary' => true],
                 ],
-                /**
-                 * A plain unassignment — ended with a reason and no successor.
-                 * Must render as a closed assignment, never as a handover chain.
-                 */
-                'caretakers' => [
-                    ['user' => 'santos', 'role' => 'social_worker', 'assigned_by' => 'maguyon', 'months_ago' => 2, 'reason' => 'Senior citizen assistance filing.'],
-                    ['user' => 'torres', 'role' => 'nurse', 'assigned_by' => 'maguyon', 'months_ago' => 5, 'reason' => 'Temporary ward coverage during confinement.', 'ended_months_ago' => 3, 'unassigned_by' => 'santos', 'unassigned_reason' => 'Patient discharged; ward coverage no longer required.'],
-                ],
             ],
             [
                 'key' => 'amil',
@@ -359,13 +320,10 @@ class SamplePatientSeeder extends Seeder
                     'monthly_income' => 0,
                 ],
                 'case' => ['case_type' => 'Medical Assistance', 'admission_type' => 'Inpatient', 'priority_level' => 'Low', 'handler' => 'villaflor'],
-                // Intentionally sparse: no family, no watchers, one caretaker —
+                // Intentionally sparse: no family, no watchers —
                 // this is the record that exercises the tabs' empty states.
                 'family' => [],
                 'watchers' => [],
-                'caretakers' => [
-                    ['user' => 'villaflor', 'role' => 'social_worker', 'assigned_by' => 'santos', 'months_ago' => 1, 'reason' => 'Maternal care assistance intake.'],
-                ],
             ],
         ];
     }
@@ -397,13 +355,10 @@ class SamplePatientSeeder extends Seeder
         $this->seedCase($patient, $definition, $handler);
         $this->seedFamily($patient, $definition['family']);
         $this->seedWatchers($patient, $definition['watchers']);
-        $this->seedCaretakers($patient, $definition['caretakers'], $staff);
     }
 
     /**
-     * One open episode per patient. The Caretake tab contrasts this case's
-     * `assigned_user` — the episode handler — against standing custody, so the
-     * distinction is invisible without a case to point at.
+     * One open episode per patient, handled by its `assigned_user`.
      *
      * @param  array<string, mixed>  $definition
      */
@@ -450,65 +405,6 @@ class SamplePatientSeeder extends Seeder
                     'address' => $patient->address,
                 ],
             );
-        }
-    }
-
-    /**
-     * Two passes, because `replaced_by_id` is a self-referencing FK: every row
-     * has to exist before the chain can be stitched. Writing it in one pass
-     * would mean ordering the array so successors always come first, which is
-     * a constraint on the data rather than on the code.
-     *
-     * @param  list<array<string, mixed>>  $assignments
-     * @param  array<string, User>  $staff
-     */
-    private function seedCaretakers(Patient $patient, array $assignments, array $staff): void
-    {
-        /** @var array<string, PatientCaretaker> $byKey */
-        $byKey = [];
-
-        foreach ($assignments as $assignment) {
-            $isEnded = isset($assignment['ended_months_ago']);
-            $assignedDate = Carbon::now()->subMonths($assignment['months_ago']);
-
-            // Keyed on patient+user+role only. `assigned_date` is relative to
-            // now and so differs on every run — including it would match
-            // nothing the second time, insert a duplicate, and collide with
-            // uniq_active_patient_caretaker. No two sample assignments share
-            // this triple.
-            $caretaker = PatientCaretaker::firstOrCreate(
-                [
-                    'patient_id' => $patient->id,
-                    'user_id' => $staff[$assignment['user']]->id,
-                    'role' => $assignment['role'],
-                ],
-                [
-                    'assigned_date' => $assignedDate,
-                    'assigned_by' => $staff[$assignment['assigned_by']]->id,
-                    'reason' => $assignment['reason'],
-                    // is_active and unassigned_date must agree: the migration
-                    // that added the unique guard treats a disagreement as
-                    // drift and repairs it by trusting the date.
-                    'is_active' => ! $isEnded,
-                    'unassigned_date' => $isEnded ? Carbon::now()->subMonths($assignment['ended_months_ago']) : null,
-                    'unassigned_by' => $isEnded ? $staff[$assignment['unassigned_by']]->id : null,
-                    'unassigned_reason' => $isEnded ? $assignment['unassigned_reason'] : null,
-                ],
-            );
-
-            if (isset($assignment['key'])) {
-                $byKey[$assignment['key']] = $caretaker;
-            }
-        }
-
-        foreach ($assignments as $assignment) {
-            if (! isset($assignment['key'], $assignment['replaced_by'])) {
-                continue;
-            }
-
-            $byKey[$assignment['key']]->update([
-                'replaced_by_id' => $byKey[$assignment['replaced_by']]->id,
-            ]);
         }
     }
 }

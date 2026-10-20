@@ -6,7 +6,6 @@ use App\Filament\Resources\Patients\Pages\CreatePatient;
 use App\Filament\Resources\Patients\Pages\EditPatient;
 use App\Filament\Resources\Patients\Pages\ListPatients;
 use App\Filament\Resources\Patients\Pages\ViewPatient;
-use App\Filament\Resources\Patients\RelationManagers\CaretakersRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\CasesRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\DocumentsRelationManager;
 use App\Filament\Resources\Patients\RelationManagers\FamilyMembersRelationManager;
@@ -193,7 +192,6 @@ class PatientResource extends Resource
             PatientIdsRelationManager::class,
             FamilyMembersRelationManager::class,
             WatchersRelationManager::class,
-            CaretakersRelationManager::class,
             CasesRelationManager::class,
             GuaranteesRelationManager::class,
             DocumentsRelationManager::class,

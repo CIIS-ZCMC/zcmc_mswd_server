@@ -1,5 +1,4 @@
 export * from "./audit.types"
-export * from "./caretake.types"
 export * from "./case-study.types"
 export * from "./document.types"
 export * from "./patient.types"

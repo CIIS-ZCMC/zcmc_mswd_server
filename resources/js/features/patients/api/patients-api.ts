@@ -2,8 +2,6 @@ import { apiClient } from "@/lib/api-client"
 import type {
   ApiActivity,
   ApiAssessment,
-  ApiCaretaker,
-  ApiCaretakeSummary,
   ApiCase,
   ApiEnvelope,
   ApiFamilyMember,
@@ -11,7 +9,6 @@ import type {
   ApiPatient,
   ApiWatcher,
 } from "../types/api.types"
-import type { CaretakerRole } from "../types/caretake.types"
 
 export interface ListPatientsParams {
   search?: string
@@ -37,7 +34,7 @@ export function listPatients(params: ListPatientsParams = {}) {
   })
 }
 
-/** GET /patients/{id}/profile — the consolidated 360 view (family, watchers, caretakers, ids, cases, documents). */
+/** GET /patients/{id}/profile — the consolidated 360 view (family, watchers, ids, cases, documents). */
 export function getPatientProfile(patientId: number) {
   return apiClient
     .get<ApiEnvelope<ApiPatient>>(`/patients/${patientId}/profile`)
@@ -60,61 +57,6 @@ export function getLatestCaseForPatient(patientId: number) {
   return apiClient
     .get<ApiPaginated<ApiCase>>("/cases", { filters: { patient_id: patientId }, params: { per_page: 1 } })
     .then((res) => res.data[0] ?? null)
-}
-
-/**
- * GET /patients/{id}/caretake — standing custody plus the episode handler
- * to contrast it with. Superset of the older `GET /patients/{id}/caretakers`
- * collection, which stays in place for anything still reading it.
- */
-export function getPatientCaretake(patientId: number) {
-  return apiClient
-    .get<ApiEnvelope<ApiCaretakeSummary>>(`/patients/${patientId}/caretake`)
-    .then((res) => res.data)
-}
-
-export interface AssignCaretakerPayload {
-  user_id: number
-  role: CaretakerRole
-  assigned_date: string
-  /** Optional on assign; the server requires it only on reassign. */
-  reason?: string
-}
-
-/** POST /patients/{id}/caretakers */
-export function assignCaretaker(patientId: number, payload: AssignCaretakerPayload) {
-  return apiClient
-    .post<ApiEnvelope<ApiCaretaker>>(`/patients/${patientId}/caretakers`, payload)
-    .then((res) => res.data)
-}
-
-export interface ReassignCaretakerPayload {
-  user_id: number
-  /** Required — a handover with no stated reason is what this module exists to prevent. */
-  reason: string
-}
-
-/**
- * POST /caretakers/{id}/reassign — ends the current assignment and opens
- * the replacement in one write, stamping `replaced_by_id` so the two render
- * as a chain. Deliberately *not* expressible as unassign + assign: that
- * path leaves the chain broken.
- */
-export function reassignCaretaker(caretakerId: string | number, payload: ReassignCaretakerPayload) {
-  return apiClient
-    .post<ApiEnvelope<ApiCaretaker>>(`/caretakers/${caretakerId}/reassign`, payload)
-    .then((res) => res.data)
-}
-
-export interface UnassignCaretakerPayload {
-  unassigned_reason?: string
-}
-
-/** PATCH /caretakers/{id}/unassign — ends custody with no replacement. */
-export function unassignCaretaker(caretakerId: string | number, payload: UnassignCaretakerPayload = {}) {
-  return apiClient
-    .patch<ApiEnvelope<ApiCaretaker>>(`/caretakers/${caretakerId}/unassign`, payload)
-    .then((res) => res.data)
 }
 
 /** GET /cases/{id}/assessments — already returned newest-first by the controller. */

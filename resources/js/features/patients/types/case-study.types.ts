@@ -26,8 +26,7 @@ export interface FamilyMember {
 
 /**
  * The handler of the patient's most recent *episode* — `cases.assigned_user`
- * and `cases.date_opened`, nothing more. Standing custody is a separate
- * concern; see `CaretakerAssignment` in caretake.types.ts.
+ * and `cases.date_opened`, nothing more.
  *
  * `socialWorkerId` (no RSW licence column exists), `caseOfficer` (no such
  * role exists apart from the assigned user) and `shift` (invented outright,

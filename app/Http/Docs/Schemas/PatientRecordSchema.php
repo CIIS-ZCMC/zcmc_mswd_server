@@ -6,7 +6,7 @@ use OpenApi\Attributes as OA;
 
 /**
  * Response and request shapes for the patient sub-records: IDs, family members,
- * watchers, caretakers, documents and merge records.
+ * watchers, documents and merge records.
  */
 #[OA\Schema(
     schema: 'PatientId',
@@ -96,43 +96,6 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'contact_number', type: 'string', maxLength: 255),
         new OA\Property(property: 'address', type: 'string', maxLength: 255),
         new OA\Property(property: 'notes', type: 'string', nullable: true),
-    ],
-)]
-#[OA\Schema(
-    schema: 'PatientCaretaker',
-    properties: [
-        new OA\Property(property: 'id', type: 'integer'),
-        new OA\Property(property: 'patient_id', type: 'integer'),
-        new OA\Property(property: 'user_id', type: 'integer'),
-        new OA\Property(property: 'role', type: 'string'),
-        new OA\Property(property: 'assigned_date', type: 'string', format: 'date', nullable: true),
-        new OA\Property(property: 'unassigned_date', type: 'string', format: 'date', nullable: true),
-        new OA\Property(property: 'is_active', type: 'boolean'),
-        new OA\Property(property: 'reason', type: 'string', nullable: true),
-        new OA\Property(property: 'unassigned_reason', type: 'string', nullable: true),
-        new OA\Property(property: 'replaced_by_id', type: 'integer', nullable: true),
-        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
-        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
-    ],
-)]
-#[OA\Schema(
-    schema: 'PatientCaretakerRequest',
-    required: ['user_id', 'role', 'assigned_date'],
-    properties: [
-        new OA\Property(property: 'user_id', type: 'integer'),
-        new OA\Property(property: 'role', type: 'string', maxLength: 255),
-        new OA\Property(property: 'assigned_date', type: 'string', format: 'date'),
-        new OA\Property(property: 'unassigned_date', type: 'string', format: 'date', nullable: true),
-        new OA\Property(property: 'is_active', type: 'boolean'),
-        new OA\Property(property: 'reason', type: 'string', maxLength: 255, nullable: true),
-    ],
-)]
-#[OA\Schema(
-    schema: 'ReassignCaretakerRequest',
-    required: ['user_id'],
-    properties: [
-        new OA\Property(property: 'user_id', type: 'integer'),
-        new OA\Property(property: 'reason', type: 'string', maxLength: 255, nullable: true),
     ],
 )]
 #[OA\Schema(

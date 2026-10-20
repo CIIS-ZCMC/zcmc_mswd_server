@@ -120,12 +120,6 @@ class PatientService
             'familyMembers',
             'watchers.relationshipType',
             'watchers.caseWatchers.case',
-            // caretakers.user for the same reason as cases.assignedUser: the
-            // Caretake tab reads custody off this profile payload, and without
-            // the relation every card renders "User #3".
-            'caretakers.user',
-            'caretakers.assignedBy',
-            'caretakers.unassignedBy',
             // assignedUser so the Staff tab has a name, not just an id.
             'cases.assignedUser',
             'documents',

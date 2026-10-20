@@ -93,7 +93,6 @@ export const MOCK_PATIENTS: PatientRecord[] = [
         assignments: [],
       },
     ],
-    caretakers: [],
     assignedStaff: {
       socialWorker: "Maria Santos, RSW",
       attendingPhysician: "Dr. Fernando Gutierrez",
@@ -245,7 +244,6 @@ export const MOCK_PATIENTS: PatientRecord[] = [
         assignments: [],
       },
     ],
-    caretakers: [],
     assignedStaff: {
       socialWorker: "Janice Torres, RSW",
       attendingPhysician: "Dr. Beatrice Valenzuela",
@@ -367,7 +365,6 @@ export const MOCK_PATIENTS: PatientRecord[] = [
         assignments: [],
       },
     ],
-    caretakers: [],
     assignedStaff: {
       socialWorker: "Maria Santos, RSW",
       attendingPhysician: "Dra. Patricia Lim",
@@ -481,7 +478,6 @@ export const MOCK_PATIENTS: PatientRecord[] = [
         assignments: [],
       },
     ],
-    caretakers: [],
     assignedStaff: {
       socialWorker: "Janice Torres, RSW",
       attendingPhysician: "Dra. Sophia Morales",

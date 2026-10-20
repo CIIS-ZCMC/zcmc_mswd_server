@@ -90,11 +90,6 @@ class Patient extends Model
         return $this->hasMany(PatientGuarantee::class);
     }
 
-    public function caretakers(): HasMany
-    {
-        return $this->hasMany(PatientCaretaker::class);
-    }
-
     public function cases(): HasMany
     {
         return $this->hasMany(CaseModel::class);

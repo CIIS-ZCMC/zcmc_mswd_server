@@ -42,7 +42,7 @@ export interface SystemUser {
 }
 
 /**
- * GET /users — staff for the caretaker assignment pickers. Paginated by
+ * GET /users — staff for the user pickers (e.g. the audit log filter). Paginated by
  * `ListQuery`, so the rows are under `data`.
  *
  * Deliberately does not catch: the endpoint is gated on `users.view`, which

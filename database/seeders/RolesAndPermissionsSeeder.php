@@ -28,7 +28,7 @@ class RolesAndPermissionsSeeder extends Seeder
 
     /**
      * The full permission catalog, grouped by aggregate.
-     * Sub-records fold into their parent (patient ids/watchers/family/caretakers
+     * Sub-records fold into their parent (patient ids/watchers/family
      * → patients; case activities/diagnostics/assessments/interventions/documents
      * → cases; assistance logs → assistance).
      *

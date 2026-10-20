@@ -95,47 +95,6 @@ export interface ApiWatcher {
   updated_at?: string
 }
 
-export interface ApiCaretaker {
-  id: number
-  patient_id: number
-  user_id: number
-  role: string
-  assigned_date: string
-  unassigned_date: string | null
-  is_active: boolean
-  /**
-   * Custody-hardening fields. All optional: they arrive only once the
-   * server's Phase 3 ships, and `PatientResource` keeps emitting the
-   * original column set until then.
-   */
-  user?: ApiUserLite | null
-  assigned_by?: ApiUserLite | null
-  reason?: string | null
-  unassigned_by?: ApiUserLite | null
-  unassigned_reason?: string | null
-  replaced_by_id?: number | null
-  created_at?: string
-  updated_at?: string
-}
-
-/**
- * GET /patients/{id}/caretake — custody and its recent trail in one payload.
- *
- * The active/history split is made server-side on purpose: "who is responsible
- * now" and "who has been" are two different questions, and the client is not
- * meant to re-derive the split from `is_active`.
- *
- * No episode handler here — that is case data, and reaches the UI through
- * `assignedStaff` instead.
- */
-export interface ApiCaretakeSummary {
-  caretakers: {
-    active: ApiCaretaker[]
-    history: ApiCaretaker[]
-  }
-  recent_activity?: ApiActivity[]
-}
-
 export interface ApiDocument {
   id: number
   case_id: number | null
@@ -260,7 +219,6 @@ export interface ApiAssessment {
   created_at: string
   updated_at: string
 }
-
 
 export interface ApiSocialCaseExpense {
   id: number
@@ -390,7 +348,6 @@ export interface ApiPatient {
   patient_ids?: ApiPatientId[]
   family_members?: ApiFamilyMember[]
   watchers?: ApiWatcher[]
-  caretakers?: ApiCaretaker[]
   cases?: ApiCase[]
   documents?: ApiDocument[]
   created_at: string
@@ -428,4 +385,3 @@ export interface ApiWatcherRelationshipType {
   created_at: string
   updated_at: string
 }
-
