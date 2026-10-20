@@ -15,7 +15,6 @@ import {
   History,
   Receipt,
   User,
-  UserCheck,
 } from "lucide-react"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import {
@@ -35,7 +34,6 @@ import { HospitalEncountersTab } from "./tabs/hospital-encounters-tab"
 import { IdTab } from "./tabs/id-tab"
 import { ProfileTab } from "./tabs/profile-tab"
 import { SocialCaseTab } from "./tabs/social-case-tab"
-import { CaretakeTab } from "./tabs/caretake-tab"
 import { SocioeconomicTab } from "@/features/socioeconomic"
 import { UisTab } from "./tabs/uis-tab"
 import { WatchersTab } from "./tabs/watchers-tab"
@@ -55,7 +53,6 @@ const PATIENT_TABS = [
   "uis",
   "social-case",
   "watchers",
-  "caretake",
   "documents",
   "history",
 ]
@@ -332,14 +329,6 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
             </TabsTrigger>
 
             <TabsTrigger
-              value="caretake"
-              className="h-auto flex-none shrink-0 cursor-pointer gap-2 rounded-lg border border-transparent px-3.5 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs sm:text-sm"
-            >
-              <UserCheck className="size-4" />
-              <span>Caretake</span>
-            </TabsTrigger>
-
-            <TabsTrigger
               value="documents"
               className="h-auto flex-none shrink-0 cursor-pointer gap-2 rounded-lg border border-transparent px-3.5 py-2 text-xs font-bold transition-all data-[state=active]:bg-primary data-[state=active]:text-primary-foreground data-[state=active]:shadow-xs sm:text-sm"
             >
@@ -410,10 +399,6 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
               patientId={Number(patient.id)}
               openCases={patient.openCases}
             />
-          </TabsContent>
-
-          <TabsContent value="caretake">
-            <CaretakeTab patient={patient} />
           </TabsContent>
 
           <TabsContent value="documents">

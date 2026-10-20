@@ -60,7 +60,6 @@ class PatientResource extends JsonResource
             'patient_ids' => PatientIdResource::collection($this->whenLoaded('patientIds')),
             'family_members' => PatientFamilyMemberResource::collection($this->whenLoaded('familyMembers')),
             'watchers' => PatientWatcherResource::collection($this->whenLoaded('watchers')),
-            'caretakers' => PatientCaretakerResource::collection($this->whenLoaded('caretakers')),
             'cases' => CaseModelResource::collection($this->whenLoaded('cases')),
             'documents' => DocumentResource::collection($this->whenLoaded('documents')),
 

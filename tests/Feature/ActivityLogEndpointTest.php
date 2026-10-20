@@ -3,7 +3,6 @@
 use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Patient;
-use App\Models\PatientCaretaker;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
 use App\Models\User;
@@ -195,42 +194,5 @@ describe('the protective-case filter', function () {
             ->pluck('subject_type');
 
         expect($subjects)->toContain('PatientWatcher');
-    });
-});
-
-describe('the combined caretake read', function () {
-    it('returns active and past custody alongside recent activity', function () {
-        Sanctum::actingAs(auditUser('MSS Head'));
-
-        $active = PatientCaretaker::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->worker->id,
-            'role' => 'social_worker', 'assigned_date' => now(), 'is_active' => true,
-        ]);
-        $past = PatientCaretaker::create([
-            'patient_id' => $this->patient->id, 'user_id' => $this->worker->id,
-            'role' => 'nurse', 'assigned_date' => now()->subMonth(),
-            'unassigned_date' => now()->subDay(), 'is_active' => false,
-        ]);
-
-        $response = $this->getJson("/api/patients/{$this->patient->id}/caretake")
-            ->assertOk()
-            ->assertJsonStructure([
-                'data' => [
-                    'caretakers' => ['active', 'history'],
-                    'recent_activity',
-                ],
-            ]);
-
-        expect(collect($response->json('data.caretakers.active'))->pluck('id')->all())->toBe([$active->id])
-            ->and(collect($response->json('data.caretakers.history'))->pluck('id')->all())->toBe([$past->id])
-            ->and($response->json('data.recent_activity'))->not->toBeEmpty();
-    });
-
-    it('is gated behind patients.view', function () {
-        $user = User::factory()->create(['role' => 'Processor']);
-        $user->syncRoles([]);
-        Sanctum::actingAs($user);
-
-        $this->getJson("/api/patients/{$this->patient->id}/caretake")->assertForbidden();
     });
 });

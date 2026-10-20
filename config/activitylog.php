@@ -38,7 +38,7 @@ return [
      * and extend Illuminate\Database\Eloquent\Model.
      *
      * Overridden from the package default so every row carries the patient_id
-     * and case_id ownership columns the caretake trail reads on.
+     * and case_id ownership columns the patient and case history reads filter on.
      */
     'activity_model' => Activity::class,
 

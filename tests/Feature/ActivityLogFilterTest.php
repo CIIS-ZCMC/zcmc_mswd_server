@@ -4,7 +4,6 @@ use App\Models\Activity;
 use App\Models\CaseModel;
 use App\Models\Document;
 use App\Models\Patient;
-use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientId;
 use App\Models\PatientWatcher;
@@ -97,7 +96,7 @@ it('keeps hiding a protective case that has since been soft-deleted', function (
 });
 
 it('matches the trail the old subject fan-out would have produced', function () {
-    // The six subject types PatientService::history() named before Phase 2
+    // The subject types PatientService::history() named before Phase 2
     // replaced the fan-out with an indexed read on patient_id.
     $case = CaseModel::create([
         'patient_id' => $this->patient->id, 'case_code' => 'CASE-1', 'case_type' => 'medical',
@@ -107,10 +106,6 @@ it('matches the trail the old subject fan-out would have produced', function () 
     PatientId::create(['patient_id' => $this->patient->id, 'id_type' => 'philhealth', 'id_number' => '1']);
     PatientFamilyMember::create(['patient_id' => $this->patient->id, 'name' => 'Maria']);
     PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Jo', 'relationship_code' => 'spouse']);
-    PatientCaretaker::create([
-        'patient_id' => $this->patient->id, 'user_id' => $this->worker->id,
-        'role' => 'social_worker', 'assigned_date' => now(),
-    ]);
     Document::create([
         'patient_id' => $this->patient->id, 'case_id' => $case->id, 'uploaded_by' => $this->worker->id,
         'document_type' => 'consent', 'file_name' => 'c.pdf', 'file_path' => 'd/c.pdf', 'file_type' => 'pdf',
@@ -121,7 +116,6 @@ it('matches the trail the old subject fan-out would have produced', function () 
         PatientId::class => $this->patient->patientIds()->pluck('id')->all(),
         PatientFamilyMember::class => $this->patient->familyMembers()->pluck('id')->all(),
         PatientWatcher::class => $this->patient->watchers()->pluck('id')->all(),
-        PatientCaretaker::class => $this->patient->caretakers()->pluck('id')->all(),
         Document::class => $this->patient->documents()->pluck('id')->all(),
     ];
 

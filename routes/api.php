@@ -63,8 +63,6 @@ use App\Http\Controllers\MyFollowUpsController;
 use App\Http\Controllers\PatientAssistanceController;
 use App\Http\Controllers\PatientAssistanceLogController;
 use App\Http\Controllers\PatientAssistanceReportController;
-use App\Http\Controllers\PatientCaretakeController;
-use App\Http\Controllers\PatientCaretakerController;
 use App\Http\Controllers\PatientController;
 use App\Http\Controllers\PatientDuplicatesController;
 use App\Http\Controllers\PatientFamilyMemberController;
@@ -82,7 +80,6 @@ use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PromoteAssessmentToSocialCaseController;
 use App\Http\Controllers\PromoteCaseWatcherController;
 use App\Http\Controllers\ReassessCaseController;
-use App\Http\Controllers\ReassignCaretakerController;
 use App\Http\Controllers\ReferCaseController;
 use App\Http\Controllers\ReleaseAssistanceController;
 use App\Http\Controllers\ReopenCaseController;
@@ -108,7 +105,6 @@ use App\Http\Controllers\TransactionTypeController;
 use App\Http\Controllers\TurnaroundReportController;
 use App\Http\Controllers\TurnaroundReportExportController;
 use App\Http\Controllers\TurnaroundTargetController;
-use App\Http\Controllers\UnassignCaretakerController;
 use App\Http\Controllers\UnmergePatientController;
 use App\Http\Controllers\UserController;
 use App\Http\Controllers\WatcherRelationshipTypeController;
@@ -178,8 +174,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('patients/{patient}/ids', [PatientIdController::class, 'index']);
         Route::get('patients/{patient}/family-members', [PatientFamilyMemberController::class, 'index']);
         Route::get('patients/{patient}/watchers', [PatientWatcherController::class, 'index']);
-        Route::get('patients/{patient}/caretakers', [PatientCaretakerController::class, 'index']);
-        Route::get('patients/{patient}/caretake', PatientCaretakeController::class);
         Route::get('patients/{patient}/documents', [DocumentController::class, 'index']);
 
         // Hospital (SQL Server) lookups — read-only. `find` before `{id}` so it is not shadowed.
@@ -239,10 +233,6 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::post('patients/{patient}/watchers', [PatientWatcherController::class, 'store']);
         Route::put('watchers/{watcher}', [PatientWatcherController::class, 'update']);
         Route::delete('watchers/{watcher}', [PatientWatcherController::class, 'destroy']);
-
-        Route::post('patients/{patient}/caretakers', [PatientCaretakerController::class, 'store']);
-        Route::patch('caretakers/{caretaker}/unassign', UnassignCaretakerController::class);
-        Route::post('caretakers/{caretaker}/reassign', ReassignCaretakerController::class);
 
         Route::post('patients/{patient}/documents', [DocumentController::class, 'store']);
         Route::delete('documents/{document}', [DocumentController::class, 'destroy']);

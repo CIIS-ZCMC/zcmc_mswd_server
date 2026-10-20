@@ -21,7 +21,6 @@ use App\Models\Patient;
 use App\Models\PatientAssistance;
 use App\Models\PatientAssistanceLog;
 use App\Models\PatientAssistanceReport;
-use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientGuarantee;
 use App\Models\PatientGuaranteeItem;
@@ -37,7 +36,7 @@ use App\Models\User;
 use App\Models\WatcherRelationshipType;
 
 /**
- * Guards the audit coverage Phase 1 of the Patient Caretake plan establishes.
+ * Guards the audit coverage of every mutating model.
  * A model dropped from this trail goes unnoticed otherwise — nothing else in
  * the suite asserts that a given model records activity at all.
  */
@@ -47,7 +46,6 @@ $audited = [
     PatientId::class,
     PatientFamilyMember::class,
     PatientWatcher::class,
-    PatientCaretaker::class,
     PatientMerge::class,
     PatientSocioeconomicProfile::class,
     PatientGuarantee::class,
@@ -75,7 +73,7 @@ $audited = [
     TurnaroundTarget::class,
 ];
 
-it('records an audit trail on every model the caretake module covers', function (string $model) {
+it('records an audit trail on every covered model', function (string $model) {
     expect(class_uses_recursive($model))->toContain(Auditable::class);
 })->with($audited);
 

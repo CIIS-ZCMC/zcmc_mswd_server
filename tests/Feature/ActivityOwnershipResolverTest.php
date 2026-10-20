@@ -20,7 +20,6 @@ use App\Models\Patient;
 use App\Models\PatientAssistance;
 use App\Models\PatientAssistanceLog;
 use App\Models\PatientAssistanceReport;
-use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientGuarantee;
 use App\Models\PatientGuaranteeItem;
@@ -109,10 +108,6 @@ dataset('resolvers', [
     ]), true, false],
     'PatientWatcher' => [fn () => PatientWatcher::create([
         'patient_id' => test()->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse',
-    ]), true, false],
-    'PatientCaretaker' => [fn () => PatientCaretaker::create([
-        'patient_id' => test()->patient->id, 'user_id' => test()->worker->id,
-        'role' => 'social_worker', 'assigned_date' => now(),
     ]), true, false],
     'PatientMerge (to the surviving patient)' => [fn () => PatientMerge::create([
         'source_patient_id' => Patient::create([
@@ -227,7 +222,7 @@ it('covers every model that declares a resolver', function () {
 
     // The models the dataset above exercises, one row each.
     $covered = collect([
-        'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher', 'PatientCaretaker',
+        'Patient', 'PatientId', 'PatientFamilyMember', 'PatientWatcher',
         'PatientMerge', 'PatientSocioeconomicProfile', 'PatientGuarantee', 'PatientGuaranteeItem', 'DarEntry', 'ServiceVisit', 'CaseModel', 'CaseHospitalTransaction', 'CaseWatcher', 'CaseProgressNote', 'Assessment', 'AssessmentExpense',
         'Intervention', 'Diagnostic', 'DiagnosticReport', 'PatientAssistance',
         'PatientAssistanceLog', 'PatientAssistanceReport', 'Document',

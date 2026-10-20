@@ -60,11 +60,10 @@ Session login, roles and permissions shared as Inertia props (`auth.user`, `auth
 - Back: `UserService`, `RoleService`, `PermissionService`; Filament Users/Roles/Permissions.
 
 ### Patients (Registry)
-MSWD patient registry with an 11-tab profile (profile, family, IDs, caretake, watchers, socioeconomic, hospital encounters, UIS, social case, documents, history).
+MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, socioeconomic, hospital encounters, UIS, social case, documents, history).
 - Patients are created by importing from HIS, keyed on `hospital_id` (`POST /hospital-patients/{id}/import`: 201 created, 200 refreshed).
-- Caretake = custody (who is responsible for the patient: `patient_caretakers`) and accountability (who changed patient data, from the audit log).
 - Patient merge and patient IDs are supported.
-- Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientCaretakerService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`.
+- Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`.
 
 ### Hospital (HIS Encounters)
 Read-only view of HIS patients and their transactions (encounters), with guarantors and diagnosis. The encounter dialog hosts the printables and the Queue & TAT tab.

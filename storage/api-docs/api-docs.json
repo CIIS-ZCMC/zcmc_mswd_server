@@ -67,6 +67,7 @@
                     {
                         "name": "time_started",
                         "in": "query",
+                        "description": "H:i. Blank prints the start of service of the encounter's latest queue visit.",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -76,6 +77,7 @@
                     {
                         "name": "time_ended",
                         "in": "query",
+                        "description": "H:i. Blank prints the completion of the encounter's latest queue visit.",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -179,6 +181,7 @@
                     {
                         "name": "time_started",
                         "in": "query",
+                        "description": "H:i. Blank prints the start of service of the encounter's latest queue visit.",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -188,6 +191,7 @@
                     {
                         "name": "time_ended",
                         "in": "query",
+                        "description": "H:i. Blank prints the completion of the encounter's latest queue visit.",
                         "required": false,
                         "schema": {
                             "type": "string",
@@ -5179,259 +5183,6 @@
                 ]
             }
         },
-        "/patients/{patient}/caretakers": {
-            "get": {
-                "tags": [
-                    "Patient Records"
-                ],
-                "summary": "List a patient's caretakers",
-                "description": "Requires the `patients.view` permission.",
-                "operationId": "patients.caretakers.index",
-                "parameters": [
-                    {
-                        "name": "patient",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "Caretakers",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "properties": {
-                                        "data": {
-                                            "type": "array",
-                                            "items": {
-                                                "$ref": "#/components/schemas/PatientCaretaker"
-                                            }
-                                        }
-                                    },
-                                    "type": "object"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            },
-            "post": {
-                "tags": [
-                    "Patient Records"
-                ],
-                "summary": "Assign a caretaker",
-                "description": "Requires the `patients.update` permission.",
-                "operationId": "patients.caretakers.store",
-                "parameters": [
-                    {
-                        "name": "patient",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/PatientCaretakerRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "201": {
-                        "description": "The created caretaker",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PatientCaretaker"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationError"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/patients/{patient}/caretake": {
-            "get": {
-                "tags": [
-                    "Patient Records"
-                ],
-                "summary": "The patient's current active caretaker",
-                "description": "Requires the `patients.view` permission.",
-                "operationId": "patients.caretake",
-                "parameters": [
-                    {
-                        "name": "patient",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The active caretaker",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PatientCaretaker"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/caretakers/{caretaker}/unassign": {
-            "patch": {
-                "tags": [
-                    "Patient Records"
-                ],
-                "summary": "Unassign a caretaker",
-                "description": "Requires the `patients.update` permission.",
-                "operationId": "caretakers.unassign",
-                "parameters": [
-                    {
-                        "name": "caretaker",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "responses": {
-                    "200": {
-                        "description": "The unassigned caretaker",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PatientCaretaker"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
-        "/caretakers/{caretaker}/reassign": {
-            "post": {
-                "tags": [
-                    "Patient Records"
-                ],
-                "summary": "Reassign a caretaker to another user",
-                "description": "Requires the `patients.update` permission.",
-                "operationId": "caretakers.reassign",
-                "parameters": [
-                    {
-                        "name": "caretaker",
-                        "in": "path",
-                        "required": true,
-                        "schema": {
-                            "type": "integer"
-                        }
-                    }
-                ],
-                "requestBody": {
-                    "required": true,
-                    "content": {
-                        "application/json": {
-                            "schema": {
-                                "$ref": "#/components/schemas/ReassignCaretakerRequest"
-                            }
-                        }
-                    }
-                },
-                "responses": {
-                    "200": {
-                        "description": "The new caretaker assignment",
-                        "content": {
-                            "application/json": {
-                                "schema": {
-                                    "$ref": "#/components/schemas/PatientCaretaker"
-                                }
-                            }
-                        }
-                    },
-                    "401": {
-                        "$ref": "#/components/responses/Unauthenticated"
-                    },
-                    "403": {
-                        "$ref": "#/components/responses/Forbidden"
-                    },
-                    "404": {
-                        "$ref": "#/components/responses/NotFound"
-                    },
-                    "422": {
-                        "$ref": "#/components/responses/ValidationError"
-                    }
-                },
-                "security": [
-                    {
-                        "sanctum": []
-                    }
-                ]
-            }
-        },
         "/patients": {
             "get": {
                 "tags": [
@@ -6558,7 +6309,7 @@
                     "Patients"
                 ],
                 "summary": "The patient profile aggregate",
-                "description": "The patient with sector, IDs, family, watchers, caretakers, cases, documents and latest case/assessment eager-loaded. Requires the `patients.view` permission.",
+                "description": "The patient with sector, IDs, family, watchers, cases, documents and latest case/assessment eager-loaded. Requires the `patients.view` permission.",
                 "operationId": "patients.profile",
                 "parameters": [
                     {
@@ -12176,7 +11927,7 @@
             "PatientId": {
                 "properties": {
                     "id": {
-                        "description": "Response and request shapes for the patient sub-records: IDs, family members,\nwatchers, caretakers, documents and merge records.",
+                        "description": "Response and request shapes for the patient sub-records: IDs, family members,\nwatchers, documents and merge records.",
                         "type": "integer"
                     },
                     "patient_id": {
@@ -12376,33 +12127,9 @@
                         "type": "integer"
                     },
                     "name": {
-                        "description": "The composed full name, e.g. \"Maria L. Reyes\".",
                         "type": "string"
                     },
-                    "last_name": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "first_name": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "middle_name": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "relationship_code": {
-                        "description": "A watcher relationship type code.",
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "relationship_label": {
-                        "description": "The relationship type name, e.g. \"Barangay Official\".",
-                        "type": "string",
-                        "nullable": true
-                    },
                     "relationship": {
-                        "description": "Same as relationship_label; kept for older clients.",
                         "type": "string",
                         "nullable": true
                     },
@@ -12414,50 +12141,7 @@
                         "type": "string",
                         "nullable": true
                     },
-                    "notes": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "assignments": {
-                        "description": "The cases this watcher is assigned to. Present when they were loaded.",
-                        "type": "array",
-                        "items": {
-                            "properties": {
-                                "id": {
-                                    "description": "The case watcher id.",
-                                    "type": "integer"
-                                },
-                                "case_id": {
-                                    "type": "integer"
-                                },
-                                "case_code": {
-                                    "type": "string",
-                                    "nullable": true
-                                },
-                                "case_status": {
-                                    "type": "string",
-                                    "nullable": true
-                                },
-                                "is_primary": {
-                                    "type": "boolean"
-                                },
-                                "is_informant": {
-                                    "type": "boolean"
-                                },
-                                "pass_number": {
-                                    "type": "string",
-                                    "nullable": true
-                                },
-                                "pass_status": {
-                                    "type": "string",
-                                    "nullable": true
-                                }
-                            },
-                            "type": "object"
-                        }
-                    },
                     "is_primary": {
-                        "description": "True when primary on any assigned case. Present with assignments.",
                         "type": "boolean"
                     },
                     "created_at": {
@@ -12474,21 +12158,20 @@
                 "type": "object"
             },
             "PatientWatcherRequest": {
-                "description": "A patient's watcher. patient_id cannot be changed on update.",
                 "required": [
-                    "last_name",
-                    "first_name",
-                    "relationship_code",
                     "contact_number",
-                    "address"
+                    "address",
+                    "relationship_code"
                 ],
                 "properties": {
-                    "last_name": {
+                    "name": {
                         "type": "string",
+                        "nullable": true,
                         "maxLength": 255
                     },
                     "first_name": {
                         "type": "string",
+                        "nullable": true,
                         "maxLength": 255
                     },
                     "middle_name": {
@@ -12496,9 +12179,14 @@
                         "nullable": true,
                         "maxLength": 255
                     },
+                    "last_name": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 255
+                    },
                     "relationship_code": {
-                        "description": "A watcher relationship type code.",
-                        "type": "string"
+                        "type": "string",
+                        "maxLength": 255
                     },
                     "contact_number": {
                         "type": "string",
@@ -12511,108 +12199,6 @@
                     "notes": {
                         "type": "string",
                         "nullable": true
-                    }
-                },
-                "type": "object"
-            },
-            "PatientCaretaker": {
-                "properties": {
-                    "id": {
-                        "type": "integer"
-                    },
-                    "patient_id": {
-                        "type": "integer"
-                    },
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "role": {
-                        "type": "string"
-                    },
-                    "assigned_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "unassigned_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "is_active": {
-                        "type": "boolean"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "unassigned_reason": {
-                        "type": "string",
-                        "nullable": true
-                    },
-                    "replaced_by_id": {
-                        "type": "integer",
-                        "nullable": true
-                    },
-                    "created_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    },
-                    "updated_at": {
-                        "type": "string",
-                        "format": "date-time",
-                        "nullable": true
-                    }
-                },
-                "type": "object"
-            },
-            "PatientCaretakerRequest": {
-                "required": [
-                    "user_id",
-                    "role",
-                    "assigned_date"
-                ],
-                "properties": {
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "role": {
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "assigned_date": {
-                        "type": "string",
-                        "format": "date"
-                    },
-                    "unassigned_date": {
-                        "type": "string",
-                        "format": "date",
-                        "nullable": true
-                    },
-                    "is_active": {
-                        "type": "boolean"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    }
-                },
-                "type": "object"
-            },
-            "ReassignCaretakerRequest": {
-                "required": [
-                    "user_id"
-                ],
-                "properties": {
-                    "user_id": {
-                        "type": "integer"
-                    },
-                    "reason": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
                     }
                 },
                 "type": "object"
@@ -14089,7 +13675,7 @@
         },
         {
             "name": "Patient Records",
-            "description": "Sub-records hanging off a patient (IDs, family, watchers, caretakers, documents)."
+            "description": "Sub-records hanging off a patient (IDs, family, watchers, documents)."
         },
         {
             "name": "Hospital (HIS)",

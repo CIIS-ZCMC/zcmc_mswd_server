@@ -5,7 +5,6 @@ namespace App\Services;
 use App\Models\CaseModel;
 use App\Models\Document;
 use App\Models\Patient;
-use App\Models\PatientCaretaker;
 use App\Models\PatientFamilyMember;
 use App\Models\PatientGuarantee;
 use App\Models\PatientId;
@@ -29,7 +28,6 @@ class PatientMergeService
         'patient_ids' => PatientId::class,
         'family_members' => PatientFamilyMember::class,
         'watchers' => PatientWatcher::class,
-        'caretakers' => PatientCaretaker::class,
         'documents' => Document::class,
         'socioeconomic_profiles' => PatientSocioeconomicProfile::class,
         'guarantees' => PatientGuarantee::class,

@@ -19,8 +19,6 @@ export function patientDetailKeys(patientId: number) {
     latestCase: ["patients", "detail", patientId, "latest-case"] as const,
     assessments: (caseId: number) => ["cases", caseId, "assessments"] as const,
     history: ["patients", "detail", patientId, "history"] as const,
-    /** Custody. No query reads it yet — the Caretake tab is the next phase. */
-    caretake: ["patients", "detail", patientId, "caretake"] as const,
   }
 }
 
@@ -52,7 +50,7 @@ export function prefetchPatientDetail(queryClient: QueryClient, patientId: numbe
 
 /**
  * The enriched detail view for one patient: profile (family/watchers/
- * caretakers/ids/documents) + most recent case + that case's most recent
+ * ids/documents) + most recent case + that case's most recent
  * assessment + audit history. Runs in parallel, gated by user permissions.
  */
 export function usePatientDetail(patientId: string) {

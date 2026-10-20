@@ -30,7 +30,6 @@ use App\Repositories\Contracts\MembershipRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceLogRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceReportRepositoryInterface;
 use App\Repositories\Contracts\PatientAssistanceRepositoryInterface;
-use App\Repositories\Contracts\PatientCaretakerRepositoryInterface;
 use App\Repositories\Contracts\PatientFamilyMemberRepositoryInterface;
 use App\Repositories\Contracts\PatientGuarantorRepositoryInterface;
 use App\Repositories\Contracts\PatientIdRepositoryInterface;
@@ -57,7 +56,6 @@ use App\Repositories\MembershipRepository;
 use App\Repositories\PatientAssistanceLogRepository;
 use App\Repositories\PatientAssistanceReportRepository;
 use App\Repositories\PatientAssistanceRepository;
-use App\Repositories\PatientCaretakerRepository;
 use App\Repositories\PatientFamilyMemberRepository;
 use App\Repositories\PatientGuarantorRepository;
 use App\Repositories\PatientIdRepository;
@@ -89,7 +87,6 @@ class RepositoryServiceProvider extends ServiceProvider
         PatientIdRepositoryInterface::class => PatientIdRepository::class,
         PatientWatcherRepositoryInterface::class => PatientWatcherRepository::class,
         PatientFamilyMemberRepositoryInterface::class => PatientFamilyMemberRepository::class,
-        PatientCaretakerRepositoryInterface::class => PatientCaretakerRepository::class,
         CaseModelRepositoryInterface::class => CaseModelRepository::class,
         CaseActivityRepositoryInterface::class => CaseActivityRepository::class,
         CaseProgressNoteRepositoryInterface::class => CaseProgressNoteRepository::class,

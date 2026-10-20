@@ -19,14 +19,11 @@
 import type { FamilyMember, MedicalCategory, StaffAssignment } from "../types/case-study.types"
 import type { DocumentItem } from "../types/document.types"
 import type { AuditEvent, AuditFieldChange, AuditHistory } from "../types/audit.types"
-import type { CaretakerAssignment, CaretakerRole } from "../types/caretake.types"
-import { CARETAKER_ROLES } from "../types/caretake.types"
 import type { PatientIdCredential, PatientRecord } from "../types/patient.types"
 import type { OpenCase, Watcher } from "../types/watcher.types"
 import type {
   ApiActivity,
   ApiAssessment,
-  ApiCaretaker,
   ApiCase,
   ApiDocument,
   ApiFamilyMember,
@@ -236,36 +233,8 @@ function toAuditHistory(raw: ApiActivity): AuditHistory {
   }
 }
 
-/** `role` is an unvalidated string column server-side; fold the unknown into "others". */
-function toCaretakerRole(raw: string): CaretakerRole {
-  return (CARETAKER_ROLES as readonly string[]).includes(raw) ? (raw as CaretakerRole) : "others"
-}
-
-export function toCaretakerAssignment(raw: ApiCaretaker): CaretakerAssignment {
-  return {
-    id: String(raw.id),
-    // `user` is only eager-loaded once the server's Phase 3 lands; until
-    // then the id is all there is, and showing it beats inventing a name.
-    user: {
-      id: String(raw.user?.id ?? raw.user_id),
-      name: raw.user?.name ?? `User #${raw.user_id}`,
-    },
-    role: toCaretakerRole(raw.role),
-    assignedDate: raw.assigned_date,
-    assignedBy: raw.assigned_by?.name ?? "",
-    reason: raw.reason ?? "",
-    unassignedDate: raw.unassigned_date ?? undefined,
-    unassignedBy: raw.unassigned_by?.name ?? undefined,
-    unassignedReason: raw.unassigned_reason ?? undefined,
-    replacedById: raw.replaced_by_id != null ? String(raw.replaced_by_id) : undefined,
-    isActive: raw.is_active,
-  }
-}
-
 /**
- * The handler of the latest *episode*, which is genuinely
- * `cases.assigned_user` — custody is a separate, patient-level concern and
- * now lives on `PatientRecord.caretakers`.
+ * The handler of the latest *episode*: `cases.assigned_user`.
  */
 function buildAssignedStaff(latestCase: ApiCase | null | undefined): StaffAssignment {
   return {
@@ -345,8 +314,6 @@ export function toPatientListRecord(raw: ApiPatient): PatientRecord {
     familyMembers: (raw.family_members ?? []).map(toFamilyMember),
     watchers: (raw.watchers ?? []).map(toWatcher),
     openCases: toOpenCases(raw.cases),
-    // Eager-loaded by PatientService::profile(); absent on list rows.
-    caretakers: (raw.caretakers ?? []).map(toCaretakerAssignment),
     assignedStaff: buildAssignedStaff(latestCase),
     caseStudy: {
       caseNumber: latestCase?.case_code ?? "No active case",

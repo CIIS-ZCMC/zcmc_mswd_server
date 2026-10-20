@@ -30,7 +30,7 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Tag(name: 'Auth', description: 'Authentication and the current session.')]
 #[OA\Tag(name: 'Patients', description: 'Patient master records.')]
-#[OA\Tag(name: 'Patient Records', description: 'Sub-records hanging off a patient (IDs, family, watchers, caretakers, documents).')]
+#[OA\Tag(name: 'Patient Records', description: 'Sub-records hanging off a patient (IDs, family, watchers, documents).')]
 #[OA\Tag(name: 'Hospital (HIS)', description: 'Read-only lookups against the hospital information system.')]
 #[OA\Tag(name: 'Cases', description: 'Case management and lifecycle.')]
 #[OA\Tag(name: 'Case Clinical', description: 'Assessments, social case studies, diagnostics, interventions and progress notes.')]

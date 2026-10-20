@@ -8,8 +8,8 @@ use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Spatie\Activitylog\Models\Activity as SpatieActivity;
 
 /**
- * The audit trail row, extended with the ownership columns the caretake module
- * reads on.
+ * The audit trail row, extended with the patient_id and case_id ownership
+ * columns the patient and case history reads filter on.
  *
  * The package resolves a trail by its polymorphic subject, which makes "every
  * row belonging to this patient" a fan-out over the unindexed morph pair — one
