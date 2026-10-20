@@ -33,7 +33,7 @@ final class PatientWatcherDocs
         operationId: 'patients.watchers.store',
         tags: ['Patient Records'],
         summary: 'Add a watcher',
-        description: 'Requires the `patients.update` permission.',
+        description: 'Adds a watcher to the patient, with or without a case. Requires the `patients.update` permission.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'patient', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/PatientWatcherRequest')),
@@ -70,7 +70,7 @@ final class PatientWatcherDocs
         operationId: 'watchers.destroy',
         tags: ['Patient Records'],
         summary: 'Delete a watcher',
-        description: 'Requires the `patients.update` permission.',
+        description: 'Requires the `patients.update` permission. Refused with 422 while the watcher is assigned to an open or ongoing case.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'watcher', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
@@ -78,6 +78,7 @@ final class PatientWatcherDocs
             new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
             new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
             new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
         ],
     )]
     public function destroy(): void {}

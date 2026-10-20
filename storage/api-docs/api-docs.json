@@ -2306,8 +2306,8 @@
                 "tags": [
                     "Cases"
                 ],
-                "summary": "Add a watcher to a case",
-                "description": "Requires the `cases.update` permission.",
+                "summary": "Assign a watcher to a case",
+                "description": "Requires the `cases.update` permission. The case must be open or ongoing; 422 for another patient's watcher or one already assigned.",
                 "operationId": "cases.watchers.store",
                 "parameters": [
                     {
@@ -2362,8 +2362,8 @@
                 "tags": [
                     "Cases"
                 ],
-                "summary": "Update a case watcher",
-                "description": "Requires the `cases.update` permission. Promotion to primary is done via the promote endpoint.",
+                "summary": "Update a case watcher assignment",
+                "description": "Requires the `cases.update` permission. Assignment fields only; edit the person with PUT /watchers/{watcher}. Promotion to primary is done via the promote endpoint.",
                 "operationId": "case-watchers.update",
                 "parameters": [
                     {
@@ -2419,8 +2419,8 @@
                 "tags": [
                     "Cases"
                 ],
-                "summary": "Remove a case watcher",
-                "description": "Requires the `cases.update` permission.",
+                "summary": "Unassign a watcher from a case",
+                "description": "Requires the `cases.update` permission. Removes the assignment only; the patient's watcher stays. Refused for the last required primary watcher and on closed cases.",
                 "operationId": "case-watchers.destroy",
                 "parameters": [
                     {
@@ -7274,7 +7274,7 @@
                     "Patient Records"
                 ],
                 "summary": "Add a watcher",
-                "description": "Requires the `patients.update` permission.",
+                "description": "Adds a watcher to the patient, with or without a case. Requires the `patients.update` permission.",
                 "operationId": "patients.watchers.store",
                 "parameters": [
                     {
@@ -7387,7 +7387,7 @@
                     "Patient Records"
                 ],
                 "summary": "Delete a watcher",
-                "description": "Requires the `patients.update` permission.",
+                "description": "Requires the `patients.update` permission. Refused with 422 while the watcher is assigned to an open or ongoing case.",
                 "operationId": "watchers.destroy",
                 "parameters": [
                     {
@@ -7411,6 +7411,9 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     }
                 },
                 "security": [
@@ -8322,6 +8325,432 @@
                 ]
             }
         },
+        "/service-visits/queue": {
+            "get": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "The day's queue board",
+                "description": "Every open visit (waiting, in progress) whatever day it arrived, oldest first, and the visits completed on the day, newest first. Requires the `queue.manage` permission.",
+                "operationId": "service-visits.queue",
+                "parameters": [
+                    {
+                        "name": "date",
+                        "in": "query",
+                        "description": "Defaults to today.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The board",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "date": {
+                                            "type": "string",
+                                            "format": "date"
+                                        },
+                                        "waiting": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ServiceVisit"
+                                            }
+                                        },
+                                        "in_progress": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ServiceVisit"
+                                            }
+                                        },
+                                        "completed": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ServiceVisit"
+                                            }
+                                        },
+                                        "summary": {
+                                            "properties": {
+                                                "waiting": {
+                                                    "type": "integer"
+                                                },
+                                                "in_progress": {
+                                                    "type": "integer"
+                                                },
+                                                "completed": {
+                                                    "type": "integer"
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/patients/{patient}/service-visits": {
+            "get": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "A patient's timed visits",
+                "description": "Newest first. `?his_transaction_id=` narrows to one encounter. Requires the `queue.manage` permission.",
+                "operationId": "service-visits.index",
+                "parameters": [
+                    {
+                        "name": "patient",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    },
+                    {
+                        "name": "his_transaction_id",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The visits",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/ServiceVisit"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Time a patient in for a HIS encounter",
+                "description": "Opens a waiting visit stamped now, received by the caller. 422 when the encounter already has an open visit. Requires the `queue.manage` permission.",
+                "operationId": "service-visits.store",
+                "parameters": [
+                    {
+                        "name": "patient",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "his_transaction_id"
+                                ],
+                                "properties": {
+                                    "his_transaction_id": {
+                                        "type": "integer"
+                                    },
+                                    "purpose": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 120
+                                    },
+                                    "remarks": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "201": {
+                        "description": "The waiting visit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceVisit"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/service-visits/{visit}/start": {
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Start serving a waiting patient",
+                "description": "waiting → in_progress; the caller becomes `served_by`. 422 from any other status. Requires the `queue.manage` permission.",
+                "operationId": "service-visits.start",
+                "parameters": [
+                    {
+                        "name": "visit",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The visit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceVisit"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/service-visits/{visit}/complete": {
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Complete a visit in progress",
+                "description": "in_progress → completed; stops the turnaround clock. 422 from any other status. Requires the `queue.manage` permission.",
+                "operationId": "service-visits.complete",
+                "parameters": [
+                    {
+                        "name": "visit",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": false,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "properties": {
+                                    "remarks": {
+                                        "type": "string",
+                                        "nullable": true,
+                                        "maxLength": 500
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The visit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceVisit"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/service-visits/{visit}/cancel": {
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Cancel an open visit",
+                "description": "waiting or in_progress → cancelled, with a reason. Cancelled visits are left out of turnaround figures. Requires the `queue.manage` permission.",
+                "operationId": "service-visits.cancel",
+                "parameters": [
+                    {
+                        "name": "visit",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "cancel_reason"
+                                ],
+                                "properties": {
+                                    "cancel_reason": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The visit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceVisit"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/signatories": {
             "get": {
                 "tags": [
@@ -8874,6 +9303,379 @@
                     },
                     "404": {
                         "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/reports/turnaround": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Turnaround time dashboard",
+                "description": "Completed visits in the range (by completion day): per stage, per serving worker (total turnaround) and per day, with compliance against the active Library targets. Visits of patients with a protective case are excluded without `audit.view_protective`. Requires the `reports.view` permission.",
+                "operationId": "reports.turnaround",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "description": "Defaults to a month before `to`.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "description": "Defaults to today.",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Report data",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "from": {
+                                                    "type": "string",
+                                                    "format": "date"
+                                                },
+                                                "to": {
+                                                    "type": "string",
+                                                    "format": "date"
+                                                },
+                                                "protective_excluded": {
+                                                    "type": "boolean"
+                                                },
+                                                "targets": {
+                                                    "description": "stage => minutes, null when inactive",
+                                                    "type": "object",
+                                                    "additionalProperties": {
+                                                        "type": "integer",
+                                                        "nullable": true
+                                                    }
+                                                },
+                                                "completed": {
+                                                    "type": "integer"
+                                                },
+                                                "cancelled": {
+                                                    "type": "integer"
+                                                },
+                                                "stages": {
+                                                    "properties": {
+                                                        "waiting": {
+                                                            "$ref": "#/components/schemas/TurnaroundStats"
+                                                        },
+                                                        "processing": {
+                                                            "$ref": "#/components/schemas/TurnaroundStats"
+                                                        },
+                                                        "total": {
+                                                            "$ref": "#/components/schemas/TurnaroundStats"
+                                                        }
+                                                    },
+                                                    "type": "object"
+                                                },
+                                                "by_employee": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "allOf": [
+                                                            {
+                                                                "properties": {
+                                                                    "user_id": {
+                                                                        "type": "integer"
+                                                                    },
+                                                                    "name": {
+                                                                        "type": "string"
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            },
+                                                            {
+                                                                "$ref": "#/components/schemas/TurnaroundStats"
+                                                            }
+                                                        ]
+                                                    }
+                                                },
+                                                "by_day": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "allOf": [
+                                                            {
+                                                                "properties": {
+                                                                    "date": {
+                                                                        "type": "string",
+                                                                        "format": "date"
+                                                                    }
+                                                                },
+                                                                "type": "object"
+                                                            },
+                                                            {
+                                                                "$ref": "#/components/schemas/TurnaroundStats"
+                                                            }
+                                                        ]
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/reports/turnaround/export": {
+            "get": {
+                "tags": [
+                    "Reports"
+                ],
+                "summary": "Export the turnaround time report",
+                "description": "CSV by default (one row per stage, worker and day); an A4 PDF with `format=pdf`, inline unless `download=1`. Requires the `reports.generate` permission.",
+                "operationId": "reports.turnaround.export",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "format",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "enum": [
+                                "csv",
+                                "pdf"
+                            ]
+                        }
+                    },
+                    {
+                        "name": "download",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "boolean"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The report",
+                        "content": {
+                            "text/csv": {
+                                "schema": {
+                                    "type": "string"
+                                }
+                            },
+                            "application/pdf": {
+                                "schema": {
+                                    "type": "string",
+                                    "format": "binary"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/turnaround-targets": {
+            "get": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "List turnaround time targets",
+                "description": "Returns the 3 Citizen's Charter targets (waiting, processing, total). Open to all authenticated users.",
+                "operationId": "turnaroundTargets.index",
+                "responses": {
+                    "200": {
+                        "description": "Turnaround targets",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/TurnaroundTarget"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/turnaround-targets/{turnaroundTarget}": {
+            "get": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Show a turnaround time target",
+                "operationId": "turnaroundTargets.show",
+                "parameters": [
+                    {
+                        "name": "turnaroundTarget",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The turnaround target",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TurnaroundTarget"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            },
+            "put": {
+                "tags": [
+                    "Library"
+                ],
+                "summary": "Update target minutes or active status",
+                "description": "Requires the `library.manage` permission. The stage cannot be changed.",
+                "operationId": "turnaroundTargets.update",
+                "parameters": [
+                    {
+                        "name": "turnaroundTarget",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "$ref": "#/components/schemas/UpdateTurnaroundTargetRequest"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The updated turnaround target",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/TurnaroundTarget"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
                     }
                 },
                 "security": [
@@ -10020,21 +10822,28 @@
                         "type": "integer"
                     },
                     "patient_watcher_id": {
-                        "type": "integer",
-                        "nullable": true
+                        "type": "integer"
+                    },
+                    "watcher": {
+                        "$ref": "#/components/schemas/PatientWatcher"
                     },
                     "name": {
-                        "type": "string"
+                        "description": "Copy of watcher.name, kept for older clients.",
+                        "type": "string",
+                        "nullable": true
                     },
                     "relationship": {
+                        "description": "Copy of watcher.relationship_code, kept for older clients.",
                         "type": "string",
                         "nullable": true
                     },
                     "contact_number": {
+                        "description": "Copy of watcher.contact_number, kept for older clients.",
                         "type": "string",
                         "nullable": true
                     },
                     "address": {
+                        "description": "Copy of watcher.address, kept for older clients.",
                         "type": "string",
                         "nullable": true
                     },
@@ -10085,30 +10894,45 @@
                 "type": "object"
             },
             "CaseWatcherStoreRequest": {
-                "description": "Either link an existing patient_watcher_id or supply an inline person (name + relationship code).",
+                "description": "Assigns a watcher to an open case: either an existing patient_watcher_id (the watcher must belong to the case's patient) or a nested `watcher` that is created for the patient and assigned in one step. The case must be open or ongoing.",
                 "properties": {
                     "patient_watcher_id": {
+                        "description": "Required without `watcher`.",
                         "type": "integer",
                         "nullable": true
                     },
-                    "name": {
-                        "description": "Required without patient_watcher_id.",
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "relationship": {
-                        "description": "Watcher relationship type code. Required without patient_watcher_id.",
-                        "type": "string"
-                    },
-                    "contact_number": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "address": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
+                    "watcher": {
+                        "description": "A new person. Required without patient_watcher_id.",
+                        "required": [
+                            "name",
+                            "relationship_code"
+                        ],
+                        "properties": {
+                            "name": {
+                                "type": "string",
+                                "maxLength": 255
+                            },
+                            "relationship_code": {
+                                "description": "A watcher relationship type code.",
+                                "type": "string"
+                            },
+                            "contact_number": {
+                                "type": "string",
+                                "nullable": true,
+                                "maxLength": 255
+                            },
+                            "address": {
+                                "type": "string",
+                                "nullable": true,
+                                "maxLength": 255
+                            },
+                            "notes": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
                     },
                     "is_primary": {
                         "type": "boolean"
@@ -10134,25 +10958,8 @@
                 "type": "object"
             },
             "CaseWatcherUpdateRequest": {
+                "description": "Assignment fields only. The watcher's own details are edited with PUT /watchers/{watcher}.",
                 "properties": {
-                    "name": {
-                        "type": "string",
-                        "maxLength": 255
-                    },
-                    "relationship": {
-                        "description": "Watcher relationship type code.",
-                        "type": "string"
-                    },
-                    "contact_number": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
-                    "address": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
-                    },
                     "is_informant": {
                         "type": "boolean"
                     },
@@ -10209,7 +11016,21 @@
                             "waived"
                         ]
                     },
+                    "requirement_reason": {
+                        "description": "Why the requirement is what it is.",
+                        "type": "string",
+                        "enum": [
+                            "legacy",
+                            "waived",
+                            "minor",
+                            "incapacitated",
+                            "inpatient",
+                            "er",
+                            "opd"
+                        ]
+                    },
                     "has_primary": {
+                        "description": "True only for a primary assignment whose pass is not revoked and who has not left (present_until).",
                         "type": "boolean"
                     },
                     "satisfied": {
@@ -11547,7 +12368,18 @@
                     "name": {
                         "type": "string"
                     },
+                    "relationship_code": {
+                        "description": "A watcher relationship type code.",
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "relationship_label": {
+                        "description": "The relationship type name, e.g. \"Barangay Official\".",
+                        "type": "string",
+                        "nullable": true
+                    },
                     "relationship": {
+                        "description": "Same as relationship_label; kept for older clients.",
                         "type": "string",
                         "nullable": true
                     },
@@ -11559,7 +12391,50 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "assignments": {
+                        "description": "The cases this watcher is assigned to. Present when they were loaded.",
+                        "type": "array",
+                        "items": {
+                            "properties": {
+                                "id": {
+                                    "description": "The case watcher id.",
+                                    "type": "integer"
+                                },
+                                "case_id": {
+                                    "type": "integer"
+                                },
+                                "case_code": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "case_status": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "is_primary": {
+                                    "type": "boolean"
+                                },
+                                "is_informant": {
+                                    "type": "boolean"
+                                },
+                                "pass_number": {
+                                    "type": "string",
+                                    "nullable": true
+                                },
+                                "pass_status": {
+                                    "type": "string",
+                                    "nullable": true
+                                }
+                            },
+                            "type": "object"
+                        }
+                    },
                     "is_primary": {
+                        "description": "True when primary on any assigned case. Present with assignments.",
                         "type": "boolean"
                     },
                     "created_at": {
@@ -11576,18 +12451,19 @@
                 "type": "object"
             },
             "PatientWatcherRequest": {
+                "description": "A patient's watcher. patient_id cannot be changed on update.",
                 "required": [
-                    "name"
+                    "name",
+                    "relationship_code"
                 ],
                 "properties": {
                     "name": {
                         "type": "string",
                         "maxLength": 255
                     },
-                    "relationship": {
-                        "type": "string",
-                        "nullable": true,
-                        "maxLength": 255
+                    "relationship_code": {
+                        "description": "A watcher relationship type code.",
+                        "type": "string"
                     },
                     "contact_number": {
                         "type": "string",
@@ -11599,8 +12475,9 @@
                         "nullable": true,
                         "maxLength": 255
                     },
-                    "is_primary": {
-                        "type": "boolean"
+                    "notes": {
+                        "type": "string",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -12706,6 +13583,151 @@
                 },
                 "type": "object"
             },
+            "ServiceVisit": {
+                "properties": {
+                    "id": {
+                        "description": "OpenAPI docs for App\\Http\\Controllers\\ServiceVisitController: turnaround timing of\nMSWD visits per HIS encounter. Every route needs `queue.manage`; every stamp comes\nfrom the server clock.",
+                        "type": "integer"
+                    },
+                    "patient_id": {
+                        "type": "integer"
+                    },
+                    "his_transaction_id": {
+                        "type": "integer"
+                    },
+                    "status": {
+                        "type": "string",
+                        "enum": [
+                            "waiting",
+                            "in_progress",
+                            "completed",
+                            "cancelled"
+                        ]
+                    },
+                    "purpose": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "remarks": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "arrived_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "started_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "completed_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "cancelled_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "cancel_reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "waiting_minutes": {
+                        "description": "Arrival to start; counts up to now while waiting.",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "processing_minutes": {
+                        "description": "Start to completion; counts up to now while in progress.",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "total_minutes": {
+                        "description": "Arrival to completion (the turnaround time); null when cancelled.",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "within_target": {
+                        "description": "Whether stage durations meet the Citizen's Charter targets. Null when cancelled or target is inactive.",
+                        "properties": {
+                            "waiting": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "processing": {
+                                "type": "boolean",
+                                "nullable": true
+                            },
+                            "total": {
+                                "type": "boolean",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object"
+                    },
+                    "received_by": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ServiceVisitUser"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "served_by": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ServiceVisitUser"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "completed_by": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ServiceVisitUser"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "cancelled_by": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ServiceVisitUser"
+                            }
+                        ],
+                        "nullable": true
+                    },
+                    "patient": {
+                        "description": "Same shape as the DAR patient.",
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "ServiceVisitUser": {
+                "properties": {
+                    "id": {
+                        "type": "integer"
+                    },
+                    "name": {
+                        "type": "string",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
             "Signatory": {
                 "properties": {
                     "id": {
@@ -12720,10 +13742,16 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "license_no": {
+                        "description": "Printed as \"Licence No.\" on the indigency certificate.",
+                        "type": "string",
+                        "nullable": true
+                    },
                     "role": {
                         "type": "string",
                         "enum": [
-                            "allied_health_chief"
+                            "allied_health_chief",
+                            "mswd_head"
                         ]
                     },
                     "role_label": {
@@ -12750,10 +13778,16 @@
                         "nullable": true,
                         "maxLength": 1000
                     },
+                    "license_no": {
+                        "type": "string",
+                        "nullable": true,
+                        "maxLength": 50
+                    },
                     "role": {
                         "type": "string",
                         "enum": [
-                            "allied_health_chief"
+                            "allied_health_chief",
+                            "mswd_head"
                         ]
                     },
                     "is_active": {
@@ -12762,6 +13796,92 @@
                     "sort_order": {
                         "type": "integer",
                         "minimum": 0
+                    }
+                },
+                "type": "object"
+            },
+            "TurnaroundStats": {
+                "description": "Durations in whole minutes. Every figure but count is null when count is 0; within_target_pct is null when the target is inactive.",
+                "properties": {
+                    "count": {
+                        "description": "OpenAPI docs for App\\Http\\Controllers\\TurnaroundReportController and\nTurnaroundReportExportController. The dashboard requires `reports.view`;\nthe export requires `reports.generate`.",
+                        "type": "integer"
+                    },
+                    "avg": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "median": {
+                        "type": "number",
+                        "nullable": true
+                    },
+                    "p90": {
+                        "description": "Nearest-rank 90th percentile.",
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "max": {
+                        "type": "integer",
+                        "nullable": true
+                    },
+                    "within_target_pct": {
+                        "type": "number",
+                        "example": 87.5,
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "TurnaroundTarget": {
+                "properties": {
+                    "id": {
+                        "description": "OpenAPI docs for App\\Http\\Controllers\\TurnaroundTargetController.",
+                        "type": "integer"
+                    },
+                    "stage": {
+                        "type": "string",
+                        "enum": [
+                            "waiting",
+                            "processing",
+                            "total"
+                        ]
+                    },
+                    "label": {
+                        "type": "string"
+                    },
+                    "description": {
+                        "type": "string"
+                    },
+                    "minutes": {
+                        "type": "integer",
+                        "maximum": 1440,
+                        "minimum": 1
+                    },
+                    "is_active": {
+                        "type": "boolean"
+                    },
+                    "created_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    },
+                    "updated_at": {
+                        "type": "string",
+                        "format": "date-time"
+                    }
+                },
+                "type": "object"
+            },
+            "UpdateTurnaroundTargetRequest": {
+                "properties": {
+                    "minutes": {
+                        "type": "integer",
+                        "nullable": true,
+                        "maximum": 1440,
+                        "minimum": 1
+                    },
+                    "is_active": {
+                        "type": "boolean",
+                        "nullable": true
                     }
                 },
                 "type": "object"
@@ -12989,6 +14109,10 @@
         {
             "name": "List of Expenses",
             "description": "List of Expenses"
+        },
+        {
+            "name": "Queue",
+            "description": "Queue"
         }
     ]
 }
