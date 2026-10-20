@@ -22,7 +22,7 @@ import type { AuditEvent, AuditFieldChange, AuditHistory } from "../types/audit.
 import type { CaretakerAssignment, CaretakerRole } from "../types/caretake.types"
 import { CARETAKER_ROLES } from "../types/caretake.types"
 import type { PatientIdCredential, PatientRecord } from "../types/patient.types"
-import type { Watcher } from "../types/watcher.types"
+import type { OpenCase, Watcher } from "../types/watcher.types"
 import type {
   ApiActivity,
   ApiAssessment,
@@ -123,17 +123,40 @@ function toFamilyMember(raw: ApiFamilyMember): FamilyMember {
   }
 }
 
-function toWatcher(raw: ApiWatcher): Watcher {
+export function toWatcher(raw: ApiWatcher): Watcher {
   return {
     id: String(raw.id),
     fullName: raw.name,
-    relationship: raw.relationship ?? "",
+    relationship: raw.relationship_label ?? raw.relationship ?? raw.relationship_code ?? "",
+    relationshipCode: raw.relationship_code ?? "",
     contactNo: raw.contact_number ?? "",
-    // No pass-number/expiry/status columns exist on the backend at all.
-    passNo: NOT_TRACKED,
-    validUntil: "—",
-    status: NOT_TRACKED,
+    address: raw.address ?? "",
+    notes: raw.notes ?? "",
+    assignments: (raw.assignments ?? []).map((a) => ({
+      id: String(a.id),
+      caseId: String(a.case_id),
+      caseCode: a.case_code,
+      caseStatus: a.case_status,
+      isPrimary: a.is_primary,
+      isInformant: a.is_informant,
+      passNumber: a.pass_number,
+      passStatus: a.pass_status,
+    })),
   }
+}
+
+/** Cases a watcher can be assigned to: the patient's open or ongoing ones. */
+function toOpenCases(cases: ApiCase[] | undefined): OpenCase[] {
+  return (cases ?? [])
+    .filter((c) => c.status === "open" || c.status === "ongoing")
+    .map((c) => ({
+      id: c.id,
+      caseCode: c.case_code,
+      status: c.status,
+      admissionType: c.admission_type,
+      dateOpened: c.date_opened,
+    }))
+    .sort((a, b) => (b.dateOpened ?? "").localeCompare(a.dateOpened ?? "") || b.id - a.id)
 }
 
 function toDocumentItem(raw: ApiDocument): DocumentItem {
@@ -308,6 +331,7 @@ export function toPatientListRecord(raw: ApiPatient): PatientRecord {
     monthlyIncome: raw.monthly_income != null ? Number(raw.monthly_income) : undefined,
     familyMembers: (raw.family_members ?? []).map(toFamilyMember),
     watchers: (raw.watchers ?? []).map(toWatcher),
+    openCases: toOpenCases(raw.cases),
     // Eager-loaded by PatientService::profile(); absent on list rows.
     caretakers: (raw.caretakers ?? []).map(toCaretakerAssignment),
     assignedStaff: buildAssignedStaff(latestCase),

@@ -3,11 +3,15 @@ import type { ApiEnvelope } from "@/features/patients/types/api.types"
 import type { ApiCaseWatcher, ApiWatcherStatus } from "../types/api.types"
 
 export interface CreateCaseWatcherPayload {
+  /** Assign an existing patient watcher... */
   patient_watcher_id?: number | null
-  name?: string
-  relationship?: string
-  contact_number?: string | null
-  address?: string | null
+  /** ...or create a new person for the case's patient and assign them. */
+  watcher?: {
+    name: string
+    relationship_code: string
+    contact_number?: string | null
+    address?: string | null
+  }
   is_primary?: boolean
   is_informant?: boolean
   present_from?: string | null
@@ -15,12 +19,8 @@ export interface CreateCaseWatcherPayload {
   notes?: string | null
 }
 
+/** The assignment only; a watcher's own details are edited with updateWatcher. */
 export interface UpdateCaseWatcherPayload {
-  name?: string
-  relationship?: string
-  contact_number?: string | null
-  address?: string | null
-  is_primary?: boolean
   is_informant?: boolean
   present_from?: string | null
   present_until?: string | null
@@ -39,7 +39,7 @@ export interface StoreWatcherWaiverPayload {
     | "patient_refused"
     | "under_protective_custody"
     | "other"
-  watcher_waiver_notes?: string | null
+  watcher_waiver_note?: string | null
 }
 
 /** GET /cases/{case}/watchers */

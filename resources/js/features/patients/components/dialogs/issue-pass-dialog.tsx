@@ -10,12 +10,17 @@ import {
 } from "@/components/ui/dialog"
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
-import type { CaseWatcher } from "@/features/cases/types/watcher.types"
+/** The part of a case watcher the dialog needs, so any assignment can be passed. */
+interface PassHolder {
+  id: string
+  fullName: string
+  passValidUntil?: string | null
+}
 
 interface IssuePassDialogProps {
   isOpen: boolean
   onClose: () => void
-  watcher: CaseWatcher | null
+  watcher: PassHolder | null
   onIssuePass: (watcherId: number, passValidUntil?: string) => Promise<void>
   isSubmitting?: boolean
 }

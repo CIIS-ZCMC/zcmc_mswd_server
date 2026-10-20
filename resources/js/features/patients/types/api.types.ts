@@ -64,14 +64,30 @@ export interface ApiFamilyMember {
   updated_at?: string
 }
 
+export interface ApiWatcherAssignment {
+  id: number
+  case_id: number
+  case_code: string | null
+  case_status: string | null
+  is_primary: boolean
+  is_informant: boolean
+  pass_number: string | null
+  pass_status: string
+}
+
 export interface ApiWatcher {
   id: number
   patient_id: number
   name: string
-  relationship: string | null
+  relationship_code: string | null
+  relationship_label: string | null
+  /** Same as relationship_label; the old free-text field name. */
+  relationship?: string | null
   contact_number: string | null
   address: string | null
-  is_primary: boolean
+  notes?: string | null
+  /** Only present when the server loaded the watcher's case assignments. */
+  assignments?: ApiWatcherAssignment[]
   created_at?: string
   updated_at?: string
 }

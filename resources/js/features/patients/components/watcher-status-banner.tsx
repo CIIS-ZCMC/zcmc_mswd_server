@@ -11,6 +11,23 @@ interface WatcherStatusBannerProps {
   isRevokingWaiver?: boolean
 }
 
+const REQUIRED_TEXT: Record<string, string> = {
+  minor: "This patient is a minor, so a registered primary watcher is required.",
+  incapacitated: "This patient cannot speak for themselves, so a registered primary watcher is required.",
+  inpatient: "This inpatient admission requires a registered primary watcher.",
+}
+
+const WAIVER_REASONS: Record<string, string> = {
+  unidentified_patient: "Unidentified patient",
+  abandoned: "Abandoned",
+  unaccompanied: "Unaccompanied",
+  patient_refused: "Patient refused a watcher",
+  under_protective_custody: "Under protective custody",
+  other: "Other",
+}
+
+const formatDate = (iso: string | null) => (iso ? iso.substring(0, 10) : null)
+
 export const WatcherStatusBanner: React.FC<WatcherStatusBannerProps> = ({
   caseId,
   onOpenWaiverDialog,
@@ -31,7 +48,8 @@ export const WatcherStatusBanner: React.FC<WatcherStatusBannerProps> = ({
           <div>
             <h4 className="text-sm font-bold tracking-tight">Primary Watcher Required</h4>
             <p className="text-xs text-destructive/90 mt-0.5">
-              This inpatient admission requires a registered primary watcher. Some actions are blocked until one is added or a waiver is filed.
+              {REQUIRED_TEXT[status.requirementReason] ?? REQUIRED_TEXT.inpatient} Some actions are blocked until one is
+              assigned or a waiver is filed.
             </p>
           </div>
         </div>
@@ -57,7 +75,7 @@ export const WatcherStatusBanner: React.FC<WatcherStatusBannerProps> = ({
         <div>
           <h4 className="text-sm font-bold tracking-tight">Watcher Recommended</h4>
           <p className="text-xs opacity-90 mt-0.5">
-            No primary watcher recorded for this episode. Recommended for ER and observation cases.
+            No primary watcher is assigned to this case. Recommended for ER and observation cases.
           </p>
         </div>
       </div>
@@ -75,11 +93,19 @@ export const WatcherStatusBanner: React.FC<WatcherStatusBannerProps> = ({
               Watcher Requirement Waived
             </h4>
             <p className="text-[11px] text-muted-foreground">
-              An official waiver has been approved for this admission episode.
+              {status.requirementReason === "legacy"
+                ? "This case predates the watcher requirement."
+                : status.waiver
+                  ? `${WAIVER_REASONS[status.waiver.reason] ?? status.waiver.reason}${
+                      status.waiver.waivedBy ? ` · waived by ${status.waiver.waivedBy}` : ""
+                    }${formatDate(status.waiver.waivedAt) ? ` on ${formatDate(status.waiver.waivedAt)}` : ""}${
+                      status.waiver.note ? ` · ${status.waiver.note}` : ""
+                    }`
+                  : "An official waiver has been approved for this admission episode."}
             </p>
           </div>
         </div>
-        {canWaiveWatcher && onRevokeWaiver && (
+        {canWaiveWatcher && onRevokeWaiver && status.requirementReason !== "legacy" && (
           <Button
             variant="outline"
             size="sm"

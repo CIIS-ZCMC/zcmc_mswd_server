@@ -1,18 +1,38 @@
-/**
- * The backend's PatientWatcher table has no pass-number, expiry or status
- * columns at all (only name/relationship/contact_number/address/is_primary)
- * — so `passNo`/`validUntil` are plain strings that the adapter fills with a
- * "not tracked" placeholder rather than fabricated values, and `status`
- * stays a loose string rather than a fixed union for the same reason.
- */
-export type WatcherPassStatus = string
+/** One case a patient watcher is assigned to (a `case_watchers` row). */
+export interface WatcherAssignment {
+  id: string
+  caseId: string
+  caseCode: string | null
+  caseStatus: string | null
+  isPrimary: boolean
+  isInformant: boolean
+  passNumber: string | null
+  passStatus: string
+}
 
+/**
+ * A person who watches over the patient — the single record of who they are.
+ * Assigning them to an open case is what gives them a primary role and a ward
+ * pass; a watcher with no assignment is simply a known contact.
+ */
 export interface Watcher {
   id: string
   fullName: string
+  /** Display label, e.g. "Barangay Official". */
   relationship: string
+  /** Master-list code, e.g. "barangay_official" — what the API takes. */
+  relationshipCode: string
   contactNo: string
-  passNo: string
-  validUntil: string
-  status: WatcherPassStatus
+  address: string
+  notes: string
+  assignments: WatcherAssignment[]
+}
+
+/** A case a watcher can still be assigned to (open or ongoing). */
+export interface OpenCase {
+  id: number
+  caseCode: string
+  status: string
+  admissionType: string | null
+  dateOpened: string | null
 }

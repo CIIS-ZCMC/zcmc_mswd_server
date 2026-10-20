@@ -2,7 +2,7 @@ import type { AuditHistory } from "./audit.types"
 import type { CaretakerAssignment } from "./caretake.types"
 import type { FamilyMember, MedicalCategory, SocialCaseStudy, StaffAssignment } from "./case-study.types"
 import type { DocumentItem } from "./document.types"
-import type { Watcher } from "./watcher.types"
+import type { OpenCase, Watcher } from "./watcher.types"
 
 /**
  * Backend `cases.admission_type`, `patients.sex` and `patients.civil_status`
@@ -67,6 +67,8 @@ export interface PatientRecord {
   monthlyIncome?: number
   familyMembers: FamilyMember[]
   watchers: Watcher[]
+  /** Cases a watcher can still be assigned to (open or ongoing). */
+  openCases: OpenCase[]
   /**
    * Standing custody — every caretaker assignment on this patient, active
    * and ended. Sourced from the profile's `caretakers` relation, which was

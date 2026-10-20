@@ -197,10 +197,31 @@ export function updatePatientBackground(patientId: number, payload: UpdatePatien
 
 export interface CreateWatcherPayload {
   name: string
-  relationship?: string
-  contact_number?: string
-  address?: string
-  is_primary?: boolean
+  relationship_code: string
+  contact_number?: string | null
+  address?: string | null
+  notes?: string | null
+}
+
+export type UpdateWatcherPayload = Partial<CreateWatcherPayload>
+
+/** GET /patients/{id}/watchers: the patient's watchers with the cases each is assigned to. */
+export function listPatientWatchers(patientId: number) {
+  return apiClient
+    .get<ApiEnvelope<ApiWatcher[]>>(`/patients/${patientId}/watchers`)
+    .then((res) => res.data)
+}
+
+/** PUT /watchers/{id} */
+export function updateWatcher(watcherId: number, payload: UpdateWatcherPayload) {
+  return apiClient
+    .put<ApiEnvelope<ApiWatcher>>(`/watchers/${watcherId}`, payload)
+    .then((res) => res.data)
+}
+
+/** DELETE /watchers/{id} */
+export function deleteWatcher(watcherId: number) {
+  return apiClient.delete<void>(`/watchers/${watcherId}`)
 }
 
 /** POST /patients/{id}/watchers */

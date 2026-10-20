@@ -1,12 +1,10 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import {
   createFamilyMember,
-  createWatcher,
   deleteFamilyMember,
   updateFamilyMember,
   updatePatientBackground,
   type CreateFamilyMemberPayload,
-  type CreateWatcherPayload,
   type UpdateFamilyMemberPayload,
   type UpdatePatientBackgroundPayload,
 } from "../api/patients-api"
@@ -68,18 +66,6 @@ export function useUpdatePatientBackground(patientId: string) {
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: patientDetailKeys(numericId).profile })
       queryClient.invalidateQueries({ queryKey: socioeconomicKeys.all })
-    },
-  })
-}
-
-export function useAddWatcher(patientId: string) {
-  const queryClient = useQueryClient()
-  const numericId = Number(patientId)
-
-  return useMutation({
-    mutationFn: (payload: CreateWatcherPayload) => createWatcher(numericId, payload),
-    onSuccess: () => {
-      queryClient.invalidateQueries({ queryKey: patientDetailKeys(numericId).profile })
     },
   })
 }
