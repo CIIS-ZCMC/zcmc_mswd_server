@@ -2,24 +2,16 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StorePatientWatcherRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
-    /**
-     * Get the validation rules that apply to the request.
-     *
-     * @return array<string, ValidationRule|array<mixed>|string>
-     */
     protected function prepareForValidation(): void
     {
         if ($this->route('patient')) {
@@ -27,15 +19,18 @@ class StorePatientWatcherRequest extends FormRequest
         }
     }
 
+    /**
+     * @return array<string, mixed>
+     */
     public function rules(): array
     {
         return [
             'patient_id' => ['required', 'exists:patients,id'],
             'name' => ['required', 'string', 'max:255'],
-            'relationship' => ['nullable', 'string', 'max:255'],
+            'relationship_code' => ['required', 'string', Rule::exists('watcher_relationship_types', 'code')],
             'contact_number' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
-            'is_primary' => ['boolean'],
+            'notes' => ['nullable', 'string'],
         ];
     }
 }

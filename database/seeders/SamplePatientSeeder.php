@@ -444,7 +444,11 @@ class SamplePatientSeeder extends Seeder
         foreach ($watchers as $watcher) {
             PatientWatcher::firstOrCreate(
                 ['patient_id' => $patient->id, 'name' => $watcher['name']],
-                $watcher + ['address' => $patient->address],
+                [
+                    'relationship_code' => $watcher['relationship'],
+                    'contact_number' => $watcher['contact_number'] ?? null,
+                    'address' => $patient->address,
+                ],
             );
         }
     }

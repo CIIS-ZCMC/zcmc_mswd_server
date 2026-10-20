@@ -56,8 +56,8 @@ Every rule (primary watcher, pass, presence, waiver, requirement) runs only on `
 |-------|------|------------|--------|
 | 0. Plan doc | docs | — | ☑ done |
 | 1. Schema and backfill | server | 0 | ☑ done (models updated; services, resources and tests follow in Phases 2–3) |
-| 2. Patient watcher API | server | 1 | ☐ |
-| 3. Case assignment API, pass numbers, requirement status | server | 1, 2 | ☐ |
+| 2. Patient watcher API | server | 1 | ☑ done (`open_cases` on the patient moved to Phase 5) |
+| 3. Case assignment API, pass numbers, requirement status | server | 1, 2 | ☑ done |
 | 4. Pass expiry command | server | 3 | ☐ |
 | 5. Client: patient watchers tab, assign dialog, case panel, bug fixes | client | 2, 3 | ☐ |
 | 6. Docs, OpenAPI, wrap-up | docs | 1–5 | ☐ |

@@ -47,7 +47,7 @@ function enforcementCase(Patient $patient, User $worker, array $overrides = []):
 
 function registerPrimaryWatcher(CaseModel $case, User $worker): CaseWatcher
 {
-    return CaseWatcher::create([
+    return assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria Reyes', 'relationship' => 'spouse',
         'is_primary' => true, 'added_by' => $worker->id,
     ]);

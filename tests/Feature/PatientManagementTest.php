@@ -9,6 +9,7 @@ use App\Models\PatientFamilyMember;
 use App\Models\Sector;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Database\Seeders\WatcherRelationshipTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Http\UploadedFile;
 use Illuminate\Support\Facades\DB;
@@ -20,6 +21,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Storage::fake();
     $this->seed(RolesAndPermissionsSeeder::class);
+    $this->seed(WatcherRelationshipTypeSeeder::class);
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
 });
 
@@ -200,7 +202,7 @@ it('manages patient records through nested endpoints', function () {
         ->assertJsonPath('data.educational_attainment', 'College graduate');
 
     // Watcher
-    $this->postJson("/api/patients/{$patient->id}/watchers", ['name' => 'Pedro', 'is_primary' => true])
+    $this->postJson("/api/patients/{$patient->id}/watchers", ['name' => 'Pedro', 'relationship_code' => 'parent'])
         ->assertCreated();
 
     expect($patient->patientIds()->count())->toBe(1)

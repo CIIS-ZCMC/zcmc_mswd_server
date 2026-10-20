@@ -2,6 +2,10 @@
 
 namespace App\DTOs;
 
+/**
+ * The assignment fields of a case watcher. The watcher's own details (name,
+ * relationship, contact number, address) live on the PatientWatcher.
+ */
 class CaseWatcherDto
 {
     /**
@@ -16,10 +20,6 @@ class CaseWatcherDto
     public function __construct(
         public readonly ?int $case_id = null,
         public readonly ?int $patient_watcher_id = null,
-        public readonly ?string $name = null,
-        public readonly ?string $relationship = null,
-        public readonly ?string $contact_number = null,
-        public readonly ?string $address = null,
         public readonly ?bool $is_primary = null,
         public readonly ?bool $is_informant = null,
         public readonly ?string $present_from = null,
@@ -36,10 +36,6 @@ class CaseWatcherDto
         return new self(
             case_id: $data['case_id'] ?? null,
             patient_watcher_id: $data['patient_watcher_id'] ?? null,
-            name: $data['name'] ?? null,
-            relationship: $data['relationship'] ?? null,
-            contact_number: $data['contact_number'] ?? null,
-            address: $data['address'] ?? null,
             is_primary: $data['is_primary'] ?? null,
             is_informant: $data['is_informant'] ?? null,
             present_from: $data['present_from'] ?? null,
@@ -55,10 +51,6 @@ class CaseWatcherDto
         $all = [
             'case_id' => $this->case_id,
             'patient_watcher_id' => $this->patient_watcher_id,
-            'name' => $this->name,
-            'relationship' => $this->relationship,
-            'contact_number' => $this->contact_number,
-            'address' => $this->address,
             'is_primary' => $this->is_primary,
             'is_informant' => $this->is_informant,
             'present_from' => $this->present_from,

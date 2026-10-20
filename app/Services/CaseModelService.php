@@ -291,7 +291,7 @@ class CaseModelService
      */
     public function profile(CaseModel $case): CaseModel
     {
-        return $case->load(['patient', 'assignedUser', 'createdBy', 'watchers.addedBy'])
+        return $case->load(['patient', 'assignedUser', 'createdBy', 'watchers.addedBy', 'watchers.patientWatcher.relationshipType'])
             ->loadCount(['activities', 'assessments', 'diagnostics', 'interventions', 'documents', 'patientAssistances']);
     }
 

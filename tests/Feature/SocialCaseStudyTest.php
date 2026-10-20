@@ -278,7 +278,7 @@ it('blocks finalize when the watcher requirement is unmet', function () {
 
     $this->postJson("/api/cases/{$inpatient->id}/social-case/finalize")->assertStatus(422);
 
-    CaseWatcher::create([
+    assignWatcher([
         'case_id' => $inpatient->id, 'name' => 'Maria Reyes',
         'relationship' => 'spouse', 'is_primary' => true, 'added_by' => $head->id,
     ]);

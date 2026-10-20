@@ -118,7 +118,8 @@ class PatientService
             'sector',
             'patientIds',
             'familyMembers',
-            'watchers',
+            'watchers.relationshipType',
+            'watchers.caseWatchers.case',
             // caretakers.user for the same reason as cases.assignedUser: the
             // Caretake tab reads custody off this profile payload, and without
             // the relation every card renders "User #3".

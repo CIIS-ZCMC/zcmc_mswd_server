@@ -48,7 +48,7 @@ it('lists watchers for a case', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
-    CaseWatcher::create(['case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse', 'added_by' => $worker->id]);
+    assignWatcher(['case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse', 'added_by' => $worker->id]);
 
     $this->getJson("/api/cases/{$case->id}/watchers")->assertOk()->assertJsonCount(1, 'data');
 });
@@ -75,7 +75,7 @@ it('creates a watcher by linking an existing directory entry, snapshotting its f
     $patient = watcherApiPatient();
     $case = watcherApiCase($patient, $worker);
     $directoryEntry = PatientWatcher::create([
-        'patient_id' => $patient->id, 'name' => 'Pedro Reyes', 'relationship' => 'parent', 'contact_number' => '0917',
+        'patient_id' => $patient->id, 'name' => 'Pedro Reyes', 'relationship_code' => 'parent', 'contact_number' => '0917',
     ]);
 
     $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $directoryEntry->id])
@@ -95,14 +95,14 @@ it('rejects a relationship not in the master list', function () {
 
     $this->postJson("/api/cases/{$case->id}/watchers", ['name' => 'Maria', 'relationship' => 'best_friend'])
         ->assertUnprocessable()
-        ->assertJsonValidationErrorFor('relationship');
+        ->assertJsonValidationErrorFor('watcher.relationship_code');
 });
 
 it('demotes the existing primary when a new one is created as primary', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
-    $first = CaseWatcher::create([
+    $first = assignWatcher([
         'case_id' => $case->id, 'name' => 'First', 'relationship' => 'spouse',
         'is_primary' => true, 'added_by' => $worker->id,
     ]);
@@ -118,24 +118,35 @@ it('updates a watcher and clears a field on an explicit null', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
-    $watcher = CaseWatcher::create([
+    $watcher = assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse',
         'contact_number' => '0917', 'added_by' => $worker->id,
     ]);
 
-    $this->putJson("/api/case-watchers/{$watcher->id}", ['contact_number' => null])
+    // The person's own details are edited on the patient watcher...
+    $this->putJson("/api/watchers/{$watcher->patient_watcher_id}", ['contact_number' => null])
         ->assertOk()
         ->assertJsonPath('data.contact_number', null)
         ->assertJsonPath('data.name', 'Maria');
 
-    expect($watcher->refresh()->contact_number)->toBeNull();
+    // ...and show up on the case assignment, which is the same record.
+    $this->getJson("/api/cases/{$case->id}/watchers")
+        ->assertOk()
+        ->assertJsonPath('data.0.watcher.contact_number', null)
+        ->assertJsonPath('data.0.name', 'Maria');
+
+    // The assignment itself only takes its own fields.
+    $this->putJson("/api/case-watchers/{$watcher->id}", ['notes' => 'Day shift', 'name' => 'Ignored'])
+        ->assertOk()
+        ->assertJsonPath('data.notes', 'Day shift')
+        ->assertJsonPath('data.name', 'Maria');
 });
 
 it('ignores is_primary on a generic update, keeping promotion atomic', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
-    $watcher = CaseWatcher::create([
+    $watcher = assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse',
         'is_primary' => false, 'added_by' => $worker->id,
     ]);
@@ -149,7 +160,7 @@ it('blocks removing the last primary on a case that requires one', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker, ['admission_type' => 'inpatient']);
-    $watcher = CaseWatcher::create([
+    $watcher = assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse',
         'is_primary' => true, 'added_by' => $worker->id,
     ]);
@@ -162,7 +173,7 @@ it('allows removing the last watcher on an OPD case', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker, ['admission_type' => 'OPD']);
-    $watcher = CaseWatcher::create([
+    $watcher = assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse',
         'is_primary' => true, 'added_by' => $worker->id,
     ]);
@@ -174,11 +185,11 @@ it('promotes a watcher, demoting whoever previously held primary', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
-    $first = CaseWatcher::create([
+    $first = assignWatcher([
         'case_id' => $case->id, 'name' => 'First', 'relationship' => 'spouse',
         'is_primary' => true, 'added_by' => $worker->id,
     ]);
-    $second = CaseWatcher::create([
+    $second = assignWatcher([
         'case_id' => $case->id, 'name' => 'Second', 'relationship' => 'parent',
         'is_primary' => false, 'added_by' => $worker->id,
     ]);
@@ -194,7 +205,7 @@ it('issues and revokes a ward pass', function () {
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
-    $watcher = CaseWatcher::create([
+    $watcher = assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse', 'added_by' => $worker->id,
     ]);
 
@@ -226,7 +237,7 @@ it('includes watchers and watcher_status on the case profile, but not on other c
     $worker = watcherApiUser();
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker, ['admission_type' => 'inpatient']);
-    CaseWatcher::create([
+    assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse',
         'is_primary' => true, 'added_by' => $worker->id,
     ]);
@@ -274,4 +285,121 @@ it('forbids managing watchers without cases.update', function () {
 
     $this->postJson("/api/cases/{$case->id}/watchers", ['name' => 'Maria', 'relationship' => 'spouse'])
         ->assertForbidden();
+});
+
+it('assigns an existing patient watcher to an open case', function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $patient = watcherApiPatient();
+    $case = watcherApiCase($patient, $worker);
+    $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
+
+    $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $person->id, 'is_primary' => true])
+        ->assertCreated()
+        ->assertJsonPath('data.patient_watcher_id', $person->id)
+        ->assertJsonPath('data.watcher.name', 'Pedro')
+        ->assertJsonPath('data.is_primary', true);
+
+    expect(PatientWatcher::count())->toBe(1);
+});
+
+it('creates and assigns a new person from a nested watcher', function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $patient = watcherApiPatient();
+    $case = watcherApiCase($patient, $worker);
+
+    $this->postJson("/api/cases/{$case->id}/watchers", [
+        'watcher' => ['name' => 'Lola', 'relationship_code' => 'grandparent', 'address' => 'Zone 1'],
+        'is_informant' => true,
+    ])->assertCreated()->assertJsonPath('data.watcher.relationship_code', 'grandparent');
+
+    $person = PatientWatcher::firstWhere('name', 'Lola');
+    expect($person->patient_id)->toBe($patient->id)->and($person->added_by)->toBe($worker->id);
+});
+
+it("refuses to assign another patient's watcher", function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $case = watcherApiCase(watcherApiPatient(), $worker);
+    $stranger = PatientWatcher::create(['patient_id' => watcherApiPatient()->id, 'name' => 'Stranger', 'relationship_code' => 'friend']);
+
+    $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $stranger->id])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrorFor('patient_watcher_id');
+});
+
+it('refuses to assign the same watcher to a case twice', function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $patient = watcherApiPatient();
+    $case = watcherApiCase($patient, $worker);
+    $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
+
+    $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $person->id])->assertCreated();
+    $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $person->id])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrorFor('patient_watcher_id');
+});
+
+it('allows one watcher on several open cases', function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $patient = watcherApiPatient();
+    $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
+
+    foreach ([watcherApiCase($patient, $worker), watcherApiCase($patient, $worker, ['status' => 'ongoing'])] as $case) {
+        $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $person->id])->assertCreated();
+    }
+
+    expect($person->caseWatchers()->count())->toBe(2);
+});
+
+it('treats assignments on a closed case as read-only history', function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $patient = watcherApiPatient();
+    $case = watcherApiCase($patient, $worker, ['status' => 'closed']);
+    $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
+    $assignment = assignWatcher(['case_id' => $case->id, 'patient_watcher_id' => $person->id, 'added_by' => $worker->id]);
+
+    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['name' => 'New', 'relationship_code' => 'friend']])
+        ->assertUnprocessable()->assertJsonValidationErrorFor('case');
+    $this->postJson("/api/case-watchers/{$assignment->id}/promote")->assertUnprocessable();
+    $this->postJson("/api/case-watchers/{$assignment->id}/issue-pass", [])->assertUnprocessable();
+    $this->deleteJson("/api/case-watchers/{$assignment->id}")->assertUnprocessable();
+
+    // Editing the person still shows on the old case.
+    $this->putJson("/api/watchers/{$person->id}", ['name' => 'Pedro Sr.'])->assertOk();
+    $this->getJson("/api/cases/{$case->id}/watchers")->assertJsonPath('data.0.name', 'Pedro Sr.');
+});
+
+it('unassigns without deleting the patient watcher and allows reassigning', function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $patient = watcherApiPatient();
+    $case = watcherApiCase($patient, $worker, ['admission_type' => 'OPD']);
+    $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
+    $assignment = assignWatcher(['case_id' => $case->id, 'patient_watcher_id' => $person->id, 'added_by' => $worker->id]);
+
+    $this->deleteJson("/api/case-watchers/{$assignment->id}")->assertNoContent();
+
+    expect(PatientWatcher::find($person->id))->not->toBeNull();
+    $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $person->id])->assertCreated();
+});
+
+it('never repeats a pass number after a reissue', function () {
+    $worker = watcherApiUser();
+    Sanctum::actingAs($worker);
+    $case = watcherApiCase(watcherApiPatient(), $worker);
+    $first = assignWatcher(['case_id' => $case->id, 'name' => 'A', 'relationship' => 'spouse', 'added_by' => $worker->id]);
+    $second = assignWatcher(['case_id' => $case->id, 'name' => 'B', 'relationship' => 'parent', 'added_by' => $worker->id]);
+
+    $numbers = [];
+    $numbers[] = $this->postJson("/api/case-watchers/{$first->id}/issue-pass", [])->json('data.pass_number');
+    $numbers[] = $this->postJson("/api/case-watchers/{$second->id}/issue-pass", [])->json('data.pass_number');
+    $numbers[] = $this->postJson("/api/case-watchers/{$first->id}/issue-pass", [])->json('data.pass_number');
+    $numbers[] = $this->postJson("/api/case-watchers/{$second->id}/issue-pass", [])->json('data.pass_number');
+
+    expect(array_unique($numbers))->toHaveCount(4)->and($numbers[3])->toBe(sprintf('PASS-%d-%06d', now()->year, 4));
 });

@@ -6,14 +6,15 @@ use App\Enums\WatcherRequirement;
 use App\Models\CaseModel;
 use App\Models\CaseWatcher;
 use App\Models\PatientWatcher;
-use App\Models\WatcherRelationshipType;
+use App\Support\RetriesOnDuplicateKey;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
 
 /**
- * Model invariants for case_watchers — enforced here rather than only in
- * form requests, since Filament and seeders bypass requests. See
- * docs/WATCHER_LOGIC_PLAN.md §4.
+ * Model invariants for case watchers — enforced here rather than only in form
+ * requests, since Filament and seeders bypass requests. A case watcher is an
+ * assignment of a patient's watcher to one open case; the person's own details
+ * live on the PatientWatcher. See docs/WATCHER_MODULE_PLAN.md.
  */
 class CaseWatcherService
 {
@@ -23,21 +24,45 @@ class CaseWatcherService
     ) {}
 
     /**
-     * Accepts either a `patient_watcher_id` (links an existing directory
-     * entry, snapshotting its fields) or a full inline person (creates the
-     * directory row and the case link together, so a social worker doesn't
-     * retype the same spouse on the next admission).
+     * Assigns a patient watcher to a case. Pass `$newWatcher` instead of a
+     * `patient_watcher_id` to create the person for the case's patient and
+     * assign them in one transaction.
      *
-     * @param  array<string, mixed>  $attributes
+     * @param  array<string, mixed>  $attributes  Assignment fields (case_id, patient_watcher_id, is_primary, ...).
+     * @param  array<string, mixed>|null  $newWatcher  name, relationship_code, contact_number, address, notes.
      */
-    public function create(array $attributes): CaseWatcher
+    public function create(array $attributes, ?array $newWatcher = null): CaseWatcher
     {
-        return DB::transaction(function () use ($attributes) {
-            $attributes = $this->resolveDirectoryLink($attributes);
-            $this->assertKnownRelationship($attributes['relationship'] ?? null);
+        return DB::transaction(function () use ($attributes, $newWatcher) {
+            $case = CaseModel::findOrFail($attributes['case_id']);
+            $this->assertCaseIsOpen($case);
+
+            if ($newWatcher !== null) {
+                $attributes['patient_watcher_id'] = PatientWatcher::create([
+                    'patient_id' => $case->patient_id,
+                    'name' => $newWatcher['name'],
+                    'relationship_code' => $newWatcher['relationship_code'],
+                    'contact_number' => $newWatcher['contact_number'] ?? null,
+                    'address' => $newWatcher['address'] ?? null,
+                    'notes' => $newWatcher['notes'] ?? null,
+                    'added_by' => $attributes['added_by'] ?? null,
+                ])->id;
+            } else {
+                $this->assertBelongsToPatient($attributes['patient_watcher_id'], $case);
+            }
+
+            $alreadyAssigned = CaseWatcher::where('case_id', $case->id)
+                ->where('patient_watcher_id', $attributes['patient_watcher_id'])
+                ->exists();
+
+            if ($alreadyAssigned) {
+                throw ValidationException::withMessages([
+                    'patient_watcher_id' => 'This watcher is already assigned to the case.',
+                ]);
+            }
 
             if ($attributes['is_primary'] ?? false) {
-                $this->demoteExistingPrimary($attributes['case_id']);
+                $this->demoteExistingPrimary($case->id);
             }
 
             return CaseWatcher::create($attributes);
@@ -45,17 +70,15 @@ class CaseWatcherService
     }
 
     /**
-     * Generic field update — relationship stays validated, but is_primary is
-     * deliberately not accepted here; promotion only ever happens through
-     * promote(), so the demote-then-set atomicity can't be bypassed.
+     * Generic assignment update. is_primary is deliberately not accepted here;
+     * promotion only ever happens through promote(), so the demote-then-set
+     * atomicity can't be bypassed.
      *
      * @param  array<string, mixed>  $attributes
      */
     public function update(CaseWatcher $watcher, array $attributes): CaseWatcher
     {
-        if (array_key_exists('relationship', $attributes)) {
-            $this->assertKnownRelationship($attributes['relationship']);
-        }
+        $this->assertCaseIsOpen($watcher->case);
 
         $watcher->update($attributes);
 
@@ -69,6 +92,8 @@ class CaseWatcherService
      */
     public function promote(CaseWatcher $watcher): CaseWatcher
     {
+        $this->assertCaseIsOpen($watcher->case);
+
         return DB::transaction(function () use ($watcher) {
             $this->demoteExistingPrimary($watcher->case_id, except: $watcher->id);
             $watcher->update(['is_primary' => true]);
@@ -78,9 +103,10 @@ class CaseWatcherService
     }
 
     /**
-     * Rejects removing the last primary watcher on a case that requires
-     * one. To swap instead of removing outright, call promote() on the
-     * replacement first — it demotes $watcher, so this then succeeds.
+     * Unassigns the watcher from the case (the patient watcher stays). Rejects
+     * removing the last primary watcher on a case that requires one. To swap
+     * instead of removing outright, call promote() on the replacement first —
+     * it demotes $watcher, so this then succeeds.
      */
     public function remove(CaseWatcher $watcher): bool
     {
@@ -88,6 +114,8 @@ class CaseWatcherService
         // this watcher via a separate query) may still be holding a stale
         // in-memory copy where is_primary reads true.
         $watcher->refresh();
+
+        $this->assertCaseIsOpen($watcher->case);
 
         if ($watcher->is_primary && $this->requirements->resolve($watcher->case) === WatcherRequirement::Required) {
             throw ValidationException::withMessages([
@@ -100,50 +128,48 @@ class CaseWatcherService
 
     public function issuePass(CaseWatcher $watcher, ?string $validUntil = null): CaseWatcher
     {
-        $watcher->update([
+        $this->assertCaseIsOpen($watcher->case);
+
+        RetriesOnDuplicateKey::run(fn () => $watcher->update([
             'pass_number' => $this->passNumbers->next(),
             'pass_valid_until' => $validUntil,
             'pass_status' => 'active',
-        ]);
+        ]));
 
         return $watcher->refresh();
     }
 
     public function revokePass(CaseWatcher $watcher): CaseWatcher
     {
+        $this->assertCaseIsOpen($watcher->case);
+
         $watcher->update(['pass_status' => 'revoked']);
 
         return $watcher->refresh();
     }
 
     /**
-     * @param  array<string, mixed>  $attributes
-     * @return array<string, mixed>
+     * Assignments on closed or referred cases are history: the case is no
+     * longer being handled, so nothing about its watchers changes.
      */
-    private function resolveDirectoryLink(array $attributes): array
+    private function assertCaseIsOpen(CaseModel $case): void
     {
-        if (! empty($attributes['patient_watcher_id'])) {
-            $directoryEntry = PatientWatcher::findOrFail($attributes['patient_watcher_id']);
-
-            // Snapshot the directory row's fields; explicit request values win.
-            return array_merge([
-                'name' => $directoryEntry->name,
-                'relationship' => $directoryEntry->relationship,
-                'contact_number' => $directoryEntry->contact_number,
-                'address' => $directoryEntry->address,
-            ], $attributes);
+        if (! in_array($case->status, [CaseModel::STATUS_OPEN, CaseModel::STATUS_ONGOING], true)) {
+            throw ValidationException::withMessages([
+                'case' => 'Watchers can only be changed on an open case.',
+            ]);
         }
+    }
 
-        $case = CaseModel::findOrFail($attributes['case_id']);
-        $directoryEntry = PatientWatcher::create([
-            'patient_id' => $case->patient_id,
-            'name' => $attributes['name'] ?? null,
-            'relationship' => $attributes['relationship'] ?? null,
-            'contact_number' => $attributes['contact_number'] ?? null,
-            'address' => $attributes['address'] ?? null,
-        ]);
+    private function assertBelongsToPatient(int $patientWatcherId, CaseModel $case): void
+    {
+        $belongs = PatientWatcher::whereKey($patientWatcherId)->where('patient_id', $case->patient_id)->exists();
 
-        return array_merge($attributes, ['patient_watcher_id' => $directoryEntry->id]);
+        if (! $belongs) {
+            throw ValidationException::withMessages([
+                'patient_watcher_id' => 'The watcher does not belong to this case\'s patient.',
+            ]);
+        }
     }
 
     private function demoteExistingPrimary(int $caseId, ?int $except = null): void
@@ -152,14 +178,5 @@ class CaseWatcherService
             ->where('is_primary', true)
             ->when($except !== null, fn ($query) => $query->whereKeyNot($except))
             ->update(['is_primary' => false]);
-    }
-
-    private function assertKnownRelationship(?string $relationship): void
-    {
-        if ($relationship === null || ! WatcherRelationshipType::where('code', $relationship)->exists()) {
-            throw ValidationException::withMessages([
-                'relationship' => 'The selected relationship is not recognised.',
-            ]);
-        }
     }
 }

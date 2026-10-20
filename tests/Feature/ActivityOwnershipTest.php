@@ -59,7 +59,7 @@ it('stamps the patient on a direct resolver', function () {
     $watcher = PatientWatcher::create([
         'patient_id' => $this->patient->id,
         'name' => 'Maria Cruz',
-        'relationship' => 'spouse',
+        'relationship_code' => 'spouse',
     ]);
 
     $row = ownershipOf($watcher);
@@ -200,7 +200,7 @@ it('keeps a patient trail query count flat as the number of rows grows', functio
     Assessment::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'classification' => 'C']);
     Diagnostic::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'diagnosis_name' => 'Pneumonia', 'diagnosis_date' => now()]);
     Intervention::create(['case_id' => $this->case->id, 'created_by' => $this->worker->id, 'intervention_type_id' => interventionType()->id, 'description' => 'X', 'date_given' => now()]);
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse']);
 
     $countQueries = function () {
         $queries = 0;
@@ -219,7 +219,7 @@ it('keeps a patient trail query count flat as the number of rows grows', functio
         PatientWatcher::create([
             'patient_id' => $this->patient->id,
             'name' => "Watcher {$i}",
-            'relationship' => 'sibling',
+            'relationship_code' => 'sibling',
         ]);
     }
 

@@ -102,16 +102,18 @@ it('derives has_primary, satisfied and blocking from the requirement and current
     $status = $this->service->status($case);
     expect($status)->toBe([
         'requirement' => 'required',
+        'requirement_reason' => 'inpatient',
         'has_primary' => false,
         'satisfied' => false,
         'blocking' => true,
         'waiver' => null,
     ]);
 
-    $case->watchers()->create(['name' => 'Maria', 'relationship' => 'spouse', 'is_primary' => true, 'added_by' => $this->user->id]);
+    assignWatcher(['case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse', 'is_primary' => true, 'added_by' => $this->user->id]);
 
     expect($this->service->status($case->refresh()))->toBe([
         'requirement' => 'required',
+        'requirement_reason' => 'inpatient',
         'has_primary' => true,
         'satisfied' => true,
         'blocking' => false,
@@ -154,4 +156,27 @@ it('is never blocking for an OPD case even with no watcher', function () {
     $case = requirementCase(requirementPatient(), ['admission_type' => 'OPD']);
 
     expect($this->service->status($case)['blocking'])->toBeFalse();
+});
+
+it('does not count a revoked or departed primary watcher as satisfying the requirement', function () {
+    $case = requirementCase(requirementPatient(), ['admission_type' => 'inpatient']);
+    $watcher = assignWatcher(['case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse', 'is_primary' => true, 'added_by' => $this->user->id]);
+
+    expect($this->service->status($case)['blocking'])->toBeFalse();
+
+    $watcher->update(['pass_status' => 'revoked']);
+    expect($this->service->status($case)['blocking'])->toBeTrue();
+
+    $watcher->update(['pass_status' => 'active', 'present_until' => now()->subHour()]);
+    expect($this->service->status($case)['blocking'])->toBeTrue();
+
+    $watcher->update(['present_until' => now()->addHour()]);
+    expect($this->service->status($case)['blocking'])->toBeFalse();
+});
+
+it('says why a watcher is required', function () {
+    expect($this->service->status(requirementCase(requirementPatient(), ['admission_type' => 'inpatient']))['requirement_reason'])->toBe('inpatient')
+        ->and($this->service->status(requirementCase(requirementPatient(), ['admission_type' => 'ER']))['requirement_reason'])->toBe('er')
+        ->and($this->service->status(requirementCase(requirementPatient(), ['admission_type' => 'OPD']))['requirement_reason'])->toBe('opd')
+        ->and($this->service->status(requirementCase(requirementPatient(['birthdate' => now()->subYears(5)->toDateString()]), ['admission_type' => 'OPD']))['requirement_reason'])->toBe('minor');
 });
