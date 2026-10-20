@@ -1,4 +1,4 @@
-import React, { useEffect, useState } from "react"
+import React, { useEffect, useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -22,6 +22,10 @@ import { Checkbox } from "@/components/ui/checkbox"
 import { Building2, Calendar, ExternalLink, Printer } from "lucide-react"
 import { useAssistanceTypeOptions } from "@/features/library/hooks/use-lookup-options"
 import { openPdfInNewTab } from "@/lib/open-pdf"
+import { usePermission } from "@/features/auth/hooks/use-permission"
+// Direct file imports (not the queue barrel, which imports this feature).
+import { useEncounterServiceTimes } from "@/features/queue/hooks/use-queue"
+import { ServiceTimesHint } from "@/features/queue/components/service-times-hint"
 import type { HospitalEncounter } from "@/features/hospital/types"
 import type { PatientRecord } from "@/features/patients/types"
 
@@ -44,7 +48,8 @@ interface CityMayorSlipDialogProps {
 /**
  * Print the City Mayor Acknowledgement Slip (Medical Assistance), ZCMC-F-MSS-04,
  * for a HIS encounter. The patient's details print from the registry; the fund,
- * amount and "para sa" type are picked here and printed only (not stored).
+ * amount and "para sa" type are picked here and printed only (not stored). Time
+ * started / ended prefill from the encounter's queue turnaround.
  */
 export const CityMayorSlipDialog: React.FC<CityMayorSlipDialogProps> = ({
   open,
@@ -63,10 +68,18 @@ export const CityMayorSlipDialog: React.FC<CityMayorSlipDialogProps> = ({
   const [remarks, setRemarks] = useState("")
   const [isGenerating, setIsGenerating] = useState(false)
   const [error, setError] = useState<string | null>(null)
+  const canManageQueue = usePermission("queue.manage")
+  const service = useEncounterServiceTimes(
+    patient.id,
+    encounter.id,
+    open && canManageQueue
+  )
+  const prefilled = useRef(false)
 
   // Each opening starts fresh: the picks are printed only, never stored.
   useEffect(() => {
     if (!open) return
+    prefilled.current = false
     setTypeIds([])
     setFund("city_grant")
     setFundOther("")
@@ -76,6 +89,14 @@ export const CityMayorSlipDialog: React.FC<CityMayorSlipDialogProps> = ({
     setRemarks("")
     setError(null)
   }, [open])
+
+  // Once per opening, fill the times from the queue; never over what was typed.
+  useEffect(() => {
+    if (!open || prefilled.current || !service.visit) return
+    prefilled.current = true
+    setTimeStarted((current) => current || service.started)
+    setTimeEnded((current) => current || service.ended)
+  }, [open, service.visit, service.started, service.ended])
 
   const toggleType = (id: number, checked: boolean) =>
     setTypeIds((ids) =>
@@ -140,9 +161,13 @@ export const CityMayorSlipDialog: React.FC<CityMayorSlipDialogProps> = ({
             </div>
             <div className="text-muted-foreground">
               Patient:{" "}
-              <strong className="text-foreground font-bold">{patient.fullName}</strong> ·
-              Hospital No:{" "}
-              <strong className="text-foreground font-bold">{patient.hospitalNo}</strong>
+              <strong className="font-bold text-foreground">
+                {patient.fullName}
+              </strong>{" "}
+              · Hospital No:{" "}
+              <strong className="font-bold text-foreground">
+                {patient.hospitalNo}
+              </strong>
             </div>
           </div>
 
@@ -231,7 +256,7 @@ export const CityMayorSlipDialog: React.FC<CityMayorSlipDialogProps> = ({
           <div className="grid grid-cols-2 gap-3">
             <div className="space-y-1.5">
               <Label htmlFor="cm-time-started" className="text-sm font-bold">
-                Time started (optional)
+                Time started
               </Label>
               <Input
                 id="cm-time-started"
@@ -243,7 +268,7 @@ export const CityMayorSlipDialog: React.FC<CityMayorSlipDialogProps> = ({
             </div>
             <div className="space-y-1.5">
               <Label htmlFor="cm-time-ended" className="text-sm font-bold">
-                Time ended (optional)
+                Time ended
               </Label>
               <Input
                 id="cm-time-ended"
@@ -254,6 +279,7 @@ export const CityMayorSlipDialog: React.FC<CityMayorSlipDialogProps> = ({
               />
             </div>
           </div>
+          <ServiceTimesHint visit={service.visit} />
 
           <div className="space-y-1.5">
             <Label htmlFor="cm-remarks" className="text-sm font-bold">

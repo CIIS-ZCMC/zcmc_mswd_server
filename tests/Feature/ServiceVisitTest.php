@@ -252,3 +252,23 @@ it('writes the audit trail against the patient', function () {
     expect($row->patient_id)->toBe($this->patient->id)
         ->and($row->event)->toBe('created');
 });
+
+// ── Registry list badge ─────────────────────────────────────────────────────
+
+it('exposes the open visit on the patient list as active_visit', function () {
+    Sanctum::actingAs($this->desk);
+    $other = queuePatient('Juan', 'Santos');
+
+    queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_COMPLETED, 'his_transaction_id' => 111]);
+    $open = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS]);
+    queueVisit($other, $this->desk, ['status' => ServiceVisit::STATUS_CANCELLED]);
+
+    $rows = collect($this->getJson('/api/patients')->assertOk()->json('data'))->keyBy('id');
+
+    expect($rows[$this->patient->id]['active_visit'])->toMatchArray([
+        'id' => $open->id,
+        'status' => 'in_progress',
+        'his_transaction_id' => 555,
+    ])
+        ->and($rows[$other->id]['active_visit'])->toBeNull();
+});

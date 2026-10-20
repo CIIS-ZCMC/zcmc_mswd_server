@@ -77,6 +77,13 @@ class PatientResource extends JsonResource
                 'latestAssessment',
                 fn () => $this->latestAssessment === null ? null : AssessmentResource::make($this->latestAssessment),
             ),
+            // The open queue visit, if any — drives the registry card's queued badge.
+            'active_visit' => $this->whenLoaded('activeVisit', fn () => $this->activeVisit === null ? null : [
+                'id' => $this->activeVisit->id,
+                'status' => $this->activeVisit->status,
+                'his_transaction_id' => $this->activeVisit->his_transaction_id,
+                'arrived_at' => $this->activeVisit->arrived_at,
+            ]),
 
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,

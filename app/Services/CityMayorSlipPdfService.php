@@ -100,6 +100,12 @@ class CityMayorSlipPdfService
         $typeIds = array_map('intval', $options['assistant_type_ids'] ?? []);
         $fund = $options['fund'] ?? 'city_grant';
         $amount = $options['amount'] ?? null;
+        [$timeStarted, $timeEnded] = $this->slips->timesOrService(
+            $patient->exists ? $patient->id : null,
+            $encounter->getKey(),
+            $options['time_started'] ?? null,
+            $options['time_ended'] ?? null,
+        );
 
         return [
             'name' => mb_strtoupper($name),
@@ -126,8 +132,8 @@ class CityMayorSlipPdfService
             'socialWorkerPosition' => $printedBy?->position,
             'hospitalNumber' => $patient->hospital_id ?? $encounter->patient?->patid,
             'mswdNumber' => $patient->mswd_id ?: 'N/A',
-            'timeStarted' => $this->slips->clock($options['time_started'] ?? null),
-            'timeEnded' => $this->slips->clock($options['time_ended'] ?? null),
+            'timeStarted' => $this->slips->clock($timeStarted),
+            'timeEnded' => $this->slips->clock($timeEnded),
         ];
     }
 

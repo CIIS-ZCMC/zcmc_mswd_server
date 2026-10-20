@@ -126,6 +126,18 @@ class Patient extends Model
     }
 
     /**
+     * The patient's newest visit still on the queue board (waiting or in
+     * progress), across all encounters. Null when the patient isn't queued.
+     */
+    public function activeVisit(): HasOne
+    {
+        return $this->hasOne(ServiceVisit::class)->ofMany(
+            ['id' => 'max'],
+            fn ($query) => $query->whereIn('status', ServiceVisit::OPEN_STATUSES),
+        );
+    }
+
+    /**
      * The patient's own audit trail (demographic changes).
      */
     public function activities(): MorphMany

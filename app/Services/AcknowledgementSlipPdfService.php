@@ -9,6 +9,7 @@ use App\Models\Bizbox\PatientTransaction;
 use App\Models\CaseHospitalTransaction;
 use App\Models\Patient;
 use App\Models\PatientGuarantee;
+use App\Models\ServiceVisit;
 use App\Models\Signatory;
 use App\Models\User;
 use Barryvdh\DomPDF\Facade\Pdf;
@@ -94,6 +95,8 @@ class AcknowledgementSlipPdfService
             ->unique()
             ->join('/');
 
+        [$timeStarted, $timeEnded] = $this->timesOrService($guarantee->patient_id, $guarantee->his_transaction_id, $timeStarted, $timeEnded);
+
         return $this->fields(
             $guarantee->patient,
             $guarantee->guaranteed_on ? Carbon::parse($guarantee->guaranteed_on) : now(),
@@ -176,6 +179,8 @@ class AcknowledgementSlipPdfService
         string $fund = 'doh_maifip',
         ?string $fundOther = null,
     ): array {
+        [$timeStarted, $timeEnded] = $this->timesOrService($this->registryPatient($encounter)?->id, $encounter->getKey(), $timeStarted, $timeEnded);
+
         return $this->fields(
             $this->patientFor($encounter),
             $entry->postdate ? Carbon::parse($entry->postdate) : now(),
@@ -237,6 +242,8 @@ class AcknowledgementSlipPdfService
         string $fund = 'doh_maifip',
         ?string $fundOther = null,
     ): array {
+        [$timeStarted, $timeEnded] = $this->timesOrService($this->registryPatient($encounter)?->id, $encounter->getKey(), $timeStarted, $timeEnded);
+
         return $this->fields(
             $this->patientFor($encounter),
             now(),
@@ -276,6 +283,37 @@ class AcknowledgementSlipPdfService
     public function encounterDiagnosis(PatientTransaction $encounter): ?string
     {
         return $this->diagnosisOf($encounter) ?? $this->snapshotDiagnosis($encounter->getKey());
+    }
+
+    /**
+     * The encounter's queue turnaround as "H:i": start of service and completion of
+     * its latest served visit (ServiceVisit::lastServedFor); nulls when there is none.
+     *
+     * @return array{0: string|null, 1: string|null}
+     */
+    private function serviceTimes(?int $patientId, int|string|null $transactionId): array
+    {
+        $visit = $patientId !== null && filled($transactionId)
+            ? ServiceVisit::lastServedFor($patientId, (int) $transactionId)
+            : null;
+
+        return [$visit?->started_at?->format('H:i'), $visit?->completed_at?->format('H:i')];
+    }
+
+    /**
+     * The times typed in the print dialog, each blank one filled from the queue.
+     *
+     * @return array{0: string|null, 1: string|null}
+     */
+    public function timesOrService(?int $patientId, int|string|null $transactionId, ?string $timeStarted, ?string $timeEnded): array
+    {
+        if (filled($timeStarted) && filled($timeEnded)) {
+            return [$timeStarted, $timeEnded];
+        }
+
+        [$started, $ended] = $this->serviceTimes($patientId, $transactionId);
+
+        return [filled($timeStarted) ? $timeStarted : $started, filled($timeEnded) ? $timeEnded : $ended];
     }
 
     /** "10:49" → "10:49 AM"; null stays blank. */

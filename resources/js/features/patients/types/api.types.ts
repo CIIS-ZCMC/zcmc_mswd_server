@@ -340,6 +340,14 @@ export interface ApiActivity {
 /** GET /activity-log — the paginated, server-filtered global trail (server Phase 4). */
 export type ApiActivityLogPage = ApiPaginated<ApiActivity>
 
+/** PatientResource `active_visit`: the patient's open queue visit. */
+export interface ApiPatientActiveVisit {
+  id: number
+  status: "waiting" | "in_progress"
+  his_transaction_id: number
+  arrived_at: string | null
+}
+
 export interface ApiPatient {
   id: number
   sector_id: number
@@ -376,6 +384,8 @@ export interface ApiPatient {
   /** Profile-only embedded relations (not returned on GET /patients list items) */
   latest_case?: ApiCase
   latest_assessment?: ApiAssessment
+  /** The open queue visit (waiting / in progress), eager-loaded on list rows. */
+  active_visit?: ApiPatientActiveVisit | null
   sector?: ApiSector
   patient_ids?: ApiPatientId[]
   family_members?: ApiFamilyMember[]

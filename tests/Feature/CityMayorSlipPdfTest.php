@@ -8,6 +8,7 @@ use App\Models\Bizbox\PatientTransaction;
 use App\Models\Patient;
 use App\Models\PatientFamilyMember;
 use App\Models\Sector;
+use App\Models\ServiceVisit;
 use App\Models\User;
 use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use App\Services\CityMayorSlipPdfService;
@@ -226,4 +227,20 @@ it('prints the patient as the signer (Pasyente/ Kinatawan ng Pasyente)', functio
     mockCityMayorEncounter();
 
     expect(cityMayorHtml())->toMatch('/<div class="signame">MARIA S\. DELA CRUZ<\/div>\s*<div class="sigcap">Pasyente\/ Kinatawan ng Pasyente/');
+});
+
+it('prints the queue start and completion unless times are typed', function () {
+    mockCityMayorEncounter();
+    ServiceVisit::create([
+        'patient_id' => $this->patient->id, 'his_transaction_id' => 9,
+        'status' => ServiceVisit::STATUS_COMPLETED, 'arrived_at' => '2026-10-19 16:50:00',
+        'started_at' => '2026-10-19 17:20:00', 'completed_at' => '2026-10-19 17:28:00',
+        'received_by' => $this->user->id,
+    ]);
+    $slips = app(CityMayorSlipPdfService::class);
+    $encounter = $slips->hisEncounter(9);
+
+    expect($slips->slip($encounter))->toMatchArray(['timeStarted' => '5:20 PM', 'timeEnded' => '5:28 PM'])
+        ->and($slips->slip($encounter, ['time_started' => '08:05', 'time_ended' => '08:15']))
+        ->toMatchArray(['timeStarted' => '8:05 AM', 'timeEnded' => '8:15 AM']);
 });
