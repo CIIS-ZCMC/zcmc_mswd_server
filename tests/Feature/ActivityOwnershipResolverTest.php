@@ -7,7 +7,6 @@ use App\Models\AssistantType;
 use App\Models\CaseHospitalTransaction;
 use App\Models\CaseModel;
 use App\Models\CaseProgressNote;
-use App\Models\CaseWatcher;
 use App\Models\Concerns\Auditable;
 use App\Models\DarEntry;
 use App\Models\Diagnostic;
