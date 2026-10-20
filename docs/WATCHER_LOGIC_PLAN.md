@@ -1,5 +1,7 @@
 # MSS — Watcher Logic Plan (Server + Client)
 
+> **Superseded** by [WATCHER_MODULE_PLAN.md](WATCHER_MODULE_PLAN.md). The watcher module was re-planned around patient-level watchers assigned to open cases.
+
 Design and build plan for episode-scoped watchers, replacing the current
 patient-scoped `patient_watchers` model. Covers both `zcmc_mswd_server` and
 `zcmc_mswd_client`.

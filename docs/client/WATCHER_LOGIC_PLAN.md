@@ -1,5 +1,7 @@
 # MSS — Watcher Logic Plan (Client)
 
+> **Superseded** by [WATCHER_MODULE_PLAN.md](../WATCHER_MODULE_PLAN.md). The watcher module was re-planned around patient-level watchers assigned to open cases.
+
 Client half of the plan replacing the patient-scoped `patient_watchers` model
 with episode-scoped `case_watchers`.
 

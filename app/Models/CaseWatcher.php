@@ -14,10 +14,6 @@ class CaseWatcher extends Model
     protected $fillable = [
         'case_id',
         'patient_watcher_id',
-        'name',
-        'relationship',
-        'contact_number',
-        'address',
         'is_primary',
         'is_informant',
         'pass_number',
@@ -47,7 +43,7 @@ class CaseWatcher extends Model
 
     public function patientWatcher(): BelongsTo
     {
-        return $this->belongsTo(PatientWatcher::class);
+        return $this->belongsTo(PatientWatcher::class)->withTrashed();
     }
 
     public function addedBy(): BelongsTo
