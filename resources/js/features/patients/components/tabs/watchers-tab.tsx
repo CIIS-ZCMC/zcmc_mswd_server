@@ -10,6 +10,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { RecordHistoryPopover } from "@/features/audit/components/record-history-popover"
 import { useCaseWatcherMutations } from "@/features/cases/hooks/use-case-watcher-mutations"
 import { usePatientWatcherMutations, usePatientWatchers } from "../../hooks/use-patient-watchers"
@@ -124,7 +125,7 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
                 <TableHead className="font-bold">Relationship</TableHead>
                 <TableHead className="font-bold">Contact No.</TableHead>
                 <TableHead className="font-bold">Cases</TableHead>
-                <TableHead className="text-right font-bold">Actions</TableHead>
+                <TableHead className="w-[190px] text-right font-bold">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -133,6 +134,8 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
                 const canAssign = openCases.some(
                   (c) => !watcher.assignments.some((a) => a.caseId === String(c.id))
                 )
+                const assignBlockedReason =
+                  openCases.length === 0 ? "No open case to assign to" : "Already assigned to every open case"
 
                 return (
                   <TableRow key={watcher.id}>
@@ -192,36 +195,58 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
                       )}
                     </TableCell>
                     <TableCell className="text-right">
-                      <DropdownMenu>
-                        <DropdownMenuTrigger className="inline-flex size-8.5 cursor-pointer items-center justify-center rounded-md border border-input bg-background p-0 text-muted-foreground shadow-2xs hover:bg-muted hover:text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-                          <MoreHorizontal className="size-4.5" />
-                        </DropdownMenuTrigger>
-                        <DropdownMenuContent align="end" className="w-56 space-y-0.5 p-1.5">
-                          <DropdownMenuItem
-                            onClick={() => setEditingWatcher(watcher)}
-                            className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold sm:text-sm"
+                      <div className="flex items-center justify-end gap-2">
+                        {canAssign ? (
+                          <Button
+                            variant="outline"
+                            size="sm"
+                            className="h-8.5 gap-1.5 text-xs font-semibold"
+                            onClick={() => setAssigningWatcher(watcher)}
                           >
-                            <Edit className="size-4 shrink-0" /> Edit Watcher
-                          </DropdownMenuItem>
-                          {canAssign && (
+                            <UserPlus className="size-4" /> Assign to Case
+                          </Button>
+                        ) : (
+                          // A disabled button gets no hover events, so the tooltip hangs off a wrapping span.
+                          <Tooltip>
+                            <TooltipTrigger render={<span className="inline-flex" />} aria-label={assignBlockedReason}>
+                              <Button variant="outline" size="sm" className="h-8.5 gap-1.5 text-xs font-semibold" disabled>
+                                <UserPlus className="size-4" /> Assign to Case
+                              </Button>
+                            </TooltipTrigger>
+                            <TooltipContent>{assignBlockedReason}</TooltipContent>
+                          </Tooltip>
+                        )}
+                        <DropdownMenu>
+                          <DropdownMenuTrigger className="inline-flex size-8.5 cursor-pointer items-center justify-center rounded-md border border-input bg-background p-0 text-muted-foreground shadow-2xs hover:bg-muted hover:text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+                            <MoreHorizontal className="size-4.5" />
+                          </DropdownMenuTrigger>
+                          <DropdownMenuContent align="end" className="w-56 space-y-0.5 p-1.5">
                             <DropdownMenuItem
-                              onClick={() => setAssigningWatcher(watcher)}
+                              onClick={() => setEditingWatcher(watcher)}
                               className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold sm:text-sm"
                             >
-                              <UserPlus className="size-4 shrink-0" /> Assign to Case
+                              <Edit className="size-4 shrink-0" /> Edit Watcher
                             </DropdownMenuItem>
-                          )}
-                          <DropdownMenuSeparator className="my-1" />
-                          <DropdownMenuItem
-                            disabled={hasOpenAssignment}
-                            title={hasOpenAssignment ? "Unassign from open cases first" : undefined}
-                            onClick={() => handleRemove(watcher)}
-                            className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold text-destructive focus:text-destructive sm:text-sm"
-                          >
-                            <Trash2 className="size-4 shrink-0" /> Remove Watcher
-                          </DropdownMenuItem>
-                        </DropdownMenuContent>
-                      </DropdownMenu>
+                            {canAssign && (
+                              <DropdownMenuItem
+                                onClick={() => setAssigningWatcher(watcher)}
+                                className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold sm:text-sm"
+                              >
+                                <UserPlus className="size-4 shrink-0" /> Assign to Case
+                              </DropdownMenuItem>
+                            )}
+                            <DropdownMenuSeparator className="my-1" />
+                            <DropdownMenuItem
+                              disabled={hasOpenAssignment}
+                              title={hasOpenAssignment ? "Unassign from open cases first" : undefined}
+                              onClick={() => handleRemove(watcher)}
+                              className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold text-destructive focus:text-destructive sm:text-sm"
+                            >
+                              <Trash2 className="size-4 shrink-0" /> Remove Watcher
+                            </DropdownMenuItem>
+                          </DropdownMenuContent>
+                        </DropdownMenu>
+                      </div>
                     </TableCell>
                   </TableRow>
                 )
