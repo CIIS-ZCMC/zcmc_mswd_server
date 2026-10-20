@@ -52,7 +52,8 @@ import { PrintUisDialog } from "./dialogs/print-uis-dialog"
 import { IntakeAssessmentDialog } from "./dialogs/intake-assessment-dialog"
 import { ReassessCaseDialog } from "./dialogs/reassess-case-dialog"
 import { SocialCaseTab } from "@/features/patients/components/tabs/social-case-tab"
-import { WatchersTab } from "@/features/patients/components/tabs/watchers-tab"
+import { CaseWatcherRequirement } from "@/features/patients/components/case-watcher-requirement"
+import { CaseWatchersPanel } from "./case-watchers-panel"
 import { CaseGuarantorsTab } from "./case-guarantors-tab"
 import { EncounterUisPanel } from "./encounter-uis-panel"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
@@ -538,11 +539,15 @@ export const CaseDetailPage: React.FC = () => {
           </TabsContent>
 
           <TabsContent value="watchers">
-            <WatchersTab
-              patient={caseRecord.patient}
-              patientId={caseRecord.patientId}
-              caseId={caseRecord.id}
-            />
+            <div className="space-y-4">
+              <CaseWatcherRequirement caseId={caseRecord.id} patientId={Number(caseRecord.patientId)} />
+              <CaseWatchersPanel
+                caseId={caseRecord.id}
+                patientId={Number(caseRecord.patientId)}
+                caseCode={caseRecord.caseCode}
+                isOpen={!isClosedOrReferred}
+              />
+            </div>
           </TabsContent>
 
           <TabsContent value="activity">

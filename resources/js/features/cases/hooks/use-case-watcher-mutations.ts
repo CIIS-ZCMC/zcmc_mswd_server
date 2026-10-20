@@ -1,5 +1,6 @@
 import { useMutation, useQueryClient } from "@tanstack/react-query"
 import { patientDetailKeys } from "@/features/patients/hooks/use-patient-detail"
+import { patientWatcherKeys } from "@/features/patients/hooks/use-patient-watchers"
 import {
   createCaseWatcher,
   deleteCaseWatcher,
@@ -29,14 +30,25 @@ export function useCaseWatcherMutations({ caseId, patientId }: MutationParams) {
       queryClient.invalidateQueries({ queryKey: caseWatcherKeys(caseId).list })
       queryClient.invalidateQueries({ queryKey: caseWatcherKeys(caseId).status })
     }
+    // An assignment can be on any of the patient's open cases, so refresh every
+    // case's watcher list and status, not only `caseId`'s.
+    queryClient.invalidateQueries({ queryKey: ["cases"] })
     if (patientId) {
       queryClient.invalidateQueries({ queryKey: patientDetailKeys(patientId).latestCase })
       queryClient.invalidateQueries({ queryKey: patientDetailKeys(patientId).profile })
+      queryClient.invalidateQueries({ queryKey: patientWatcherKeys(patientId).list })
     }
   }
 
   const createWatcherMutation = useMutation({
     mutationFn: (payload: CreateCaseWatcherPayload) => createCaseWatcher(caseId, payload),
+    onSuccess: invalidateWatcherQueries,
+  })
+
+  // Assigns to any case, for the patient page where the case is chosen per watcher.
+  const assignWatcherMutation = useMutation({
+    mutationFn: ({ caseId: targetCaseId, payload }: { caseId: number; payload: CreateCaseWatcherPayload }) =>
+      createCaseWatcher(targetCaseId, payload),
     onSuccess: invalidateWatcherQueries,
   })
 
@@ -80,6 +92,9 @@ export function useCaseWatcherMutations({ caseId, patientId }: MutationParams) {
   return {
     createWatcher: createWatcherMutation.mutateAsync,
     isCreating: createWatcherMutation.isPending,
+
+    assignWatcher: assignWatcherMutation.mutateAsync,
+    isAssigning: assignWatcherMutation.isPending,
 
     updateWatcher: updateWatcherMutation.mutateAsync,
     isUpdating: updateWatcherMutation.isPending,

@@ -57,7 +57,7 @@ export const WatcherWaiverDialog: React.FC<WatcherWaiverDialogProps> = ({
       setErrorMessage(null)
       await onStoreWaiver({
         watcher_waiver_reason: reason,
-        watcher_waiver_notes: notes.trim() || null,
+        watcher_waiver_note: notes.trim() || null,
       })
       onClose()
     } catch (err: unknown) {

@@ -1,8 +1,13 @@
+import type { ApiWatcher } from "@/features/patients/types/api.types"
+
 export interface ApiCaseWatcher {
   id: number
   case_id: number
-  patient_watcher_id: number | null
+  patient_watcher_id: number
+  /** The watcher's own record; the flat fields below are copies of it. */
+  watcher?: ApiWatcher
   name: string
+  /** The relationship code, e.g. "spouse". */
   relationship: string
   contact_number: string | null
   address: string | null
@@ -19,11 +24,21 @@ export interface ApiCaseWatcher {
   updated_at: string
 }
 
+export interface ApiWatcherWaiver {
+  reason: string
+  note: string | null
+  waived_by: string | null
+  waived_by_id: number | null
+  waived_at: string | null
+}
+
 export interface ApiWatcherStatus {
   requirement: string
+  requirement_reason?: string
   has_primary: boolean
   satisfied: boolean
   blocking: boolean
+  waiver?: ApiWatcherWaiver | null
 }
 
 export interface ApiWatcherRelationshipType {

@@ -13,6 +13,7 @@ import { Label } from "@/components/ui/label"
 import { AlertCircle, CheckCircle2, Loader2 } from "lucide-react"
 import { ApiError } from "@/lib/api-client"
 import { useCaseMutations } from "../../hooks/use-case-mutations"
+import { useWatcherStatus } from "../../hooks/use-case-watchers"
 
 interface CloseCaseDialogProps {
   caseId: number | string
@@ -34,6 +35,9 @@ export const CloseCaseDialog: React.FC<CloseCaseDialogProps> = ({
   const [error, setError] = useState<string>("")
 
   const { closeCase, isClosePending } = useCaseMutations(caseId)
+  const { data: watcherStatus } = useWatcherStatus(open ? Number(caseId) : undefined)
+  // The server refuses to close a case that still needs a primary watcher; say so up front.
+  const needsWatcher = watcherStatus?.blocking === true
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -84,6 +88,15 @@ export const CloseCaseDialog: React.FC<CloseCaseDialogProps> = ({
             </div>
           )}
 
+          {needsWatcher && (
+            <div className="rounded-lg bg-amber-500/10 border border-amber-500/40 p-3 flex gap-2.5 items-start text-xs font-semibold text-amber-800 dark:text-amber-300">
+              <AlertCircle className="size-4 shrink-0 mt-0.5" />
+              <span>
+                This case still needs a primary watcher. Assign one on the Watchers tab, or file a waiver, before closing it.
+              </span>
+            </div>
+          )}
+
           <div className="space-y-1.5">
             <Label className="text-xs font-bold uppercase tracking-wider">
               Closure Reason <span className="text-destructive">*</span>
@@ -118,7 +131,7 @@ export const CloseCaseDialog: React.FC<CloseCaseDialogProps> = ({
             </Button>
             <Button
               type="submit"
-              disabled={isClosePending}
+              disabled={isClosePending || needsWatcher}
               className="font-extrabold text-sm h-10 px-5 shadow-sm transition-all gap-1.5"
             >
               {isClosePending && <Loader2 className="size-4 animate-spin" />}
