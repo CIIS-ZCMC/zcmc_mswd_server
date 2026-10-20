@@ -34,7 +34,7 @@ interface WatcherDialogProps {
 }
 
 /**
- * Who a watcher is: name, relationship, contact number, address and notes. It
+ * Who a watcher is: last, first and middle name, relationship, contact number, address and notes. It
  * says nothing about any case; assigning the watcher to a case (primary, pass,
  * presence) is the assign dialog's job.
  */
@@ -50,7 +50,9 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
     useWatcherRelationshipTypes()
 
   const [formData, setFormData] = useState({
-    name: "",
+    lastName: "",
+    firstName: "",
+    middleName: "",
     relationshipCode: "",
     contactNumber: "",
     address: "",
@@ -68,14 +70,18 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
     setFormData(
       editingWatcher
         ? {
-            name: editingWatcher.fullName,
+            lastName: editingWatcher.lastName,
+            firstName: editingWatcher.firstName,
+            middleName: editingWatcher.middleName,
             relationshipCode: editingWatcher.relationshipCode,
             contactNumber: editingWatcher.contactNo,
             address: editingWatcher.address,
             notes: editingWatcher.notes,
           }
         : {
-            name: "",
+            lastName: "",
+            firstName: "",
+            middleName: "",
             relationshipCode: relationshipTypes[0]?.code ?? "",
             contactNumber: defaults?.contactNo ?? "",
             address: defaults?.address ?? "",
@@ -84,7 +90,12 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
     )
   }
 
-  const canSave = formData.name.trim() !== "" && formData.relationshipCode !== ""
+  const canSave =
+    formData.lastName.trim() !== "" &&
+    formData.firstName.trim() !== "" &&
+    formData.relationshipCode !== "" &&
+    formData.contactNumber.trim() !== "" &&
+    formData.address.trim() !== ""
 
   const handleSave = async () => {
     if (!canSave) return
@@ -93,10 +104,12 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
       setError(null)
       await onSave(
         {
-          name: formData.name.trim(),
+          last_name: formData.lastName.trim(),
+          first_name: formData.firstName.trim(),
+          middle_name: formData.middleName.trim() || null,
           relationship_code: formData.relationshipCode,
-          contact_number: formData.contactNumber.trim() || null,
-          address: formData.address.trim() || null,
+          contact_number: formData.contactNumber.trim(),
+          address: formData.address.trim(),
           notes: formData.notes.trim() || null,
         },
         editingWatcher ? Number(editingWatcher.id) : undefined
@@ -128,14 +141,34 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
             </div>
           )}
 
-          <div>
-            <Label className="text-xs font-semibold">Full Name *</Label>
-            <Input
-              placeholder="e.g. Juan San Juan"
-              value={formData.name}
-              onChange={(e) => setFormData({ ...formData, name: e.target.value })}
-              className="mt-1 h-10"
-            />
+          <div className="grid grid-cols-3 gap-3">
+            <div>
+              <Label className="text-xs font-semibold">Last Name *</Label>
+              <Input
+                placeholder="e.g. San Juan"
+                value={formData.lastName}
+                onChange={(e) => setFormData({ ...formData, lastName: e.target.value })}
+                className="mt-1 h-10"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">First Name *</Label>
+              <Input
+                placeholder="e.g. Juan"
+                value={formData.firstName}
+                onChange={(e) => setFormData({ ...formData, firstName: e.target.value })}
+                className="mt-1 h-10"
+              />
+            </div>
+            <div>
+              <Label className="text-xs font-semibold">Middle Name</Label>
+              <Input
+                placeholder="Optional"
+                value={formData.middleName}
+                onChange={(e) => setFormData({ ...formData, middleName: e.target.value })}
+                className="mt-1 h-10"
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-2 gap-3">
@@ -163,7 +196,7 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
             </div>
 
             <div>
-              <Label className="text-xs font-semibold">Contact Number</Label>
+              <Label className="text-xs font-semibold">Contact Number *</Label>
               <Input
                 placeholder="+63 9XX XXX XXXX"
                 value={formData.contactNumber}
@@ -174,7 +207,7 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
           </div>
 
           <div>
-            <Label className="text-xs font-semibold">Address</Label>
+            <Label className="text-xs font-semibold">Address *</Label>
             <Input
               placeholder="Street, barangay, city"
               value={formData.address}

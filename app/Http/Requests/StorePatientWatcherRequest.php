@@ -26,10 +26,12 @@ class StorePatientWatcherRequest extends FormRequest
     {
         return [
             'patient_id' => ['required', 'exists:patients,id'],
-            'name' => ['required', 'string', 'max:255'],
+            'last_name' => ['required', 'string', 'max:255'],
+            'first_name' => ['required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
             'relationship_code' => ['required', 'string', Rule::exists('watcher_relationship_types', 'code')],
-            'contact_number' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'contact_number' => ['required', 'string', 'max:255'],
+            'address' => ['required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ];
     }

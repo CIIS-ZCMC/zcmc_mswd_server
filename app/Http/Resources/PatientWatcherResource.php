@@ -18,6 +18,9 @@ class PatientWatcherResource extends JsonResource
             'id' => $this->id,
             'patient_id' => $this->patient_id,
             'name' => $this->name,
+            'last_name' => $this->last_name,
+            'first_name' => $this->first_name,
+            'middle_name' => $this->middle_name,
             'relationship_code' => $this->relationship_code,
             'relationship_label' => $label,
             // Kept for clients that still read the old free-text field.

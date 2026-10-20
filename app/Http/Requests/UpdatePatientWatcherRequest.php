@@ -21,10 +21,12 @@ class UpdatePatientWatcherRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'name' => ['sometimes', 'required', 'string', 'max:255'],
+            'last_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'first_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'middle_name' => ['nullable', 'string', 'max:255'],
             'relationship_code' => ['sometimes', 'required', 'string', Rule::exists('watcher_relationship_types', 'code')],
-            'contact_number' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'contact_number' => ['sometimes', 'required', 'string', 'max:255'],
+            'address' => ['sometimes', 'required', 'string', 'max:255'],
             'notes' => ['nullable', 'string'],
         ];
     }

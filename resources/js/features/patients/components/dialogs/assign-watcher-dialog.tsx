@@ -59,7 +59,14 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
 
   const [caseId, setCaseId] = useState("")
   const [watcherId, setWatcherId] = useState(NEW_PERSON)
-  const [person, setPerson] = useState({ name: "", relationshipCode: "", contactNumber: "", address: "" })
+  const [person, setPerson] = useState({
+    lastName: "",
+    firstName: "",
+    middleName: "",
+    relationshipCode: "",
+    contactNumber: "",
+    address: "",
+  })
   const [flags, setFlags] = useState({ isPrimary: false, isInformant: false, presentFrom: "", presentUntil: "", notes: "" })
   const [error, setError] = useState<string | null>(null)
 
@@ -81,14 +88,27 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
     setError(null)
     setCaseId(availableCases[0] ? String(availableCases[0].id) : "")
     setWatcherId(watcher ? String(watcher.id) : NEW_PERSON)
-    setPerson({ name: "", relationshipCode: relationshipTypes[0]?.code ?? "", contactNumber: "", address: "" })
+    setPerson({
+      lastName: "",
+      firstName: "",
+      middleName: "",
+      relationshipCode: relationshipTypes[0]?.code ?? "",
+      contactNumber: "",
+      address: "",
+    })
     setFlags({ isPrimary: false, isInformant: false, presentFrom: "", presentUntil: "", notes: "" })
   }
 
   const isNewPerson = !watcher && watcherId === NEW_PERSON
   const canSave =
     targetCaseId !== undefined &&
-    (isNewPerson ? person.name.trim() !== "" && person.relationshipCode !== "" : watcherId !== NEW_PERSON)
+    (isNewPerson
+      ? person.lastName.trim() !== "" &&
+        person.firstName.trim() !== "" &&
+        person.relationshipCode !== "" &&
+        person.contactNumber.trim() !== "" &&
+        person.address.trim() !== ""
+      : watcherId !== NEW_PERSON)
 
   const handleSave = async () => {
     if (!canSave || targetCaseId === undefined) return
@@ -97,10 +117,12 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
       ...(isNewPerson
         ? {
             watcher: {
-              name: person.name.trim(),
+              last_name: person.lastName.trim(),
+              first_name: person.firstName.trim(),
+              middle_name: person.middleName.trim() || null,
               relationship_code: person.relationshipCode,
-              contact_number: person.contactNumber.trim() || null,
-              address: person.address.trim() || null,
+              contact_number: person.contactNumber.trim(),
+              address: person.address.trim(),
             },
           }
         : { patient_watcher_id: Number(watcher?.id ?? watcherId) }),
@@ -184,12 +206,26 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
 
               {isNewPerson && (
                 <div className="grid gap-3">
-                  <Input
-                    placeholder="Full name *"
-                    value={person.name}
-                    onChange={(e) => setPerson({ ...person, name: e.target.value })}
-                    className="h-10 bg-background"
-                  />
+                  <div className="grid grid-cols-3 gap-3">
+                    <Input
+                      placeholder="Last name *"
+                      value={person.lastName}
+                      onChange={(e) => setPerson({ ...person, lastName: e.target.value })}
+                      className="h-10 bg-background"
+                    />
+                    <Input
+                      placeholder="First name *"
+                      value={person.firstName}
+                      onChange={(e) => setPerson({ ...person, firstName: e.target.value })}
+                      className="h-10 bg-background"
+                    />
+                    <Input
+                      placeholder="Middle name"
+                      value={person.middleName}
+                      onChange={(e) => setPerson({ ...person, middleName: e.target.value })}
+                      className="h-10 bg-background"
+                    />
+                  </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Select
                       value={person.relationshipCode}
@@ -207,14 +243,14 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
                       </SelectContent>
                     </Select>
                     <Input
-                      placeholder="Contact number"
+                      placeholder="Contact number *"
                       value={person.contactNumber}
                       onChange={(e) => setPerson({ ...person, contactNumber: e.target.value })}
                       className="h-10 bg-background"
                     />
                   </div>
                   <Input
-                    placeholder="Address"
+                    placeholder="Address *"
                     value={person.address}
                     onChange={(e) => setPerson({ ...person, address: e.target.value })}
                     className="h-10 bg-background"

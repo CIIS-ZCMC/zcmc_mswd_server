@@ -79,6 +79,9 @@ export interface ApiWatcher {
   id: number
   patient_id: number
   name: string
+  last_name: string | null
+  first_name: string | null
+  middle_name: string | null
   relationship_code: string | null
   relationship_label: string | null
   /** Same as relationship_label; the old free-text field name. */

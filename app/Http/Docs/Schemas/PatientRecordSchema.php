@@ -75,7 +75,10 @@ use OpenApi\Attributes as OA;
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'patient_id', type: 'integer'),
-        new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'name', type: 'string', description: 'The composed full name, e.g. "Maria L. Reyes".'),
+        new OA\Property(property: 'last_name', type: 'string', nullable: true),
+        new OA\Property(property: 'first_name', type: 'string', nullable: true),
+        new OA\Property(property: 'middle_name', type: 'string', nullable: true),
         new OA\Property(property: 'relationship_code', type: 'string', nullable: true, description: 'A watcher relationship type code.'),
         new OA\Property(property: 'relationship_label', type: 'string', nullable: true, description: 'The relationship type name, e.g. "Barangay Official".'),
         new OA\Property(property: 'relationship', type: 'string', nullable: true, description: 'Same as relationship_label; kept for older clients.'),
@@ -105,12 +108,14 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'PatientWatcherRequest',
     description: "A patient's watcher. patient_id cannot be changed on update.",
-    required: ['name', 'relationship_code'],
+    required: ['last_name', 'first_name', 'relationship_code', 'contact_number', 'address'],
     properties: [
-        new OA\Property(property: 'name', type: 'string', maxLength: 255),
+        new OA\Property(property: 'last_name', type: 'string', maxLength: 255),
+        new OA\Property(property: 'first_name', type: 'string', maxLength: 255),
+        new OA\Property(property: 'middle_name', type: 'string', maxLength: 255, nullable: true),
         new OA\Property(property: 'relationship_code', type: 'string', description: 'A watcher relationship type code.'),
-        new OA\Property(property: 'contact_number', type: 'string', maxLength: 255, nullable: true),
-        new OA\Property(property: 'address', type: 'string', maxLength: 255, nullable: true),
+        new OA\Property(property: 'contact_number', type: 'string', maxLength: 255),
+        new OA\Property(property: 'address', type: 'string', maxLength: 255),
         new OA\Property(property: 'notes', type: 'string', nullable: true),
     ],
 )]
