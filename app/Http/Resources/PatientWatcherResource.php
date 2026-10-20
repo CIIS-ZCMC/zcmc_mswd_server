@@ -12,15 +12,16 @@ class PatientWatcherResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
-        $label = $this->relationshipType?->name ?? $this->relationship_code;
+        $label = $this->relationshipType?->name
+            ?? ($this->relationship_code ? ucwords(str_replace('_', ' ', $this->relationship_code)) : null);
 
         return [
             'id' => $this->id,
             'patient_id' => $this->patient_id,
             'name' => $this->name,
-            'last_name' => $this->last_name,
             'first_name' => $this->first_name,
             'middle_name' => $this->middle_name,
+            'last_name' => $this->last_name,
             'relationship_code' => $this->relationship_code,
             'relationship_label' => $label,
             // Kept for clients that still read the old free-text field.

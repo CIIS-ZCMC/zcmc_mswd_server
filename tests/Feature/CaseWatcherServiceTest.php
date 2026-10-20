@@ -32,7 +32,7 @@ beforeEach(function () {
 function serviceAssign(array $attributes)
 {
     $person = [
-        'last_name' => 'Reyes', 'first_name' => $attributes['name'], 'relationship_code' => $attributes['relationship'],
+        'name' => $attributes['name'].' Reyes', 'last_name' => 'Reyes', 'first_name' => $attributes['name'], 'relationship_code' => $attributes['relationship'],
         'contact_number' => $attributes['contact_number'] ?? '0917', 'address' => $attributes['address'] ?? 'Zone 1',
     ];
 

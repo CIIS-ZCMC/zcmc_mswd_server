@@ -318,7 +318,7 @@ it('creates and assigns a new person from a nested watcher', function () {
 
     $person = PatientWatcher::firstWhere('first_name', 'Lola');
     expect($person->patient_id)->toBe($patient->id)->and($person->added_by)->toBe($worker->id)
-        ->and($person->name)->toBe('Lola S. Cruz')
+        ->and($person->name)->toBe('Lola Santos Cruz')
         ->and($person->last_name)->toBe('Cruz')->and($person->middle_name)->toBe('Santos');
 });
 

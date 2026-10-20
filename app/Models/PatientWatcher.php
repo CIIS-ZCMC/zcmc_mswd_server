@@ -3,7 +3,6 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
-use App\Support\WatcherName;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
@@ -17,9 +16,9 @@ class PatientWatcher extends Model
     protected $fillable = [
         'patient_id',
         'name',
-        'last_name',
         'first_name',
         'middle_name',
+        'last_name',
         'relationship_code',
         'contact_number',
         'address',
@@ -27,21 +26,35 @@ class PatientWatcher extends Model
         'notes',
     ];
 
-    /**
-     * `name` is always the composed full name. When the parts are given it is
-     * built from them; a row written with only a `name` (seeders, older callers)
-     * gets its parts split out of it instead.
-     */
     protected static function booted(): void
     {
-        static::saving(function (PatientWatcher $watcher) {
-            if ($watcher->isDirty(['last_name', 'first_name', 'middle_name'])) {
-                $watcher->name = WatcherName::compose($watcher->first_name, $watcher->middle_name, $watcher->last_name);
-            } elseif ($watcher->isDirty('name')) {
-                $parts = WatcherName::split($watcher->name);
-                $watcher->first_name = $parts['first'];
-                $watcher->middle_name = $parts['middle'];
-                $watcher->last_name = $parts['last'];
+        static::saving(function (self $model) {
+            if ($model->first_name && $model->last_name) {
+                if (empty($model->name) || $model->isDirty('first_name') || $model->isDirty('middle_name') || $model->isDirty('last_name')) {
+                    $model->name = trim(preg_replace('/\s+/', ' ', "{$model->first_name} {$model->middle_name} {$model->last_name}"));
+                }
+            } elseif (! empty($model->name) && empty($model->first_name) && empty($model->last_name)) {
+                $trimmed = trim($model->name);
+                if (str_contains($trimmed, ',')) {
+                    $parts = explode(',', $trimmed, 2);
+                    $model->last_name = trim($parts[0]);
+                    $rest = preg_split('/\s+/', trim($parts[1] ?? '')) ?: [];
+                    $model->first_name = $rest[0] ?? null;
+                    $model->middle_name = count($rest) > 1 ? implode(' ', array_slice($rest, 1)) : null;
+                } else {
+                    $parts = preg_split('/\s+/', $trimmed) ?: [];
+                    if (count($parts) === 1) {
+                        $model->first_name = $parts[0];
+                        $model->last_name = $parts[0];
+                    } elseif (count($parts) === 2) {
+                        $model->first_name = $parts[0];
+                        $model->last_name = $parts[1];
+                    } else {
+                        $model->first_name = $parts[0];
+                        $model->middle_name = implode(' ', array_slice($parts, 1, -1));
+                        $model->last_name = end($parts);
+                    }
+                }
             }
         });
     }

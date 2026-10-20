@@ -147,12 +147,17 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
   const handleSave = async () => {
     if (!canSave || targetCaseId === undefined) return
 
+    const fullName = [person.firstName.trim(), person.middleName.trim(), person.lastName.trim()]
+      .filter(Boolean)
+      .join(" ")
+
     const formattedContact = `+63-${person.contactNumber.trim()}`
 
     const payload: CreateCaseWatcherPayload = {
       ...(isNewPerson
         ? {
             watcher: {
+              name: fullName,
               first_name: person.firstName.trim(),
               middle_name: person.middleName.trim() || null,
               last_name: person.lastName.trim(),

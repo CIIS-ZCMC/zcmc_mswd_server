@@ -127,10 +127,12 @@ export function toWatcher(raw: ApiWatcher): Watcher {
   return {
     id: String(raw.id),
     fullName: raw.name,
-    lastName: raw.last_name ?? "",
-    firstName: raw.first_name ?? "",
-    middleName: raw.middle_name ?? "",
-    relationship: raw.relationship_label ?? raw.relationship ?? raw.relationship_code ?? "",
+    firstName: raw.first_name ?? undefined,
+    middleName: raw.middle_name ?? undefined,
+    relationship: (raw.relationship_label ?? raw.relationship ?? raw.relationship_code ?? "")
+      .replace(/_/g, " ")
+      .replace(/\b\w/g, (c) => c.toUpperCase())
+      .trim(),
     relationshipCode: raw.relationship_code ?? "",
     contactNo: raw.contact_number ?? "",
     address: raw.address ?? "",
