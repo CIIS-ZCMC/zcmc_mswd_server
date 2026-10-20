@@ -44,7 +44,7 @@ it('filters the log by causer', function () {
 
 it('filters the log by date range', function () {
     Sanctum::actingAs($this->auditor);
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse']);
 
     // Backdate the row so a bounded range can exclude it.
     Activity::query()->update(['created_at' => now()->subDays(10)]);
@@ -60,7 +60,7 @@ it('filters the log by date range', function () {
 
 it('filters the log by log name', function () {
     Sanctum::actingAs($this->auditor);
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse']);
 
     $matching = $this->getJson('/api/activity-log?log_name=patient_watcher')->assertOk();
     $nonMatching = $this->getJson('/api/activity-log?log_name=nothing_logs_under_this')->assertOk();
@@ -71,7 +71,7 @@ it('filters the log by log name', function () {
 
 it('ignores an unrecognised event rather than erroring', function () {
     Sanctum::actingAs($this->auditor);
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse']);
 
     // An unknown event is dropped from the filter, not treated as a match on
     // nothing and not a 500.
@@ -106,7 +106,7 @@ it('matches the trail the old subject fan-out would have produced', function () 
     ]);
     PatientId::create(['patient_id' => $this->patient->id, 'id_type' => 'philhealth', 'id_number' => '1']);
     PatientFamilyMember::create(['patient_id' => $this->patient->id, 'name' => 'Maria']);
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Jo', 'relationship' => 'spouse']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Jo', 'relationship_code' => 'spouse']);
     PatientCaretaker::create([
         'patient_id' => $this->patient->id, 'user_id' => $this->worker->id,
         'role' => 'social_worker', 'assigned_date' => now(),

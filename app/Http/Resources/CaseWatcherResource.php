@@ -12,14 +12,19 @@ class CaseWatcherResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $watcher = $this->patientWatcher;
+
         return [
             'id' => $this->id,
             'case_id' => $this->case_id,
             'patient_watcher_id' => $this->patient_watcher_id,
-            'name' => $this->name,
-            'relationship' => $this->relationship,
-            'contact_number' => $this->contact_number,
-            'address' => $this->address,
+            'watcher' => $this->whenLoaded('patientWatcher', fn () => PatientWatcherResource::make($watcher)),
+            // Flat copies of the watcher's details for clients that predate the
+            // embedded `watcher`.
+            'name' => $watcher?->name,
+            'relationship' => $watcher?->relationship_code,
+            'contact_number' => $watcher?->contact_number,
+            'address' => $watcher?->address,
             'is_primary' => $this->is_primary,
             'is_informant' => $this->is_informant,
             'pass_number' => $this->pass_number,

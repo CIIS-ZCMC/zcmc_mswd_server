@@ -3,11 +3,11 @@
 namespace App\Services;
 
 use App\Models\Assessment;
-use Illuminate\Database\QueryException;
+use App\Support\RetriesOnDuplicateKey;
 
 /**
  * Sequential SCSR control numbers — the same count-based pattern as
- * WatcherPassNumberService and CaseModelService::nextCaseCode().
+ * CaseModelService::nextCaseCode().
  *
  * That pattern races: two concurrent finalizations can COUNT the same value.
  * `assessments.social_case_no` is uniquely indexed, so the race surfaces as a
@@ -17,25 +17,12 @@ use Illuminate\Database\QueryException;
  */
 class SocialCaseNumberService
 {
-    private const ATTEMPTS = 3;
-
     /**
      * @param  callable(string): mixed  $persist  Writes the number; may throw on collision.
      */
     public function assign(callable $persist): mixed
     {
-        for ($attempt = 1; $attempt <= self::ATTEMPTS; $attempt++) {
-            try {
-                return $persist($this->next());
-            } catch (QueryException $e) {
-                if ($attempt === self::ATTEMPTS || ! $this->isDuplicateKey($e)) {
-                    throw $e;
-                }
-            }
-        }
-
-        // Unreachable: the loop either returns or rethrows on its last attempt.
-        throw new \LogicException('Could not assign a social case number.');
+        return RetriesOnDuplicateKey::run(fn () => $persist($this->next()));
     }
 
     public function next(): string
@@ -47,12 +34,5 @@ class SocialCaseNumberService
             ->count() + 1;
 
         return sprintf('SCSR-%d-%06d', $year, $sequence);
-    }
-
-    private function isDuplicateKey(QueryException $e): bool
-    {
-        // 23000/23505 are the SQLSTATE integrity-constraint classes MySQL,
-        // MariaDB, Postgres and SQLite all report a unique collision under.
-        return in_array($e->getCode(), ['23000', '23505'], true);
     }
 }

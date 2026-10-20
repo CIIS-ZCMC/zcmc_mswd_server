@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use Illuminate\Database\Eloquent\Casts\Attribute;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\SoftDeletes;
@@ -14,10 +15,6 @@ class CaseWatcher extends Model
     protected $fillable = [
         'case_id',
         'patient_watcher_id',
-        'name',
-        'relationship',
-        'contact_number',
-        'address',
         'is_primary',
         'is_informant',
         'pass_number',
@@ -47,7 +44,16 @@ class CaseWatcher extends Model
 
     public function patientWatcher(): BelongsTo
     {
-        return $this->belongsTo(PatientWatcher::class);
+        return $this->belongsTo(PatientWatcher::class)->withTrashed();
+    }
+
+    /**
+     * The watcher's name, read through the patient watcher — the activity log
+     * labels a row by its `name`.
+     */
+    protected function name(): Attribute
+    {
+        return Attribute::get(fn () => $this->patientWatcher?->name);
     }
 
     public function addedBy(): BelongsTo

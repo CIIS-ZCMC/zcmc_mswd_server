@@ -43,15 +43,16 @@ class WatcherRequirementService
     }
 
     /**
-     * @return array{requirement: string, has_primary: bool, satisfied: bool, blocking: bool, waiver: array{reason: string, note: string|null, waived_by: string|null, waived_by_id: int|null, waived_at: Carbon|null}|null}
+     * @return array{requirement: string, requirement_reason: string, has_primary: bool, satisfied: bool, blocking: bool, waiver: array{reason: string, note: string|null, waived_by: string|null, waived_by_id: int|null, waived_at: Carbon|null}|null}
      */
     public function status(CaseModel $case): array
     {
         $requirement = $this->resolve($case);
-        $hasPrimary = $case->watchers()->where('is_primary', true)->exists();
+        $hasPrimary = $this->hasActivePrimary($case);
 
         return [
             'requirement' => $requirement->value,
+            'requirement_reason' => $this->reason($case, $requirement),
             'has_primary' => $hasPrimary,
             'satisfied' => $hasPrimary || in_array($requirement, [
                 WatcherRequirement::Optional,
@@ -61,6 +62,48 @@ class WatcherRequirementService
             'blocking' => $requirement === WatcherRequirement::Required && ! $hasPrimary,
             'waiver' => $this->waiver($case),
         ];
+    }
+
+    /**
+     * A primary watcher only counts while they can actually act for the
+     * patient: their pass is not revoked and they have not left the ward.
+     */
+    private function hasActivePrimary(CaseModel $case): bool
+    {
+        return $case->watchers()
+            ->where('is_primary', true)
+            ->where('pass_status', '!=', 'revoked')
+            ->where(fn ($query) => $query->whereNull('present_until')->orWhere('present_until', '>', now()))
+            ->exists();
+    }
+
+    /**
+     * Why the requirement is what it is, for the client banner: legacy,
+     * waived, minor, incapacitated, or the admission type (inpatient, er, opd).
+     */
+    private function reason(CaseModel $case, WatcherRequirement $requirement): string
+    {
+        if ($case->watcher_legacy_exempt) {
+            return 'legacy';
+        }
+
+        if ($requirement === WatcherRequirement::Waived) {
+            return 'waived';
+        }
+
+        if ($this->isMinor($case->patient)) {
+            return 'minor';
+        }
+
+        if ((bool) $case->patient->is_incapacitated) {
+            return 'incapacitated';
+        }
+
+        return match ($case->admission_type) {
+            'inpatient' => 'inpatient',
+            'ER' => 'er',
+            default => 'opd',
+        };
     }
 
     /**

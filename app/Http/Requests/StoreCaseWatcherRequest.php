@@ -5,6 +5,11 @@ namespace App\Http\Requests;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
+/**
+ * Assigns a watcher to a case: either an existing patient watcher
+ * (`patient_watcher_id`) or a new person (`watcher`), which is created for the
+ * case's patient and assigned in one step.
+ */
 class StoreCaseWatcherRequest extends FormRequest
 {
     /**
@@ -21,6 +26,18 @@ class StoreCaseWatcherRequest extends FormRequest
         if ($this->route('case')) {
             $this->merge(['case_id' => $this->route('case')->id]);
         }
+
+        // Deprecated flat shape (name/relationship/contact_number/address on the
+        // request itself) is treated as a nested `watcher` until the client
+        // stops sending it.
+        if (! $this->filled('patient_watcher_id') && ! $this->has('watcher') && $this->filled('name')) {
+            $this->merge(['watcher' => [
+                'name' => $this->input('name'),
+                'relationship_code' => $this->input('relationship_code', $this->input('relationship')),
+                'contact_number' => $this->input('contact_number'),
+                'address' => $this->input('address'),
+            ]]);
+        }
     }
 
     /**
@@ -31,17 +48,14 @@ class StoreCaseWatcherRequest extends FormRequest
         return [
             'case_id' => ['required', 'exists:cases,id'],
 
-            // Either link an existing directory entry (relationship/contact
-            // default from it, see CaseWatcherService::resolveDirectoryLink)
-            // or supply a full inline person.
-            'patient_watcher_id' => ['nullable', 'integer', 'exists:patient_watchers,id'],
-            'name' => ['required_without:patient_watcher_id', 'string', 'max:255'],
-            'relationship' => [
-                Rule::requiredIf(fn () => ! $this->filled('patient_watcher_id')),
-                'nullable', 'string', Rule::exists('watcher_relationship_types', 'code'),
-            ],
-            'contact_number' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
+            'patient_watcher_id' => ['required_without:watcher', 'nullable', 'integer', 'exists:patient_watchers,id'],
+
+            'watcher' => ['required_without:patient_watcher_id', 'nullable', 'array'],
+            'watcher.name' => ['required_with:watcher', 'string', 'max:255'],
+            'watcher.relationship_code' => ['required_with:watcher', 'string', Rule::exists('watcher_relationship_types', 'code')],
+            'watcher.contact_number' => ['nullable', 'string', 'max:255'],
+            'watcher.address' => ['nullable', 'string', 'max:255'],
+            'watcher.notes' => ['nullable', 'string'],
 
             'is_primary' => ['sometimes', 'boolean'],
             'is_informant' => ['sometimes', 'boolean'],

@@ -18,7 +18,7 @@ class SocialCaseStudyPdfService
         'case.patient.patientIds',
         'case.patient.familyMembers',
         'case.assignedUser',
-        'case.watchers',
+        'case.watchers.patientWatcher.relationshipType',
         'case.patientAssistances.assistantType',
         'case.interventions.interventionType',
         'expenses',

@@ -2,33 +2,30 @@
 
 namespace App\Http\Requests;
 
-use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class UpdatePatientWatcherRequest extends FormRequest
 {
-    /**
-     * Determine if the user is authorized to make this request.
-     */
     public function authorize(): bool
     {
         return true;
     }
 
     /**
-     * Get the validation rules that apply to the request.
+     * patient_id is deliberately absent: a watcher belongs to one patient and
+     * cannot be moved to another.
      *
-     * @return array<string, ValidationRule|array<mixed>|string>
+     * @return array<string, mixed>
      */
     public function rules(): array
     {
         return [
-            'patient_id' => ['sometimes', 'required', 'exists:patients,id'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
-            'relationship' => ['nullable', 'string', 'max:255'],
+            'relationship_code' => ['sometimes', 'required', 'string', Rule::exists('watcher_relationship_types', 'code')],
             'contact_number' => ['nullable', 'string', 'max:255'],
             'address' => ['nullable', 'string', 'max:255'],
-            'is_primary' => ['boolean'],
+            'notes' => ['nullable', 'string'],
         ];
     }
 }

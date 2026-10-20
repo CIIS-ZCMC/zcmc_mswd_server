@@ -3,6 +3,7 @@
 namespace App\Models;
 
 use App\Models\Concerns\Auditable;
+use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
 use Illuminate\Database\Eloquent\Relations\HasMany;
@@ -15,31 +16,45 @@ class PatientWatcher extends Model
     protected $fillable = [
         'patient_id',
         'name',
-        'relationship',
+        'relationship_code',
         'contact_number',
         'address',
-        'is_primary',
+        'added_by',
+        'notes',
     ];
-
-    protected function casts(): array
-    {
-        return [
-            'is_primary' => 'boolean',
-        ];
-    }
 
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
     }
 
+    public function relationshipType(): BelongsTo
+    {
+        return $this->belongsTo(WatcherRelationshipType::class, 'relationship_code', 'code');
+    }
+
+    public function addedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'added_by');
+    }
+
     /**
-     * Episode links created from this directory entry. Most are ad-hoc
-     * (patient_watcher_id null on case_watchers), so this is often empty.
+     * The cases this watcher is assigned to (live assignments only).
      */
     public function caseWatchers(): HasMany
     {
         return $this->hasMany(CaseWatcher::class);
+    }
+
+    /**
+     * Watchers currently assigned to an open or ongoing case.
+     */
+    public function scopeOpenAssignments(Builder $query): Builder
+    {
+        return $query->whereHas('caseWatchers.case', fn ($case) => $case->whereIn('status', [
+            CaseModel::STATUS_OPEN,
+            CaseModel::STATUS_ONGOING,
+        ]));
     }
 
     /**

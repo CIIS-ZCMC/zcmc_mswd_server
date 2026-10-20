@@ -19,19 +19,26 @@ class PatientWatcherController extends Controller
 
     public function index(Patient $patient): AnonymousResourceCollection
     {
-        return PatientWatcherResource::collection($patient->watchers()->latest()->get());
+        return PatientWatcherResource::collection(
+            $patient->watchers()->with(['relationshipType', 'caseWatchers.case'])->latest()->get(),
+        );
     }
 
     public function store(StorePatientWatcherRequest $request, Patient $patient): JsonResponse
     {
-        $record = $this->service->create(PatientWatcherDto::fromArray($request->validated()));
+        $record = $this->service->create(PatientWatcherDto::fromArray(array_merge($request->validated(), [
+            'added_by' => $request->user()->id,
+        ])));
 
-        return PatientWatcherResource::make($record)->response()->setStatusCode(Response::HTTP_CREATED);
+        return PatientWatcherResource::make($record->load('relationshipType'))->response()->setStatusCode(Response::HTTP_CREATED);
     }
 
     public function update(UpdatePatientWatcherRequest $request, PatientWatcher $watcher): PatientWatcherResource
     {
-        return PatientWatcherResource::make($this->service->update($watcher, PatientWatcherDto::fromArray($request->validated())));
+        return PatientWatcherResource::make(
+            $this->service->update($watcher, PatientWatcherDto::fromArray($request->validated()))
+                ->load(['relationshipType', 'caseWatchers.case']),
+        );
     }
 
     public function destroy(PatientWatcher $watcher): Response

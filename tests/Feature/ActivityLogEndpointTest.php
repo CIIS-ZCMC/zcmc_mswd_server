@@ -75,8 +75,8 @@ it('filters the log by patient, event and subject type', function () {
     $other = Patient::create([
         'sector_id' => $this->sector->id, 'first_name' => 'Bea', 'last_name' => 'Santos', 'sex' => 'female',
     ]);
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
-    PatientWatcher::create(['patient_id' => $other->id, 'name' => 'Jose', 'relationship' => 'parent']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse']);
+    PatientWatcher::create(['patient_id' => $other->id, 'name' => 'Jose', 'relationship_code' => 'parent']);
 
     $mine = $this->getJson("/api/activity-log?patient_id={$this->patient->id}")->assertOk();
     expect(collect($mine->json('data'))->pluck('patient_id')->unique()->all())
@@ -91,9 +91,9 @@ it('filters the log by patient, event and subject type', function () {
 it('serves the inline per-record drill-down from the same endpoint', function () {
     Sanctum::actingAs(auditUser('MSS Head'));
     $watcher = PatientWatcher::create([
-        'patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse',
+        'patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse',
     ]);
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Other', 'relationship' => 'parent']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Other', 'relationship_code' => 'parent']);
 
     $response = $this->getJson("/api/activity-log?subject_type=PatientWatcher&subject_id={$watcher->id}")
         ->assertOk();
@@ -103,7 +103,7 @@ it('serves the inline per-record drill-down from the same endpoint', function ()
 
 it('labels each row with a human-readable subject', function () {
     Sanctum::actingAs(auditUser('MSS Head'));
-    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria Cruz', 'relationship' => 'spouse']);
+    PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria Cruz', 'relationship_code' => 'spouse']);
 
     $response = $this->getJson('/api/activity-log?subject_type=PatientWatcher')->assertOk();
 
@@ -187,7 +187,7 @@ describe('the protective-case filter', function () {
 
     it('keeps patient-level rows visible — the documented residual', function () {
         Sanctum::actingAs(auditUser('Supervisor'));
-        PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship' => 'spouse']);
+        PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse']);
 
         // Not case-attached, so nothing ties it to the protective episode. The
         // Protective Cases module owns patient-level restriction.

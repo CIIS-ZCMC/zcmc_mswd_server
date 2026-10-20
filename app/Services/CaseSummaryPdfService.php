@@ -23,7 +23,7 @@ class CaseSummaryPdfService
         'patient.patientIds',
         'patient.familyMembers',
         'assignedUser',
-        'watchers',
+        'watchers.patientWatcher.relationshipType',
         'socialCase.expenses',
         'socialCase.preparedBy',
         'socialCase.notedBy',

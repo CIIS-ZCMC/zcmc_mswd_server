@@ -109,7 +109,7 @@ dataset('resolvers', [
         'patient_id' => test()->patient->id, 'name' => 'Maria',
     ]), true, false],
     'PatientWatcher' => [fn () => PatientWatcher::create([
-        'patient_id' => test()->patient->id, 'name' => 'Maria', 'relationship' => 'spouse',
+        'patient_id' => test()->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse',
     ]), true, false],
     'PatientCaretaker' => [fn () => PatientCaretaker::create([
         'patient_id' => test()->patient->id, 'user_id' => test()->worker->id,
@@ -146,8 +146,8 @@ dataset('resolvers', [
         'case_id' => test()->case->id, 'his_transaction_id' => 9,
         'snapshot' => [], 'linked_by' => test()->worker->id, 'linked_at' => now(),
     ]), true, true],
-    'CaseWatcher' => [fn () => CaseWatcher::create([
-        'case_id' => test()->case->id, 'name' => 'Maria', 'relationship' => 'spouse',
+    'CaseWatcher' => [fn () => assignWatcher([
+        'case_id' => test()->case->id, 'name' => 'Maria', 'relationship_code' => 'spouse',
         'added_by' => test()->worker->id,
     ]), true, true],
     'Assessment' => [fn () => Assessment::create([

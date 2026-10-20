@@ -32,7 +32,7 @@ beforeEach(function () {
 
 function makeCaseWatcher(CaseModel $case, array $overrides = []): CaseWatcher
 {
-    return CaseWatcher::create(array_merge([
+    return assignWatcher(array_merge([
         'case_id' => $case->id,
         'name' => 'Maria Reyes',
         'relationship' => 'spouse',
@@ -58,7 +58,7 @@ it('creates a case watcher with the expected attributes and casts', function () 
 
 it('resolves case, patientWatcher and addedBy relations', function () {
     $directoryEntry = PatientWatcher::create([
-        'patient_id' => $this->patient->id, 'name' => 'Maria Reyes', 'relationship' => 'spouse',
+        'patient_id' => $this->patient->id, 'name' => 'Maria Reyes', 'relationship_code' => 'spouse',
     ]);
     $watcher = makeCaseWatcher($this->case, ['patient_watcher_id' => $directoryEntry->id]);
 

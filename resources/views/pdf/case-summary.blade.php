@@ -69,7 +69,7 @@
         @foreach($case->watchers as $watcher)
             <tr>
                 <td>{{ $val($watcher->name) }}</td>
-                <td>{{ $val($watcher->relationship) }}</td>
+                <td>{{ $val($watcher->patientWatcher?->relationshipType?->name) }}</td>
                 <td>{{ $watcher->is_primary ? 'Yes' : 'No' }}</td>
             </tr>
         @endforeach

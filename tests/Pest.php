@@ -1,5 +1,9 @@
 <?php
 
+use App\Models\CaseModel;
+use App\Models\CaseWatcher;
+use App\Models\PatientWatcher;
+use Illuminate\Support\Arr;
 use Tests\TestCase;
 
 /*
@@ -46,4 +50,27 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * Assigns a watcher to a case. Accepts the old flat shape (name, relationship,
+ * contact_number, address) and creates the patient watcher behind it, unless a
+ * patient_watcher_id is given.
+ *
+ * @param  array<string, mixed>  $attributes
+ */
+function assignWatcher(array $attributes): CaseWatcher
+{
+    $patientWatcherId = $attributes['patient_watcher_id'] ?? PatientWatcher::create([
+        'patient_id' => CaseModel::findOrFail($attributes['case_id'])->patient_id,
+        'name' => $attributes['name'] ?? 'Watcher',
+        'relationship_code' => $attributes['relationship'] ?? 'other',
+        'contact_number' => $attributes['contact_number'] ?? null,
+        'address' => $attributes['address'] ?? null,
+    ])->id;
+
+    return CaseWatcher::create(
+        Arr::except($attributes, ['name', 'relationship', 'contact_number', 'address'])
+        + ['patient_watcher_id' => $patientWatcherId],
+    );
 }

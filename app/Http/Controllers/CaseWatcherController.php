@@ -19,7 +19,7 @@ class CaseWatcherController extends Controller
 
     public function index(CaseModel $case): AnonymousResourceCollection
     {
-        return CaseWatcherResource::collection($case->watchers()->with('addedBy')->latest()->get());
+        return CaseWatcherResource::collection($case->watchers()->with(['addedBy', 'patientWatcher.relationshipType'])->latest()->get());
     }
 
     public function store(StoreCaseWatcherRequest $request, CaseModel $case): JsonResponse
@@ -29,16 +29,18 @@ class CaseWatcherController extends Controller
             'added_by' => $request->user()->id,
         ]));
 
-        $watcher = $this->service->create($dto->toArray());
+        $watcher = $this->service->create($dto->toArray(), $request->validated('watcher'));
 
-        return CaseWatcherResource::make($watcher)->response()->setStatusCode(Response::HTTP_CREATED);
+        return CaseWatcherResource::make($watcher->load(['addedBy', 'patientWatcher.relationshipType']))->response()->setStatusCode(Response::HTTP_CREATED);
     }
 
     public function update(UpdateCaseWatcherRequest $request, CaseWatcher $caseWatcher): CaseWatcherResource
     {
         $dto = CaseWatcherDto::fromArray($request->validated());
 
-        return CaseWatcherResource::make($this->service->update($caseWatcher, $dto->toArray()));
+        return CaseWatcherResource::make(
+            $this->service->update($caseWatcher, $dto->toArray())->load(['addedBy', 'patientWatcher.relationshipType']),
+        );
     }
 
     public function destroy(CaseWatcher $caseWatcher): Response
