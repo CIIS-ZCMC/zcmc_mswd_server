@@ -4,7 +4,7 @@ import type { ApiError } from "@/lib/api-client"
 import { login, logout } from "../api/auth-api"
 import type { AuthUser, LoginPayload } from "../types/auth.types"
 
-interface SharedProps {
+interface SharedProps extends Record<string, unknown> {
   auth?: {
     user: AuthUser | null
     roles: string[]
