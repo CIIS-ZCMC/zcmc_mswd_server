@@ -40,6 +40,18 @@ interface AssignWatcherDialogProps {
   isSubmitting?: boolean
 }
 
+function extract10DigitPhone(raw: string): string {
+  if (!raw) return ""
+  const digits = raw.replace(/\D/g, "")
+  if (digits.startsWith("63") && digits.length >= 12) {
+    return digits.slice(2, 12)
+  }
+  if (digits.startsWith("0") && digits.length >= 11) {
+    return digits.slice(1, 11)
+  }
+  return digits.slice(0, 10)
+}
+
 /**
  * Assigns a patient's watcher to one of their open cases, with the facts that
  * belong to that case: primary, informant, presence dates and notes. From a
@@ -56,6 +68,28 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
   isSubmitting = false,
 }) => {
   const { data: relationshipTypes = [] } = useWatcherRelationshipTypes()
+
+  const relationshipMap = React.useMemo(() => {
+    const map: Record<string, string> = {}
+    for (const t of relationshipTypes) {
+      map[t.code] = t.name
+    }
+    return map
+  }, [relationshipTypes])
+
+  const formatRelationshipLabel = React.useCallback(
+    (code: string | null) => {
+      if (!code) return ""
+      const match = relationshipMap[code]
+      if (match) {
+        return match.replace(/_/g, " ")
+      }
+      return code
+        .replace(/_/g, " ")
+        .replace(/\b\w/g, (c) => c.toUpperCase())
+    },
+    [relationshipMap]
+  )
 
   const [caseId, setCaseId] = useState("")
   const [watcherId, setWatcherId] = useState(NEW_PERSON)
@@ -106,22 +140,24 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
       ? person.lastName.trim() !== "" &&
         person.firstName.trim() !== "" &&
         person.relationshipCode !== "" &&
-        person.contactNumber.trim() !== "" &&
+        person.contactNumber.trim().length === 10 &&
         person.address.trim() !== ""
       : watcherId !== NEW_PERSON)
 
   const handleSave = async () => {
     if (!canSave || targetCaseId === undefined) return
 
+    const formattedContact = `+63-${person.contactNumber.trim()}`
+
     const payload: CreateCaseWatcherPayload = {
       ...(isNewPerson
         ? {
             watcher: {
-              last_name: person.lastName.trim(),
               first_name: person.firstName.trim(),
               middle_name: person.middleName.trim() || null,
+              last_name: person.lastName.trim(),
               relationship_code: person.relationshipCode,
-              contact_number: person.contactNumber.trim(),
+              contact_number: formattedContact,
               address: person.address.trim(),
             },
           }
@@ -206,7 +242,7 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
 
               {isNewPerson && (
                 <div className="grid gap-3">
-                  <div className="grid grid-cols-3 gap-3">
+                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
                     <Input
                       placeholder="Last name *"
                       value={person.lastName}
@@ -232,23 +268,43 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
                       onValueChange={(code) => code && setPerson({ ...person, relationshipCode: code })}
                     >
                       <SelectTrigger className="h-10 bg-background">
-                        <SelectValue placeholder="Relationship *" />
+                        <SelectValue placeholder="Relationship *">
+                          {(val: string | null) =>
+                            val ? formatRelationshipLabel(val) : "Relationship *"
+                          }
+                        </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
                         {relationshipTypes.map((type) => (
                           <SelectItem key={type.id} value={type.code}>
-                            {type.name}
+                            {formatRelationshipLabel(type.code) || type.name}
                           </SelectItem>
                         ))}
                       </SelectContent>
                     </Select>
-                    <Input
-                      placeholder="Contact number *"
-                      value={person.contactNumber}
-                      onChange={(e) => setPerson({ ...person, contactNumber: e.target.value })}
-                      className="h-10 bg-background"
-                    />
+                    <div className="flex items-stretch">
+                      <span className="inline-flex items-center px-3 rounded-l-md border border-r-0 border-input bg-muted/40 text-muted-foreground text-xs font-bold select-none">
+                        +63 -
+                      </span>
+                      <Input
+                        type="tel"
+                        inputMode="numeric"
+                        placeholder="9XX XXX XXXX"
+                        maxLength={10}
+                        value={person.contactNumber}
+                        onChange={(e) => {
+                          const cleaned = extract10DigitPhone(e.target.value)
+                          setPerson({ ...person, contactNumber: cleaned })
+                        }}
+                        className="h-10 rounded-l-none bg-background font-mono tracking-wider"
+                      />
+                    </div>
                   </div>
+                  {person.contactNumber.length > 0 && person.contactNumber.length < 10 && (
+                    <p className="-mt-1 text-[11px] text-muted-foreground">
+                      10-digit number required ({person.contactNumber.length}/10)
+                    </p>
+                  )}
                   <Input
                     placeholder="Address *"
                     value={person.address}
