@@ -83,4 +83,11 @@ export interface PatientRecord {
   latestCaseId?: number
   /** The patient's hospital number (emdPatients.patid), for HIS encounter reads. */
   hospitalId?: number
+  /** The patient's open queue visit, if any (list rows only). */
+  activeVisit?: {
+    id: number
+    status: "waiting" | "in_progress"
+    hisTransactionId: number
+    arrivedAt: string | null
+  } | null
 }

@@ -210,15 +210,33 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
                 <Button
                   variant="outline"
                   size="default"
-                  className="h-11 gap-2.5 border-amber-500/40 bg-amber-500/10 px-4 text-base font-bold text-amber-600 shadow-sm transition-all hover:bg-amber-500/20 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-500/20"
+                  className={`h-11 gap-2.5 px-4 text-base font-bold shadow-sm transition-all ${
+                    activeVisit.status === "in_progress"
+                      ? "border-emerald-500/40 bg-emerald-500/10 text-emerald-600 hover:bg-emerald-500/20 hover:text-emerald-700 dark:text-emerald-400 dark:hover:bg-emerald-500/20"
+                      : "border-amber-500/40 bg-amber-500/10 text-amber-600 hover:bg-amber-500/20 hover:text-amber-700 dark:text-amber-400 dark:hover:bg-amber-500/20"
+                  }`}
                   onClick={() => setIsActiveQueueStatusOpen(true)}
                 >
-                  <span className="size-2.5 animate-pulse rounded-full bg-amber-500" />
+                  <span
+                    className={`size-2.5 animate-pulse rounded-full ${
+                      activeVisit.status === "in_progress"
+                        ? "bg-emerald-500"
+                        : "bg-amber-500"
+                    }`}
+                  />
                   <Clock className="size-5" />
-                  <span>In Queue</span>
+                  <span>
+                    {activeVisit.status === "in_progress"
+                      ? "In Service"
+                      : "In Queue"}
+                  </span>
                   <Badge
                     variant="outline"
-                    className="ml-1 border-amber-500/40 text-xs font-bold text-amber-600 dark:text-amber-400"
+                    className={`ml-1 text-xs font-bold ${
+                      activeVisit.status === "in_progress"
+                        ? "border-emerald-500/40 text-emerald-600 dark:text-emerald-400"
+                        : "border-amber-500/40 text-amber-600 dark:text-amber-400"
+                    }`}
                   >
                     {activeVisit.status === "in_progress"
                       ? "Serving"

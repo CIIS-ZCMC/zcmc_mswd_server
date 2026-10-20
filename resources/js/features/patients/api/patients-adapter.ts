@@ -299,6 +299,14 @@ export function toPatientListRecord(raw: ApiPatient): PatientRecord {
     id: String(raw.id),
     latestCaseId: latestCase?.id,
     hospitalId: raw.hospital_id ?? undefined,
+    activeVisit: raw.active_visit
+      ? {
+          id: raw.active_visit.id,
+          status: raw.active_visit.status,
+          hisTransactionId: raw.active_visit.his_transaction_id,
+          arrivedAt: raw.active_visit.arrived_at,
+        }
+      : null,
     hospitalNo: raw.hospital_id != null ? String(raw.hospital_id) : "—",
     mswdNo: raw.mswd_id != null ? String(raw.mswd_id) : "—",
     fullName: buildFullName(raw),

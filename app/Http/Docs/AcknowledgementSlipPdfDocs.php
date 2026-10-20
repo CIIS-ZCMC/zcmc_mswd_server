@@ -23,8 +23,8 @@ final class AcknowledgementSlipPdfDocs
             new OA\Parameter(name: 'download', in: 'query', required: false, schema: new OA\Schema(type: 'boolean')),
             new OA\Parameter(name: 'copies', in: 'query', required: false, schema: new OA\Schema(type: 'integer', minimum: 1, maximum: 20)),
             new OA\Parameter(name: 'remarks', in: 'query', required: false, schema: new OA\Schema(type: 'string', maxLength: 255)),
-            new OA\Parameter(name: 'time_started', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '10:49')),
-            new OA\Parameter(name: 'time_ended', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '10:55')),
+            new OA\Parameter(name: 'time_started', in: 'query', required: false, description: 'H:i. Blank prints the start of service of the encounter\'s latest queue visit.', schema: new OA\Schema(type: 'string', example: '10:49')),
+            new OA\Parameter(name: 'time_ended', in: 'query', required: false, description: 'H:i. Blank prints the completion of the encounter\'s latest queue visit.', schema: new OA\Schema(type: 'string', example: '10:55')),
         ],
         responses: [
             new OA\Response(response: 200, description: 'The slip PDF', content: new OA\MediaType(
@@ -52,8 +52,8 @@ final class AcknowledgementSlipPdfDocs
             new OA\Parameter(name: 'fund_other', in: 'query', required: false, description: 'Required when fund=others.', schema: new OA\Schema(type: 'string', maxLength: 100)),
             new OA\Parameter(name: 'amount', in: 'query', required: false, schema: new OA\Schema(type: 'number', minimum: 0)),
             new OA\Parameter(name: 'assistant_type_ids', in: 'query', required: false, description: 'The "Para sa" ticks: Types of Assistance ids, comma-separated (e.g. 3,4).', schema: new OA\Schema(type: 'string', example: '3,4')),
-            new OA\Parameter(name: 'time_started', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '17:20')),
-            new OA\Parameter(name: 'time_ended', in: 'query', required: false, schema: new OA\Schema(type: 'string', example: '17:28')),
+            new OA\Parameter(name: 'time_started', in: 'query', required: false, description: 'H:i. Blank prints the start of service of the encounter\'s latest queue visit.', schema: new OA\Schema(type: 'string', example: '17:20')),
+            new OA\Parameter(name: 'time_ended', in: 'query', required: false, description: 'H:i. Blank prints the completion of the encounter\'s latest queue visit.', schema: new OA\Schema(type: 'string', example: '17:28')),
             new OA\Parameter(name: 'remarks', in: 'query', required: false, schema: new OA\Schema(type: 'string', maxLength: 255)),
             new OA\Parameter(name: 'preview', in: 'query', required: false, schema: new OA\Schema(type: 'boolean')),
             new OA\Parameter(name: 'download', in: 'query', required: false, schema: new OA\Schema(type: 'boolean')),

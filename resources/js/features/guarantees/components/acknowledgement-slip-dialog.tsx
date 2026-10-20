@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react"
+import React, { useEffect, useMemo, useRef, useState } from "react"
 import {
   Dialog,
   DialogContent,
@@ -26,6 +26,9 @@ import { useAssistanceTypeOptions } from "@/features/library/hooks/use-lookup-op
 // Direct file imports (not the hospital barrel, which re-exports this feature).
 import { useHospitalEncounter } from "@/features/hospital/hooks/use-hospital-encounters"
 import type { EncounterGuarantor } from "@/features/hospital/types/hospital-transaction.types"
+import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useEncounterServiceTimes } from "@/features/queue/hooks/use-queue"
+import { ServiceTimesHint } from "@/features/queue/components/service-times-hint"
 import {
   type AcknowledgementSlipFund,
   isMaifipGuarantee,
@@ -79,6 +82,7 @@ const FUND_LABELS: Record<AcknowledgementSlipFund, string> = {
  * Print the Acknowledgement Slip (ZCMC-F-MSWD-46) for the encounter.
  * Sources: MSWD guarantee, HIS guarantor ledger entry, or direct encounter print
  * with manual/blank entries. Fund options: DOH-MAIFIP, OPAV-SOCIO CIVID FUND, OTHERS.
+ * Time started / ended prefill from the encounter's queue turnaround.
  */
 export const AcknowledgementSlipDialog: React.FC<
   AcknowledgementSlipDialogProps
@@ -122,10 +126,18 @@ export const AcknowledgementSlipDialog: React.FC<
   // Type of assistance (Library id)
   const [typeId, setTypeId] = useState<string | null>(null)
   const { data: typeOptions = [] } = useAssistanceTypeOptions(true)
+  const canManageQueue = usePermission("queue.manage")
+  const service = useEncounterServiceTimes(
+    patientId,
+    encounterId,
+    open && encounterId > 0 && canManageQueue
+  )
+  const prefilled = useRef(false)
 
   // Each opening resets to default fund and sets initial guarantee if provided
   useEffect(() => {
     if (!open) return
+    prefilled.current = false
     setSelectedKey(guaranteeId ? `mswd-${guaranteeId}` : null)
     setFund("doh_maifip")
     setFundOther("")
@@ -136,6 +148,14 @@ export const AcknowledgementSlipDialog: React.FC<
     setError(null)
     setTypeId(null)
   }, [open, guaranteeId])
+
+  // Once per opening, fill the times from the queue; never over what was typed.
+  useEffect(() => {
+    if (!open || prefilled.current || !service.visit) return
+    prefilled.current = true
+    setTimeStarted((current) => current || service.started)
+    setTimeEnded((current) => current || service.ended)
+  }, [open, service.visit, service.started, service.ended])
 
   const selected =
     sources.find((source) => source.key === selectedKey) ??
@@ -431,7 +451,7 @@ export const AcknowledgementSlipDialog: React.FC<
                     htmlFor="slip-time-started"
                     className="text-sm font-bold"
                   >
-                    Time started (optional)
+                    Time started
                   </Label>
                   <Input
                     id="slip-time-started"
@@ -446,7 +466,7 @@ export const AcknowledgementSlipDialog: React.FC<
                     htmlFor="slip-time-ended"
                     className="text-sm font-bold"
                   >
-                    Time ended (optional)
+                    Time ended
                   </Label>
                   <Input
                     id="slip-time-ended"
@@ -457,6 +477,7 @@ export const AcknowledgementSlipDialog: React.FC<
                   />
                 </div>
               </div>
+              <ServiceTimesHint visit={service.visit} />
 
               <div className="space-y-1.5">
                 <Label htmlFor="slip-remarks" className="text-sm font-bold">

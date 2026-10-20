@@ -8,6 +8,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { DatePicker } from "@/components/ui/date-picker"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { PatientQueueDialog } from "@/features/patients/components/dialogs/patient-queue-dialog"
 import {
   Search,
   Calendar,
@@ -23,8 +24,19 @@ import {
   BarChart3,
   ClipboardList,
   Timer,
+  Clock,
+  Loader2,
 } from "lucide-react"
 import { cn } from "@/lib/utils"
+
+/** "2026-10-19T07:31:26.000000Z" or "2026-10-19" → "Oct 19, 2026". */
+function formatIntakeDate(value: string | null | undefined): string {
+  if (!value) return "—"
+  // A bare date is a calendar day; parse it as local so it can't shift a day.
+  const date = /^\d{4}-\d{2}-\d{2}$/.test(value) ? new Date(`${value}T00:00:00`) : new Date(value)
+  if (Number.isNaN(date.getTime())) return value
+  return date.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })
+}
 
 interface SidebarProps {
   patients: PatientRecord[]
@@ -72,6 +84,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const canViewReports = usePermission("reports.view")
   const canManageDar = usePermission("dar.manage")
   const canManageQueue = usePermission("queue.manage")
+  const [queuePatient, setQueuePatient] = React.useState<PatientRecord | null>(null)
 
   const isPatientsRoute = pathname === "/" || pathname.startsWith("/patients")
   const isCaseloadRoute = pathname.startsWith("/caseload") || pathname.startsWith("/cases")
@@ -310,31 +323,68 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   <span>{patient.mswdNo}</span>
                 </div>
 
-                <div className="flex items-center justify-between pt-1">
-                  <Badge variant={getCategoryBadgeVariant(patient.category)} className="text-xs px-2 py-0.5 font-semibold">
-                    {patient.category}
-                  </Badge>
-                  <div className="flex items-center gap-1.5 text-xs text-muted-foreground font-medium">
+                <div className="flex items-center justify-between gap-2 pt-1">
+                  <div className="flex min-w-0 items-center gap-2">
+                    <Badge variant={getCategoryBadgeVariant(patient.category)} className="text-xs px-2 py-0.5 font-semibold">
+                      {patient.category}
+                    </Badge>
+                    <span
+                      className={cn(
+                        "truncate font-semibold text-xs",
+                        patient.admissionStatus === "ER Emergency"
+                          ? "text-destructive"
+                          : "text-emerald-600 dark:text-emerald-400"
+                      )}
+                    >
+                      {patient.admissionStatus}
+                    </span>
+                  </div>
+                  <div className="flex shrink-0 items-center gap-1.5 text-xs text-muted-foreground font-medium">
                     <Building2 className="size-3.5 text-primary" />
                     <span>{patient.ward}</span>
                   </div>
                 </div>
 
-                <div className="flex items-center justify-between text-xs text-muted-foreground border-t border-border/50 pt-2 mt-0.5">
+                <div className="flex items-center justify-between gap-2 text-xs text-muted-foreground border-t border-border/50 pt-2 mt-0.5">
                   <span className="flex items-center gap-1">
                     <Calendar className="size-3.5" />
-                    {patient.intakeDate}
+                    {formatIntakeDate(patient.intakeDate)}
                   </span>
-                  <span
-                    className={cn(
-                      "font-semibold text-xs",
-                      patient.admissionStatus === "ER Emergency"
-                        ? "text-destructive"
-                        : "text-emerald-600 dark:text-emerald-400"
-                    )}
-                  >
-                    {patient.admissionStatus}
-                  </span>
+                  {canManageQueue &&
+                    (patient.activeVisit ? (
+                      <span
+                        className={cn(
+                          "inline-flex items-center gap-1 rounded-full border px-2 py-0.5 text-[11px] font-semibold",
+                          patient.activeVisit.status === "in_progress"
+                            ? "border-sky-500/40 bg-sky-500/10 text-sky-600 dark:text-sky-400"
+                            : "border-amber-500/40 bg-amber-500/10 text-amber-600 dark:text-amber-400"
+                        )}
+                        title={`On the queue for encounter #${patient.activeVisit.hisTransactionId}`}
+                      >
+                        {patient.activeVisit.status === "in_progress" ? (
+                          <Loader2 className="size-3 animate-spin" />
+                        ) : (
+                          <Clock className="size-3" />
+                        )}
+                        {patient.activeVisit.status === "in_progress" ? "In progress" : "Waiting"}
+                      </span>
+                    ) : (
+                      <Button
+                        type="button"
+                        variant="outline"
+                        size="sm"
+                        className="h-7 gap-1 px-2 text-xs font-semibold hover:border-primary hover:text-primary"
+                        title="Place this patient on the MSWD queue"
+                        // The card itself opens the patient; keep this click to the button.
+                        onClick={(e) => {
+                          e.stopPropagation()
+                          setQueuePatient(patient)
+                        }}
+                      >
+                        <Clock className="size-3.5" />
+                        Queue
+                      </Button>
+                    ))}
                 </div>
               </div>
             )
@@ -371,6 +421,16 @@ export const Sidebar: React.FC<SidebarProps> = ({
           </Button>
         </div>
       </div>
+
+      {canManageQueue && queuePatient && (
+        <PatientQueueDialog
+          open
+          onOpenChange={(open) => {
+            if (!open) setQueuePatient(null)
+          }}
+          patient={queuePatient}
+        />
+      )}
     </aside>
   )
 }

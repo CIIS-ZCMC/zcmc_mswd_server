@@ -13,6 +13,7 @@ use App\Models\Guarantor;
 use App\Models\Patient;
 use App\Models\PatientGuarantee;
 use App\Models\Sector;
+use App\Models\ServiceVisit;
 use App\Models\Signatory;
 use App\Models\User;
 use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
@@ -395,4 +396,65 @@ it('rejects an unknown type of assistance', function () {
 
     $this->getJson('/api/patient-transactions/9/acknowledgement-slip/pdf?assistant_type_ids=99999')
         ->assertJsonValidationErrors('assistant_type_ids.0');
+});
+
+// ── Time started / ended from the queue's turnaround ─────────────────────────
+
+/** A visit on encounter 9: arrived 10:30, service started 10:49 and completed 10:55. */
+function slipServiceVisit(Patient $patient, array $attributes = []): ServiceVisit
+{
+    return ServiceVisit::create([
+        'patient_id' => $patient->id, 'his_transaction_id' => 9,
+        'status' => ServiceVisit::STATUS_COMPLETED,
+        'arrived_at' => '2026-10-19 10:30:00', 'started_at' => '2026-10-19 10:49:00',
+        'completed_at' => '2026-10-19 10:55:00', 'received_by' => User::query()->value('id'),
+        ...$attributes,
+    ]);
+}
+
+it('prints the queue start and completion when no times are typed', function () {
+    mockHisEncounter([[72, 'MAIFIP', 500]]);
+    slipServiceVisit($this->patient);
+    $slips = app(AcknowledgementSlipPdfService::class);
+    $encounter = $slips->hisEncounter(9);
+
+    $times = ['timeStarted' => '10:49 AM', 'timeEnded' => '10:55 AM'];
+
+    expect($slips->slip($this->guarantee))->toMatchArray($times)
+        ->and($slips->slipFromHis($encounter, $slips->hisMaifipEntries($encounter)->first()))->toMatchArray($times)
+        ->and($slips->slipFromEncounter($encounter))->toMatchArray($times);
+});
+
+it('prints typed times over the queue, filling only the blank one', function () {
+    mockHisEncounter([]);
+    slipServiceVisit($this->patient);
+    $slips = app(AcknowledgementSlipPdfService::class);
+
+    expect($slips->slipFromEncounter($slips->hisEncounter(9), timeStarted: '11:00'))
+        ->toMatchArray(['timeStarted' => '11:00 AM', 'timeEnded' => '10:55 AM']);
+});
+
+it('uses the latest served visit and leaves the end blank while in progress', function () {
+    slipServiceVisit($this->patient);
+    slipServiceVisit($this->patient, [
+        'status' => ServiceVisit::STATUS_IN_PROGRESS, 'arrived_at' => '2026-10-19 13:00:00',
+        'started_at' => '2026-10-19 13:20:00', 'completed_at' => null,
+    ]);
+
+    expect(app(AcknowledgementSlipPdfService::class)->slip($this->guarantee))
+        ->toMatchArray(['timeStarted' => '1:20 PM', 'timeEnded' => null]);
+});
+
+it('leaves the times blank without a served visit on the encounter', function () {
+    slipServiceVisit($this->patient, [
+        'status' => ServiceVisit::STATUS_CANCELLED, 'completed_at' => null, 'cancelled_at' => '2026-10-19 11:00:00',
+    ]);
+    slipServiceVisit($this->patient, [
+        'status' => ServiceVisit::STATUS_WAITING, 'arrived_at' => '2026-10-19 13:00:00',
+        'started_at' => null, 'completed_at' => null,
+    ]);
+    slipServiceVisit($this->patient, ['his_transaction_id' => 10]); // another encounter
+
+    expect(app(AcknowledgementSlipPdfService::class)->slip($this->guarantee))
+        ->toMatchArray(['timeStarted' => null, 'timeEnded' => null]);
 });

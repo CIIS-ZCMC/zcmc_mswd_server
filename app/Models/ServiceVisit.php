@@ -91,6 +91,21 @@ class ServiceVisit extends Model
         $query->where('patient_id', $patientId)->where('his_transaction_id', $transactionId);
     }
 
+    /**
+     * The encounter's latest visit whose service started and was not cancelled:
+     * its start and completion are the "Time Started / Ended" printed on the slips.
+     */
+    public static function lastServedFor(int $patientId, int $transactionId): ?self
+    {
+        return self::query()
+            ->forEncounter($patientId, $transactionId)
+            ->where('status', '!=', self::STATUS_CANCELLED)
+            ->whereNotNull('started_at')
+            ->orderByDesc('arrived_at')
+            ->orderByDesc('id')
+            ->first();
+    }
+
     public function isOpen(): bool
     {
         return in_array($this->status, self::OPEN_STATUSES, true);

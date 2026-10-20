@@ -22,7 +22,7 @@ class PatientRepository extends BaseRepository implements PatientRepositoryInter
     protected string $defaultSort = 'last_name';
 
     /** @var list<string> */
-    protected array $listWith = ['sector', 'latestCase', 'latestAssessment'];
+    protected array $listWith = ['sector', 'latestCase', 'latestAssessment', 'activeVisit'];
 
     /** @var list<string> */
     protected array $listWithCount = ['cases'];
