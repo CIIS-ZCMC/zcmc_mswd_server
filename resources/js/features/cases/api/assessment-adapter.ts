@@ -160,6 +160,8 @@ export function adaptAssessment(api: ApiAssessment): Assessment {
     uisSnapshot: adaptUisSnapshot(api.uis_snapshot),
     uisSnapshotAt: api.uis_snapshot_at ?? null,
     uisSnapshotBy: api.uis_snapshot_by ?? null,
+    socioeconomicProfileId: api.socioeconomic_profile_id ?? null,
+    socioeconomicImportedAt: api.socioeconomic_imported_at ?? null,
     interviewedAt: api.interviewed_at ?? null,
     interviewedBy: api.interviewed_by ?? null,
     createdAt: api.created_at,

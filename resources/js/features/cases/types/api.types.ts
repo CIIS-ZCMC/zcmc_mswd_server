@@ -121,6 +121,18 @@ export interface ApiPatientUisCase {
   date_opened: string
 }
 
+/**
+ * The patient's newest Socio-economic record against the one this sheet imported its
+ * family income and section III from. See docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md.
+ */
+export interface ApiPatientUisSocioeconomic {
+  latest_id: number | null
+  /** `YYYY-MM-DD`. */
+  latest_recorded_on: string | null
+  imported_id: number | null
+  newer_available: boolean
+}
+
 export interface ApiPatientUisInfo {
   has_assessment: boolean
   assessment_id: number | null
@@ -133,6 +145,7 @@ export interface ApiPatientUisInfo {
   household_size: number
   /** null when the case has no intake assessment. */
   expense_slots: ApiPatientUisExpenseSlots | null
+  socioeconomic?: ApiPatientUisSocioeconomic
   assessment: import("@/features/patients/types/api.types").ApiAssessment | null
 }
 

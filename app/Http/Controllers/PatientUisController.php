@@ -9,6 +9,7 @@ use App\Models\Patient;
 use App\Models\PatientGuarantee;
 use App\Models\UisPrintLog;
 use App\Services\UisReadinessService;
+use App\Services\UisSocioeconomicImporter;
 use App\Support\UisExpenseSlots;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
@@ -33,8 +34,15 @@ class PatientUisController extends Controller implements HasMiddleware
         return [new Middleware('permission:intake.view')];
     }
 
-    public function __invoke(Request $request, Patient $patient, UisReadinessService $readiness): JsonResponse
-    {
+    public function __invoke(
+        Request $request,
+        Patient $patient,
+        UisReadinessService $readiness,
+        UisSocioeconomicImporter $socioeconomic,
+    ): JsonResponse {
+        // The patient's newest socio-economic record, once: every row compares its own
+        // imported record against it. One query, not one per row.
+        $latestRecord = $socioeconomic->latestFor($patient);
         // Household size as the MSWD classification counts it (CalculateMswdClassificationAction):
         // the patient plus every family member. One query for the patient, not one per row.
         // This is today's household, used for a case with no intake yet; an intake
@@ -78,7 +86,7 @@ class PatientUisController extends Controller implements HasMiddleware
         $data = $rows
             ->sortByDesc(fn (array $row) => (string) ($row['case']?->date_opened ?? $row['intake']?->encounter_date ?? $row['intake']?->created_at))
             ->values()
-            ->map(function (array $row) use ($readiness, $hasFamily, $householdSize, $guarantees, $prints, $request) {
+            ->map(function (array $row) use ($readiness, $hasFamily, $householdSize, $guarantees, $prints, $request, $latestRecord) {
                 /** @var Assessment|null $intake */
                 ['intake' => $intake, 'case' => $case, 'transaction_id' => $transactionId] = $row;
 
@@ -117,6 +125,17 @@ class PatientUisController extends Controller implements HasMiddleware
                         'household_size' => $intake?->household_size ?? $householdSize,
                         // ANNEX B section III amounts, matched by the same code the PDF uses.
                         'expense_slots' => $intake === null ? null : UisExpenseSlots::slots($intake->expenses),
+                        // Where section III and the income come from: the patient's newest
+                        // record, and whether this sheet already took it. A worker who has
+                        // since recorded a newer one is offered a Refresh.
+                        'socioeconomic' => [
+                            'latest_id' => $latestRecord?->id,
+                            'latest_recorded_on' => $latestRecord?->recorded_on?->toDateString(),
+                            'imported_id' => $intake?->socioeconomic_profile_id,
+                            'newer_available' => $intake !== null
+                                && $latestRecord !== null
+                                && $latestRecord->id !== $intake->socioeconomic_profile_id,
+                        ],
                         'assessment' => $intake === null ? null : $this->intakePayload($intake, $request, $householdSize),
                     ],
                 ];

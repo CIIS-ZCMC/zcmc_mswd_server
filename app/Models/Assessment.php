@@ -74,6 +74,8 @@ class Assessment extends Model
         'total_family_income',
         'net_per_capita_income',
         'household_size',
+        'socioeconomic_profile_id',
+        'socioeconomic_imported_at',
         'housing_type',
         'utilities_access',
         'classification',
@@ -140,6 +142,7 @@ class Assessment extends Model
             'household_size' => 'integer',
             'uis_snapshot' => 'array',
             'uis_snapshot_at' => 'datetime',
+            'socioeconomic_imported_at' => 'datetime',
             'interviewed_at' => 'datetime',
             'problem_categories' => 'array',
             'light_source' => 'array',
@@ -229,6 +232,12 @@ class Assessment extends Model
     public function interviewedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'interviewed_by');
+    }
+
+    /** The patient socio-economic record this sheet's section III and income were imported from. */
+    public function socioeconomicProfile(): BelongsTo
+    {
+        return $this->belongsTo(PatientSocioeconomicProfile::class)->withTrashed();
     }
 
     /** Who last refreshed the frozen UIS copy. */

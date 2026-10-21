@@ -54,6 +54,8 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'household_size', type: 'integer', nullable: true, description: 'The household the per-capita income was divided by, frozen at intake.'),
         new OA\Property(property: 'uis_snapshot', ref: '#/components/schemas/UisSnapshot', nullable: true),
         new OA\Property(property: 'uis_snapshot_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'socioeconomic_profile_id', type: 'integer', nullable: true, description: 'The patient socio-economic record this sheet\'s family income and section III were imported from.'),
+        new OA\Property(property: 'socioeconomic_imported_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'uis_snapshot_by', type: 'string', nullable: true, description: 'Who last refreshed the frozen copy; present when loaded.'),
         new OA\Property(property: 'interviewed_at', type: 'string', format: 'date-time', nullable: true, description: 'When the intake interview happened; printed on the UIS.'),
         new OA\Property(property: 'interviewed_by', type: 'string', nullable: true, description: 'The worker who conducted it; signs the UIS. Present when loaded.'),

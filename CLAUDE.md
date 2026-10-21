@@ -72,6 +72,7 @@ Read-only view of HIS patients and their transactions (encounters), with guarant
 
 ### Socioeconomic
 Itemized living expenses and family income per patient, with history and trend.
+- The UIS reads the newest record (`UisSocioeconomicImporter`) for its family income and section III, at intake and on Refresh; this module never reads the UIS. See `docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md`.
 - Front: `features/socioeconomic`. Back: `PatientSocioeconomicService`, `SocioeconomicProfileService`, `Support/FamilyIncome`.
 
 ### Assessment & Intake (UIS)
@@ -82,7 +83,8 @@ Socio-economic classification of a patient for an encounter.
 - Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up).
 - The UIS is a **printable, not a stored record**; every print is logged (`uis_print_logs`).
 - But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. The on-screen sheet reads the same copy through `uisSheetData()` (`features/cases/lib/uis-sheet-data.ts`), which mirrors `UisSnapshotService::sheetData()`. See `docs/UIS_SNAPSHOT_PLAN.md`.
-- Front: `features/cases` (`NewIntakeAssessmentDialog`, UIS tab). Back: `AssessmentService`, `IntakeAssessmentService`, `UisReadinessService`, `UisSnapshotService`, `UnifiedIntakeSheetPdfService`, `UisPrintLogService`.
+- Family income, house tenure, light/water and the section III expense lines are imported from the patient's newest Socioeconomic record when an intake is taken (what the request supplies wins) and on Refresh (which overwrites; a patient with no record, or a record with no expense items, leaves the assessment's own alone). `assessments.socioeconomic_profile_id` records which record, so the sheet can tell a newer one exists.
+- Front: `features/cases` (`NewIntakeAssessmentDialog`, UIS tab). Back: `AssessmentService`, `IntakeAssessmentService`, `UisReadinessService`, `UisSnapshotService`, `UisSocioeconomicImporter`, `UnifiedIntakeSheetPdfService`, `UisPrintLogService`.
 
 ### Cases & Social Case (SCSR)
 A case is opened per HIS encounter (`cases.transaction_id`), with `created_by`, `assigned_user_id` and a manual card colour. Extra encounters link through `case_hospital_transactions` with a decision-time snapshot.

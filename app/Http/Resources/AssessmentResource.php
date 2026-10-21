@@ -65,6 +65,10 @@ class AssessmentResource extends JsonResource
             // docs/UIS_SNAPSHOT_PLAN.md.
             'uis_snapshot' => $this->uis_snapshot,
             'uis_snapshot_at' => $this->uis_snapshot_at,
+            // The patient's socio-economic record the family income and section III were
+            // imported from, and when. See docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md.
+            'socioeconomic_profile_id' => $this->socioeconomic_profile_id,
+            'socioeconomic_imported_at' => $this->socioeconomic_imported_at,
             'uis_snapshot_by' => $this->whenLoaded('uisSnapshotBy', fn () => $this->uisSnapshotBy?->name),
             'interviewed_at' => $this->interviewed_at,
             'interviewed_by' => $this->whenLoaded('interviewedBy', fn () => $this->interviewedBy?->name),

@@ -139,6 +139,9 @@ export interface Assessment {
   uisSnapshot: UisSnapshot | null
   uisSnapshotAt: string | null
   uisSnapshotBy: string | null
+  /** The Socio-economic record the family income and section III were imported from. */
+  socioeconomicProfileId: number | null
+  socioeconomicImportedAt: string | null
   /** When the intake interview happened, and who conducted it; both print on the UIS. */
   interviewedAt: string | null
   interviewedBy: string | null
