@@ -79,6 +79,12 @@ export function adaptPatientUisRow(api: ApiPatientUisRow): PatientUisRow {
             others: slotAmount(api.uis.expense_slots.others),
           }
         : null,
+      socioeconomic: {
+        latestId: api.uis.socioeconomic?.latest_id ?? null,
+        latestRecordedOn: api.uis.socioeconomic?.latest_recorded_on ?? null,
+        importedId: api.uis.socioeconomic?.imported_id ?? null,
+        newerAvailable: Boolean(api.uis.socioeconomic?.newer_available),
+      },
       assessment: api.uis.assessment ? adaptAssessment(api.uis.assessment) : null,
     },
   }

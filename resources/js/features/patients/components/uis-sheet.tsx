@@ -67,6 +67,7 @@ import { CaseGuarantorsTab } from "@/features/cases/components/case-guarantors-t
 import type { PatientRecord } from "@/features/patients/types/patient.types"
 import type { PatientUisRow } from "@/features/cases/types/uis.types"
 import { ApiError } from "@/lib/api-client"
+import { useSearchParams } from "@/lib/inertia-router-hooks"
 import {
   AlertTriangle,
   CheckCircle2,
@@ -135,6 +136,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
   const caseId = row?.case?.id ?? 0
   const deleteAssessmentMutation = useDeleteAssessment(caseId)
   const refreshSnapshotMutation = useRefreshUisSnapshot(caseId)
+  const [, setSearchParams] = useSearchParams()
   const { data: modeOptions = [] } = useModeOfAssistanceOptions(false)
   const { data: fundSourceOptions = [] } = useFundSourceOptions(false)
 
@@ -188,6 +190,23 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
     }
   }
 
+  // Closes the sheet and opens the patient's Socio-economic tab, where the List of
+  // Expenses is recorded. One navigation: the router hook derives the next URL from a
+  // snapshot of the current one, so two calls in a row would overwrite each other.
+  // The UIS tab closes the sheet when `uis` leaves the URL.
+  const handleOpenSocioeconomicTab = () => {
+    setSearchParams(
+      (prev) => {
+        const next = new URLSearchParams(prev)
+        next.delete("uis")
+        next.delete("case")
+        next.set("tab", "socioeconomic")
+        return next
+      },
+      { replace: true }
+    )
+  }
+
   const handleRefreshSnapshot = async () => {
     if (!uis.assessmentId) return
     setRefreshError(null)
@@ -231,6 +250,25 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
         hour: "numeric",
         minute: "2-digit",
       })
+    : null
+
+  // Where family income and section III come from: the patient's Socio-economic
+  // record, imported when the intake is taken and on Refresh. See
+  // docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md.
+  const socioeconomic = uis.socioeconomic
+  const hasSocioeconomicRecord = socioeconomic.latestId !== null
+  const importedSocioeconomic = assessment?.socioeconomicProfileId != null
+  const importedOn = assessment?.socioeconomicImportedAt
+    ? new Date(assessment.socioeconomicImportedAt).toLocaleDateString(
+        undefined,
+        { month: "short", day: "numeric", year: "numeric" }
+      )
+    : null
+  const latestRecordedOn = socioeconomic.latestRecordedOn
+    ? new Date(`${socioeconomic.latestRecordedOn}T00:00:00`).toLocaleDateString(
+        undefined,
+        { month: "short", day: "numeric", year: "numeric" }
+      )
     : null
 
   const informantEffectiveAddress =
@@ -577,6 +615,36 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                 </div>
               )}
 
+              {/* Where the family income and section III come from: the patient's
+                  Socio-economic record, imported at intake and on Refresh. */}
+              {assessment && !uis.hasSocialCase && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Wallet className="size-3.5 shrink-0" />
+                    <span>
+                      {!hasSocioeconomicRecord
+                        ? "No Socio-economic record yet. Record the patient's List of Expenses on that tab, then refresh this sheet to bring in the family income and expenses."
+                        : socioeconomic.newerAvailable
+                          ? importedSocioeconomic
+                            ? `A newer Socio-economic record${latestRecordedOn ? ` (${latestRecordedOn})` : ""} is available. Refresh from the patient record to bring in its family income and expenses.`
+                            : `The patient's Socio-economic record${latestRecordedOn ? ` of ${latestRecordedOn}` : ""} has not been imported into this sheet. Refresh from the patient record to bring in the family income and expenses.`
+                          : `Family income and section III were imported from the patient's Socio-economic record${importedOn ? ` on ${importedOn}` : ""}.`}
+                    </span>
+                  </span>
+                  {!hasSocioeconomicRecord && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 shrink-0 gap-1.5 text-xs font-semibold"
+                      onClick={handleOpenSocioeconomicTab}
+                    >
+                      <Wallet className="size-3.5" />
+                      Open Socio-economic tab
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {/* Section I: Identifying Information */}
               <Card className="border shadow-2xs">
                 <CardHeader className="border-b bg-muted/30 p-3.5">
@@ -879,6 +947,14 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         </span>
                       )}
                     </div>
+
+                    {totalMonthlyExpenses === null && (
+                      <p className="rounded-md border border-dashed bg-muted/20 px-3 py-2 text-xs text-muted-foreground">
+                        {hasSocioeconomicRecord
+                          ? "No expenses are on this sheet. The patient's Socio-economic record has expenses — use Refresh from patient record to bring them in."
+                          : "No expenses are on this sheet. Record the patient's List of Expenses on the Socio-economic tab, then refresh the sheet."}
+                      </p>
+                    )}
 
                     <div className="overflow-hidden rounded-lg border">
                       <Table className="text-xs">
@@ -1364,6 +1440,11 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                   replaced with the patient&apos;s identity and family
                   composition as they stand now, and the MSWD classification
                   will be re-derived against the new household size.
+                </p>
+                <p>
+                  {hasSocioeconomicRecord
+                    ? `The family income, house tenure, light and water sources and the expense lines of section III will also be replaced with the patient's Socio-economic record${latestRecordedOn ? ` of ${latestRecordedOn}` : ""}. Anything entered on this sheet for those will be overwritten.`
+                    : "The patient has no Socio-economic record yet, so the family income and section III stay as they are."}
                 </p>
                 <p>
                   Do this when the patient&apos;s details were still being

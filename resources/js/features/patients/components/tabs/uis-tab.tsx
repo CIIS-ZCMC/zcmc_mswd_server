@@ -161,11 +161,15 @@ export const UisTab: React.FC<UisTabProps> = ({
   const [currentPage, setCurrentPage] = useState(1)
   const [pageSize, setPageSize] = useState(10)
 
-  // Keep modal open/close synchronized if searchParams change externally
+  // Keep modal open/close synchronized if searchParams change externally. Closing
+  // matters for a link out of the sheet (to the Socio-economic tab) that takes
+  // `uis` out of the URL: the dialog must not stay open over the other tab.
   useEffect(() => {
     if (uisParam) {
       setSelectedKey(uisParam)
       setIsModalOpen(true)
+    } else {
+      setIsModalOpen(false)
     }
   }, [uisParam])
 

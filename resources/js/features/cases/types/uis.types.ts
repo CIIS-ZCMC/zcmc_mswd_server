@@ -35,6 +35,19 @@ export interface PatientUisClassification {
   hasOverride: boolean
 }
 
+/**
+ * The patient's newest Socio-economic record against the one this sheet imported its
+ * family income and section III from. `newerAvailable` is true when the patient has a
+ * record the sheet has not taken.
+ */
+export interface PatientUisSocioeconomic {
+  latestId: number | null
+  /** `YYYY-MM-DD`. */
+  latestRecordedOn: string | null
+  importedId: number | null
+  newerAvailable: boolean
+}
+
 export interface PatientUisInfo {
   hasAssessment: boolean
   assessmentId: number | null
@@ -47,6 +60,7 @@ export interface PatientUisInfo {
   householdSize: number
   /** null when the case has no intake assessment. */
   expenseSlots: PatientUisExpenseSlots | null
+  socioeconomic: PatientUisSocioeconomic
   assessment: Assessment | null
 }
 

@@ -134,7 +134,13 @@ Phases 1–5 are done. The `socioeconomic` block on each `/patients/{id}/uis` ro
 `{latest_id, latest_recorded_on, imported_id, newer_available}`; `newer_available` is true
 when the patient has a record and the sheet has not imported that one.
 
-### Phase 6 — Frontend (not started)
+### Phase 6 — Frontend (done)
+
+Built as planned, plus one thing the plan missed: the UIS tab's `?uis=` sync only ever
+opened the sheet, so a link out of it would have left the dialog hanging over the other tab.
+It now closes when `uis` leaves the URL. The "Open Socio-economic tab" link is a single
+navigation, because the router hook derives the next URL from a snapshot of the current one
+and two calls in a row would overwrite each other.
 
 - `uis.types.ts`, `assessment.types.ts` and the adapters gain the provenance and the
   `socioeconomic` block.

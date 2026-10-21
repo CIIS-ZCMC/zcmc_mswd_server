@@ -72,7 +72,7 @@ Read-only view of HIS patients and their transactions (encounters), with guarant
 
 ### Socioeconomic
 Itemized living expenses and family income per patient, with history and trend.
-- The UIS reads the newest record (`UisSocioeconomicImporter`) for its family income and section III, at intake and on Refresh; this module never reads the UIS. **In active development — see `docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md`.**
+- The UIS reads the newest record (`UisSocioeconomicImporter`) for its family income and section III, at intake and on Refresh; this module never reads the UIS. See `docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md`.
 - Front: `features/socioeconomic`. Back: `PatientSocioeconomicService`, `SocioeconomicProfileService`, `Support/FamilyIncome`.
 
 ### Assessment & Intake (UIS)

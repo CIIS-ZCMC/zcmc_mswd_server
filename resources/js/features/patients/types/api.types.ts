@@ -229,6 +229,9 @@ export interface ApiAssessment {
   /** §I and §II frozen at intake; see docs/UIS_SNAPSHOT_PLAN.md. */
   uis_snapshot?: ApiUisSnapshot | null
   uis_snapshot_at?: string | null
+  /** The Socio-economic record the family income and section III were imported from. */
+  socioeconomic_profile_id?: number | null
+  socioeconomic_imported_at?: string | null
   uis_snapshot_by?: string | null
   interviewed_at?: string | null
   interviewed_by?: string | null
