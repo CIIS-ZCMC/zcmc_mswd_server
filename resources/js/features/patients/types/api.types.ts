@@ -119,6 +119,14 @@ export interface ApiUserLite {
   name: string
 }
 
+/** The frozen UIS copy, as the server stores it (`assessments.uis_snapshot`). */
+export interface ApiUisSnapshot {
+  patient?: Record<string, unknown> | null
+  family_members?: Record<string, unknown>[] | null
+  household_size?: number | null
+  labels?: { recommendation_mode?: string | null; fund_source?: string | null } | null
+}
+
 export interface ApiCase {
   id: number
   case_code: string
@@ -218,6 +226,12 @@ export interface ApiAssessment {
   social_functioning: string | null
   assessment_notes: string | null
   intervention_plan: string | null
+  /** §I and §II frozen at intake; see docs/UIS_SNAPSHOT_PLAN.md. */
+  uis_snapshot?: ApiUisSnapshot | null
+  uis_snapshot_at?: string | null
+  uis_snapshot_by?: string | null
+  interviewed_at?: string | null
+  interviewed_by?: string | null
   social_case_status?: string | null
   expenses?: ApiAssessmentExpense[]
   parent_assessment?: ApiAssessment | null

@@ -31,6 +31,60 @@ export interface AssessmentExpense {
   amount: number
 }
 
+/** UIS §I, as the intake froze it. The age is as of the interview, so it never drifts. */
+export interface UisSnapshotPatient {
+  fullName: string | null
+  firstName: string | null
+  middleName: string | null
+  lastName: string | null
+  extensionName: string | null
+  sex: string | null
+  birthdate: string | null
+  age: number | null
+  placeOfBirth: string | null
+  civilStatus: string | null
+  religion: string | null
+  nationality: string | null
+  citizenship: string | null
+  educationalAttainment: string | null
+  occupation: string | null
+  monthlyIncome: number | null
+  contactNumber: string | null
+  composedAddress: string | null
+  permanentAddress: string | null
+  presentAddress: string | null
+  hospitalId: string | null
+  mswdId: string | null
+  philhealthNo: string | null
+}
+
+/** One UIS §II row, as the intake froze it. */
+export interface UisSnapshotFamilyMember {
+  name: string | null
+  relationship: string | null
+  birthdate: string | null
+  sex: string | null
+  civilStatus: string | null
+  age: number | null
+  educationalAttainment: string | null
+  occupation: string | null
+  monthlyIncome: number | null
+}
+
+/**
+ * Sections I and II of the sheet as the intake froze them, so editing the patient
+ * afterwards cannot rewrite a sheet already issued. §V is not here: it stays live.
+ * Null on a row taken before snapshots existed — the sheet then falls back to the
+ * live patient, as the PDF does. See docs/UIS_SNAPSHOT_PLAN.md.
+ */
+export interface UisSnapshot {
+  patient: UisSnapshotPatient
+  familyMembers: UisSnapshotFamilyMember[]
+  householdSize: number
+  /** The Library names the sheet printed, kept so a renamed entry does not change it. */
+  labels: { recommendationMode: string | null; fundSource: string | null }
+}
+
 export interface Assessment {
   id: number
   /** null for an intake taken before any case was opened. */
@@ -81,6 +135,13 @@ export interface Assessment {
   interventionPlan: string | null
   socialCaseStatus: string | null
   parentAssessment?: Assessment | null
+  /** §I and §II frozen at intake; null on a row that predates snapshots. */
+  uisSnapshot: UisSnapshot | null
+  uisSnapshotAt: string | null
+  uisSnapshotBy: string | null
+  /** When the intake interview happened, and who conducted it; both print on the UIS. */
+  interviewedAt: string | null
+  interviewedBy: string | null
   createdAt: string
   updatedAt: string
 }

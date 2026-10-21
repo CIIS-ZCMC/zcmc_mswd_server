@@ -87,6 +87,18 @@ export async function updateAssessment(
   return adaptAssessment(res.data)
 }
 
+/**
+ * POST /assessments/{assessment}/uis-snapshot/refresh — replaces the sheet's frozen
+ * §I/§II copy with the patient's current data, re-deriving the classification against
+ * the new household size.
+ */
+export async function refreshUisSnapshot(assessmentId: number): Promise<Assessment> {
+  const res = await apiClient.post<ApiEnvelope<ApiAssessment>>(
+    `/assessments/${assessmentId}/uis-snapshot/refresh`
+  )
+  return adaptAssessment(res.data)
+}
+
 /** GET /assessments/{assessment}/expenses — lists expenses for an assessment */
 export async function listAssessmentExpenses(assessmentId: number): Promise<AssessmentExpense[]> {
   const res = await apiClient.get<ApiEnvelope<ApiAssessmentExpense[]> | ApiAssessmentExpense[]>(

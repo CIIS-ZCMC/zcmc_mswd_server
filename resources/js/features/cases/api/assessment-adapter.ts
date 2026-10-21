@@ -1,10 +1,79 @@
-import type { ApiAssessment, ApiMswdClassificationMatrix } from "@/features/patients/types/api.types"
+import type { ApiAssessment, ApiMswdClassificationMatrix, ApiUisSnapshot } from "@/features/patients/types/api.types"
 import type {
   Assessment,
   LegacyClassification,
   MswdClassificationCode,
   MswdClassificationMatrix,
+  UisSnapshot,
+  UisSnapshotFamilyMember,
+  UisSnapshotPatient,
 } from "../types/assessment.types"
+
+/** A snapshot value as text; blank and missing both read as "not on file". */
+function snapshotText(value: unknown): string | null {
+  return value === null || value === undefined || value === "" ? null : String(value)
+}
+
+function snapshotNumber(value: unknown): number | null {
+  return value === null || value === undefined || value === "" ? null : Number(value)
+}
+
+function adaptSnapshotPatient(raw: Record<string, unknown>): UisSnapshotPatient {
+  return {
+    fullName: snapshotText(raw.full_name),
+    firstName: snapshotText(raw.first_name),
+    middleName: snapshotText(raw.middle_name),
+    lastName: snapshotText(raw.last_name),
+    extensionName: snapshotText(raw.extension_name),
+    sex: snapshotText(raw.sex),
+    birthdate: snapshotText(raw.birthdate),
+    age: snapshotNumber(raw.age),
+    placeOfBirth: snapshotText(raw.place_of_birth),
+    civilStatus: snapshotText(raw.civil_status),
+    religion: snapshotText(raw.religion),
+    nationality: snapshotText(raw.nationality),
+    citizenship: snapshotText(raw.citizenship),
+    educationalAttainment: snapshotText(raw.educational_attainment),
+    occupation: snapshotText(raw.occupation),
+    monthlyIncome: snapshotNumber(raw.monthly_income),
+    contactNumber: snapshotText(raw.contact_number),
+    composedAddress: snapshotText(raw.composed_address),
+    permanentAddress: snapshotText(raw.permanent_address),
+    presentAddress: snapshotText(raw.present_address),
+    hospitalId: snapshotText(raw.hospital_id),
+    mswdId: snapshotText(raw.mswd_id),
+    philhealthNo: snapshotText(raw.philhealth_no),
+  }
+}
+
+function adaptSnapshotFamilyMember(raw: Record<string, unknown>): UisSnapshotFamilyMember {
+  return {
+    name: snapshotText(raw.name),
+    relationship: snapshotText(raw.relationship),
+    birthdate: snapshotText(raw.birthdate),
+    sex: snapshotText(raw.sex),
+    civilStatus: snapshotText(raw.civil_status),
+    age: snapshotNumber(raw.age),
+    educationalAttainment: snapshotText(raw.educational_attainment),
+    occupation: snapshotText(raw.occupation),
+    monthlyIncome: snapshotNumber(raw.monthly_income),
+  }
+}
+
+/** The frozen §I/§II copy. Null for a row taken before snapshots existed. */
+export function adaptUisSnapshot(api: ApiUisSnapshot | null | undefined): UisSnapshot | null {
+  if (!api || !api.patient) return null
+
+  return {
+    patient: adaptSnapshotPatient(api.patient),
+    familyMembers: (api.family_members ?? []).map(adaptSnapshotFamilyMember),
+    householdSize: Number(api.household_size || 1),
+    labels: {
+      recommendationMode: snapshotText(api.labels?.recommendation_mode),
+      fundSource: snapshotText(api.labels?.fund_source),
+    },
+  }
+}
 
 export function adaptMswdClassificationMatrix(
   api: ApiMswdClassificationMatrix
@@ -88,6 +157,11 @@ export function adaptAssessment(api: ApiAssessment): Assessment {
     interventionPlan: api.intervention_plan ?? null,
     socialCaseStatus: api.social_case_status ?? null,
     parentAssessment: api.parent_assessment ? adaptAssessment(api.parent_assessment) : null,
+    uisSnapshot: adaptUisSnapshot(api.uis_snapshot),
+    uisSnapshotAt: api.uis_snapshot_at ?? null,
+    uisSnapshotBy: api.uis_snapshot_by ?? null,
+    interviewedAt: api.interviewed_at ?? null,
+    interviewedBy: api.interviewed_by ?? null,
     createdAt: api.created_at,
     updatedAt: api.updated_at,
   }
