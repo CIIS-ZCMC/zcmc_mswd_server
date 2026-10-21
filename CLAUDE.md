@@ -63,7 +63,8 @@ Session login, roles and permissions shared as Inertia props (`auth.user`, `auth
 MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, socioeconomic, hospital encounters, UIS, social case, documents, history).
 - Patients are created by importing from HIS, keyed on `hospital_id` (`POST /hospital-patients/{id}/import`: 201 created, 200 refreshed).
 - Patient merge and patient IDs are supported.
-- Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`.
+- Documents tab: PDF/JPG/PNG uploads (max 10 MB) per patient, typed from the Library Document Types list, filed under a case optionally. Files are stored on the default disk (RustFS in dev, bucket `mss`; the disk is kept per row) and read **only through the server** (`GET /patients/{id}/documents/{doc}/file`, inline or `?download=1`), never a storage path. Delete is a soft delete and keeps the file. Finalized SCSR PDFs also appear here.
+- Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`, `DocumentService`.
 
 ### Hospital (HIS Encounters)
 Read-only view of HIS patients and their transactions (encounters), with guarantors and diagnosis. The encounter dialog hosts the printables and the Queue & TAT tab.
@@ -122,8 +123,8 @@ Social case reports and the TAT report (CSV/PDF), plus patient assistance report
 - Front: `features/reports`. Back: `SocialCaseReportService`, `TurnaroundReportService`, `PatientAssistanceReportService`.
 
 ### Library
-Reference lists managed in-app (`/library`, `library.manage`) and in Filament: guarantors, types of assistance, modes of assistance, fund sources, signatories printed on forms, TAT targets.
-- Front: `features/library`. Back: `AssistantTypeService`, `GuarantorService`, models `FundSource`, `ModeOfAssistance`, `Signatory`, `TurnaroundTarget`.
+Reference lists managed in-app (`/library`, `library.manage`) and in Filament: guarantors, types of assistance, modes of assistance, fund sources, document types (the Docs tab dropdown), signatories printed on forms, TAT targets.
+- Front: `features/library`. Back: `AssistantTypeService`, `GuarantorService`, models `FundSource`, `ModeOfAssistance`, `DocumentType`, `Signatory`, `TurnaroundTarget`.
 
 ### Audit
 System-wide activity log viewer (`/audit`) and per-record history popovers.

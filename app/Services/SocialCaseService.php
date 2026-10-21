@@ -8,7 +8,9 @@ use App\Models\Assessment;
 use App\Models\CaseActivity;
 use App\Models\CaseModel;
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\User;
+use Database\Seeders\DocumentTypeSeeder;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Support\Facades\Storage;
 use Illuminate\Validation\ValidationException;
@@ -212,17 +214,26 @@ class SocialCaseService
     {
         $filename = $this->pdf->filename($scsr);
         $path = "social-case-studies/{$filename}";
+        $disk = config('filesystems.default');
+        $output = $this->pdf->render($scsr)->output();
 
-        Storage::put($path, $this->pdf->render($scsr)->output());
+        Storage::disk($disk)->put($path, $output);
+
+        // `document_type` keeps the code the report relation matches on; the Library
+        // type is what the patient's Docs tab shows.
+        $type = DocumentType::withTrashed()->firstOrCreate(['name' => DocumentTypeSeeder::SOCIAL_CASE_STUDY]);
 
         return Document::create([
             'case_id' => $scsr->case_id,
             'patient_id' => $scsr->case->patient_id,
             'uploaded_by' => $user->id,
+            'document_type_id' => $type->id,
             'document_type' => 'social_case_study',
             'file_name' => $filename,
             'file_path' => $path,
             'file_type' => 'application/pdf',
+            'file_size' => strlen($output),
+            'disk' => $disk,
         ]);
     }
 

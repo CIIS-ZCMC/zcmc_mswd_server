@@ -100,32 +100,33 @@ use OpenApi\Attributes as OA;
 )]
 #[OA\Schema(
     schema: 'Document',
+    description: 'An uploaded file. Read it through `file_url`; the storage path is not exposed.',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
         new OA\Property(property: 'case_id', type: 'integer', nullable: true),
-        new OA\Property(property: 'patient_id', type: 'integer', nullable: true),
+        new OA\Property(property: 'patient_id', type: 'integer'),
         new OA\Property(property: 'intervention_id', type: 'integer', nullable: true),
         new OA\Property(property: 'uploaded_by', type: 'integer', nullable: true),
-        new OA\Property(property: 'document_type', type: 'string'),
+        new OA\Property(property: 'uploaded_by_name', type: 'string', nullable: true, description: 'Present when the uploader is loaded.'),
+        new OA\Property(property: 'case_code', type: 'string', nullable: true, description: 'Present when the case is loaded.'),
+        new OA\Property(property: 'document_type_id', type: 'integer', nullable: true),
+        new OA\Property(property: 'document_type', type: 'string', description: 'The type name at upload time.'),
         new OA\Property(property: 'file_name', type: 'string'),
-        new OA\Property(property: 'file_path', type: 'string'),
         new OA\Property(property: 'file_type', type: 'string'),
+        new OA\Property(property: 'file_size', type: 'integer', nullable: true, description: 'Bytes; null on uploads from before sizes were kept.'),
+        new OA\Property(property: 'file_url', type: 'string', description: 'GET to view; add `?download=1` to save.'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
     ],
 )]
 #[OA\Schema(
     schema: 'DocumentRequest',
-    required: ['case_id', 'patient_id', 'uploaded_by', 'document_type', 'file_name', 'file_path', 'file_type'],
+    description: 'Multipart upload.',
+    required: ['document_type_id', 'file'],
     properties: [
-        new OA\Property(property: 'case_id', type: 'integer'),
-        new OA\Property(property: 'patient_id', type: 'integer'),
-        new OA\Property(property: 'intervention_id', type: 'integer', nullable: true),
-        new OA\Property(property: 'uploaded_by', type: 'integer'),
-        new OA\Property(property: 'document_type', type: 'string', maxLength: 255),
-        new OA\Property(property: 'file_name', type: 'string', maxLength: 255),
-        new OA\Property(property: 'file_path', type: 'string', maxLength: 255),
-        new OA\Property(property: 'file_type', type: 'string', maxLength: 255),
+        new OA\Property(property: 'document_type_id', type: 'integer', description: 'An active Library document type.'),
+        new OA\Property(property: 'case_id', type: 'integer', nullable: true, description: 'One of the patient\'s cases.'),
+        new OA\Property(property: 'file', type: 'string', format: 'binary', description: 'pdf, jpg, jpeg or png; max 10 MB.'),
     ],
 )]
 #[OA\Schema(

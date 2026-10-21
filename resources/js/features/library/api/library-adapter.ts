@@ -1,7 +1,9 @@
 import type {
   ApiAssessmentLookup,
   ApiAssistantType,
+  ApiDocumentType,
   ApiGuarantor,
+  ApiSaveDocumentTypePayload,
   ApiSaveSignatoryPayload,
   ApiSignatory,
   ApiSaveAssessmentLookupPayload,
@@ -9,10 +11,12 @@ import type {
   ApiSaveGuarantorPayload,
   AssessmentLookup,
   AssistantType,
+  DocumentType,
   Guarantor,
   LookupOption,
   SaveAssessmentLookupInput,
   SaveAssistantTypeInput,
+  SaveDocumentTypeInput,
   SaveGuarantorInput,
   SaveSignatoryInput,
   SaveTurnaroundTargetInput,
@@ -88,6 +92,37 @@ export function toApiSaveAssistantTypePayload(
     category: input.category,
     description: input.description?.trim() ? input.description.trim() : null,
     is_active: input.isActive ?? true,
+  }
+}
+
+export function toDocumentType(raw: ApiDocumentType): DocumentType {
+  return {
+    id: raw.id,
+    name: raw.name ?? "",
+    isActive: Boolean(raw.is_active),
+    sortOrder: Number(raw.sort_order ?? 0),
+    usageCount: Number(raw.usage_count ?? 0),
+    createdAt: raw.created_at,
+    updatedAt: raw.updated_at,
+  }
+}
+
+export function toApiSaveDocumentTypePayload(
+  input: SaveDocumentTypeInput
+): ApiSaveDocumentTypePayload {
+  return {
+    name: input.name.trim(),
+    is_active: input.isActive ?? true,
+    sort_order: input.sortOrder ?? 0,
+  }
+}
+
+export function toDocumentTypeLookupOption(item: DocumentType): LookupOption {
+  return {
+    id: item.id,
+    value: String(item.id),
+    label: item.name,
+    isActive: item.isActive,
   }
 }
 

@@ -1,16 +1,25 @@
 /**
- * Backend `documents.document_type` is a free string (no enum), and there is
- * no verification-status or file-size column on the Document model at all —
- * both typed as `string` rather than a fixed union the backend can't back.
+ * A file uploaded for a patient. `type` is the Library document type's name at
+ * upload time; the case is optional. The file itself is read through the server
+ * (never a storage path), so a document carries only its details here.
  */
-export type DocumentCategory = string
-export type DocumentStatus = string
-
 export interface DocumentItem {
-  id: string
-  title: string
-  category: DocumentCategory
-  uploadDate: string
-  status: DocumentStatus
-  fileSize: string
+  id: number
+  typeId: number | null
+  type: string
+  fileName: string
+  fileType: string
+  /** Bytes; null on uploads from before sizes were kept. */
+  fileSize: number | null
+  caseId: number | null
+  caseCode: string | null
+  uploadedByName: string | null
+  uploadedAt: string
+}
+
+/** What the upload dialog collects. */
+export interface UploadDocumentInput {
+  file: File
+  documentTypeId: number
+  caseId?: number | null
 }

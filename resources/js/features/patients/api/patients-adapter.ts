@@ -33,7 +33,6 @@ import type {
 } from "../types/api.types"
 
 const NOT_ON_FILE = "Not on file"
-const NOT_TRACKED = "Not tracked"
 
 export interface PatientDetailExtras {
   latestCase?: ApiCase | null
@@ -161,16 +160,32 @@ function toOpenCases(cases: ApiCase[] | undefined): OpenCase[] {
     .sort((a, b) => (b.dateOpened ?? "").localeCompare(a.dateOpened ?? "") || b.id - a.id)
 }
 
-function toDocumentItem(raw: ApiDocument): DocumentItem {
+export function toDocumentItem(raw: ApiDocument): DocumentItem {
   return {
-    id: String(raw.id),
-    title: raw.file_name,
-    category: raw.document_type,
-    uploadDate: raw.created_at,
-    // No verification workflow or size tracking on the Document model.
-    status: NOT_TRACKED,
-    fileSize: "—",
+    id: raw.id,
+    typeId: raw.document_type_id ?? null,
+    type: raw.document_type,
+    fileName: raw.file_name,
+    fileType: raw.file_type,
+    fileSize: raw.file_size ?? null,
+    caseId: raw.case_id ?? null,
+    caseCode: raw.case_code ?? null,
+    uploadedByName: raw.uploaded_by_name ?? null,
+    uploadedAt: raw.created_at,
   }
+}
+
+/** Every case the patient has, for pickers that may name a closed one too. */
+function toCaseOptions(cases: ApiCase[] | undefined): OpenCase[] {
+  return (cases ?? [])
+    .map((c) => ({
+      id: c.id,
+      caseCode: c.case_code,
+      status: c.status,
+      admissionType: c.admission_type,
+      dateOpened: c.date_opened,
+    }))
+    .sort((a, b) => (b.dateOpened ?? "").localeCompare(a.dateOpened ?? "") || b.id - a.id)
 }
 
 /** `monthly_income` → "Monthly income". No server-side label map exists yet. */
@@ -314,6 +329,7 @@ export function toPatientListRecord(raw: ApiPatient): PatientRecord {
     familyMembers: (raw.family_members ?? []).map(toFamilyMember),
     watchers: (raw.watchers ?? []).map(toWatcher),
     openCases: toOpenCases(raw.cases),
+    allCases: toCaseOptions(raw.cases),
     assignedStaff: buildAssignedStaff(latestCase),
     caseStudy: {
       caseNumber: latestCase?.case_code ?? "No active case",

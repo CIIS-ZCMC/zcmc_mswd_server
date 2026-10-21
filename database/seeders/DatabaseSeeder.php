@@ -20,6 +20,7 @@ class DatabaseSeeder extends Seeder
         $this->call(GuarantorSeeder::class);
         $this->call(ModeOfAssistanceSeeder::class);
         $this->call(FundSourceSeeder::class);
+        $this->call(DocumentTypeSeeder::class);
         $this->call(AssistantTypeSeeder::class);
         $this->call(SignatorySeeder::class);
         $this->call(TurnaroundTargetSeeder::class);

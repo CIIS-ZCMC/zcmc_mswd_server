@@ -3,6 +3,8 @@
 use App\DTOs\CaseModelDto;
 use App\Models\Assessment;
 use App\Models\CaseModel;
+use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\InterventionType;
 use App\Models\Patient;
 use App\Models\Sector;
@@ -103,12 +105,13 @@ it('uploads and lists a case document', function () {
     $case = caseForRecords($worker, $this->patient);
 
     $doc = $this->postJson("/api/cases/{$case->id}/documents", [
-        'document_type' => 'medical',
+        'document_type_id' => DocumentType::create(['name' => 'Medical Abstract'])->id,
         'file' => UploadedFile::fake()->create('abstract.pdf', 20, 'application/pdf'),
     ])->assertCreated()->json('data');
 
-    Storage::assertExists($doc['file_path']);
-    expect($doc['patient_id'])->toBe($this->patient->id);
+    Storage::assertExists(Document::findOrFail($doc['id'])->file_path);
+    expect($doc['patient_id'])->toBe($this->patient->id)
+        ->and($doc['document_type'])->toBe('Medical Abstract');
     $this->getJson("/api/cases/{$case->id}/documents")->assertOk()->assertJsonCount(1, 'data');
     $this->deleteJson("/api/cases/{$case->id}/documents/{$doc['id']}")->assertNoContent();
 });

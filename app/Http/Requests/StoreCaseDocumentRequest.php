@@ -3,6 +3,7 @@
 namespace App\Http\Requests;
 
 use Illuminate\Foundation\Http\FormRequest;
+use Illuminate\Validation\Rule;
 
 class StoreCaseDocumentRequest extends FormRequest
 {
@@ -19,8 +20,12 @@ class StoreCaseDocumentRequest extends FormRequest
     public function rules(): array
     {
         return [
-            'document_type' => ['required', 'string', 'max:255'],
-            'file' => ['required', 'file', 'max:10240'],
+            'document_type_id' => [
+                'required',
+                'integer',
+                Rule::exists('document_types', 'id')->where('is_active', true)->whereNull('deleted_at'),
+            ],
+            'file' => ['required', 'file', 'mimes:pdf,jpg,jpeg,png', 'max:10240'],
         ];
     }
 }

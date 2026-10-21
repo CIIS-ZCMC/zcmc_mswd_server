@@ -2,15 +2,18 @@ import { apiClient } from "@/lib/api-client"
 import type {
   ApiAssessmentLookup,
   ApiAssistantType,
+  ApiDocumentType,
   ApiGuarantor,
   ApiSignatory,
   ApiTurnaroundTarget,
   AssessmentLookup,
   AssistantType,
+  DocumentType,
   Guarantor,
   LookupOption,
   SaveAssessmentLookupInput,
   SaveAssistantTypeInput,
+  SaveDocumentTypeInput,
   SaveGuarantorInput,
   SaveSignatoryInput,
   SaveTurnaroundTargetInput,
@@ -20,12 +23,15 @@ import type {
 import {
   toApiSaveAssessmentLookupPayload,
   toApiSaveAssistantTypePayload,
+  toApiSaveDocumentTypePayload,
   toApiSaveGuarantorPayload,
   toApiSaveSignatoryPayload,
   toApiSaveTurnaroundTargetPayload,
   toAssessmentLookup,
   toAssistantType,
   toAssistantTypeLookupOption,
+  toDocumentType,
+  toDocumentTypeLookupOption,
   toGuarantor,
   toLookupOption,
   toSignatory,
@@ -182,6 +188,54 @@ export async function getFundSourceOptions(
 ): Promise<LookupOption[]> {
   const items = await getFundSources(activeOnly)
   return items.map(toLookupOption)
+}
+
+/**
+ * Document Types API (/api/document-types)
+ */
+export async function getDocumentTypes(
+  activeOnly = false
+): Promise<DocumentType[]> {
+  const res = await apiClient.get<{ data: ApiDocumentType[] }>(
+    "/document-types",
+    {
+      params: activeOnly ? { active: 1 } : {},
+    }
+  )
+  const list = Array.isArray(res.data) ? res.data : []
+  return list.map(toDocumentType)
+}
+
+export async function createDocumentType(
+  input: SaveDocumentTypeInput
+): Promise<DocumentType> {
+  const res = await apiClient.post<{ data: ApiDocumentType }>(
+    "/document-types",
+    toApiSaveDocumentTypePayload(input)
+  )
+  return toDocumentType(res.data)
+}
+
+export async function updateDocumentType(
+  id: number | string,
+  input: SaveDocumentTypeInput
+): Promise<DocumentType> {
+  const res = await apiClient.put<{ data: ApiDocumentType }>(
+    `/document-types/${id}`,
+    toApiSaveDocumentTypePayload(input)
+  )
+  return toDocumentType(res.data)
+}
+
+export async function deleteDocumentType(id: number | string): Promise<void> {
+  await apiClient.delete(`/document-types/${id}`)
+}
+
+export async function getDocumentTypeOptions(
+  activeOnly = true
+): Promise<LookupOption[]> {
+  const items = await getDocumentTypes(activeOnly)
+  return items.map(toDocumentTypeLookupOption)
 }
 
 /**

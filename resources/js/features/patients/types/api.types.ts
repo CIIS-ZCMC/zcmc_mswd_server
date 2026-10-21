@@ -98,13 +98,18 @@ export interface ApiWatcher {
 export interface ApiDocument {
   id: number
   case_id: number | null
-  patient_id: number | null
+  patient_id: number
   intervention_id: number | null
   uploaded_by: number | null
+  /** Present when the server loaded the uploader / case. */
+  uploaded_by_name?: string | null
+  case_code?: string | null
+  document_type_id: number | null
   document_type: string
   file_name: string
-  file_path: string
   file_type: string
+  file_size: number | null
+  file_url: string
   created_at: string
   updated_at: string
 }
@@ -263,7 +268,7 @@ export interface ApiSocialCase {
   expenses_total?: string | number | null
   is_editable: boolean
   can_finalize: boolean
-  latest_document?: ApiDocument | null
+  latest_document?: { id: number; file_name: string; file_path: string } | null
   created_at: string
   updated_at: string
 }

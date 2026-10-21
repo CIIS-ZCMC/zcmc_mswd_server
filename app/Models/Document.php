@@ -16,11 +16,21 @@ class Document extends Model
         'patient_id',
         'intervention_id',
         'uploaded_by',
+        'document_type_id',
         'document_type',
         'file_name',
         'file_path',
         'file_type',
+        'file_size',
+        'disk',
     ];
+
+    protected function casts(): array
+    {
+        return [
+            'file_size' => 'integer',
+        ];
+    }
 
     public function case(): BelongsTo
     {
@@ -42,15 +52,21 @@ class Document extends Model
         return $this->belongsTo(User::class, 'uploaded_by');
     }
 
+    public function documentType(): BelongsTo
+    {
+        return $this->belongsTo(DocumentType::class)->withTrashed();
+    }
+
+    /** The disk the file was stored on; rows from before the column was added used the default. */
+    public function storageDisk(): string
+    {
+        return $this->disk ?? config('filesystems.default');
+    }
+
     /**
-     * A document carries both ids itself, so this costs no query.
-     *
-     * An earlier plan specced a `patient_id ?? case.patient_id` fallback here,
-     * on the assumption that a patient-level document has no case. It does not:
-     * `create_documents_table` constrains both columns NOT NULL, so every
-     * document belongs to exactly one case and one patient, and the fallback
-     * branch was unreachable. Should `patient_id` ever become nullable, this is
-     * where the hop through the case goes.
+     * A document carries its patient id itself, so this costs no query. The case is
+     * optional (a patient's ID can be filed before any case exists), so `case_id` may
+     * be null.
      *
      * @return array{patient_id: int|null, case_id: int|null}
      */

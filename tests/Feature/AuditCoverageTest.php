@@ -12,6 +12,7 @@ use App\Models\DarEntry;
 use App\Models\Diagnostic;
 use App\Models\DiagnosticReport;
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\FundSource;
 use App\Models\Guarantor;
 use App\Models\Intervention;
@@ -65,6 +66,7 @@ $audited = [
     PatientAssistanceLog::class,
     PatientAssistanceReport::class,
     Document::class,
+    DocumentType::class,
     Guarantor::class,
     ModeOfAssistance::class,
     FundSource::class,
