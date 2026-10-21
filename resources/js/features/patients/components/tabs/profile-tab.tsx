@@ -5,9 +5,22 @@ import { RecordHistoryPopover } from "@/features/audit/components/record-history
 import { Briefcase, Edit, MapPin, Phone, User } from "lucide-react"
 import { useUpdatePatientBackground } from "../../hooks/use-patient-writes"
 import type { FamilyMember, PatientRecord } from "../../types"
-import { PatientBackgroundDialog } from "../dialogs/patient-background-dialog"
 import { PatientContactDialog } from "../dialogs/patient-contact-dialog"
+import { PatientDemographicsDialog } from "../dialogs/patient-demographics-dialog"
+import { PatientSocioEconomicDialog } from "../dialogs/patient-socioeconomic-dialog"
 import { FamilyTab } from "./family-tab"
+
+function formatBirthDate(dateStr?: string | null): string {
+  if (!dateStr) return "Not on file"
+  const date = new Date(dateStr)
+  if (Number.isNaN(date.getTime())) return dateStr
+  return new Intl.DateTimeFormat("en-US", {
+    month: "long",
+    day: "numeric",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(date)
+}
 
 interface ProfileTabProps {
   patient: PatientRecord
@@ -22,8 +35,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   onOpenEditFamilyDialog,
   onDeleteFamilyMember,
 }) => {
-  const [isEditingBackground, setIsEditingBackground] = useState(false)
+  const [isEditingDemographics, setIsEditingDemographics] = useState(false)
   const [isEditingContact, setIsEditingContact] = useState(false)
+  const [isEditingSocioEconomic, setIsEditingSocioEconomic] = useState(false)
   const updateBackground = useUpdatePatientBackground(patient.id)
 
   return (
@@ -44,9 +58,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               variant="outline"
               size="default"
               className="h-9 gap-2 px-3.5 text-sm font-bold"
-              onClick={() => setIsEditingBackground(true)}
+              onClick={() => setIsEditingDemographics(true)}
             >
-              <Edit className="size-4" /> Edit Profile
+              <Edit className="size-4" /> Edit
             </Button>
           </CardHeader>
           <CardContent className="flex-1 space-y-4 pt-4 text-base">
@@ -73,7 +87,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
                   Birth Date:
                 </span>
                 <p className="mt-0.5 text-base font-bold">
-                  {patient.birthDate || "Not on file"}
+                  {formatBirthDate(patient.birthDate)}
                 </p>
               </div>
             </div>
@@ -206,7 +220,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               variant="outline"
               size="default"
               className="h-9 gap-2 px-3.5 text-sm font-bold"
-              onClick={() => setIsEditingBackground(true)}
+              onClick={() => setIsEditingSocioEconomic(true)}
             >
               <Edit className="size-4" /> Edit
             </Button>
@@ -253,14 +267,14 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         onDeleteFamilyMember={onDeleteFamilyMember}
       />
 
-      <PatientBackgroundDialog
-        isOpen={isEditingBackground}
-        onClose={() => setIsEditingBackground(false)}
+      <PatientDemographicsDialog
+        isOpen={isEditingDemographics}
+        onClose={() => setIsEditingDemographics(false)}
         patient={patient}
         isSaving={updateBackground.isPending}
         onSave={(payload) =>
           updateBackground.mutate(payload, {
-            onSuccess: () => setIsEditingBackground(false),
+            onSuccess: () => setIsEditingDemographics(false),
           })
         }
       />
@@ -273,6 +287,18 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
         onSave={(payload) =>
           updateBackground.mutate(payload, {
             onSuccess: () => setIsEditingContact(false),
+          })
+        }
+      />
+
+      <PatientSocioEconomicDialog
+        isOpen={isEditingSocioEconomic}
+        onClose={() => setIsEditingSocioEconomic(false)}
+        patient={patient}
+        isSaving={updateBackground.isPending}
+        onSave={(payload) =>
+          updateBackground.mutate(payload, {
+            onSuccess: () => setIsEditingSocioEconomic(false),
           })
         }
       />
