@@ -13,8 +13,10 @@ use Illuminate\Database\Eloquent\SoftDeletes;
  * expense item, and the family's income (patient + family members + other sources). The newest (recorded_on, id) is the patient's current record;
  * earlier ones are the history.
  *
- * Patient-level and independent of cases, assessments and the UIS — nothing here
- * references them. See docs/PATIENT_SOCIOECONOMIC_PLAN.md.
+ * Patient-level: nothing here references a case or the intake sheet. The dependency runs
+ * one way — the UIS reads the newest record (UisSocioeconomicImporter), this module never
+ * reads the UIS. See docs/PATIENT_SOCIOECONOMIC_PLAN.md and
+ * docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md.
  */
 class PatientSocioeconomicProfile extends Model
 {

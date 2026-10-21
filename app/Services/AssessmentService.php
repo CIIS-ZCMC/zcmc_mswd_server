@@ -21,6 +21,7 @@ class AssessmentService
         protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
         protected CalculateMswdClassificationAction $calculateClassification,
         protected UisSnapshotService $snapshots,
+        protected UisSocioeconomicImporter $socioeconomic,
     ) {}
 
     public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
@@ -62,10 +63,17 @@ class AssessmentService
         $data['uis_snapshot'] = $this->snapshots->capture($patient, $interviewedAt);
         $data['uis_snapshot_at'] = now();
 
+        // Section III and the family income are recorded once, on the patient's
+        // Socio-economic tab. Fill what the request left out from the newest record;
+        // anything the request supplied wins. This runs before the classification, so
+        // the new assessment is classified against the imported figures.
+        // See docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md.
+        [$data, $expenses] = $this->fillFromSocioeconomic($patient, $data, $expenses);
+
         // Calculate socio-economic metrics against the expense lines being created
         // with the assessment, so one request yields the final classification.
         $metrics = $this->calculateClassification->execute(
-            totalFamilyIncome: $dto->total_family_income,
+            totalFamilyIncome: isset($data['total_family_income']) ? (float) $data['total_family_income'] : null,
             expensesSum: (float) collect($expenses)->sum(fn (array $line) => (float) ($line['amount'] ?? 0)),
             patient: $patient,
             householdSize: $householdSize,
@@ -91,6 +99,46 @@ class AssessmentService
 
             return $assessment->load('expenses');
         });
+    }
+
+    /**
+     * Fill the income, living conditions and expense lines a new assessment's request
+     * omitted from the patient's newest socio-economic record, stamping which record it
+     * was. Nothing the request supplied is overwritten, and a patient with no record
+     * imports nothing.
+     *
+     * @param  array<string, mixed>  $data
+     * @param  array<int, array<string, mixed>>  $expenses
+     * @return array{0: array<string, mixed>, 1: array<int, array<string, mixed>>}
+     */
+    private function fillFromSocioeconomic(Patient $patient, array $data, array $expenses): array
+    {
+        $profile = $this->socioeconomic->latestFor($patient);
+
+        if ($profile === null) {
+            return [$data, $expenses];
+        }
+
+        $imported = false;
+
+        foreach ($this->socioeconomic->attributes($profile) as $column => $value) {
+            if (blank($data[$column] ?? null)) {
+                $data[$column] = $value;
+                $imported = true;
+            }
+        }
+
+        if ($expenses === []) {
+            $expenses = $this->socioeconomic->expenseLines($profile);
+            $imported = $imported || $expenses !== [];
+        }
+
+        if ($imported) {
+            $data['socioeconomic_profile_id'] = $profile->id;
+            $data['socioeconomic_imported_at'] = now();
+        }
+
+        return [$data, $expenses];
     }
 
     public function update(Assessment $assessment, AssessmentDto $dto): Assessment
@@ -178,14 +226,54 @@ class AssessmentService
             return $assessment;
         }
 
-        $assessment->forceFill([
-            'uis_snapshot' => $this->snapshots->capture($patient, $assessment->interviewed_at, $assessment),
-            'uis_snapshot_at' => now(),
-            'uis_snapshot_by' => $worker->id,
-            'household_size' => $this->snapshots->householdSize($patient),
-        ])->save();
+        return DB::transaction(function () use ($assessment, $patient, $worker) {
+            $assessment->forceFill([
+                'uis_snapshot' => $this->snapshots->capture($patient, $assessment->interviewed_at, $assessment),
+                'uis_snapshot_at' => now(),
+                'uis_snapshot_by' => $worker->id,
+                'household_size' => $this->snapshots->householdSize($patient),
+            ]);
 
-        return $this->recalculateClassification($assessment->refresh());
+            $this->importSocioeconomic($assessment, $patient);
+
+            $assessment->save();
+
+            return $this->recalculateClassification($assessment->refresh());
+        });
+    }
+
+    /**
+     * Replace the assessment's income, living conditions and expense lines with the
+     * patient's newest socio-economic record. Unlike intake this overwrites: Refresh is
+     * "pull the patient record in". A patient with no record leaves the assessment
+     * alone, and a record that holds no expense items leaves its lines alone, so a
+     * refresh never wipes figures a worker entered.
+     */
+    private function importSocioeconomic(Assessment $assessment, Patient $patient): void
+    {
+        $profile = $this->socioeconomic->latestFor($patient);
+
+        if ($profile === null) {
+            return;
+        }
+
+        $assessment->forceFill($this->socioeconomic->attributes($profile));
+
+        $lines = $this->socioeconomic->expenseLines($profile);
+
+        if ($lines !== []) {
+            // Deleted one by one, not in bulk, so each removal reaches the audit trail.
+            $assessment->expenses->each->delete();
+
+            foreach ($lines as $line) {
+                $assessment->expenses()->create($line);
+            }
+        }
+
+        $assessment->forceFill([
+            'socioeconomic_profile_id' => $profile->id,
+            'socioeconomic_imported_at' => now(),
+        ]);
     }
 
     public function createReassessment(CaseModel $case, AssessmentDto $dto, string $reason): Assessment
