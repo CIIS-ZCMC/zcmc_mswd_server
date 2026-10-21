@@ -11,6 +11,7 @@ import {
   listAssessmentExpenses,
   promoteAssessmentToSocialCase,
   reassessCase,
+  refreshUisSnapshot,
   updateAssessment,
   updateAssessmentExpense,
 } from "../api/assessment-api"
@@ -201,6 +202,26 @@ export function usePromoteAssessmentToSocialCase(caseId: number) {
     mutationFn: (assessmentId: number) => promoteAssessmentToSocialCase(assessmentId),
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ["cases", caseId, "social-case"] })
+      queryClient.invalidateQueries({ queryKey: assessmentKeys.caseAssessments(caseId) })
+      queryClient.invalidateQueries({ queryKey: assessmentKeys.latestAssessment(caseId) })
+      queryClient.invalidateQueries({ queryKey: uisPrintKeys.all })
+      queryClient.invalidateQueries({ queryKey: patientUisKeys.all })
+    },
+  })
+}
+
+/**
+ * Pulls the patient's current identity and family onto the sheet, replacing the copy
+ * frozen at intake. The intake form collects no family or income — those are filled in
+ * on the patient afterwards — so a sheet not yet issued needs a way to catch up.
+ * See docs/UIS_SNAPSHOT_PLAN.md.
+ */
+export function useRefreshUisSnapshot(caseId: number) {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (assessmentId: number) => refreshUisSnapshot(assessmentId),
+    onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: assessmentKeys.caseAssessments(caseId) })
       queryClient.invalidateQueries({ queryKey: assessmentKeys.latestAssessment(caseId) })
       queryClient.invalidateQueries({ queryKey: uisPrintKeys.all })

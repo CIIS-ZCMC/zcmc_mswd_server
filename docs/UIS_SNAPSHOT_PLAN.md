@@ -123,13 +123,21 @@ Library entry no longer changes an old sheet.
 `POST /assessments/{assessment}/uis-snapshot/refresh`, permission `cases.update`,
 single-action `RefreshUisSnapshotController`, annotated in `Http/Docs/`.
 
-### Phase 6 — Frontend (follow-up, not in this phase)
+### Phase 6 — Frontend (done)
 
-`uis-sheet.tsx` reads Section I, the family table and the household size from the row's
-snapshot rather than the `patient` prop; a "Refresh from patient record" button gated on
-`cases.update`, with a confirm dialog and a line showing when the copy was taken and by whom;
-`uis.types.ts`, `patient-uis-adapter.ts` and `use-assessment.ts` gain the snapshot shape and
-the mutation.
+- `uisSheetData()` in `features/cases/lib/uis-sheet-data.ts` mirrors the server's
+  `UisSnapshotService::sheetData()`: the frozen copy when there is one, today's patient
+  record otherwise. The on-screen sheet and the PDF read the same shape, for the same reason
+  the expense slots are computed in one place.
+- `uis-sheet.tsx` renders Section I, the §II family table and the household size from it,
+  rather than the live `patient` prop. The empty family row distinguishes "none at the
+  intake" from "none on file".
+- A "Refresh from patient record" button (gated on `cases.update`, hidden once the
+  assessment is a social case study) sits in a banner that says when the copy was taken and
+  who last refreshed it, with a confirm dialog that warns a reprint will stop matching an
+  issued copy.
+- `adaptUisSnapshot()` maps the blob to camelCase types; `useRefreshUisSnapshot()` invalidates
+  the assessment and patient-UIS caches.
 
 ## Known limitations (stated, not fixed here)
 

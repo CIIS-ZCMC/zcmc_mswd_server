@@ -31,7 +31,11 @@ import {
 } from "@/components/ui/alert-dialog"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { useQueryClient } from "@tanstack/react-query"
-import { useDeleteAssessment } from "@/features/cases/hooks/use-assessment"
+import {
+  useDeleteAssessment,
+  useRefreshUisSnapshot,
+} from "@/features/cases/hooks/use-assessment"
+import { uisSheetData } from "@/features/cases/lib/uis-sheet-data"
 import {
   uisPrintKeys,
   patientUisKeys,
@@ -77,6 +81,7 @@ import {
   Lock,
   Plus,
   Printer,
+  RefreshCw,
   ShieldAlert,
   User,
   Users,
@@ -110,6 +115,8 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
   const [isPreviewDialogOpen, setIsPreviewDialogOpen] = useState(false)
   const [isDeleteDialogOpen, setIsDeleteDialogOpen] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
+  const [isRefreshDialogOpen, setIsRefreshDialogOpen] = useState(false)
+  const [refreshError, setRefreshError] = useState<string | null>(null)
   const [isPrintingDirect, setIsPrintingDirect] = useState(false)
   const queryClient = useQueryClient()
 
@@ -127,6 +134,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
 
   const caseId = row?.case?.id ?? 0
   const deleteAssessmentMutation = useDeleteAssessment(caseId)
+  const refreshSnapshotMutation = useRefreshUisSnapshot(caseId)
   const { data: modeOptions = [] } = useModeOfAssistanceOptions(false)
   const { data: fundSourceOptions = [] } = useFundSourceOptions(false)
 
@@ -180,6 +188,26 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
     }
   }
 
+  const handleRefreshSnapshot = async () => {
+    if (!uis.assessmentId) return
+    setRefreshError(null)
+
+    try {
+      await refreshSnapshotMutation.mutateAsync(uis.assessmentId)
+      setIsRefreshDialogOpen(false)
+    } catch (err: unknown) {
+      if (err instanceof ApiError) {
+        setRefreshError(err.firstValidationMessage || err.message)
+      } else {
+        setRefreshError(
+          err instanceof Error
+            ? err.message
+            : "Failed to refresh from the patient record."
+        )
+      }
+    }
+  }
+
   const informantDisplayName =
     assessment?.informantLastName || assessment?.informantFirstName
       ? [
@@ -191,10 +219,24 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
           .join(", ")
       : assessment?.informantName || "—"
 
+  // Sections I and II as the printed form reads them: the copy the intake froze,
+  // today's record only when there is none. See docs/UIS_SNAPSHOT_PLAN.md.
+  const sheet = uisSheetData(assessment, patient, uis.householdSize)
+
+  const frozenAt = assessment?.uisSnapshotAt
+    ? new Date(assessment.uisSnapshotAt).toLocaleString(undefined, {
+        month: "short",
+        day: "numeric",
+        year: "numeric",
+        hour: "numeric",
+        minute: "2-digit",
+      })
+    : null
+
   const informantEffectiveAddress =
-    assessment?.informantAddress || patient.address || "—"
+    assessment?.informantAddress || sheet.permanentAddress || "—"
   const informantEffectiveContact =
-    assessment?.informantContact || patient.contactNo || "—"
+    assessment?.informantContact || sheet.contactNo || "—"
 
   const encounterDate = encounter.date ?? caseData?.dateOpened ?? null
   const dateStr = encounterDate
@@ -503,6 +545,38 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                 </CardContent>
               </Card>
 
+              {/* Where sections I and II come from: the copy the intake froze,
+                  or today's record when there is none. */}
+              {sheet.frozen && (
+                <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border bg-muted/30 px-3 py-2 text-xs">
+                  <span className="flex items-center gap-2 text-muted-foreground">
+                    <Lock className="size-3.5 shrink-0" />
+                    <span>
+                      Sections I and II are as recorded at the intake
+                      {frozenAt ? ` (${frozenAt})` : ""}
+                      {assessment?.uisSnapshotBy
+                        ? `, last refreshed by ${assessment.uisSnapshotBy}`
+                        : ""}
+                      . Later edits to the patient do not change this sheet.
+                    </span>
+                  </span>
+                  {canUpdate && uis.assessmentId && !uis.hasSocialCase && (
+                    <Button
+                      variant="outline"
+                      size="sm"
+                      className="h-7 shrink-0 gap-1.5 text-xs font-semibold"
+                      onClick={() => {
+                        setRefreshError(null)
+                        setIsRefreshDialogOpen(true)
+                      }}
+                    >
+                      <RefreshCw className="size-3.5" />
+                      Refresh from patient record
+                    </Button>
+                  )}
+                </div>
+              )}
+
               {/* Section I: Identifying Information */}
               <Card className="border shadow-2xs">
                 <CardHeader className="border-b bg-muted/30 p-3.5">
@@ -518,7 +592,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Patient Full Name
                       </span>
                       <span className="font-bold text-foreground">
-                        {patient.fullName}
+                        {sheet.fullName || "—"}
                       </span>
                     </div>
                     <div>
@@ -526,7 +600,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Hospital No.
                       </span>
                       <span className="font-mono font-bold text-foreground">
-                        {patient.hospitalNo}
+                        {sheet.hospitalNo || "—"}
                       </span>
                     </div>
                     <div>
@@ -534,7 +608,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         MSWD No.
                       </span>
                       <span className="font-mono font-bold text-foreground">
-                        {patient.mswdNo || "—"}
+                        {sheet.mswdNo || "—"}
                       </span>
                     </div>
                     <div>
@@ -542,7 +616,8 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Age / Sex
                       </span>
                       <span className="font-semibold text-foreground">
-                        {patient.age} yrs · {patient.gender}
+                        {sheet.age !== null ? `${sheet.age} yrs` : "—"}
+                        {sheet.sex ? ` · ${sheet.sex}` : ""}
                       </span>
                     </div>
                     <div>
@@ -550,7 +625,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Civil Status
                       </span>
                       <span className="font-semibold text-foreground">
-                        {patient.civilStatus || "—"}
+                        {sheet.civilStatus || "—"}
                       </span>
                     </div>
                     <div>
@@ -558,7 +633,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Date of Birth
                       </span>
                       <span className="font-mono text-foreground">
-                        {patient.birthDate || "—"}
+                        {sheet.birthDate || "—"}
                       </span>
                     </div>
                     <div>
@@ -566,7 +641,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Place of Birth
                       </span>
                       <span className="text-foreground">
-                        {patient.placeOfBirth || "—"}
+                        {sheet.placeOfBirth || "—"}
                       </span>
                     </div>
                     <div>
@@ -574,7 +649,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         PhilHealth No.
                       </span>
                       <span className="font-mono text-foreground">
-                        {patient.philHealthNo || "—"}
+                        {sheet.philHealthNo || "—"}
                       </span>
                     </div>
                     <div>
@@ -582,7 +657,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Educational Attainment
                       </span>
                       <span className="text-foreground">
-                        {patient.educationalAttainment || "—"}
+                        {sheet.educationalAttainment || "—"}
                       </span>
                     </div>
                     <div>
@@ -590,7 +665,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Occupation
                       </span>
                       <span className="text-foreground">
-                        {patient.occupation || "—"}
+                        {sheet.occupation || "—"}
                       </span>
                     </div>
                     <div>
@@ -598,7 +673,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Contact Number
                       </span>
                       <span className="font-mono text-foreground">
-                        {patient.contactNo || "—"}
+                        {sheet.contactNo || "—"}
                       </span>
                     </div>
                     <div>
@@ -606,7 +681,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Permanent Address
                       </span>
                       <span className="text-foreground">
-                        {patient.permanentAddress || patient.address || "—"}
+                        {sheet.permanentAddress || "—"}
                       </span>
                     </div>
                   </div>
@@ -623,7 +698,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                   <div className="text-xs text-muted-foreground">
                     Household Size:{" "}
                     <span className="font-mono font-bold text-foreground">
-                      {uis.householdSize}
+                      {sheet.householdSize}
                     </span>
                   </div>
                 </CardHeader>
@@ -652,21 +727,20 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         </TableRow>
                       </TableHeader>
                       <TableBody>
-                        {patient.familyMembers &&
-                        patient.familyMembers.length > 0 ? (
-                          patient.familyMembers.map((member) => (
+                        {sheet.familyMembers.length > 0 ? (
+                          sheet.familyMembers.map((member) => (
                             <TableRow
-                              key={member.id}
+                              key={member.key}
                               className="text-xs hover:bg-muted/30"
                             >
                               <TableCell className="font-semibold text-foreground">
-                                {member.fullName}
+                                {member.name}
                               </TableCell>
                               <TableCell>
                                 {member.relationship || "—"}
                               </TableCell>
                               <TableCell>
-                                {member.age ? `${member.age} yrs` : "—"}
+                                {member.age !== null ? `${member.age} yrs` : "—"}
                                 {member.sex ? ` · ${member.sex}` : ""}
                               </TableCell>
                               <TableCell>{member.civilStatus || "—"}</TableCell>
@@ -685,7 +759,9 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                               colSpan={7}
                               className="py-4 text-center text-xs text-muted-foreground"
                             >
-                              No family members listed on file.
+                              {sheet.frozen
+                                ? "No family members were on file at the intake."
+                                : "No family members listed on file."}
                             </TableCell>
                           </TableRow>
                         )}
@@ -1270,6 +1346,61 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
             setIsIntakeDialogOpen(true)
           }}
         />
+
+        {/* Refresh the frozen §I/§II copy from the patient record */}
+        <AlertDialog
+          open={isRefreshDialogOpen}
+          onOpenChange={setIsRefreshDialogOpen}
+        >
+          <AlertDialogContent>
+            <AlertDialogHeader>
+              <AlertDialogTitle className="flex items-center gap-2">
+                <RefreshCw className="size-5 text-primary" />
+                Refresh from the patient record?
+              </AlertDialogTitle>
+              <AlertDialogDescription className="space-y-2">
+                <p>
+                  Sections I and II of <strong>{uisLabel}</strong> will be
+                  replaced with the patient&apos;s identity and family
+                  composition as they stand now, and the MSWD classification
+                  will be re-derived against the new household size.
+                </p>
+                <p>
+                  Do this when the patient&apos;s details were still being
+                  completed after the intake. If the sheet has already been
+                  issued, refreshing it means a reprint will no longer match the
+                  copy handed over.
+                </p>
+                {refreshError && (
+                  <div className="rounded-md border border-destructive/20 bg-destructive/10 p-3 text-xs font-semibold text-destructive">
+                    {refreshError}
+                  </div>
+                )}
+              </AlertDialogDescription>
+            </AlertDialogHeader>
+            <AlertDialogFooter>
+              <AlertDialogCancel disabled={refreshSnapshotMutation.isPending}>
+                Cancel
+              </AlertDialogCancel>
+              <AlertDialogAction
+                onClick={(e) => {
+                  e.preventDefault()
+                  handleRefreshSnapshot()
+                }}
+                disabled={refreshSnapshotMutation.isPending}
+              >
+                {refreshSnapshotMutation.isPending ? (
+                  <span className="flex items-center gap-1.5">
+                    <Loader2 className="size-3.5 animate-spin" />
+                    Refreshing…
+                  </span>
+                ) : (
+                  "Refresh sheet"
+                )}
+              </AlertDialogAction>
+            </AlertDialogFooter>
+          </AlertDialogContent>
+        </AlertDialog>
 
         {/* Delete Confirmation Alert Dialog */}
         <AlertDialog

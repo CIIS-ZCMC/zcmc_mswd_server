@@ -81,7 +81,7 @@ Socio-economic classification of a patient for an encounter.
 - Assessments are append-only snapshots; a re-assessment links to its parent (`parent_assessment_id`).
 - Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up).
 - The UIS is a **printable, not a stored record**; every print is logged (`uis_print_logs`).
-- But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. **In active development — see `docs/UIS_SNAPSHOT_PLAN.md`.**
+- But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. The on-screen sheet reads the same copy through `uisSheetData()` (`features/cases/lib/uis-sheet-data.ts`), which mirrors `UisSnapshotService::sheetData()`. See `docs/UIS_SNAPSHOT_PLAN.md`.
 - Front: `features/cases` (`NewIntakeAssessmentDialog`, UIS tab). Back: `AssessmentService`, `IntakeAssessmentService`, `UisReadinessService`, `UisSnapshotService`, `UnifiedIntakeSheetPdfService`, `UisPrintLogService`.
 
 ### Cases & Social Case (SCSR)
@@ -147,6 +147,6 @@ System-wide activity log viewer (`/audit`) and per-record history popovers.
 
 ## Plans
 
-- `docs/` holds only plans for work in active development. Current: `WATCHER_MODULE_PLAN.md`, `UIS_SNAPSHOT_PLAN.md`.
+- `docs/` holds only plans for work in active development. Current: `WATCHER_MODULE_PLAN.md`.
 - Write a plan in `docs/<FEATURE>_PLAN.md` for multi-session or multi-layer work. Remove it when the feature ships, and update the module's entry above.
 - Finished plans are in git history (`git log -- docs/`). The code and migrations are the source of truth.
