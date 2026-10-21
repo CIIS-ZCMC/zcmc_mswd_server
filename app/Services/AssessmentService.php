@@ -8,6 +8,7 @@ use App\DTOs\AssessmentDto;
 use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Patient;
+use App\Models\User;
 use App\Repositories\Contracts\AssessmentRepositoryInterface;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Support\Facades\DB;
@@ -19,6 +20,7 @@ class AssessmentService
         protected AssessmentRepositoryInterface $repository,
         protected EnsureWatcherRequirementSatisfied $ensureWatcherRequirement,
         protected CalculateMswdClassificationAction $calculateClassification,
+        protected UisSnapshotService $snapshots,
     ) {}
 
     public function list(int $page = 1, int $perPage = 15): LengthAwarePaginator
@@ -48,12 +50,25 @@ class AssessmentService
         $data = array_merge($dto->toArray(), $encounter);
         $expenses = $dto->expenses ?? [];
 
+        // The UIS prints the patient's identity and family composition, which are
+        // patient-level and keep changing. Freeze them here so a sheet issued from
+        // this assessment reprints as it was. See docs/UIS_SNAPSHOT_PLAN.md.
+        $interviewedAt = $data['interviewed_at'] ?? $data['encounter_date'] ?? now();
+        $householdSize = $this->snapshots->householdSize($patient);
+
+        $data['interviewed_at'] = $interviewedAt;
+        $data['interviewed_by'] ??= $data['created_by'] ?? null;
+        $data['household_size'] = $householdSize;
+        $data['uis_snapshot'] = $this->snapshots->capture($patient, $interviewedAt);
+        $data['uis_snapshot_at'] = now();
+
         // Calculate socio-economic metrics against the expense lines being created
         // with the assessment, so one request yields the final classification.
         $metrics = $this->calculateClassification->execute(
             totalFamilyIncome: $dto->total_family_income,
             expensesSum: (float) collect($expenses)->sum(fn (array $line) => (float) ($line['amount'] ?? 0)),
             patient: $patient,
+            householdSize: $householdSize,
         );
 
         $data['net_per_capita_income'] = $metrics['net_per_capita_income'];
@@ -85,10 +100,14 @@ class AssessmentService
         $income = $dto->total_family_income ?? (float) $assessment->total_family_income;
         $expensesSum = (float) $assessment->expenses()->sum('amount');
 
+        // The household size the intake froze, not today's family: editing an
+        // assessment must not re-derive its per-capita income against a household
+        // that has changed since the interview.
         $metrics = $this->calculateClassification->execute(
             totalFamilyIncome: $income,
             expensesSum: $expensesSum,
             patient: $this->householdOf($assessment),
+            householdSize: $assessment->household_size,
         );
 
         $data['net_per_capita_income'] = $metrics['net_per_capita_income'];
@@ -122,6 +141,7 @@ class AssessmentService
             totalFamilyIncome: (float) $assessment->total_family_income,
             expensesSum: (float) $assessment->expenses()->sum('amount'),
             patient: $this->householdOf($assessment),
+            householdSize: $assessment->household_size,
         );
 
         $data = [
@@ -141,6 +161,31 @@ class AssessmentService
     private function householdOf(Assessment $assessment): ?Patient
     {
         return $assessment->patient ?? $assessment->case?->patient;
+    }
+
+    /**
+     * Replace the frozen UIS copy with the patient's current data, stamped with
+     * who asked for it. The intake form collects no family or income — those are
+     * filled in on the patient afterwards — so a worker needs a way to pull them
+     * onto a sheet that has not been issued yet. The classification follows: a
+     * household that grew since the interview changes the per-capita income.
+     */
+    public function refreshSnapshot(Assessment $assessment, User $worker): Assessment
+    {
+        $patient = $this->householdOf($assessment);
+
+        if ($patient === null) {
+            return $assessment;
+        }
+
+        $assessment->forceFill([
+            'uis_snapshot' => $this->snapshots->capture($patient, $assessment->interviewed_at, $assessment),
+            'uis_snapshot_at' => now(),
+            'uis_snapshot_by' => $worker->id,
+            'household_size' => $this->snapshots->householdSize($patient),
+        ])->save();
+
+        return $this->recalculateClassification($assessment->refresh());
     }
 
     public function createReassessment(CaseModel $case, AssessmentDto $dto, string $reason): Assessment

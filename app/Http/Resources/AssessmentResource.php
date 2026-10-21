@@ -26,6 +26,8 @@ class AssessmentResource extends JsonResource
             'created_by' => $this->created_by,
             'total_family_income' => $this->total_family_income,
             'net_per_capita_income' => $this->net_per_capita_income,
+            // The household the per-capita income was divided by, frozen at intake.
+            'household_size' => $this->household_size,
             'calculated_classification' => $this->calculated_classification,
             'classification' => $this->classification,
             'classification_override_reason' => $this->classification_override_reason,
@@ -58,6 +60,14 @@ class AssessmentResource extends JsonResource
             'assessment_notes' => $this->assessment_notes,
             'intervention_plan' => $this->intervention_plan,
             'expenses' => AssessmentExpenseResource::collection($this->whenLoaded('expenses')),
+            // Sections I and II of the sheet as the intake froze them, so the
+            // on-screen sheet shows what the printed one does. See
+            // docs/UIS_SNAPSHOT_PLAN.md.
+            'uis_snapshot' => $this->uis_snapshot,
+            'uis_snapshot_at' => $this->uis_snapshot_at,
+            'uis_snapshot_by' => $this->whenLoaded('uisSnapshotBy', fn () => $this->uisSnapshotBy?->name),
+            'interviewed_at' => $this->interviewed_at,
+            'interviewed_by' => $this->whenLoaded('interviewedBy', fn () => $this->interviewedBy?->name),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

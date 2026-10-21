@@ -22,6 +22,7 @@ class CalculateMswdClassificationAction
         ?CaseModel $case = null,
         int $familyMemberCount = 1,
         ?Patient $patient = null,
+        ?int $householdSize = null,
     ): array {
         $income = max(0, $totalFamilyIncome ?? 0.0);
         $expenses = max(0, $expensesSum);
@@ -30,7 +31,12 @@ class CalculateMswdClassificationAction
         // case) or through the case.
         $patient ??= $case?->patient;
 
-        if ($patient !== null || $case !== null) {
+        if ($householdSize !== null) {
+            // The size the assessment froze at intake. Counting the family live
+            // here would move an issued sheet's per-capita income whenever the
+            // household changed, months after the interview.
+            $householdSize = max(1, $householdSize);
+        } elseif ($patient !== null || $case !== null) {
             $memberCount = $patient?->familyMembers()->count() ?? 0;
             // Household size includes patient + family members (or minimum 1)
             $householdSize = max(1, $memberCount + 1);

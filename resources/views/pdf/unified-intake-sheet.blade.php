@@ -1,34 +1,27 @@
 @php
-    use Illuminate\Support\Carbon;
-
     // The UIS of an Intake Assessment, with or without a case. Inputs:
-    //   $patient, $case (nullable), $assessment (nullable), $assistanceLines (section V:
-    //   [{type, amount, mode, fund}]), $printedBy (nullable User), $printedAt (Carbon).
+    //   $patient + $familyMembers (sections I and II, as the intake froze them —
+    //   UisSnapshotService::sheetData()), $case (nullable), $assessment (nullable),
+    //   $assistanceLines (section V, live: [{type, amount, mode, fund}]),
+    //   $interviewedAt (nullable Carbon), $interviewedBy (nullable User),
+    //   $printedBy (nullable User), $printedAt (Carbon).
     // See UnifiedIntakeSheetPdfService::renderForAssessment().
     $p = $patient;
     $a = $assessment;
 
-    $fullName = collect([$p?->last_name, $p?->first_name, $p?->middle_name, $p?->extension_name])
-        ->filter()->join(', ');
-
-    // Age as of the print date, which is the interview date on the form.
-    $age = $p?->birthdate
-        ? (int) Carbon::parse($p->birthdate)->diffInYears($printedAt ?? now())
-        : $p?->estimated_age;
-
-    $composedAddress = collect([$p?->address, $p?->barangay, $p?->municipality, $p?->province])
-        ->filter()->join(', ');
-    $permanentAddress = filled($p?->permanent_address) ? $p->permanent_address : $composedAddress;
-    $presentAddress = filled($p?->present_address) ? $p->present_address : $composedAddress;
+    // Already resolved against the frozen copy: the name as it read at intake, the
+    // age as of the interview (so a reprint does not age the patient), the address
+    // the sheet composes and the PhilHealth number on file then.
+    $fullName = $p?->full_name;
+    $age = $p?->age;
+    $permanentAddress = $p?->permanent_address;
+    $presentAddress = $p?->present_address;
+    $philhealthNo = $p?->philhealth_no;
 
     // The informant's own address/contact when the worker recorded them; the
     // patient's otherwise (the informant is usually the patient or a relative).
     $informantAddress = filled($a?->informant_address) ? $a->informant_address : $presentAddress;
     $informantContact = filled($a?->informant_contact_number) ? $a->informant_contact_number : $p?->contact_number;
-
-    $philhealthNo = optional($p?->patientIds?->first(
-        fn ($id) => str_contains(strtolower((string) $id->id_type), 'philhealth')
-    ))->id_number;
 
     // Plain numbers matching the paper form (no currency symbol / thousands comma;
     // decimals only when present). Empty stays blank for hand fill-in.
@@ -169,8 +162,8 @@
     <tr><td>
         <table class="plain">
             <tr>
-                <td style="width:55%"><b>Date of Intake/Interview</b> <i>(Petsa ng Panayam)</i>: {!! $u(optional($printedAt)->format('m/d/Y g:i:s A')) !!}</td>
-                <td><b>Time of Interview</b> <i>(Oras ng Panayam)</i>: {!! $u(optional($printedAt)->format('g:i:s A')) !!}</td>
+                <td style="width:55%"><b>Date of Intake/Interview</b> <i>(Petsa ng Panayam)</i>: {!! $u(optional($interviewedAt)->format('m/d/Y g:i:s A')) !!}</td>
+                <td><b>Time of Interview</b> <i>(Oras ng Panayam)</i>: {!! $u(optional($interviewedAt)->format('g:i:s A')) !!}</td>
             </tr>
             <tr>
                 <td><b>Name of Informant</b> <i>(Pangalan ng impormante)</i>: {!! $u($a?->informant_name) !!}</td>
@@ -318,7 +311,7 @@
                 <th style="width:13%">Occupation</th>
                 <th>Monthly Income</th>
             </tr>
-            @forelse($p?->familyMembers ?? [] as $m)
+            @forelse($familyMembers ?? [] as $m)
                 <tr>
                     <td>{{ $m->name }}</td>
                     <td class="center">{{ $m->birthdate ? $m->birthdate->format('y/m/d') : '' }}</td>
@@ -515,7 +508,7 @@
     <tr><td>
         <table class="cells"><tr>
             <td style="width:15%">Interviewed by:</td>
-            <td style="width:35%"><div class="signame">{!! filled($printedBy?->employee_name) ? e($printedBy->employee_name) : '&nbsp;' !!}</div><div class="sigcap">Signature over Name of Medical Social Worker</div></td>
+            <td style="width:35%"><div class="signame">{!! filled($interviewedBy?->employee_name) ? e($interviewedBy->employee_name) : '&nbsp;' !!}</div><div class="sigcap">Signature over Name of Medical Social Worker</div></td>
             <td style="width:15%">Reviewed and<br>Approved by:</td>
             <td><div class="signame">&nbsp;</div><div class="sigcap">Signature over Name</div></td>
         </tr></table>
