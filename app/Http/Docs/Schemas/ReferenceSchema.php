@@ -84,6 +84,29 @@ use OpenApi\Attributes as OA;
     ],
 )]
 #[OA\Schema(
+    schema: 'DocumentType',
+    description: 'A kind of patient document, picked on upload.',
+    properties: [
+        new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'name', type: 'string'),
+        new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(property: 'sort_order', type: 'integer'),
+        new OA\Property(property: 'usage_count', type: 'integer', description: 'Uploads filed under this type.'),
+        new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+    ],
+)]
+#[OA\Schema(
+    schema: 'DocumentTypeRequest',
+    required: ['name'],
+    description: 'On update every field is optional.',
+    properties: [
+        new OA\Property(property: 'name', type: 'string', maxLength: 255),
+        new OA\Property(property: 'is_active', type: 'boolean'),
+        new OA\Property(property: 'sort_order', type: 'integer', minimum: 0, maximum: 65535),
+    ],
+)]
+#[OA\Schema(
     schema: 'AssessmentLookup',
     description: 'A mode of assistance or fund source. Assessments store `code`; guarantee breakdown lines store the fund source id.',
     properties: [

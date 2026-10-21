@@ -145,11 +145,45 @@ export interface LookupOption {
   requiresSpecify?: boolean
 }
 
+export interface ApiDocumentType {
+  id: number
+  name: string
+  is_active: boolean
+  sort_order: number
+  usage_count?: number
+  created_at?: string
+  updated_at?: string
+}
+
+/** A kind of patient document, picked on upload. */
+export interface DocumentType {
+  id: number
+  name: string
+  isActive: boolean
+  sortOrder: number
+  usageCount: number
+  createdAt?: string
+  updatedAt?: string
+}
+
+export interface ApiSaveDocumentTypePayload {
+  name: string
+  is_active?: boolean
+  sort_order?: number
+}
+
+export interface SaveDocumentTypeInput {
+  name: string
+  isActive?: boolean
+  sortOrder?: number
+}
+
 export type LibraryTabKey =
   | "guarantors"
   | "assistance-types"
   | "mode-of-assistance"
   | "fund-sources"
+  | "document-types"
   | "signatories"
   | "turnaround-targets"
 

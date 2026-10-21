@@ -88,13 +88,16 @@ export function buildUrl(path: string, options: RequestOptions = {}): string {
 async function request<T>(path: string, options: RequestOptions = {}): Promise<T> {
   const xsrfToken = getXsrfToken()
   const hasBody = options.body !== undefined
+  // A FormData body (file uploads) is sent as-is: the browser sets the multipart
+  // Content-Type, with its boundary.
+  const isForm = typeof FormData !== "undefined" && options.body instanceof FormData
 
   const headers: Record<string, string> = {
     Accept: "application/json",
     "X-Requested-With": "XMLHttpRequest",
   }
 
-  if (hasBody) {
+  if (hasBody && !isForm) {
     headers["Content-Type"] = "application/json"
   }
 
@@ -107,7 +110,7 @@ async function request<T>(path: string, options: RequestOptions = {}): Promise<T
     signal: options.signal,
     credentials: "same-origin",
     headers,
-    body: hasBody ? JSON.stringify(options.body) : undefined,
+    body: hasBody ? (isForm ? (options.body as FormData) : JSON.stringify(options.body)) : undefined,
   })
 
   if (res.status === 204) {

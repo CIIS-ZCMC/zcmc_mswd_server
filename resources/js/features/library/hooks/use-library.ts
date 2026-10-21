@@ -1,22 +1,26 @@
 import { useMutation, useQuery, useQueryClient } from "@tanstack/react-query"
 import {
   createAssistantType,
+  createDocumentType,
   createFundSource,
   createGuarantor,
   createModeOfAssistance,
   createSignatory,
   deleteAssistantType,
+  deleteDocumentType,
   deleteFundSource,
   deleteGuarantor,
   deleteModeOfAssistance,
   deleteSignatory,
   getAssistantTypes,
+  getDocumentTypes,
   getFundSources,
   getGuarantors,
   getModeOfAssistances,
   getSignatories,
   getTurnaroundTargets,
   updateAssistantType,
+  updateDocumentType,
   updateFundSource,
   updateGuarantor,
   updateModeOfAssistance,
@@ -26,6 +30,7 @@ import {
 import type {
   SaveAssessmentLookupInput,
   SaveAssistantTypeInput,
+  SaveDocumentTypeInput,
   SaveGuarantorInput,
   SaveSignatoryInput,
   SaveTurnaroundTargetInput,
@@ -56,6 +61,13 @@ export const libraryKeys = {
     options: (activeOnly: boolean) =>
       ["fund-sources", "options", { activeOnly }] as const,
   },
+  documentTypes: {
+    all: ["library", "document-types"] as const,
+    list: (activeOnly: boolean) =>
+      [...libraryKeys.documentTypes.all, "list", { activeOnly }] as const,
+    options: (activeOnly: boolean) =>
+      ["document-types", "options", { activeOnly }] as const,
+  },
   guarantors: {
     all: ["library", "guarantors"] as const,
     list: (activeOnly: boolean) =>
@@ -79,6 +91,7 @@ export function invalidateLibraryCaches(
   queryClient.invalidateQueries({ queryKey: ["assistant-types"] })
   queryClient.invalidateQueries({ queryKey: ["mode-of-assistances"] })
   queryClient.invalidateQueries({ queryKey: ["fund-sources"] })
+  queryClient.invalidateQueries({ queryKey: ["document-types"] })
   queryClient.invalidateQueries({ queryKey: guarantorOptionKeys.all })
   queryClient.invalidateQueries({ queryKey: guaranteeKeys.all })
 }
@@ -219,6 +232,53 @@ export function useDeleteFundSource() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (id: number | string) => deleteFundSource(id),
+    onSuccess: () => {
+      invalidateLibraryCaches(queryClient)
+    },
+  })
+}
+
+/**
+ * Document Types Hooks
+ */
+export function useDocumentTypes(activeOnly = false, enabled = true) {
+  return useQuery({
+    queryKey: libraryKeys.documentTypes.list(activeOnly),
+    queryFn: () => getDocumentTypes(activeOnly),
+    enabled,
+  })
+}
+
+export function useCreateDocumentType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (input: SaveDocumentTypeInput) => createDocumentType(input),
+    onSuccess: () => {
+      invalidateLibraryCaches(queryClient)
+    },
+  })
+}
+
+export function useUpdateDocumentType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      id,
+      input,
+    }: {
+      id: number | string
+      input: SaveDocumentTypeInput
+    }) => updateDocumentType(id, input),
+    onSuccess: () => {
+      invalidateLibraryCaches(queryClient)
+    },
+  })
+}
+
+export function useDeleteDocumentType() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: (id: number | string) => deleteDocumentType(id),
     onSuccess: () => {
       invalidateLibraryCaches(queryClient)
     },

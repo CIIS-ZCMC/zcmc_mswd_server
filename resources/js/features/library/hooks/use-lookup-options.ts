@@ -1,6 +1,7 @@
 import { useQuery } from "@tanstack/react-query"
 import {
   getAssistantTypeOptions,
+  getDocumentTypeOptions,
   getFundSourceOptions,
   getModeOfAssistanceOptions,
 } from "../api/library-api"
@@ -18,6 +19,14 @@ export function useModeOfAssistanceOptions(activeOnly = true) {
   return useQuery({
     queryKey: libraryKeys.modes.options(activeOnly),
     queryFn: () => getModeOfAssistanceOptions(activeOnly),
+    staleTime: 5 * 60 * 1000,
+  })
+}
+
+export function useDocumentTypeOptions(activeOnly = true) {
+  return useQuery({
+    queryKey: libraryKeys.documentTypes.options(activeOnly),
+    queryFn: () => getDocumentTypeOptions(activeOnly),
     staleTime: 5 * 60 * 1000,
   })
 }

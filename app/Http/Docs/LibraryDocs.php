@@ -191,4 +191,95 @@ final class LibraryDocs
         ],
     )]
     public function fundSourcesDestroy(): void {}
+
+    #[OA\Get(
+        path: '/document-types',
+        operationId: 'documentTypes.index',
+        tags: ['Library'],
+        summary: 'List document types',
+        description: 'Ordered by sort order, then name. `?active=1` hides retired rows. `usage_count` is the uploads filed under the type.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'active', in: 'query', required: false, schema: new OA\Schema(type: 'boolean'))],
+        responses: [
+            new OA\Response(response: 200, description: 'Document types', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', type: 'array', items: new OA\Items(ref: '#/components/schemas/DocumentType')),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+        ],
+    )]
+    public function documentTypesIndex(): void {}
+
+    #[OA\Get(
+        path: '/document-types/{documentType}',
+        operationId: 'documentTypes.show',
+        tags: ['Library'],
+        summary: 'Show a document type',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'documentType', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'The document type', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/DocumentType'),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+        ],
+    )]
+    public function documentTypesShow(): void {}
+
+    #[OA\Post(
+        path: '/document-types',
+        operationId: 'documentTypes.store',
+        tags: ['Library'],
+        summary: 'Add a document type',
+        description: 'Requires the `library.manage` permission.',
+        security: [['sanctum' => []]],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/DocumentTypeRequest')),
+        responses: [
+            new OA\Response(response: 201, description: 'The created document type', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/DocumentType'),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+        ],
+    )]
+    public function documentTypesStore(): void {}
+
+    #[OA\Put(
+        path: '/document-types/{documentType}',
+        operationId: 'documentTypes.update',
+        tags: ['Library'],
+        summary: 'Rename, reorder, retire or reactivate a document type',
+        description: 'Partial update. Requires the `library.manage` permission.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'documentType', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/DocumentTypeRequest')),
+        responses: [
+            new OA\Response(response: 200, description: 'The updated document type', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/DocumentType'),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+        ],
+    )]
+    public function documentTypesUpdate(): void {}
+
+    #[OA\Delete(
+        path: '/document-types/{documentType}',
+        operationId: 'documentTypes.destroy',
+        tags: ['Library'],
+        summary: 'Delete a document type (soft delete)',
+        description: 'Documents already filed under it keep its name; new uploads can no longer pick it. Requires the `library.manage` permission.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'documentType', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 204, description: 'Deleted'),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+        ],
+    )]
+    public function documentTypesDestroy(): void {}
 }

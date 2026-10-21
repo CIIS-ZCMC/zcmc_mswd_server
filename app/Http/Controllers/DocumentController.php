@@ -2,59 +2,61 @@
 
 namespace App\Http\Controllers;
 
-use App\DTOs\DocumentDto;
+use App\Http\Requests\StorePatientDocumentRequest;
 use App\Http\Resources\DocumentResource;
+use App\Models\CaseModel;
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\Patient;
 use App\Services\DocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
-use Illuminate\Validation\Rule;
 
 class DocumentController extends Controller
 {
     public function __construct(protected DocumentService $service) {}
 
-    public function index(Patient $patient): AnonymousResourceCollection
+    /** A patient's documents, newest first; `?document_type_id=` and `?case_id=` narrow the list. */
+    public function index(Request $request, Patient $patient): AnonymousResourceCollection
     {
-        return DocumentResource::collection($patient->documents()->latest()->get());
+        $documents = $patient->documents()
+            ->with(['uploadedBy', 'case', 'documentType'])
+            ->when($request->integer('document_type_id'), fn ($query, $id) => $query->where('document_type_id', $id))
+            ->when($request->integer('case_id'), fn ($query, $id) => $query->where('case_id', $id))
+            ->latest()
+            ->get();
+
+        return DocumentResource::collection($documents);
     }
 
     /**
-     * Upload a document for the patient. A document is tied to one of the
-     * patient's cases (the schema requires both patient and case).
+     * Upload a document for the patient, optionally tied to one of their cases.
      */
-    public function store(Request $request, Patient $patient): JsonResponse
+    public function store(StorePatientDocumentRequest $request, Patient $patient): JsonResponse
     {
-        $validated = $request->validate([
-            'file' => ['required', 'file', 'max:10240'],
-            'document_type' => ['required', 'string', 'max:255'],
-            'case_id' => [
-                'required',
-                Rule::exists('cases', 'id')->where('patient_id', $patient->id),
-            ],
-        ]);
+        $case = $request->validated('case_id')
+            ? CaseModel::findOrFail($request->validated('case_id'))
+            : null;
 
-        $file = $request->file('file');
-        $path = $file->store("patients/{$patient->id}/documents");
+        $document = $this->service->upload(
+            $patient,
+            $case,
+            $request->file('file'),
+            DocumentType::findOrFail($request->validated('document_type_id')),
+            $request->user(),
+        );
 
-        $document = $this->service->create(DocumentDto::fromArray([
-            'patient_id' => $patient->id,
-            'case_id' => $validated['case_id'],
-            'uploaded_by' => $request->user()->id,
-            'document_type' => $validated['document_type'],
-            'file_name' => $file->getClientOriginalName(),
-            'file_path' => $path,
-            'file_type' => $file->getClientMimeType(),
-        ]));
-
-        return DocumentResource::make($document)->response()->setStatusCode(Response::HTTP_CREATED);
+        return DocumentResource::make($document->load(['uploadedBy', 'case', 'documentType']))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
     }
 
-    public function destroy(Document $document): Response
+    public function destroy(Patient $patient, Document $document): Response
     {
+        abort_unless($document->patient_id === $patient->id, Response::HTTP_NOT_FOUND);
+
         $this->service->delete($document);
 
         return response()->noContent();

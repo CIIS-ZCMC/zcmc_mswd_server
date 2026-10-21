@@ -6,19 +6,23 @@ import { usePermission } from "@/features/auth/hooks/use-permission"
 import {
   useAssistantTypes,
   useCreateAssistantType,
+  useCreateDocumentType,
   useCreateFundSource,
   useCreateGuarantor,
   useCreateModeOfAssistance,
   useDeleteAssistantType,
+  useDeleteDocumentType,
   useDeleteFundSource,
   useDeleteGuarantor,
   useDeleteModeOfAssistance,
+  useDocumentTypes,
   useFundSources,
   useGuarantors,
   useModeOfAssistances,
   useSignatories,
   useTurnaroundTargets,
   useUpdateAssistantType,
+  useUpdateDocumentType,
   useUpdateFundSource,
   useUpdateGuarantor,
   useUpdateModeOfAssistance,
@@ -64,6 +68,13 @@ export const LibraryPage: React.FC = () => {
   const updateFund = useUpdateFundSource()
   const deleteFund = useDeleteFundSource()
 
+  // Document Types
+  const { data: documentTypes = [], isLoading: documentTypesLoading } =
+    useDocumentTypes(false)
+  const createDocType = useCreateDocumentType()
+  const updateDocType = useUpdateDocumentType()
+  const deleteDocType = useDeleteDocumentType()
+
   // Signatories (the panel owns its own writes)
   const { data: signatories = [] } = useSignatories()
 
@@ -80,6 +91,8 @@ export const LibraryPage: React.FC = () => {
         return modes.length
       case "fund-sources":
         return fundSources.length
+      case "document-types":
+        return documentTypes.length
       case "signatories":
         return signatories.length
       case "turnaround-targets":
@@ -322,6 +335,53 @@ export const LibraryPage: React.FC = () => {
               }}
               onDelete={async (id: number) => {
                 await deleteFund.mutateAsync(id)
+              }}
+            />
+          </TabsContent>
+
+          {/* Document Types Tab */}
+          <TabsContent
+            value="document-types"
+            className="mt-0 space-y-4 focus-visible:outline-hidden"
+          >
+            <Alert className="border-primary/20 bg-primary/5 text-foreground">
+              <Info className="size-5 text-primary" />
+              <AlertTitle className="text-sm font-bold">
+                About Document Types
+              </AlertTitle>
+              <AlertDescription className="mt-0.5 text-xs text-muted-foreground">
+                The kinds of patient document chosen when uploading to a
+                patient&apos;s Docs tab (Certificate of Indigency, Valid ID,
+                Medical Abstract). Retire a type instead of deleting it; files
+                already filed under it keep its name.
+              </AlertDescription>
+            </Alert>
+
+            <LookupTable
+              tabConfig={getTabConfig("document-types")}
+              items={documentTypes}
+              isLoading={documentTypesLoading}
+              canManage={canManageLibrary}
+              onSave={async (data: LookupFormItem) => {
+                if (data.id) {
+                  await updateDocType.mutateAsync({
+                    id: data.id,
+                    input: {
+                      name: data.name,
+                      sortOrder: data.sortOrder ?? 0,
+                      isActive: data.isActive,
+                    },
+                  })
+                } else {
+                  await createDocType.mutateAsync({
+                    name: data.name,
+                    sortOrder: data.sortOrder ?? 0,
+                    isActive: data.isActive,
+                  })
+                }
+              }}
+              onDelete={async (id: number) => {
+                await deleteDocType.mutateAsync(id)
               }}
             />
           </TabsContent>

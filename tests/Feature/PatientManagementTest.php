@@ -3,6 +3,7 @@
 use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Models\Patient;
 use App\Models\PatientFamilyMember;
 use App\Models\Sector;
@@ -263,7 +264,7 @@ it('uploads and lists a document tied to a case', function () {
 
     $doc = $this->post("/api/patients/{$patient->id}/documents", [
         'file' => UploadedFile::fake()->create('report.pdf', 20, 'application/pdf'),
-        'document_type' => 'medical',
+        'document_type_id' => DocumentType::create(['name' => 'Medical Abstract'])->id,
         'case_id' => $case->id,
     ])->assertCreated()->json('data');
 

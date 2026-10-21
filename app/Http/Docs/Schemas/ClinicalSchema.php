@@ -242,10 +242,10 @@ use OpenApi\Attributes as OA;
 #[OA\Schema(
     schema: 'CaseDocumentRequest',
     description: 'Multipart upload.',
-    required: ['document_type', 'file'],
+    required: ['document_type_id', 'file'],
     properties: [
-        new OA\Property(property: 'document_type', type: 'string', maxLength: 255),
-        new OA\Property(property: 'file', type: 'string', format: 'binary', description: 'Max 10 MB.'),
+        new OA\Property(property: 'document_type_id', type: 'integer', description: 'An active Library document type.'),
+        new OA\Property(property: 'file', type: 'string', format: 'binary', description: 'pdf, jpg, jpeg or png; max 10 MB.'),
     ],
 )]
 final class ClinicalSchema

@@ -68,6 +68,8 @@ export interface PatientRecord {
   watchers: Watcher[]
   /** Cases a watcher can still be assigned to (open or ongoing). */
   openCases: OpenCase[]
+  /** Every case of the patient, newest first (the Docs tab can file under a closed one). */
+  allCases?: OpenCase[]
   /** The handler of the *latest episode*. */
   assignedStaff: StaffAssignment
   caseStudy: SocialCaseStudy

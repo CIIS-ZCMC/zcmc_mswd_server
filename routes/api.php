@@ -35,6 +35,8 @@ use App\Http\Controllers\DiagnosticController;
 use App\Http\Controllers\DiagnosticReportController;
 use App\Http\Controllers\DiscountController;
 use App\Http\Controllers\DocumentController;
+use App\Http\Controllers\DocumentFileController;
+use App\Http\Controllers\DocumentTypeController;
 use App\Http\Controllers\EncounterAcknowledgementSlipPdfController;
 use App\Http\Controllers\FinalizeSocialCaseController;
 use App\Http\Controllers\FindHospitalPatientController;
@@ -130,6 +132,8 @@ Route::middleware('auth:sanctum')->group(function () {
     // Library: UIS modes of assistance and fund sources; read by everyone, written by library.manage.
     Route::apiResource('mode-of-assistances', ModeOfAssistanceController::class)->except(['create', 'edit'])->parameters(['mode-of-assistances' => 'modeOfAssistance']);
     Route::apiResource('fund-sources', FundSourceController::class)->except(['create', 'edit'])->parameters(['fund-sources' => 'fundSource']);
+    // Library: kinds of patient document; read by everyone, written by library.manage.
+    Route::apiResource('document-types', DocumentTypeController::class)->except(['create', 'edit'])->parameters(['document-types' => 'documentType']);
     // Library: officers printed on MSWD forms; read by everyone, written by library.manage.
     Route::apiResource('signatories', SignatoryController::class)->except(['create', 'edit']);
     // Library: turnaround time targets; read by everyone, written by library.manage.
@@ -175,6 +179,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::get('patients/{patient}/family-members', [PatientFamilyMemberController::class, 'index']);
         Route::get('patients/{patient}/watchers', [PatientWatcherController::class, 'index']);
         Route::get('patients/{patient}/documents', [DocumentController::class, 'index']);
+        Route::get('patients/{patient}/documents/{document}/file', DocumentFileController::class)->name('patients.documents.file');
 
         // Hospital (SQL Server) lookups — read-only. `find` before `{id}` so it is not shadowed.
         Route::get('hospital-patients', [HospitalPatientController::class, 'index']);
@@ -235,7 +240,7 @@ Route::middleware('auth:sanctum')->group(function () {
         Route::delete('watchers/{watcher}', [PatientWatcherController::class, 'destroy']);
 
         Route::post('patients/{patient}/documents', [DocumentController::class, 'store']);
-        Route::delete('documents/{document}', [DocumentController::class, 'destroy']);
+        Route::delete('patients/{patient}/documents/{document}', [DocumentController::class, 'destroy']);
     });
 
     // The audit trail as a first-class read surface: the global log, and the

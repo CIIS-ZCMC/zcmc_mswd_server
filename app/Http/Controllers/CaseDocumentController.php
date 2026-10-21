@@ -2,11 +2,11 @@
 
 namespace App\Http\Controllers;
 
-use App\DTOs\DocumentDto;
 use App\Http\Requests\StoreCaseDocumentRequest;
 use App\Http\Resources\DocumentResource;
 use App\Models\CaseModel;
 use App\Models\Document;
+use App\Models\DocumentType;
 use App\Services\DocumentService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -28,25 +28,22 @@ class CaseDocumentController extends Controller implements HasMiddleware
 
     public function index(CaseModel $case): AnonymousResourceCollection
     {
-        return DocumentResource::collection($case->documents()->latest()->get());
+        return DocumentResource::collection($case->documents()->with(['uploadedBy', 'case', 'documentType'])->latest()->get());
     }
 
     public function store(StoreCaseDocumentRequest $request, CaseModel $case): JsonResponse
     {
-        $file = $request->file('file');
-        $path = $file->store("cases/{$case->id}/documents");
+        $document = $this->service->upload(
+            $case->patient,
+            $case,
+            $request->file('file'),
+            DocumentType::findOrFail($request->validated('document_type_id')),
+            $request->user(),
+        );
 
-        $document = $this->service->create(DocumentDto::fromArray([
-            'case_id' => $case->id,
-            'patient_id' => $case->patient_id,
-            'uploaded_by' => $request->user()->id,
-            'document_type' => $request->validated('document_type'),
-            'file_name' => $file->getClientOriginalName(),
-            'file_path' => $path,
-            'file_type' => $file->getClientMimeType(),
-        ]));
-
-        return DocumentResource::make($document)->response()->setStatusCode(Response::HTTP_CREATED);
+        return DocumentResource::make($document->load(['uploadedBy', 'case', 'documentType']))
+            ->response()
+            ->setStatusCode(Response::HTTP_CREATED);
     }
 
     public function destroy(CaseModel $case, Document $document): Response

@@ -3,6 +3,7 @@ import type { LibraryTabKey } from "../types"
 import {
   Building2,
   DollarSign,
+  FileText,
   HeartHandshake,
   Layers,
   PenLine,
@@ -156,6 +157,22 @@ export const LIBRARY_TABS: LibraryTabDefinition[] = [
     showCategory: false,
     showAddress: false,
     showRequiresSpecify: true,
+    showUsageCount: true,
+  },
+  {
+    key: "document-types",
+    label: "Document Types",
+    singularLabel: "Document Type",
+    description:
+      "Kinds of patient document picked on upload (Certificate of Indigency, Valid ID, Medical Abstract).",
+    icon: FileText,
+    writePermission: "library.manage",
+    defaultSort: "sortOrder",
+    showCode: false,
+    showSortOrder: true,
+    showCategory: false,
+    showAddress: false,
+    showRequiresSpecify: false,
     showUsageCount: true,
   },
   {
