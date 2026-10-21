@@ -54,6 +54,11 @@ class Assessment extends Model
         'his_transaction_id',
         'transaction_type',
         'encounter_date',
+        'uis_snapshot',
+        'uis_snapshot_at',
+        'uis_snapshot_by',
+        'interviewed_at',
+        'interviewed_by',
         'case_id',
         'parent_assessment_id',
         'reassessment_reason',
@@ -68,6 +73,7 @@ class Assessment extends Model
         'revision',
         'total_family_income',
         'net_per_capita_income',
+        'household_size',
         'housing_type',
         'utilities_access',
         'classification',
@@ -102,6 +108,18 @@ class Assessment extends Model
         'intervention_plan',
     ];
 
+    /**
+     * The frozen UIS copy is a blob: logging its old → new pair on every refresh
+     * would swamp the trail and tell a reader nothing. `uis_snapshot_at` and
+     * `uis_snapshot_by` are logged and say who refreshed it, and when.
+     *
+     * @return list<string>
+     */
+    public function auditExcept(): array
+    {
+        return ['uis_snapshot'];
+    }
+
     /** UIS form III/IV checkbox vocabularies (validated in the requests, printed by the UIS PDF). */
     public const HOUSE_TENURES = ['owned', 'rented'];
 
@@ -119,6 +137,10 @@ class Assessment extends Model
             'calculated_discount_rate' => 'decimal:2',
             'recommended_amount' => 'decimal:2',
             'revision' => 'integer',
+            'household_size' => 'integer',
+            'uis_snapshot' => 'array',
+            'uis_snapshot_at' => 'datetime',
+            'interviewed_at' => 'datetime',
             'problem_categories' => 'array',
             'light_source' => 'array',
             'water_source' => 'array',
@@ -201,6 +223,18 @@ class Assessment extends Model
     public function notedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'noted_by');
+    }
+
+    /** The worker who conducted the intake interview; "Interviewed by" on the UIS. */
+    public function interviewedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'interviewed_by');
+    }
+
+    /** Who last refreshed the frozen UIS copy. */
+    public function uisSnapshotBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'uis_snapshot_by');
     }
 
     public function parentAssessment(): BelongsTo

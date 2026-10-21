@@ -83,6 +83,7 @@ use App\Http\Controllers\PromoteAssessmentToSocialCaseController;
 use App\Http\Controllers\PromoteCaseWatcherController;
 use App\Http\Controllers\ReassessCaseController;
 use App\Http\Controllers\ReferCaseController;
+use App\Http\Controllers\RefreshUisSnapshotController;
 use App\Http\Controllers\ReleaseAssistanceController;
 use App\Http\Controllers\ReopenCaseController;
 use App\Http\Controllers\RestoreCaseController;
@@ -293,6 +294,9 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('assessments/{assessment}/uis', [AssessmentUisController::class, 'readiness']);
     Route::get('assessments/{assessment}/uis/pdf', [AssessmentUisController::class, 'pdf']);
     Route::get('assessments/{assessment}/uis/prints', [AssessmentUisController::class, 'prints']);
+    // Pulls the patient's current identity and family onto the sheet, replacing
+    // the copy frozen at intake (cases.update, set in the controller).
+    Route::post('assessments/{assessment}/uis-snapshot/refresh', RefreshUisSnapshotController::class);
 
     Route::middleware('permission:cases.update')->group(function () {
         Route::post('cases/{case}/assign', AssignCaseController::class);

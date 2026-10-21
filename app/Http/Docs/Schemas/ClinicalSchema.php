@@ -51,8 +51,24 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'assessment_notes', type: 'string', nullable: true),
         new OA\Property(property: 'intervention_plan', type: 'string', nullable: true),
         new OA\Property(property: 'expenses', type: 'array', items: new OA\Items(ref: '#/components/schemas/AssessmentExpense')),
+        new OA\Property(property: 'household_size', type: 'integer', nullable: true, description: 'The household the per-capita income was divided by, frozen at intake.'),
+        new OA\Property(property: 'uis_snapshot', ref: '#/components/schemas/UisSnapshot', nullable: true),
+        new OA\Property(property: 'uis_snapshot_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'uis_snapshot_by', type: 'string', nullable: true, description: 'Who last refreshed the frozen copy; present when loaded.'),
+        new OA\Property(property: 'interviewed_at', type: 'string', format: 'date-time', nullable: true, description: 'When the intake interview happened; printed on the UIS.'),
+        new OA\Property(property: 'interviewed_by', type: 'string', nullable: true, description: 'The worker who conducted it; signs the UIS. Present when loaded.'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time', nullable: true),
+    ],
+)]
+#[OA\Schema(
+    schema: 'UisSnapshot',
+    description: 'Sections I and II of the Unified Intake Sheet as the intake froze them, so editing the patient afterwards cannot rewrite a sheet already issued. Section V is not here: it stays live. See docs/UIS_SNAPSHOT_PLAN.md.',
+    properties: [
+        new OA\Property(property: 'patient', type: 'object', description: 'Section I: identity as it read at intake. Ages are resolved as of the interview, the address is composed as the sheet prints it, and the PhilHealth number is the one on file then.'),
+        new OA\Property(property: 'family_members', type: 'array', description: 'Section II, one entry per member at intake.', items: new OA\Items(type: 'object')),
+        new OA\Property(property: 'household_size', type: 'integer'),
+        new OA\Property(property: 'labels', type: 'object', description: 'The Library names the sheet printed, kept so renaming a list entry does not change an old sheet.'),
     ],
 )]
 #[OA\Schema(

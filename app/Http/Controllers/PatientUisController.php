@@ -37,6 +37,8 @@ class PatientUisController extends Controller implements HasMiddleware
     {
         // Household size as the MSWD classification counts it (CalculateMswdClassificationAction):
         // the patient plus every family member. One query for the patient, not one per row.
+        // This is today's household, used for a case with no intake yet; an intake
+        // reports the size it froze (see docs/UIS_SNAPSHOT_PLAN.md).
         $familyCount = $patient->familyMembers()->count();
         $hasFamily = $familyCount > 0;
         $householdSize = $familyCount + 1;
@@ -51,7 +53,7 @@ class PatientUisController extends Controller implements HasMiddleware
         $intakes = Assessment::query()
             ->where('patient_id', $patient->id)
             ->whereNull('social_case_status')
-            ->with('expenses')
+            ->with(['expenses', 'interviewedBy', 'uisSnapshotBy'])
             ->latest()->latest('id')
             ->get()
             ->unique(fn (Assessment $intake) => $this->encounterKey($intake->his_transaction_id, $intake->case_id));
@@ -111,17 +113,30 @@ class PatientUisController extends Controller implements HasMiddleware
                         lastPrintedAt: $rowPrints->max('printed_at')?->toDateTimeString(),
                     ) + [
                         'has_social_case' => (bool) $case?->social_case_exists,
-                        'household_size' => $householdSize,
+                        // The intake's frozen household; today's for a case with no intake.
+                        'household_size' => $intake?->household_size ?? $householdSize,
                         // ANNEX B section III amounts, matched by the same code the PDF uses.
                         'expense_slots' => $intake === null ? null : UisExpenseSlots::slots($intake->expenses),
-                        'assessment' => $intake === null
-                            ? null
-                            : AssessmentResource::make($intake)->resolve($request) + ['household_size' => $householdSize],
+                        'assessment' => $intake === null ? null : $this->intakePayload($intake, $request, $householdSize),
                     ],
                 ];
             });
 
         return response()->json(['data' => $data]);
+    }
+
+    /**
+     * The intake as the client reads it. `household_size` is the size the intake
+     * froze; a row from before snapshots falls back to today's household.
+     *
+     * @return array<string, mixed>
+     */
+    private function intakePayload(Assessment $intake, Request $request, int $householdSize): array
+    {
+        $payload = AssessmentResource::make($intake)->resolve($request);
+        $payload['household_size'] ??= $householdSize;
+
+        return $payload;
     }
 
     /** One UIS per HIS encounter; a case with no encounter is its own. */

@@ -24,9 +24,22 @@ trait Auditable
     {
         return LogOptions::defaults()
             ->logFillable()
+            ->logExcept($this->auditExcept())
             ->logOnlyDirty()
             ->dontSubmitEmptyLogs()
             ->useLogName(Str::snake(class_basename($this)));
+    }
+
+    /**
+     * Fillable columns to keep out of the trail. For a large blob (a frozen
+     * snapshot, say) the old → new pair would swamp the log and tell a reader
+     * nothing; the row's own timestamps say when it changed.
+     *
+     * @return list<string>
+     */
+    public function auditExcept(): array
+    {
+        return [];
     }
 
     /**

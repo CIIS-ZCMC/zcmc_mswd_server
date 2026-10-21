@@ -15,13 +15,21 @@ use Illuminate\Support\Collection;
  * Renders the Unified Intake Sheet (ANNEX B) of an Intake Assessment: the
  * patient, the assessment, and the guarantors on its HIS encounter (section V).
  * The intake stands without a case; a case-based print resolves the case's
- * intake. Each print is logged separately by UisPrintLogService. See
- * docs/INTAKE_ASSESSMENT_PLAN.md.
+ * intake. Each print is logged separately by UisPrintLogService.
+ *
+ * Sections I and II are rendered from the copy the intake froze
+ * (UisSnapshotService), so editing the patient afterwards cannot rewrite a sheet
+ * already issued. Section V reads the encounter's guarantors live, because a
+ * guarantee is a later decision on the same encounter. See
+ * docs/INTAKE_ASSESSMENT_PLAN.md and docs/UIS_SNAPSHOT_PLAN.md.
  */
 class UnifiedIntakeSheetPdfService
 {
+    public function __construct(protected UisSnapshotService $snapshots) {}
+
     /**
-     * Patient relations the form reads, eager-loaded together to avoid N+1.
+     * Patient relations the form reads when there is no frozen copy to render
+     * from, eager-loaded together to avoid N+1.
      *
      * @var list<string>
      */
@@ -111,15 +119,24 @@ class UnifiedIntakeSheetPdfService
         ?User $printedBy,
     ): PdfInstance {
         $patient?->loadMissing(self::PATIENT_RELATIONS);
-        $assessment?->loadMissing('expenses');
+        $assessment?->loadMissing(['expenses', 'interviewedBy']);
+
+        // Sections I and II come from the copy frozen at intake, so an issued
+        // sheet reprints as it was. Section V stays live — see UisSnapshotService.
+        $sheet = $this->snapshots->sheetData($assessment, $patient);
 
         return Pdf::loadView('pdf.unified-intake-sheet', [
-            'patient' => $patient,
+            'patient' => $sheet['patient'],
+            'familyMembers' => $sheet['family_members'],
             'case' => $case,
             'assessment' => $assessment,
             'assistanceLines' => $patient === null ? collect() : $this->assistanceLines($patient, $transactionId, $case),
             'printedBy' => $printedBy,
             'printedAt' => now(),
+            // The interview is when the intake happened, not when this copy was
+            // printed, and it was conducted by the worker who recorded it.
+            'interviewedAt' => $assessment?->interviewed_at,
+            'interviewedBy' => $assessment?->interviewedBy ?? $printedBy,
         ])->setPaper('a4', 'portrait');
     }
 }
