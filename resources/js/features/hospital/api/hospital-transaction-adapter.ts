@@ -34,6 +34,10 @@ function toGuarantor(raw: ApiPatientGuarantor): EncounterGuarantor {
     postDate: raw.post_date ?? null,
     glPosted: toBool(raw.isGlPost),
     glPostDate: raw.gl_post_date ?? null,
+    mswdGuarantorId:
+      raw.mswd_guarantor_id ??
+      raw.guarantor_details?.mswd_guarantor_id ??
+      null,
   }
 }
 

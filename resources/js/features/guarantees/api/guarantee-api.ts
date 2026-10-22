@@ -86,16 +86,23 @@ export async function deleteGuarantee(id: number | string): Promise<void> {
 }
 
 /**
- * GET /api/guarantors?active=1
+ * GET /api/guarantors?active=1&transaction={transactionId}
  */
 export async function getGuarantorOptions(
-  activeOnly = true
+  activeOnly = true,
+  transactionId?: number | string | null
 ): Promise<GuarantorOption[]> {
+  const params: Record<string, string | number> = {}
+  if (activeOnly) {
+    params.active = 1
+  }
+  if (transactionId !== undefined && transactionId !== null && transactionId !== "") {
+    params.transaction = transactionId
+  }
+
   const res = await apiClient.get<{ data: ApiGuarantorOption[] }>(
     "/guarantors",
-    {
-      params: activeOnly ? { active: 1 } : {},
-    }
+    { params }
   )
   const list = Array.isArray(res.data) ? res.data : []
   return list.map(toGuarantorOption)

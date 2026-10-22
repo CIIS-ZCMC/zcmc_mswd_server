@@ -6,12 +6,20 @@ export interface ApiGuarantorOption {
   id: number
   name: string
   is_active?: boolean
+  his_amount?: number | string | null
+  gl_posted?: boolean | null
+  gl_post_date?: string | null
+  has_breakdown?: boolean
 }
 
 export interface GuarantorOption {
   id: number
   name: string
   isActive?: boolean
+  hisAmount?: number | null
+  glPosted?: boolean | null
+  glPostDate?: string | null
+  hasBreakdown?: boolean
 }
 
 interface ApiLineOption {

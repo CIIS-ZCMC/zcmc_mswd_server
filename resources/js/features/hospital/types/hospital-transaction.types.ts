@@ -20,6 +20,7 @@ export interface EncounterGuarantor {
   postDate: string | null
   glPosted: boolean
   glPostDate: string | null
+  mswdGuarantorId?: number | null
 }
 
 /**

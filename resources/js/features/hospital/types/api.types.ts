@@ -26,7 +26,9 @@ export interface ApiPatientGuarantor {
   guarantor_details?: {
     guarantor_id?: number | null
     guarantor_name?: string | null
+    mswd_guarantor_id?: number | null
   } | null
+  mswd_guarantor_id?: number | null
   post_date?: string | null
   amount?: number | string | null
   isGlPost?: boolean | number | null
