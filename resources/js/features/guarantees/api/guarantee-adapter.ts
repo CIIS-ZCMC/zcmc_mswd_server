@@ -68,6 +68,13 @@ export function toGuarantorOption(api: ApiGuarantorOption): GuarantorOption {
     id: api.id,
     name: api.name,
     isActive: Boolean(api.is_active ?? true),
+    hisAmount:
+      api.his_amount !== undefined && api.his_amount !== null
+        ? Number(api.his_amount)
+        : null,
+    glPosted: api.gl_posted ?? null,
+    glPostDate: api.gl_post_date ?? null,
+    hasBreakdown: Boolean(api.has_breakdown),
   }
 }
 

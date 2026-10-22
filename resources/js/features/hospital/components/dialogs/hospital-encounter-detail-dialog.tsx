@@ -17,7 +17,7 @@ import { RegistryStatusBadge } from "../registry-status-badge"
 import { AssessEncounterDialog } from "./assess-encounter-dialog"
 import { OpenCaseDialog } from "@/features/cases/components/dialogs/open-case-dialog"
 import { EncounterUisPanel } from "@/features/cases/components/encounter-uis-panel"
-import { EncounterGuaranteesCard } from "@/features/guarantees"
+import { EncounterGuaranteesCard, useGuarantees } from "@/features/guarantees"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -49,13 +49,19 @@ import {
   FileText,
   FolderPlus,
   Loader2,
+  Plus,
   Printer,
   ShieldCheck,
   Stethoscope,
   XCircle,
 } from "lucide-react"
 import { useNavigate } from "@/lib/inertia-router-hooks"
-import { ServiceVisitPanel, usePatientVisits } from "@/features/queue"
+import {
+  QueueActionGateProvider,
+  QueueStatusBanner,
+  ServiceVisitPanel,
+  useQueueActionGate,
+} from "@/features/queue"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 
 const PLACEHOLDER = "—"
@@ -94,7 +100,20 @@ interface HospitalEncounterDetailDialogProps {
   initialTab?: string
 }
 
-export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDialogProps> = ({
+export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDialogProps> = (props) => {
+  if (!props.encounter) return null
+
+  return (
+    <QueueActionGateProvider
+      patientId={props.patient.id}
+      transactionId={props.encounter.id}
+    >
+      <HospitalEncounterDetailDialogContent {...props} />
+    </QueueActionGateProvider>
+  )
+}
+
+const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDialogProps> = ({
   encounter,
   patient,
   open,
@@ -112,6 +131,8 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
   const [printableType, setPrintableType] = useState<PrintableType>("uis")
   const [isPrintableOpen, setIsPrintableOpen] = useState(false)
 
+  const { canPerformActions, reason, activeVisit } = useQueueActionGate()
+
   const handleOpenPrint = (type: PrintableType) => {
     setPrintableType(type)
     setIsPrintableOpen(true)
@@ -121,12 +142,17 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
   const { data: detail, isLoading, error } = useHospitalEncounter(encounterId, open && encounterId > 0)
   const { data: assignableCases = [] } = useAssignableCases(encounterId, open && encounterId > 0)
   const canManageQueue = usePermission("queue.manage")
-  const { data: visits = [] } = usePatientVisits(
+  const canCreateGuarantee = usePermission("guarantee.create")
+  const [targetGuarantorForBreakdown, setTargetGuarantorForBreakdown] = useState<{
+    name: string
+    mswdGuarantorId?: number | null
+  } | null>(null)
+  const { data: mswdGuaranteesData } = useGuarantees(
     patient?.id,
     encounterId > 0 ? encounterId : undefined,
-    open && canManageQueue
+    open && Boolean(patient?.id && encounterId > 0)
   )
-  const activeVisit = visits.find((v) => v.status === "waiting" || v.status === "in_progress") ?? null
+  const mswdGuaranteesList = mswdGuaranteesData?.data ?? []
 
   // Reset tab on open
   React.useEffect(() => {
@@ -181,7 +207,9 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
               {/* Header Print Actions */}
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-sm font-bold gap-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
+                  disabled={!canPerformActions}
+                  title={!canPerformActions ? reason : undefined}
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-sm font-bold gap-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
                   aria-label="Print documents for encounter"
                 >
                   <Printer className="size-4.5 text-primary" />
@@ -288,6 +316,7 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
             </div>
 
             <div className="flex-1 overflow-y-auto p-5 space-y-4">
+              <QueueStatusBanner onNavigateToQueue={() => setActiveTab("queue")} />
               {isLoading && (
                 <div className="space-y-3">
                   <div className="flex items-center gap-2 text-xs font-semibold text-muted-foreground p-3 bg-muted/30 rounded-lg">
@@ -468,26 +497,65 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                             <TableHead className="text-xs font-bold text-foreground">Guarantor Name</TableHead>
                             <TableHead className="text-xs font-bold text-foreground text-right">Amount</TableHead>
                             <TableHead className="text-xs font-bold text-foreground">General Ledger Status</TableHead>
+                            <TableHead className="text-xs font-bold text-foreground text-right">Action</TableHead>
                           </TableRow>
                         </TableHeader>
                         <TableBody>
-                          {activeEncounter.guarantors.map((g) => (
-                            <TableRow key={g.id} className="hover:bg-muted/30">
-                              <TableCell className="font-semibold text-sm">{text(g.name)}</TableCell>
-                              <TableCell className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                                {peso(g.amount)}
-                              </TableCell>
-                              <TableCell className="text-xs font-medium">
-                                {g.glPosted ? (
-                                  <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-500/15 px-2 py-0.5 rounded text-xs">
-                                    <CheckCircle2 className="w-3.5 h-3.5" /> Posted ({text(g.glPostDate)})
-                                  </span>
-                                ) : (
-                                  <span className="text-muted-foreground text-xs">Not Posted</span>
-                                )}
-                              </TableCell>
-                            </TableRow>
-                          ))}
+                          {activeEncounter.guarantors.map((g) => {
+                            const match = mswdGuaranteesList.find(
+                              (mg) =>
+                                mg.guarantor?.name.trim().toLowerCase() ===
+                                (g.name?.trim().toLowerCase() ?? "")
+                            )
+
+                            return (
+                              <TableRow key={g.id} className="hover:bg-muted/30">
+                                <TableCell className="font-semibold text-sm">{text(g.name)}</TableCell>
+                                <TableCell className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                  {peso(g.amount)}
+                                </TableCell>
+                                <TableCell className="text-xs font-medium">
+                                  {g.glPosted ? (
+                                    <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-500/15 px-2 py-0.5 rounded text-xs">
+                                      <CheckCircle2 className="w-3.5 h-3.5" /> Posted ({text(g.glPostDate)})
+                                    </span>
+                                  ) : (
+                                    <span className="text-muted-foreground text-xs">Not Posted</span>
+                                  )}
+                                </TableCell>
+                                <TableCell className="text-right">
+                                  {match ? (
+                                    <Badge
+                                      variant="secondary"
+                                      className="bg-emerald-500/15 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300"
+                                    >
+                                      Breakdown recorded
+                                    </Badge>
+                                  ) : canCreateGuarantee ? (
+                                    <Button
+                                      type="button"
+                                      variant="outline"
+                                      size="sm"
+                                      disabled={!canPerformActions}
+                                      title={!canPerformActions ? reason : undefined}
+                                      onClick={() =>
+                                        setTargetGuarantorForBreakdown({
+                                          name: g.name ?? "",
+                                          mswdGuarantorId: g.mswdGuarantorId,
+                                        })
+                                      }
+                                      className="h-7 cursor-pointer gap-1 border-primary/30 px-2 text-xs font-bold text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                    >
+                                      <Plus className="size-3" />
+                                      Add Breakdown
+                                    </Button>
+                                  ) : (
+                                    <span className="text-xs text-muted-foreground italic">—</span>
+                                  )}
+                                </TableCell>
+                              </TableRow>
+                            )
+                          })}
                         </TableBody>
                       </Table>
                     </div>
@@ -498,6 +566,8 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                 <EncounterGuaranteesCard
                   patientId={patient.id}
                   transactionId={activeEncounter.id}
+                  targetGuarantor={targetGuarantorForBreakdown}
+                  onClearTargetGuarantor={() => setTargetGuarantorForBreakdown(null)}
                 />
               </TabsContent>
 
@@ -570,8 +640,10 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                   type="button"
                   variant="outline"
                   size="sm"
+                  disabled={!canPerformActions}
+                  title={!canPerformActions ? reason : undefined}
                   onClick={() => setOpenCaseOpen(true)}
-                  className="font-bold text-xs h-9 px-3.5 gap-1.5 border shadow-2xs"
+                  className="font-bold text-xs h-9 px-3.5 gap-1.5 border shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <FolderPlus className="w-3.5 h-3.5 text-primary" />
                   Open Case
@@ -582,8 +654,10 @@ export const HospitalEncounterDetailDialog: React.FC<HospitalEncounterDetailDial
                 <Button
                   type="button"
                   size="sm"
+                  disabled={!canPerformActions}
+                  title={!canPerformActions ? reason : undefined}
                   onClick={() => setAssessOpen(true)}
-                  className="font-bold text-xs h-9 px-3.5 gap-1.5 shadow-xs"
+                  className="font-bold text-xs h-9 px-3.5 gap-1.5 shadow-xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <ClipboardCheck className="w-3.5 h-3.5" />
                   Assess Encounter

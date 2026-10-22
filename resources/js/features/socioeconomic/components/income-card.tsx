@@ -12,6 +12,7 @@ import {
   TableRow,
 } from "@/components/ui/table"
 import { formatCurrency } from "@/lib/format-currency"
+import { useQueueActionGate } from "@/features/queue"
 import type { ProfileIncome } from "../types/socioeconomic.types"
 
 interface IncomeCardProps {
@@ -20,6 +21,7 @@ interface IncomeCardProps {
 }
 
 export const IncomeCard: React.FC<IncomeCardProps> = ({ income, onUpdate }) => {
+  const { canPerformActions, reason } = useQueueActionGate()
   const ratio = income.expenseToIncomeRatio
   const ratioPercent = ratio !== null && ratio !== undefined ? Math.round(ratio * 100) : null
 
@@ -93,8 +95,10 @@ export const IncomeCard: React.FC<IncomeCardProps> = ({ income, onUpdate }) => {
               <Button
                 variant="outline"
                 size="sm"
+                disabled={!canPerformActions}
+                title={!canPerformActions ? reason : undefined}
                 onClick={onUpdate}
-                className="h-8 text-xs font-bold bg-background hover:bg-muted border-amber-500/40 shrink-0 cursor-pointer shadow-2xs"
+                className="h-8 text-xs font-bold bg-background hover:bg-muted border-amber-500/40 shrink-0 cursor-pointer shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 Sync Changes
               </Button>

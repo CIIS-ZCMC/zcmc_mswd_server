@@ -5,6 +5,7 @@ use App\Models\Bizbox\HospitalPatient;
 use App\Models\Bizbox\PatientGuarantors;
 use App\Models\Bizbox\PatientPersonalData;
 use App\Models\Bizbox\PatientTransaction;
+use App\Models\Guarantor;
 use App\Models\User;
 use App\Repositories\Contracts\PatientGuarantorRepositoryInterface;
 use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
@@ -157,4 +158,21 @@ it('omits guarantors from the transaction list', function () {
         ->assertOk()
         ->assertJsonPath('data.0.id', 9)
         ->assertJsonMissingPath('data.0.patient_guarantors');
+});
+
+it('returns HIS guarantors for a transaction via /api/guarantors?transaction={id}', function () {
+    Sanctum::actingAs(hisUser());
+
+    $this->mock(PatientGuarantorRepositoryInterface::class, function ($mock) {
+        $mock->shouldReceive('forRegistration')->with(9)->andReturn(new Collection([
+            fakeGuarantor(1, 9, 'Santos', 'Pedro', 'M'),
+        ]));
+    });
+
+    $res = $this->getJson('/api/guarantors?transaction=9')
+        ->assertOk()
+        ->assertJsonCount(1, 'data')
+        ->assertJsonPath('data.0.name', 'Pedro M Santos');
+
+    expect(Guarantor::where('name', 'Pedro M Santos')->exists())->toBeTrue();
 });

@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
+import { useQueueActionGate } from "@/features/queue"
 import { CheckCircle2, CreditCard, Eye, Plus } from "lucide-react"
 import type { PatientIdCredential, PatientRecord } from "../../types"
 import { IdDialog, type CreateIdPayload } from "../dialogs/id-dialog"
@@ -12,6 +13,7 @@ interface IdTabProps {
 }
 
 export const IdTab: React.FC<IdTabProps> = ({ patient }) => {
+  const { canPerformActions, reason } = useQueueActionGate()
   const [isAddIdOpen, setIsAddIdOpen] = useState(false)
   const [selectedPreview, setSelectedPreview] = useState<IdPreviewData | null>(null)
   const [customIds, setCustomIds] = useState<PatientIdCredential[]>(patient.customIds || [])
@@ -102,7 +104,9 @@ export const IdTab: React.FC<IdTabProps> = ({ patient }) => {
         <Button
           variant="default"
           size="default"
-          className="h-10 px-4 text-sm font-bold gap-2"
+          disabled={!canPerformActions}
+          title={!canPerformActions ? reason : undefined}
+          className="h-10 px-4 text-sm font-bold gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={() => setIsAddIdOpen(true)}
         >
           <Plus className="size-4.5" /> Add New ID

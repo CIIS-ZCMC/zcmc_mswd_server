@@ -24,6 +24,13 @@ class GuarantorResource extends JsonResource
                 isset($this->patient_guarantees_count, $this->patient_assistances_count),
                 fn () => $this->patient_guarantees_count + $this->patient_assistances_count,
             ),
+            'his_amount' => $this->when(
+                isset($this->his_amount),
+                fn () => $this->his_amount !== null ? (float) $this->his_amount : null
+            ),
+            'gl_posted' => $this->when(isset($this->gl_posted), fn () => (bool) $this->gl_posted),
+            'gl_post_date' => $this->when(isset($this->gl_post_date), fn () => $this->gl_post_date),
+            'has_breakdown' => $this->when(isset($this->has_breakdown), fn () => (bool) $this->has_breakdown),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

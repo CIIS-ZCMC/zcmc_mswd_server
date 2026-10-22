@@ -6,6 +6,8 @@ use App\Http\Requests\StoreGuarantorRequest;
 use App\Http\Requests\UpdateGuarantorRequest;
 use App\Http\Resources\GuarantorResource;
 use App\Models\Guarantor;
+use App\Models\PatientGuarantee;
+use App\Services\PatientGuarantorService;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -29,8 +31,45 @@ class GuarantorController extends Controller implements HasMiddleware
         ];
     }
 
-    public function index(Request $request): AnonymousResourceCollection
+    public function index(Request $request, PatientGuarantorService $patientGuarantorService): AnonymousResourceCollection
     {
+        $transactionId = $request->input('transaction');
+
+        if (! blank($transactionId)) {
+            try {
+                $hisGuarantors = $patientGuarantorService->forRegistration($transactionId);
+
+                if ($hisGuarantors->isNotEmpty()) {
+                    $options = $hisGuarantors->map(function ($ledger) use ($transactionId) {
+                        $name = trim((string) ($ledger->guarantor?->fullname ?? ''));
+                        if ($name === '') {
+                            return null;
+                        }
+
+                        $mswdGuarantor = Guarantor::firstOrCreate(['name' => $name]);
+
+                        $hasBreakdown = PatientGuarantee::query()
+                            ->where('his_transaction_id', $transactionId)
+                            ->where('guarantor_id', $mswdGuarantor->id)
+                            ->exists();
+
+                        $mswdGuarantor->his_amount = $ledger->amount;
+                        $mswdGuarantor->gl_posted = (bool) $ledger->glpostflag;
+                        $mswdGuarantor->gl_post_date = $ledger->glpostdate;
+                        $mswdGuarantor->has_breakdown = $hasBreakdown;
+
+                        return $mswdGuarantor;
+                    })->filter()->values();
+
+                    if ($options->isNotEmpty()) {
+                        return GuarantorResource::collection($options);
+                    }
+                }
+            } catch (\Throwable) {
+                // Fallback to library guarantors on any external HIS query failure
+            }
+        }
+
         $items = Guarantor::query()
             // `?active=1` hides retired entries from new-record dropdowns
             // while leaving them resolvable on historical records.

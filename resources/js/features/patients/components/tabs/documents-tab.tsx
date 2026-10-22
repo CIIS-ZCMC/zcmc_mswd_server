@@ -40,6 +40,7 @@ import {
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import { useDocumentTypeOptions } from "@/features/library/hooks/use-lookup-options"
 import { Download, Eye, FileImage, FileText, Plus, Trash2 } from "lucide-react"
 import { openPatientDocument } from "../../api/documents-api"
@@ -85,6 +86,7 @@ function formatDate(iso: string): string {
 export const DocumentsTab: React.FC<DocumentsTabProps> = ({ patient }) => {
   const patientId = Number(patient.id)
   const canManage = usePermission("patients.update")
+  const { canPerformActions, reason } = useQueueActionGate()
 
   const [typeFilter, setTypeFilter] = useState(ALL_TYPES)
   const filters =
@@ -167,7 +169,9 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({ patient }) => {
             <Button
               variant="default"
               size="default"
-              className="h-10 gap-2 px-4 text-sm font-bold"
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
+              className="h-10 gap-2 px-4 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => setIsUploadOpen(true)}
             >
               <Plus className="size-4.5" /> Upload Document
@@ -293,7 +297,9 @@ export const DocumentsTab: React.FC<DocumentsTabProps> = ({ patient }) => {
                               <Button
                                 variant="ghost"
                                 size="sm"
-                                className="h-8 w-8 p-0 text-destructive hover:text-destructive"
+                                disabled={!canPerformActions}
+                                title={!canPerformActions ? reason : undefined}
+                                className="h-8 w-8 p-0 text-destructive hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
                                 aria-label={`Delete ${doc.fileName}`}
                                 onClick={() => setDeleting(doc)}
                               />

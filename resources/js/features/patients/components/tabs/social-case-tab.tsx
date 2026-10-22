@@ -4,6 +4,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import {
   useAmendSocialCase,
   useFinalizeSocialCase,
@@ -72,6 +73,7 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
   const canCreateCase = usePermission("cases.create")
   const canUpdateCase = usePermission("cases.update")
   const canFinalizeCase = usePermission("cases.finalize_social_case")
+  const { canPerformActions, reason } = useQueueActionGate()
 
   const { data: caseRecord } = useCase(caseId)
   const caseCode = propCaseCode ?? caseRecord?.caseCode ?? patient?.caseStudy?.caseNumber ?? (caseId ? `CASE-${caseId}` : "—")
@@ -217,9 +219,10 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                 {canCreateCase ? (
                   <Button
                     onClick={handleStart}
-                    disabled={startMutation.isPending || promoteMutation.isPending}
+                    disabled={!canPerformActions || startMutation.isPending || promoteMutation.isPending}
+                    title={!canPerformActions ? reason : undefined}
                     size="senior"
-                    className="font-extrabold text-sm px-6 h-11 shadow-md hover:shadow-lg transition-all"
+                    className="font-extrabold text-sm px-6 h-11 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     {startMutation.isPending || promoteMutation.isPending ? (
                       <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -237,8 +240,10 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                 <Button
                   variant="outline"
                   size="senior"
+                  disabled={!canPerformActions}
+                  title={!canPerformActions ? reason : undefined}
                   onClick={() => setReassessDialogOpen(true)}
-                  className="font-bold text-sm h-11 border-2 border-primary/40 text-primary hover:bg-primary/10"
+                  className="font-bold text-sm h-11 border-2 border-primary/40 text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Calculator className="w-4 h-4 mr-2" />
                   Re-assess Patient
@@ -391,8 +396,10 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
               <Button
                 variant="outline"
                 size="senior"
+                disabled={!canPerformActions}
+                title={!canPerformActions ? reason : undefined}
                 onClick={() => setReassessDialogOpen(true)}
-                className="border-2 border-primary/40 text-primary font-extrabold text-sm h-11 px-4 hover:bg-primary/10 transition-all"
+                className="border-2 border-primary/40 text-primary font-extrabold text-sm h-11 px-4 hover:bg-primary/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <Calculator className="w-5 h-5 mr-2" />
                 Re-assess Patient
@@ -404,8 +411,9 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                   variant="outline"
                   size="senior"
                   onClick={handleDownloadPdf}
-                  disabled={isDownloadingPdf}
-                  className="border-2 border-primary/40 text-foreground font-bold text-sm h-11 px-4 hover:bg-primary/10 transition-all"
+                  disabled={!canPerformActions || isDownloadingPdf}
+                  title={!canPerformActions ? reason : undefined}
+                  className="border-2 border-primary/40 text-foreground font-bold text-sm h-11 px-4 hover:bg-primary/10 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {isDownloadingPdf ? (
                     <Loader2 className="w-5 h-5 mr-2 animate-spin text-primary" />
@@ -423,11 +431,13 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                     <Button
                       variant="outline"
                       size="senior"
+                      disabled={!canPerformActions}
+                      title={!canPerformActions ? reason : undefined}
                       onClick={() => {
                         setIsEditing(true)
                         setActionError(null)
                       }}
-                      className="border-2 border-primary text-primary font-extrabold text-sm h-11 px-4 hover:bg-primary/15 transition-all"
+                      className="border-2 border-primary text-primary font-extrabold text-sm h-11 px-4 hover:bg-primary/15 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       <Edit className="w-5 h-5 mr-2" />
                       Edit Report
@@ -437,8 +447,9 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                       variant="secondary"
                       size="senior"
                       onClick={handleSaveDraft}
-                      disabled={updateMutation.isPending}
-                      className="border-2 border-slate-400 dark:border-slate-600 font-extrabold text-sm h-11 px-5 shadow-sm hover:bg-slate-200 dark:hover:bg-slate-800 transition-all"
+                      disabled={!canPerformActions || updateMutation.isPending}
+                      title={!canPerformActions ? reason : undefined}
+                      className="border-2 border-slate-400 dark:border-slate-600 font-extrabold text-sm h-11 px-5 shadow-sm hover:bg-slate-200 dark:hover:bg-slate-800 transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                     >
                       {updateMutation.isPending ? (
                         <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -457,8 +468,9 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                   variant="default"
                   size="senior"
                   onClick={handleSubmitReview}
-                  disabled={submitMutation.isPending || updateMutation.isPending}
-                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm h-11 px-5 shadow-md hover:shadow-lg transition-all"
+                  disabled={!canPerformActions || submitMutation.isPending || updateMutation.isPending}
+                  title={!canPerformActions ? reason : undefined}
+                  className="bg-indigo-600 hover:bg-indigo-700 text-white font-extrabold text-sm h-11 px-5 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {submitMutation.isPending ? (
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -475,8 +487,9 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                   variant="default"
                   size="senior"
                   onClick={handleFinalize}
-                  disabled={finalizeMutation.isPending || (socialCase.canFinalize === false && !isEditing)}
-                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm h-11 px-6 shadow-md hover:shadow-lg transition-all"
+                  disabled={!canPerformActions || finalizeMutation.isPending || (socialCase.canFinalize === false && !isEditing)}
+                  title={!canPerformActions ? reason : undefined}
+                  className="bg-emerald-600 hover:bg-emerald-700 text-white font-extrabold text-sm h-11 px-6 shadow-md hover:shadow-lg transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   {finalizeMutation.isPending ? (
                     <Loader2 className="w-5 h-5 mr-2 animate-spin" />
@@ -492,11 +505,13 @@ export const SocialCaseTab: React.FC<SocialCaseTabProps> = ({
                 <Button
                   variant="outline"
                   size="senior"
+                  disabled={!canPerformActions}
+                  title={!canPerformActions ? reason : undefined}
                   onClick={() => {
                     setAmendDialogOpen(true)
                     setActionError(null)
                   }}
-                  className="border-2 border-amber-500 text-amber-800 dark:text-amber-300 font-extrabold text-sm h-11 px-5 hover:bg-amber-500/15 shadow-sm transition-all"
+                  className="border-2 border-amber-500 text-amber-800 dark:text-amber-300 font-extrabold text-sm h-11 px-5 hover:bg-amber-500/15 shadow-sm transition-all disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <RotateCcw className="w-5 h-5 mr-2" />
                   Amend Report

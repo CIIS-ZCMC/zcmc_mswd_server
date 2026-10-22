@@ -14,6 +14,7 @@ import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { RecordHistoryPopover } from "@/features/audit/components/record-history-popover"
+import { useQueueActionGate } from "@/features/queue"
 import { Pencil, Plus, Trash2 } from "lucide-react"
 import type { FamilyMember, PatientRecord } from "../../types"
 
@@ -31,6 +32,7 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
   onDeleteFamilyMember,
 }) => {
   const [memberToDelete, setMemberToDelete] = useState<FamilyMember | null>(null)
+  const { canPerformActions, reason } = useQueueActionGate()
 
   return (
     <Card className="shadow-xs">
@@ -46,7 +48,9 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
         <Button
           variant="default"
           size="default"
-          className="h-10 px-4 text-sm font-bold gap-2 shadow-xs cursor-pointer"
+          disabled={!canPerformActions}
+          title={!canPerformActions ? reason : undefined}
+          className="h-10 px-4 text-sm font-bold gap-2 shadow-xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           onClick={onOpenAddFamilyDialog}
         >
           <Plus className="size-4.5" /> Add Family Member
@@ -106,7 +110,9 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-9 px-3 text-sm font-bold gap-1.5 cursor-pointer"
+                          disabled={!canPerformActions}
+                          title={!canPerformActions ? reason : undefined}
+                          className="h-9 px-3 text-sm font-bold gap-1.5 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={() => onOpenEditFamilyDialog(fam)}
                         >
                           <Pencil className="size-4 text-primary" /> Edit
@@ -116,7 +122,9 @@ export const FamilyTab: React.FC<FamilyTabProps> = ({
                         <Button
                           variant="ghost"
                           size="sm"
-                          className="h-9 px-3 text-sm font-bold gap-1.5 text-destructive hover:bg-destructive/10 cursor-pointer"
+                          disabled={!canPerformActions}
+                          title={!canPerformActions ? reason : undefined}
+                          className="h-9 px-3 text-sm font-bold gap-1.5 text-destructive hover:bg-destructive/10 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
                           onClick={() => setMemberToDelete(fam)}
                         >
                           <Trash2 className="size-4" /> Remove

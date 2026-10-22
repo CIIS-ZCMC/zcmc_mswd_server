@@ -27,7 +27,11 @@ import { FamilyMemberDialog } from "./dialogs/family-member-dialog"
 import { OpenCaseDialog } from "@/features/cases/components/dialogs/open-case-dialog"
 import { PatientQueueDialog } from "./dialogs/patient-queue-dialog"
 import { PatientActiveQueueStatusDialog } from "./dialogs/patient-active-queue-status-dialog"
-import { usePatientVisits } from "@/features/queue"
+import {
+  QueueActionGateProvider,
+  QueueStatusBanner,
+  usePatientVisits,
+} from "@/features/queue"
 import { DocumentsTab } from "./tabs/documents-tab"
 import { HistoryTab } from "./tabs/history-tab"
 import { HospitalEncountersTab } from "./tabs/hospital-encounters-tab"
@@ -57,7 +61,15 @@ const PATIENT_TABS = [
   "history",
 ]
 
-export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
+export const PatientDetailView: React.FC<PatientDetailViewProps> = (props) => {
+  return (
+    <QueueActionGateProvider patientId={props.patient.id}>
+      <PatientDetailViewContent {...props} />
+    </QueueActionGateProvider>
+  )
+}
+
+const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
   patient,
 }) => {
   const [searchParams, setSearchParams] = useSearchParams()
@@ -266,6 +278,14 @@ export const PatientDetailView: React.FC<PatientDetailViewProps> = ({
             caseCode={patient.openCases.length > 1 ? openCase.caseCode : undefined}
           />
         ))}
+
+        <QueueStatusBanner
+          onNavigateToQueue={
+            activeVisit ? () => setIsActiveQueueStatusOpen(true) : undefined
+          }
+          onQueuePatient={() => setIsQueueDialogOpen(true)}
+          className="mb-4"
+        />
 
         <Tabs value={activeTab} onValueChange={setActiveTab} className="w-full">
           <TabsList className="mb-6 flex h-auto w-full flex-wrap items-center justify-start gap-1.5 rounded-xl border border-border/80 bg-muted/60 p-1.5 shadow-2xs group-data-horizontal/tabs:h-auto">

@@ -3,14 +3,20 @@ import { getGuarantorOptions } from "../api/guarantee-api"
 
 export const guarantorOptionKeys = {
   all: ["guarantors", "options"] as const,
-  list: (activeOnly: boolean) =>
-    [...guarantorOptionKeys.all, { activeOnly }] as const,
+  list: (activeOnly: boolean, transactionId?: number | string | null) =>
+    [
+      ...guarantorOptionKeys.all,
+      { activeOnly, transactionId: transactionId ? String(transactionId) : null },
+    ] as const,
 }
 
-export function useGuarantorOptions(activeOnly = true) {
+export function useGuarantorOptions(
+  activeOnly = true,
+  transactionId?: number | string | null
+) {
   return useQuery({
-    queryKey: guarantorOptionKeys.list(activeOnly),
-    queryFn: () => getGuarantorOptions(activeOnly),
+    queryKey: guarantorOptionKeys.list(activeOnly, transactionId),
+    queryFn: () => getGuarantorOptions(activeOnly, transactionId),
     staleTime: 5 * 60 * 1000,
   })
 }

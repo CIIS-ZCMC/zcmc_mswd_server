@@ -123,7 +123,7 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
   const canManageLibrary = usePermission("library.manage")
 
   const { data: guarantorOptions = [], isLoading: loadingGuarantors } =
-    useGuarantorOptions(true)
+    useGuarantorOptions(true, transactionId)
   // Inactive options are fetched too, so a line keeps showing a retired choice.
   const { data: typeOptions = [], isLoading: loadingTypes } =
     useAssistanceTypeOptions(false)
@@ -210,6 +210,10 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
       return sum + (isNaN(val) || val < 0 ? 0 : val)
     }, 0)
   }, [lines])
+
+  const selectedGuarantor = useMemo(() => {
+    return guarantorOptions.find((opt) => opt.id === guarantorId) ?? null
+  }, [guarantorOptions, guarantorId])
 
   // Fund sources by id, to know which ones need a Specify value ("Others").
   const fundsById = useMemo(
@@ -414,17 +418,27 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
                               : "Select guarantor"
                           }
                         >
-                          {(value: string | null) =>
-                            value
-                              ? (guarantorOptions.find(
-                                  (opt) => String(opt.id) === value
-                                )?.name ??
-                                guarantee?.guarantor?.name ??
-                                "Select guarantor")
-                              : loadingGuarantors
+                          {(value: string | null) => {
+                            if (!value) {
+                              return loadingGuarantors
                                 ? "Loading..."
                                 : "Select guarantor"
-                          }
+                            }
+                            const opt = guarantorOptions.find(
+                              (o) => String(o.id) === value
+                            )
+                            if (opt) {
+                              const amt =
+                                opt.hisAmount !== null &&
+                                opt.hisAmount !== undefined
+                                  ? ` — ${formatCurrency(opt.hisAmount)}`
+                                  : ""
+                              return `${opt.name}${amt}`
+                            }
+                            return (
+                              guarantee?.guarantor?.name ?? "Select guarantor"
+                            )
+                          }}
                         </SelectValue>
                       </SelectTrigger>
                       <SelectContent>
@@ -436,13 +450,49 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
                               {guarantee.guarantor.name} (inactive)
                             </SelectItem>
                           )}
-                        {guarantorOptions.map((opt) => (
-                          <SelectItem key={opt.id} value={String(opt.id)}>
-                            {opt.name}
-                          </SelectItem>
-                        ))}
+                        {guarantorOptions.map((opt) => {
+                          const isTaken =
+                            Boolean(opt.hasBreakdown) &&
+                            opt.id !== guarantee?.guarantor?.id
+                          const amt =
+                            opt.hisAmount !== null &&
+                            opt.hisAmount !== undefined
+                              ? ` — ${formatCurrency(opt.hisAmount)}`
+                              : ""
+                          return (
+                            <SelectItem
+                              key={opt.id}
+                              value={String(opt.id)}
+                              disabled={isTaken}
+                              className="text-xs"
+                            >
+                              {opt.name}
+                              {amt}
+                              {isTaken ? " (Already recorded)" : ""}
+                            </SelectItem>
+                          )
+                        })}
                       </SelectContent>
                     </Select>
+                    {selectedGuarantor?.hisAmount !== null &&
+                      selectedGuarantor?.hisAmount !== undefined && (
+                        <div className="flex items-center justify-between rounded-md border border-primary/20 bg-primary/5 px-2.5 py-1.5 text-[11px]">
+                          <div className="flex items-center gap-1.5 text-muted-foreground">
+                            <span>HIS Billing Guarantee:</span>
+                            <strong className="font-bold text-foreground">
+                              {formatCurrency(selectedGuarantor.hisAmount)}
+                            </strong>
+                            {selectedGuarantor.glPosted && (
+                              <span className="font-semibold text-emerald-600 dark:text-emerald-400">
+                                • Posted
+                              </span>
+                            )}
+                          </div>
+                          <span className="text-[10px] font-semibold text-primary uppercase">
+                            Target Amount
+                          </span>
+                        </div>
+                      )}
                     {serverErrors.guarantor_id && (
                       <p className="text-xs font-semibold text-destructive">
                         {serverErrors.guarantor_id[0]}
@@ -796,9 +846,36 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
 
                 {/* Total Calculation in Footer */}
                 <div className="flex items-center justify-between rounded-lg border border-emerald-500/30 bg-emerald-500/10 p-3">
-                  <span className="text-xs font-bold tracking-wider text-emerald-800 uppercase dark:text-emerald-300">
-                    Computed Total
-                  </span>
+                  <div className="space-y-0.5">
+                    <span className="text-xs font-bold tracking-wider text-emerald-800 uppercase dark:text-emerald-300">
+                      Computed Total
+                    </span>
+                    {selectedGuarantor?.hisAmount !== null &&
+                      selectedGuarantor?.hisAmount !== undefined && (
+                        <div className="text-[11px] font-medium text-emerald-800/90 dark:text-emerald-300/90">
+                          {Math.abs(computedTotal - selectedGuarantor.hisAmount) < 0.009 ? (
+                            <span className="font-bold text-emerald-600 dark:text-emerald-400">
+                              ✓ Matches HIS guarantee ({formatCurrency(selectedGuarantor.hisAmount)})
+                            </span>
+                          ) : computedTotal < selectedGuarantor.hisAmount ? (
+                            <span>
+                              Remaining to breakdown:{" "}
+                              <strong className="font-bold">
+                                {formatCurrency(selectedGuarantor.hisAmount - computedTotal)}
+                              </strong>{" "}
+                              (Target: {formatCurrency(selectedGuarantor.hisAmount)})
+                            </span>
+                          ) : (
+                            <span className="font-semibold text-amber-600 dark:text-amber-400">
+                              Exceeds HIS guarantee by{" "}
+                              <strong>
+                                {formatCurrency(computedTotal - selectedGuarantor.hisAmount)}
+                              </strong>
+                            </span>
+                          )}
+                        </div>
+                      )}
+                  </div>
                   <span className="text-base font-black text-emerald-600 sm:text-lg dark:text-emerald-400">
                     {formatCurrency(computedTotal)}
                   </span>

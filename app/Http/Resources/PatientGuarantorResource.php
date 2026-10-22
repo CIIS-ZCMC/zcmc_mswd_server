@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Models\Guarantor;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,15 +19,24 @@ class PatientGuarantorResource extends JsonResource
      */
     public function toArray(Request $request): array
     {
+        $guarantorName = $this->guarantor?->fullname;
+        $mswdGuarantorId = null;
+        if (! blank($guarantorName)) {
+            $mswdGuarantor = Guarantor::firstOrCreate(['name' => trim($guarantorName)]);
+            $mswdGuarantorId = $mswdGuarantor->id;
+        }
+
         return [
             'id' => $this->getKey(),
             'transaction_id' => $this->whenHas('FK_psPatRegisters'),
 
             'guarantor_details' => $this->whenHas('FK_faCustomers', fn () => [
                 'guarantor_id' => $this->whenHas('FK_faCustomers'),
-                'guarantor_name' => $this->guarantor?->fullname,
+                'guarantor_name' => $guarantorName,
+                'mswd_guarantor_id' => $mswdGuarantorId,
             ]),
 
+            'mswd_guarantor_id' => $mswdGuarantorId,
             'post_date' => $this->whenHas('postdate'),
             'amount' => $this->whenHas('amount'),
 

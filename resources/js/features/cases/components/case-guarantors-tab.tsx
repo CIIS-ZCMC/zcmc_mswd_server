@@ -40,6 +40,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import { useHospitalEncounter } from "@/features/hospital/hooks/use-hospital-encounters"
 import { Link } from "@inertiajs/react"
 import {
@@ -81,6 +82,7 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
   const canManageLibrary = usePermission("library.manage")
   const canUpdate = usePermission("guarantee.update")
   const canDelete = usePermission("guarantee.delete")
+  const { canPerformActions, reason } = useQueueActionGate()
 
   // Load HIS encounter details
   const { data: encounter, isLoading: isEncounterLoading } =
@@ -284,8 +286,10 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                   <Button
                     type="button"
                     size="sm"
+                    disabled={!canPerformActions}
+                    title={!canPerformActions ? reason : undefined}
                     onClick={handleAddGeneral}
-                    className="h-8 cursor-pointer gap-1 px-2.5 text-xs font-bold shadow-2xs"
+                    className="h-8 cursor-pointer gap-1 px-2.5 text-xs font-bold shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                   >
                     <Plus className="size-3.5" />
                     Add Guarantor Breakdown
@@ -426,9 +430,10 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                                       type="button"
                                       variant="ghost"
                                       size="icon"
+                                      disabled={!canPerformActions}
                                       onClick={() => handleEdit(g)}
-                                      className="size-7 cursor-pointer text-muted-foreground hover:text-foreground"
-                                      title="Edit assistance breakdown"
+                                      className="size-7 cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title={!canPerformActions ? reason : "Edit assistance breakdown"}
                                     >
                                       <Edit2 className="size-3.5" />
                                     </Button>
@@ -438,9 +443,10 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                                       type="button"
                                       variant="ghost"
                                       size="icon"
+                                      disabled={!canPerformActions}
                                       onClick={() => setDeletingGuarantee(g)}
-                                      className="size-7 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                      title="Delete assistance breakdown"
+                                      className="size-7 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+                                      title={!canPerformActions ? reason : "Delete assistance breakdown"}
                                     >
                                       <Trash2 className="size-3.5" />
                                     </Button>
@@ -452,10 +458,12 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                                     type="button"
                                     variant="outline"
                                     size="sm"
+                                    disabled={!canPerformActions}
+                                    title={!canPerformActions ? reason : undefined}
                                     onClick={() =>
                                       handleAddForGuarantor(row.name, row.key)
                                     }
-                                    className="h-7 cursor-pointer gap-1 border-primary/30 px-2 text-xs font-bold text-primary hover:bg-primary/10"
+                                    className="h-7 cursor-pointer gap-1 border-primary/30 px-2 text-xs font-bold text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     <Plus className="size-3" />
                                     Add Breakdown
@@ -520,10 +528,12 @@ export const CaseGuarantorsTab: React.FC<CaseGuarantorsTabProps> = ({
                                     <Button
                                       type="button"
                                       size="sm"
+                                      disabled={!canPerformActions}
+                                      title={!canPerformActions ? reason : undefined}
                                       onClick={() =>
                                         handleAddForGuarantor(row.name, row.key)
                                       }
-                                      className="h-7 cursor-pointer gap-1 px-2.5 text-xs font-bold"
+                                      className="h-7 cursor-pointer gap-1 px-2.5 text-xs font-bold disabled:opacity-50 disabled:cursor-not-allowed"
                                     >
                                       <Plus className="size-3" />
                                       Add Assistance Breakdown

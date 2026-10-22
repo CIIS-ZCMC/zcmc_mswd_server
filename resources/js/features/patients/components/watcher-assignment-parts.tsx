@@ -7,6 +7,7 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
+import { useQueueActionGate } from "@/features/queue"
 import { Ban, CheckCircle, MoreHorizontal, Star, UserMinus } from "lucide-react"
 
 /** Pass state as a badge; "No Pass" until one has been issued. */
@@ -89,30 +90,50 @@ export const AssignmentMenu: React.FC<AssignmentMenuProps> = ({
   onIssuePass,
   onRevokePass,
   onUnassign,
-}) => (
-  <DropdownMenu>
-    <DropdownMenuTrigger className="inline-flex size-8.5 cursor-pointer items-center justify-center rounded-md border border-input bg-background p-0 text-muted-foreground shadow-2xs hover:bg-muted hover:text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
-      <MoreHorizontal className="size-4.5" />
-    </DropdownMenuTrigger>
-    <DropdownMenuContent align="end" className="w-56 space-y-0.5 p-1.5">
-      {!isPrimary && (
-        <DropdownMenuItem onClick={onMakePrimary} className={itemClass}>
-          <Star className="size-4 shrink-0 text-amber-500" /> Make Primary
+}) => {
+  const { canPerformActions } = useQueueActionGate()
+
+  return (
+    <DropdownMenu>
+      <DropdownMenuTrigger className="inline-flex size-8.5 cursor-pointer items-center justify-center rounded-md border border-input bg-background p-0 text-muted-foreground shadow-2xs hover:bg-muted hover:text-foreground focus:outline-none focus:ring-1 focus:ring-primary">
+        <MoreHorizontal className="size-4.5" />
+      </DropdownMenuTrigger>
+      <DropdownMenuContent align="end" className="w-56 space-y-0.5 p-1.5">
+        {!isPrimary && (
+          <DropdownMenuItem
+            disabled={!canPerformActions}
+            onClick={onMakePrimary}
+            className={itemClass}
+          >
+            <Star className="size-4 shrink-0 text-amber-500" /> Make Primary
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuItem
+          disabled={!canPerformActions}
+          onClick={onIssuePass}
+          className={itemClass}
+        >
+          <CheckCircle className="size-4 shrink-0 text-emerald-600" />
+          {passNumber ? "Reissue Pass" : "Issue Ward Pass"}
         </DropdownMenuItem>
-      )}
-      <DropdownMenuItem onClick={onIssuePass} className={itemClass}>
-        <CheckCircle className="size-4 shrink-0 text-emerald-600" />
-        {passNumber ? "Reissue Pass" : "Issue Ward Pass"}
-      </DropdownMenuItem>
-      {passNumber && passStatus === "active" && (
-        <DropdownMenuItem onClick={onRevokePass} className={itemClass}>
-          <Ban className="size-4 shrink-0 text-amber-600" /> Revoke Pass
+        {passNumber && passStatus === "active" && (
+          <DropdownMenuItem
+            disabled={!canPerformActions}
+            onClick={onRevokePass}
+            className={itemClass}
+          >
+            <Ban className="size-4 shrink-0 text-amber-600" /> Revoke Pass
+          </DropdownMenuItem>
+        )}
+        <DropdownMenuSeparator className="my-1" />
+        <DropdownMenuItem
+          disabled={!canPerformActions}
+          onClick={onUnassign}
+          className={`${itemClass} text-destructive focus:text-destructive`}
+        >
+          <UserMinus className="size-4 shrink-0" /> Unassign from Case
         </DropdownMenuItem>
-      )}
-      <DropdownMenuSeparator className="my-1" />
-      <DropdownMenuItem onClick={onUnassign} className={`${itemClass} text-destructive focus:text-destructive`}>
-        <UserMinus className="size-4 shrink-0" /> Unassign from Case
-      </DropdownMenuItem>
-    </DropdownMenuContent>
-  </DropdownMenu>
-)
+      </DropdownMenuContent>
+    </DropdownMenu>
+  )
+}
