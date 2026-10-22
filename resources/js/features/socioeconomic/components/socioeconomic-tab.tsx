@@ -25,6 +25,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import type { PatientRecord } from "@/features/patients/types"
 import { formatCurrency } from "@/lib/format-currency"
 import {
@@ -47,6 +48,7 @@ export const SocioeconomicTab: React.FC<SocioeconomicTabProps> = ({ patient }) =
   const canCreate = usePermission("socioeconomic.create")
   const canUpdate = usePermission("socioeconomic.update")
   const canDelete = usePermission("socioeconomic.delete")
+  const { canPerformActions, reason } = useQueueActionGate()
 
   const {
     data,
@@ -267,8 +269,10 @@ export const SocioeconomicTab: React.FC<SocioeconomicTabProps> = ({ patient }) =
           {canCreate && (
             <Button
               size="lg"
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
               onClick={handleOpenCreate}
-              className="h-10 gap-2 text-sm font-bold cursor-pointer shadow-sm"
+              className="h-10 gap-2 text-sm font-bold cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <Plus className="size-4.5" />
               <span>Record List of Expenses</span>

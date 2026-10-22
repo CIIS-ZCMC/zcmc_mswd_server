@@ -3,6 +3,7 @@ import { Badge } from "@/components/ui/badge"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import { useUisReadiness } from "../hooks/use-uis-prints"
 import { useLatestAssessment } from "../hooks/use-assessment"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
@@ -47,6 +48,7 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
 }) => {
   const canView = usePermission("intake.view")
   const canUpdate = usePermission("cases.update")
+  const { canPerformActions, reason } = useQueueActionGate()
   const [isPrintDialogOpen, setIsPrintDialogOpen] = useState(false)
   const [isIntakeDialogOpen, setIsIntakeDialogOpen] = useState(false)
 
@@ -83,8 +85,10 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
               type="button"
               variant="default"
               size="sm"
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
               onClick={onOpenCaseNeeded}
-              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs cursor-pointer"
+              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FolderPlus className="size-4" />
               Open a Case to Print UIS
@@ -121,8 +125,10 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
               type="button"
               variant="outline"
               size="sm"
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
               onClick={handleOpenAssess}
-              className="h-9 px-3 text-xs font-bold gap-1.5 border shadow-2xs cursor-pointer"
+              className="h-9 px-3 text-xs font-bold gap-1.5 border shadow-2xs cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <FileEdit className="size-3.5 text-primary" />
               {readiness?.has_assessment ? "Edit Assessment" : "Assess"}
@@ -134,9 +140,10 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
               type="button"
               variant="default"
               size="sm"
+              disabled={!canPerformActions}
               onClick={() => setIsPrintDialogOpen(true)}
-              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs shrink-0 cursor-pointer"
-              title="Print options, copies, remarks and blank templates"
+              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
+              title={!canPerformActions ? reason : "Print options, copies, remarks and blank templates"}
             >
               <Printer className="size-4" />
               Print UIS

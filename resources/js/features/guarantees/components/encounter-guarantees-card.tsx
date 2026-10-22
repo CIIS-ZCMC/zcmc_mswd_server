@@ -40,6 +40,7 @@ import {
   Trash2,
 } from "lucide-react"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import { formatCurrency } from "@/lib/format-currency"
 import { useDeleteGuarantee, useGuarantees } from "../hooks/use-guarantees"
 import { GuaranteeFormDialog } from "./guarantee-form-dialog"
@@ -53,16 +54,25 @@ interface EncounterGuaranteesCardProps {
   patientId: number | string
   transactionId: number | string
   className?: string
+  targetGuarantor?: { name: string; mswdGuarantorId?: number | null } | null
+  onClearTargetGuarantor?: () => void
 }
 
 export const EncounterGuaranteesCard: React.FC<
   EncounterGuaranteesCardProps
-> = ({ patientId, transactionId, className = "" }) => {
+> = ({
+  patientId,
+  transactionId,
+  className = "",
+  targetGuarantor,
+  onClearTargetGuarantor,
+}) => {
   const canView = usePermission("guarantee.view")
   const canCreate = usePermission("guarantee.create")
   const canManageLibrary = usePermission("library.manage")
   const canUpdate = usePermission("guarantee.update")
   const canDelete = usePermission("guarantee.delete")
+  const { canPerformActions, reason } = useQueueActionGate()
 
   const { data, isLoading } = useGuarantees(
     patientId,
@@ -78,10 +88,25 @@ export const EncounterGuaranteesCard: React.FC<
   const [dialogOpen, setDialogOpen] = useState(false)
   const [editingGuarantee, setEditingGuarantee] =
     useState<PatientGuarantee | null>(null)
+  const [initialGuarantorName, setInitialGuarantorName] = useState<string | null>(null)
+  const [initialGuarantorId, setInitialGuarantorId] = useState<number | null>(null)
+  const [lockGuarantor, setLockGuarantor] = useState(false)
   const [deletingGuarantee, setDeletingGuarantee] =
     useState<PatientGuarantee | null>(null)
   // The MAIFIP guarantee whose Acknowledgement Slip is being printed.
   const [slipGuaranteeId, setSlipGuaranteeId] = useState<number | null>(null)
+
+  // Pre-fill dialog when requested externally (e.g. from HIS guarantors table)
+  React.useEffect(() => {
+    if (targetGuarantor) {
+      setEditingGuarantee(null)
+      setInitialGuarantorName(targetGuarantor.name)
+      setInitialGuarantorId(targetGuarantor.mswdGuarantorId ?? null)
+      setLockGuarantor(true)
+      setDialogOpen(true)
+      onClearTargetGuarantor?.()
+    }
+  }, [targetGuarantor, onClearTargetGuarantor])
 
   const toggleExpand = (id: number) => {
     setExpandedIds((prev) => {
@@ -97,11 +122,17 @@ export const EncounterGuaranteesCard: React.FC<
 
   const handleAdd = () => {
     setEditingGuarantee(null)
+    setInitialGuarantorName(null)
+    setInitialGuarantorId(null)
+    setLockGuarantor(false)
     setDialogOpen(true)
   }
 
   const handleEdit = (g: PatientGuarantee) => {
     setEditingGuarantee(g)
+    setInitialGuarantorName(null)
+    setInitialGuarantorId(null)
+    setLockGuarantor(false)
     setDialogOpen(true)
   }
 
@@ -159,8 +190,10 @@ export const EncounterGuaranteesCard: React.FC<
                 <Button
                   type="button"
                   size="sm"
+                  disabled={!canPerformActions}
+                  title={!canPerformActions ? reason : undefined}
                   onClick={handleAdd}
-                  className="h-8 cursor-pointer gap-1 px-2.5 text-xs font-bold shadow-2xs"
+                  className="h-8 cursor-pointer gap-1 px-2.5 text-xs font-bold shadow-2xs disabled:opacity-50 disabled:cursor-not-allowed"
                 >
                   <Plus className="size-3.5" />
                   Add Guarantor
@@ -292,9 +325,10 @@ export const EncounterGuaranteesCard: React.FC<
                                 type="button"
                                 variant="ghost"
                                 size="icon"
+                                disabled={!canPerformActions}
                                 onClick={() => setSlipGuaranteeId(g.id)}
-                                className="size-7 text-muted-foreground hover:text-foreground"
-                                title="Print Acknowledgement Slip (DOH-MAIFIP)"
+                                className="size-7 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={!canPerformActions ? reason : "Print Acknowledgement Slip (DOH-MAIFIP)"}
                                 aria-label="Print Acknowledgement Slip"
                               >
                                 <Printer className="size-3.5" />
@@ -305,9 +339,10 @@ export const EncounterGuaranteesCard: React.FC<
                                 type="button"
                                 variant="ghost"
                                 size="icon"
+                                disabled={!canPerformActions}
                                 onClick={() => handleEdit(g)}
-                                className="size-7 text-muted-foreground hover:text-foreground"
-                                title="Edit guarantor"
+                                className="size-7 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={!canPerformActions ? reason : "Edit guarantor"}
                               >
                                 <Edit2 className="size-3.5" />
                               </Button>
@@ -317,9 +352,10 @@ export const EncounterGuaranteesCard: React.FC<
                                 type="button"
                                 variant="ghost"
                                 size="icon"
+                                disabled={!canPerformActions}
                                 onClick={() => setDeletingGuarantee(g)}
-                                className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive"
-                                title="Delete guarantor"
+                                className="size-7 text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+                                title={!canPerformActions ? reason : "Delete guarantor"}
                               >
                                 <Trash2 className="size-3.5" />
                               </Button>
@@ -356,8 +392,18 @@ export const EncounterGuaranteesCard: React.FC<
         patientId={patientId}
         transactionId={transactionId}
         guarantee={editingGuarantee}
+        initialGuarantorName={initialGuarantorName}
+        initialGuarantorId={initialGuarantorId}
+        lockGuarantor={lockGuarantor}
         open={dialogOpen}
-        onOpenChange={setDialogOpen}
+        onOpenChange={(open) => {
+          setDialogOpen(open)
+          if (!open) {
+            setInitialGuarantorName(null)
+            setInitialGuarantorId(null)
+            setLockGuarantor(false)
+          }
+        }}
       />
 
       <AcknowledgementSlipDialog

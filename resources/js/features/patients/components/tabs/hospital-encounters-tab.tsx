@@ -15,6 +15,7 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import { useHospitalEncounters } from "@/features/hospital/hooks/use-hospital-encounters"
 import { RegistryStatusBadge } from "@/features/hospital/components/registry-status-badge"
 import { HospitalEncounterDetailDialog } from "@/features/hospital/components/dialogs/hospital-encounter-detail-dialog"
@@ -59,6 +60,7 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
   const hospitalNumber = patient.hospitalId
   const canAssess = usePermission("cases.update")
   const canCreateCase = usePermission("cases.create")
+  const { canPerformActions, reason } = useQueueActionGate()
 
   // Data fetching
   const { data: encounters = [], isLoading, error } = useHospitalEncounters(hospitalNumber)
@@ -369,7 +371,9 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                             {/* Print Dropdown Action Button */}
                             <DropdownMenu>
                               <DropdownMenuTrigger
-                                className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs sm:text-sm font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
+                                disabled={!canPerformActions}
+                                title={!canPerformActions ? reason : undefined}
+                                className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs sm:text-sm font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
                                 aria-label={`Print documents for encounter #${enc.id}`}
                               >
                                 <Printer className="size-4 text-primary" />
@@ -458,8 +462,9 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                                 <DropdownMenuSeparator className="my-1.5" />
 
                                 <DropdownMenuItem
+                                  disabled={!canPerformActions}
                                   onClick={() => handleOpenPrint(enc, "uis")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
+                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   <Printer className="size-4.5 text-primary shrink-0" />
                                   Print Documents…
@@ -469,8 +474,9 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
 
                                 {canAssess && (
                                   <DropdownMenuItem
+                                    disabled={!canPerformActions}
                                     onClick={() => setDirectAssessEncounterId(enc.id)}
-                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-primary focus:text-primary min-h-10 rounded-lg"
+                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-primary focus:text-primary min-h-10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     <ClipboardCheck className="size-4.5 shrink-0" />
                                     Assess Encounter
@@ -479,8 +485,9 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
 
                                 {canCreateCase && (
                                   <DropdownMenuItem
+                                    disabled={!canPerformActions}
                                     onClick={() => setDirectOpenCaseEncounter(enc)}
-                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold min-h-10 rounded-lg"
+                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold min-h-10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
                                   >
                                     <FolderPlus className="size-4.5 text-primary shrink-0" />
                                     Open Case for Encounter

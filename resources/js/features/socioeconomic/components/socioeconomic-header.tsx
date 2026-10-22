@@ -2,6 +2,7 @@ import React from "react"
 import { format, parseISO } from "date-fns"
 import { Calendar, Pencil, Trash2, UserCheck } from "lucide-react"
 import { Button } from "@/components/ui/button"
+import { useQueueActionGate } from "@/features/queue"
 import type { SocioeconomicCurrent } from "../types/socioeconomic.types"
 
 interface SocioeconomicHeaderProps {
@@ -19,6 +20,7 @@ export const SocioeconomicHeader: React.FC<SocioeconomicHeaderProps> = ({
   onEdit,
   onDelete,
 }) => {
+  const { canPerformActions, reason } = useQueueActionGate()
   const formattedDate = current.recordedOn
     ? (() => {
         try {
@@ -59,8 +61,10 @@ export const SocioeconomicHeader: React.FC<SocioeconomicHeaderProps> = ({
         {canUpdate && (
           <Button
             size="default"
+            disabled={!canPerformActions}
+            title={!canPerformActions ? reason : undefined}
             onClick={onEdit}
-            className="h-9 sm:h-10 px-4 gap-2 text-xs sm:text-sm font-semibold cursor-pointer shadow-sm"
+            className="h-9 sm:h-10 px-4 gap-2 text-xs sm:text-sm font-semibold cursor-pointer shadow-sm disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Pencil className="size-4" />
             <span>Update Record</span>
@@ -70,8 +74,10 @@ export const SocioeconomicHeader: React.FC<SocioeconomicHeaderProps> = ({
           <Button
             variant="outline"
             size="default"
+            disabled={!canPerformActions}
+            title={!canPerformActions ? reason : undefined}
             onClick={onDelete}
-            className="h-9 sm:h-10 px-3.5 gap-2 text-xs sm:text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30 cursor-pointer"
+            className="h-9 sm:h-10 px-3.5 gap-2 text-xs sm:text-sm font-semibold text-destructive hover:bg-destructive/10 hover:text-destructive border-destructive/30 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
           >
             <Trash2 className="size-4" />
             <span>Delete</span>

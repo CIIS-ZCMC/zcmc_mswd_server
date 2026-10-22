@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { Button } from "@/components/ui/button"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { RecordHistoryPopover } from "@/features/audit/components/record-history-popover"
+import { useQueueActionGate } from "@/features/queue"
 import { Briefcase, Edit, MapPin, Phone, User } from "lucide-react"
 import { useUpdatePatientBackground } from "../../hooks/use-patient-writes"
 import type { FamilyMember, PatientRecord } from "../../types"
@@ -39,6 +40,7 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
   const [isEditingContact, setIsEditingContact] = useState(false)
   const [isEditingSocioEconomic, setIsEditingSocioEconomic] = useState(false)
   const updateBackground = useUpdatePatientBackground(patient.id)
+  const { canPerformActions, reason } = useQueueActionGate()
 
   return (
     <div className="space-y-6">
@@ -57,7 +59,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             <Button
               variant="outline"
               size="default"
-              className="h-9 gap-2 px-3.5 text-sm font-bold"
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
+              className="h-9 gap-2 px-3.5 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => setIsEditingDemographics(true)}
             >
               <Edit className="size-4" /> Edit
@@ -151,7 +155,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             <Button
               variant="outline"
               size="default"
-              className="h-9 gap-2 px-3.5 text-sm font-bold"
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
+              className="h-9 gap-2 px-3.5 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => setIsEditingContact(true)}
             >
               <Edit className="size-4" /> Edit
@@ -219,7 +225,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             <Button
               variant="outline"
               size="default"
-              className="h-9 gap-2 px-3.5 text-sm font-bold"
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
+              className="h-9 gap-2 px-3.5 text-sm font-bold disabled:opacity-50 disabled:cursor-not-allowed"
               onClick={() => setIsEditingSocioEconomic(true)}
             >
               <Edit className="size-4" /> Edit

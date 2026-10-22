@@ -12,6 +12,7 @@ import { Spinner } from "@/components/ui/spinner"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip"
 import { RecordHistoryPopover } from "@/features/audit/components/record-history-popover"
+import { useQueueActionGate } from "@/features/queue"
 import { useCaseWatcherMutations } from "@/features/cases/hooks/use-case-watcher-mutations"
 import { usePatientWatcherMutations, usePatientWatchers } from "../../hooks/use-patient-watchers"
 import type { PatientRecord } from "../../types"
@@ -47,6 +48,7 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
   const { data: watchers = [], isLoading } = usePatientWatchers(patientId)
   const watcherMutations = usePatientWatcherMutations(patientId)
   const caseMutations = useCaseWatcherMutations({ caseId: 0, patientId })
+  const { canPerformActions, reason } = useQueueActionGate()
 
   const [isAddOpen, setIsAddOpen] = useState(false)
   const [editingWatcher, setEditingWatcher] = useState<Watcher | null>(null)
@@ -93,7 +95,12 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
             People who watch over this patient. Assign a watcher to an open case to make them its primary watcher or issue a ward pass.
           </CardDescription>
         </div>
-        <Button className="h-10 gap-2 font-semibold" onClick={() => setIsAddOpen(true)}>
+        <Button
+          disabled={!canPerformActions}
+          title={!canPerformActions ? reason : undefined}
+          className="h-10 gap-2 font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+          onClick={() => setIsAddOpen(true)}
+        >
           <Plus className="size-4" /> Add Watcher
         </Button>
       </CardHeader>
@@ -200,7 +207,9 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
                           <Button
                             variant="outline"
                             size="sm"
-                            className="h-8.5 gap-1.5 text-xs font-semibold"
+                            disabled={!canPerformActions}
+                            title={!canPerformActions ? reason : undefined}
+                            className="h-8.5 gap-1.5 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
                             onClick={() => setAssigningWatcher(watcher)}
                           >
                             <UserPlus className="size-4" /> Assign to Case
@@ -222,25 +231,27 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
                           </DropdownMenuTrigger>
                           <DropdownMenuContent align="end" className="w-56 space-y-0.5 p-1.5">
                             <DropdownMenuItem
+                              disabled={!canPerformActions}
                               onClick={() => setEditingWatcher(watcher)}
-                              className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold sm:text-sm"
+                              className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Edit className="size-4 shrink-0" /> Edit Watcher
                             </DropdownMenuItem>
                             {canAssign && (
                               <DropdownMenuItem
+                                disabled={!canPerformActions}
                                 onClick={() => setAssigningWatcher(watcher)}
-                                className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold sm:text-sm"
+                                className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                               >
                                 <UserPlus className="size-4 shrink-0" /> Assign to Case
                               </DropdownMenuItem>
                             )}
                             <DropdownMenuSeparator className="my-1" />
                             <DropdownMenuItem
-                              disabled={hasOpenAssignment}
+                              disabled={!canPerformActions || hasOpenAssignment}
                               title={hasOpenAssignment ? "Unassign from open cases first" : undefined}
                               onClick={() => handleRemove(watcher)}
-                              className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold text-destructive focus:text-destructive sm:text-sm"
+                              className="cursor-pointer gap-2 px-2.5 py-2 text-xs font-semibold text-destructive focus:text-destructive sm:text-sm disabled:opacity-50 disabled:cursor-not-allowed"
                             >
                               <Trash2 className="size-4 shrink-0" /> Remove Watcher
                             </DropdownMenuItem>

@@ -8,6 +8,7 @@ import {
 } from "@/features/cases/hooks/use-uis-prints"
 import { printUisDirectly } from "@/features/cases/api/uis-print-api"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import { Button } from "@/components/ui/button"
 import {
   Card,
@@ -99,6 +100,7 @@ export const UisTab: React.FC<UisTabProps> = ({
   const canCreateCase = usePermission("cases.create")
   const canCreateAssessment = usePermission("cases.create")
   const canUpdateAssessment = usePermission("cases.update")
+  const { canPerformActions, reason } = useQueueActionGate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const { data: rows = [], isLoading, error } = usePatientUis(patient.id)
@@ -369,8 +371,10 @@ export const UisTab: React.FC<UisTabProps> = ({
         {canCreateAssessment && (
           <div className="pt-2">
             <Button
+              disabled={!canPerformActions}
+              title={!canPerformActions ? reason : undefined}
               onClick={() => setIsNewIntakeOpen(true)}
-              className="cursor-pointer gap-2 text-xs font-semibold"
+              className="cursor-pointer gap-2 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
             >
               <ClipboardPlus className="size-4" />
               New Intake Assessment
@@ -572,8 +576,10 @@ export const UisTab: React.FC<UisTabProps> = ({
             {canCreateAssessment && (
               <Button
                 size="sm"
+                disabled={!canPerformActions}
+                title={!canPerformActions ? reason : undefined}
                 onClick={() => setIsNewIntakeOpen(true)}
-                className="h-9 cursor-pointer gap-1.5 text-xs font-semibold"
+                className="h-9 cursor-pointer gap-1.5 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
               >
                 <ClipboardPlus className="size-3.5" />
                 New Intake Assessment
@@ -797,9 +803,10 @@ export const UisTab: React.FC<UisTabProps> = ({
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    disabled={!canPerformActions}
+                                    title={!canPerformActions ? reason : "Assess / Re-Assess"}
                                     onClick={() => handleOpenAssessDialog(row)}
-                                    className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
-                                    title="Assess / Re-Assess"
+                                    className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
                                   >
                                     <FileEdit className="size-3.5 text-primary" />
                                     <span className="hidden md:inline">
@@ -810,10 +817,10 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  disabled={printingRowKey === row.key}
+                                  disabled={!canPerformActions || printingRowKey === row.key}
                                   onClick={() => handleDirectPrint(row)}
-                                  className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
-                                  title="Print Unified Intake Sheet"
+                                  className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
+                                  title={!canPerformActions ? reason : "Print Unified Intake Sheet"}
                                 >
                                   {printingRowKey === row.key ? (
                                     <Loader2 className="size-3.5 animate-spin text-primary" />
@@ -833,9 +840,10 @@ export const UisTab: React.FC<UisTabProps> = ({
                                   <Button
                                     variant="ghost"
                                     size="sm"
+                                    disabled={!canPerformActions}
+                                    title={!canPerformActions ? reason : "Conduct Assessment"}
                                     onClick={() => handleOpenAssessDialog(row)}
-                                    className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
-                                    title="Conduct Assessment"
+                                    className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
                                   >
                                     <Plus className="size-3.5 text-primary" />
                                     <span className="hidden md:inline">
@@ -846,10 +854,10 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  disabled={printingRowKey === row.key}
+                                  disabled={!canPerformActions || printingRowKey === row.key}
                                   onClick={() => handleDirectPrint(row)}
-                                  className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground sm:inline-flex"
-                                  title="Print Blank UIS Form"
+                                  className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
+                                  title={!canPerformActions ? reason : "Print Blank UIS Form"}
                                 >
                                   {printingRowKey === row.key ? (
                                     <Loader2 className="size-3.5 animate-spin text-primary" />
@@ -892,7 +900,8 @@ export const UisTab: React.FC<UisTabProps> = ({
 
                                 <DropdownMenuItem
                                   onClick={() => handleOpenAssessDialog(row)}
-                                  className="cursor-pointer gap-2"
+                                  disabled={!canPerformActions}
+                                  className="cursor-pointer gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {row.uis.hasAssessment ? (
                                     <>
@@ -909,8 +918,8 @@ export const UisTab: React.FC<UisTabProps> = ({
 
                                 <DropdownMenuItem
                                   onClick={() => handleDirectPrint(row)}
-                                  disabled={printingRowKey === row.key}
-                                  className="cursor-pointer gap-2"
+                                  disabled={!canPerformActions || printingRowKey === row.key}
+                                  className="cursor-pointer gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {printingRowKey === row.key ? (
                                     <Loader2 className="size-3.5 animate-spin text-primary" />
