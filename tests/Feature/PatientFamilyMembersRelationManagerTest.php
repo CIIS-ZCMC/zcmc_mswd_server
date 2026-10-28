@@ -22,7 +22,7 @@ beforeEach(function () {
     ]);
 });
 
-function familyRmUser(string $role = 'MSS Head'): User
+function familyRmUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
@@ -86,7 +86,7 @@ it('gates create/edit/delete on patients.update', function () {
         ->and($manager->canEdit($member))->toBeFalse()
         ->and($manager->canDelete($member))->toBeFalse();
 
-    actingAs(familyRmUser('MSS Head'));
+    actingAs(familyRmUser('Admin'));
     expect($manager->canCreate())->toBeTrue()
         ->and($manager->canEdit($member))->toBeTrue()
         ->and($manager->canDelete($member))->toBeTrue();

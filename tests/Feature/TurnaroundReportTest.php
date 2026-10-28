@@ -21,7 +21,7 @@ beforeEach(function () {
 
     $this->ana = tatReportUser('Case Manager', ['employee_name' => 'Ana Reyes']);
     $this->ben = tatReportUser('Processor', ['employee_name' => 'Ben Cruz']);
-    $this->head = tatReportUser('MSS Head');
+    $this->head = tatReportUser('Admin');
     $this->patient = tatReportPatient();
 });
 
@@ -200,7 +200,8 @@ it('excludes visits of a patient with a protective case without audit.view_prote
 // ── Gates ────────────────────────────────────────────────────────────────────
 
 it('lets reports.view read the dashboard but not the export', function () {
-    Sanctum::actingAs($this->ana); // Case Manager: reports.view, no reports.generate
+    $this->ana->givePermissionTo('reports.view');
+    Sanctum::actingAs($this->ana); // reports.view, no reports.generate
 
     $this->getJson('/api/reports/turnaround')->assertOk();
     $this->get('/api/reports/turnaround/export')->assertForbidden();

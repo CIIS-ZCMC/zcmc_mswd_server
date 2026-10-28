@@ -18,8 +18,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
-    $this->worker = User::factory()->create(['role' => 'MSS Head']);
-    $this->worker->assignRole('MSS Head');
+    $this->worker = User::factory()->create(['role' => 'Admin']);
+    $this->worker->assignRole('Admin');
 
     $sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
     $this->patient = Patient::create([

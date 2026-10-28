@@ -112,7 +112,7 @@ class SocialCaseService
      * Noting the report *is* finalizing it — there is no third signature pair.
      *
      * Permitted direct from draft: requiring the review step in the schema
-     * would deadlock a one-person office and block MSS Head, who is a
+     * would deadlock a one-person office and block Head, who is a
      * legitimate signer. The review step is optional by policy, mandatory by
      * nothing.
      */

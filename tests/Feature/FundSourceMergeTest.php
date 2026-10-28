@@ -26,8 +26,8 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(GuarantorSeeder::class);
 
-    $this->supervisor = User::factory()->create(['role' => 'Supervisor']);
-    $this->supervisor->assignRole('Supervisor');
+    $this->supervisor = User::factory()->create(['role' => 'Admin']);
+    $this->supervisor->assignRole('Admin');
     Sanctum::actingAs($this->supervisor);
 });
 
@@ -93,8 +93,8 @@ it('counts assessments and breakdown lines but locks the code only for assessmen
 });
 
 it('lets settings managers flag a fund source as requiring specify in the admin panel', function () {
-    $admin = User::factory()->create(['role' => 'Admin']);
-    $admin->assignRole('Admin');
+    $admin = User::factory()->create(['role' => 'Super Admin']);
+    $admin->assignRole('Super Admin');
     actingAs($admin);
 
     Livewire::test(CreateFundSource::class)

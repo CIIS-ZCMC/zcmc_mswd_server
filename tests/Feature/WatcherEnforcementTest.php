@@ -20,7 +20,7 @@ beforeEach(function () {
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
 });
 
-function enforcementUser(string $role = 'MSS Head'): User
+function enforcementUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);

@@ -18,7 +18,16 @@ import { useAuth } from "../hooks/use-auth"
  */
 import { router } from "@inertiajs/react"
 
-export const LoginForm: React.FC = () => {
+interface LoginFormProps {
+  iamError?: string | null
+  /** The local super admin's password form, reached at /login?admin. */
+  adminLogin?: boolean
+}
+
+export const LoginForm: React.FC<LoginFormProps> = ({
+  iamError = null,
+  adminLogin = false,
+}) => {
   const { login, isLoggingIn, loginError } = useAuth()
   const [employeeNumber, setEmployeeNumber] = useState("")
   const [password, setPassword] = useState("")
@@ -51,61 +60,82 @@ export const LoginForm: React.FC = () => {
             </p>
           </div>
         </CardHeader>
-        <CardContent>
-          <form onSubmit={handleSubmit} className="flex flex-col gap-5">
-            {loginError && (
-              <Alert variant="destructive" className="px-3 py-2.5">
-                <AlertCircle className="size-4" />
-                <AlertTitle className="text-sm">Sign-in failed</AlertTitle>
-                <AlertDescription className="text-sm">
-                  {loginError.firstValidationMessage ?? loginError.message}
-                </AlertDescription>
-              </Alert>
-            )}
+        <CardContent className="flex flex-col gap-5">
+          {iamError && (
+            <Alert variant="destructive" className="px-3 py-2.5">
+              <AlertCircle className="size-4" />
+              <AlertTitle className="text-sm">Sign-in failed</AlertTitle>
+              <AlertDescription className="text-sm">{iamError}</AlertDescription>
+            </Alert>
+          )}
 
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="login-employee-number" className="text-sm">
-                Employee Number
-              </Label>
-              <Input
-                id="login-employee-number"
-                type="text"
-                inputMode="numeric"
-                pattern="[0-9]*"
-                autoComplete="username"
-                required
-                value={employeeNumber}
-                onChange={(e) => setEmployeeNumber(e.target.value.replace(/\D/g, ""))}
+          {/* A plain link, not an Inertia <Link>: leaving for IAM is a real
+              navigation, and an XHR would die on CORS following the redirect. */}
+          <Button
+            nativeButton={false}
+            render={<a href="/auth/iam/redirect" />}
+            className="h-12 gap-2 text-base font-bold"
+          >
+            Sign in with ZCMC
+          </Button>
+
+          {adminLogin && (
+            <form onSubmit={handleSubmit} className="flex flex-col gap-5 border-t pt-5">
+              {loginError && (
+                <Alert variant="destructive" className="px-3 py-2.5">
+                  <AlertCircle className="size-4" />
+                  <AlertTitle className="text-sm">Sign-in failed</AlertTitle>
+                  <AlertDescription className="text-sm">
+                    {loginError.firstValidationMessage ?? loginError.message}
+                  </AlertDescription>
+                </Alert>
+              )}
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="login-employee-number" className="text-sm">
+                  Employee Number
+                </Label>
+                <Input
+                  id="login-employee-number"
+                  type="text"
+                  inputMode="numeric"
+                  pattern="[0-9]*"
+                  autoComplete="username"
+                  required
+                  value={employeeNumber}
+                  onChange={(e) => setEmployeeNumber(e.target.value.replace(/\D/g, ""))}
+                  disabled={isLoggingIn}
+                  className="h-12 px-4 text-base md:text-base"
+                />
+              </div>
+
+              <div className="flex flex-col gap-2">
+                <Label htmlFor="login-password" className="text-sm">
+                  Password
+                </Label>
+                <Input
+                  id="login-password"
+                  type="password"
+                  autoComplete="current-password"
+                  required
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  disabled={isLoggingIn}
+                  className="h-12 px-4 text-base md:text-base"
+                />
+              </div>
+
+              <Button
+                type="submit"
+                variant="outline"
+                className="h-12 gap-2 text-base font-bold"
                 disabled={isLoggingIn}
-                className="h-12 px-4 text-base md:text-base"
-              />
-            </div>
-
-            <div className="flex flex-col gap-2">
-              <Label htmlFor="login-password" className="text-sm">
-                Password
-              </Label>
-              <Input
-                id="login-password"
-                type="password"
-                autoComplete="current-password"
-                required
-                value={password}
-                onChange={(e) => setPassword(e.target.value)}
-                disabled={isLoggingIn}
-                className="h-12 px-4 text-base md:text-base"
-              />
-            </div>
-
-            <Button
-              type="submit"
-              className="mt-2 h-12 gap-2 text-base font-bold"
-              disabled={isLoggingIn}
-            >
-              {isLoggingIn && <Spinner className="size-4" />}
-              Sign In
-            </Button>
-          </form>
+              >
+                {isLoggingIn && <Spinner className="size-4" />}
+                Sign In
+              </Button>
+            </form>
+          )}
         </CardContent>
       </Card>
     </div>

@@ -87,7 +87,7 @@ it('defaults created_by to the opener and card_color to white', function () {
 });
 
 it('keeps created_by fixed when the case is reassigned', function () {
-    $worker = cmrUser('MSS Head');
+    $worker = cmrUser('Admin');
     Sanctum::actingAs($worker);
     $case = app(CaseModelService::class)->create(
         CaseModelDto::fromArray([
@@ -227,7 +227,7 @@ it('requires admission_type only when no transaction_id is given', function () {
 });
 
 it('exposes the new fields with created_by_user on the show route', function () {
-    $worker = cmrUser('MSS Head');
+    $worker = cmrUser('Admin');
     Sanctum::actingAs($worker);
     $case = app(CaseModelService::class)->create(
         CaseModelDto::fromArray([

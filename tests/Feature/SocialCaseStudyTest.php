@@ -220,7 +220,7 @@ function startScsr(CaseModel $case, User $worker, array $payload = []): Assessme
 
 it('walks draft through review to finalized', function () {
     $worker = scsrUser('Case Manager');
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $scsr = startScsr($this->case, $worker);
 
     Sanctum::actingAs($worker);
@@ -248,7 +248,7 @@ it('walks draft through review to finalized', function () {
 });
 
 it('backfills prepared_by when finalizing straight from draft', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $scsr = startScsr($this->case, $head);
 
     // A one-person office must be able to sign without a review step.
@@ -261,7 +261,7 @@ it('backfills prepared_by when finalizing straight from draft', function () {
 });
 
 it('refuses to submit anything but a draft', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     startScsr($this->case, $head);
 
     $this->postJson("/api/cases/{$this->case->id}/social-case/submit")->assertOk();
@@ -271,7 +271,7 @@ it('refuses to submit anything but a draft', function () {
 });
 
 it('blocks finalize when the watcher requirement is unmet', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $inpatient = makeSocialCaseEpisode($this->patient, ['admission_type' => 'inpatient']);
     startScsr($inpatient, $head);
 
@@ -286,7 +286,7 @@ it('blocks finalize when the watcher requirement is unmet', function () {
 });
 
 it('archives a pdf document on finalize', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $scsr = startScsr($this->case, $head);
 
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
@@ -304,7 +304,7 @@ it('archives a pdf document on finalize', function () {
 // ----------------------------------------------------- the finalized lock
 
 it('rejects edits to a finalized report through both write paths', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $scsr = startScsr($this->case, $head);
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
 
@@ -322,7 +322,7 @@ it('rejects edits to a finalized report through both write paths', function () {
 });
 
 it('refuses to delete a finalized report', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $scsr = startScsr($this->case, $head);
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
 
@@ -332,7 +332,7 @@ it('refuses to delete a finalized report', function () {
 });
 
 it('soft-deletes an ordinary assessment instead of hard-deleting it', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $assessment = makeAssessment($this->case, $head);
     $assessment->expenses()->create(['expense_type' => 'food', 'amount' => 1200]);
 
@@ -347,7 +347,7 @@ it('soft-deletes an ordinary assessment instead of hard-deleting it', function (
 // ----------------------------------------------------------------- amend
 
 it('reopens a finalized report and increments the revision', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $scsr = startScsr($this->case, $head);
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
 
@@ -366,7 +366,7 @@ it('reopens a finalized report and increments the revision', function () {
 });
 
 it('requires a reason to amend', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     startScsr($this->case, $head);
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
 
@@ -376,7 +376,7 @@ it('requires a reason to amend', function () {
 });
 
 it('refuses to amend anything but a finalized report', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     startScsr($this->case, $head);
 
     $this->postJson("/api/cases/{$this->case->id}/social-case/amend", ['reason' => 'too early'])
@@ -385,7 +385,7 @@ it('refuses to amend anything but a finalized report', function () {
 });
 
 it('keeps one immutable document per finalization, sharing a control number', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $scsr = startScsr($this->case, $head);
 
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
@@ -405,7 +405,7 @@ it('keeps one immutable document per finalization, sharing a control number', fu
 
 it('forbids a case manager from finalizing or amending', function () {
     $worker = scsrUser('Case Manager');
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     startScsr($this->case, $worker);
 
     Sanctum::actingAs($worker);
@@ -419,14 +419,14 @@ it('forbids a case manager from finalizing or amending', function () {
 });
 
 it('lets a supervisor finalize', function () {
-    $supervisor = scsrUser('Supervisor');
+    $supervisor = scsrUser('Admin');
     startScsr($this->case, $supervisor);
 
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
 });
 
 it('requires cases.view to read the report', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     startScsr($this->case, $head);
 
     $outsider = User::factory()->create();
@@ -435,7 +435,7 @@ it('requires cases.view to read the report', function () {
 });
 
 it('404s when the case has no social case study', function () {
-    Sanctum::actingAs(scsrUser('MSS Head'));
+    Sanctum::actingAs(scsrUser('Admin'));
 
     $this->getJson("/api/cases/{$this->case->id}/social-case")->assertNotFound();
 });
@@ -443,7 +443,7 @@ it('404s when the case has no social case study', function () {
 // -------------------------------------------------------- control numbers
 
 it('issues sequential SCSR control numbers scoped to the year', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     $first = startScsr($this->case, $head);
     $second = startScsr(makeSocialCaseEpisode($this->patient), $head);
 
@@ -455,7 +455,7 @@ it('issues sequential SCSR control numbers scoped to the year', function () {
 // -------------------------------------------------- the guarded regression
 
 it('still accepts an intake appended to a case with a finalized report', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     startScsr($this->case, $head);
     $this->postJson("/api/cases/{$this->case->id}/social-case/finalize")->assertOk();
 
@@ -470,7 +470,7 @@ it('still accepts an intake appended to a case with a finalized report', functio
 // ------------------------------------------------------------- timeline
 
 it('writes one case activity per lifecycle transition', function () {
-    $head = scsrUser('MSS Head');
+    $head = scsrUser('Admin');
     startScsr($this->case, $head);
 
     $this->postJson("/api/cases/{$this->case->id}/social-case/submit")->assertOk();

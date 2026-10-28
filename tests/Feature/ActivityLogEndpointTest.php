@@ -22,10 +22,13 @@ beforeEach(function () {
     $this->worker = User::factory()->create();
 });
 
-function auditUser(string $role): User
+function auditUser(string $role, bool $withAudit = false): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
+    if ($withAudit) {
+        $user->givePermissionTo('audit.view');
+    }
 
     return $user;
 }
@@ -52,7 +55,7 @@ it('gates the global log behind audit.view', function () {
 });
 
 it('returns a paginated global log to a permitted user', function () {
-    Sanctum::actingAs(auditUser('MSS Head'));
+    Sanctum::actingAs(auditUser('Admin'));
     caseFor($this->patient, $this->worker);
 
     $this->getJson('/api/activity-log')
@@ -62,7 +65,7 @@ it('returns a paginated global log to a permitted user', function () {
 });
 
 it('caps the page size at 100', function () {
-    Sanctum::actingAs(auditUser('MSS Head'));
+    Sanctum::actingAs(auditUser('Admin'));
 
     $this->getJson('/api/activity-log?per_page=500')
         ->assertOk()
@@ -70,7 +73,7 @@ it('caps the page size at 100', function () {
 });
 
 it('filters the log by patient, event and subject type', function () {
-    Sanctum::actingAs(auditUser('MSS Head'));
+    Sanctum::actingAs(auditUser('Admin'));
     $other = Patient::create([
         'sector_id' => $this->sector->id, 'first_name' => 'Bea', 'last_name' => 'Santos', 'sex' => 'female',
     ]);
@@ -88,7 +91,7 @@ it('filters the log by patient, event and subject type', function () {
 });
 
 it('serves the inline per-record drill-down from the same endpoint', function () {
-    Sanctum::actingAs(auditUser('MSS Head'));
+    Sanctum::actingAs(auditUser('Admin'));
     $watcher = PatientWatcher::create([
         'patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse',
     ]);
@@ -101,7 +104,7 @@ it('serves the inline per-record drill-down from the same endpoint', function ()
 });
 
 it('labels each row with a human-readable subject', function () {
-    Sanctum::actingAs(auditUser('MSS Head'));
+    Sanctum::actingAs(auditUser('Admin'));
     PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria Cruz', 'relationship_code' => 'spouse']);
 
     $response = $this->getJson('/api/activity-log?subject_type=PatientWatcher')->assertOk();
@@ -110,7 +113,7 @@ it('labels each row with a human-readable subject', function () {
 });
 
 it('gracefully handles legacy activity log rows whose subject model class was removed', function () {
-    Sanctum::actingAs(auditUser('MSS Head'));
+    Sanctum::actingAs(auditUser('Admin'));
 
     Activity::create([
         'log_name' => 'default',
@@ -142,8 +145,8 @@ describe('the protective-case filter', function () {
     });
 
     it('hides protective rows from a user without audit.view_protective', function () {
-        // Supervisor has audit.view but not audit.view_protective.
-        Sanctum::actingAs(auditUser('Supervisor'));
+        // This user has audit.view but not audit.view_protective.
+        Sanctum::actingAs(auditUser('Case Manager', true));
 
         $caseIds = collect($this->getJson('/api/activity-log')->assertOk()->json('data'))
             ->pluck('case_id')
@@ -155,7 +158,7 @@ describe('the protective-case filter', function () {
     });
 
     it('shows protective rows to a user with the permission', function () {
-        Sanctum::actingAs(auditUser('MSS Head'));
+        Sanctum::actingAs(auditUser('Admin'));
 
         $caseIds = collect($this->getJson('/api/activity-log')->assertOk()->json('data'))
             ->pluck('case_id')
@@ -166,7 +169,7 @@ describe('the protective-case filter', function () {
     });
 
     it('applies to the patient history endpoint too', function () {
-        Sanctum::actingAs(auditUser('Supervisor'));
+        Sanctum::actingAs(auditUser('Case Manager', true));
 
         $caseIds = collect($this->getJson("/api/patients/{$this->patient->id}/history")->assertOk()->json('data'))
             ->pluck('case_id')
@@ -177,7 +180,7 @@ describe('the protective-case filter', function () {
     });
 
     it('applies to the case history endpoint too', function () {
-        Sanctum::actingAs(auditUser('Supervisor'));
+        Sanctum::actingAs(auditUser('Case Manager', true));
 
         $this->getJson("/api/cases/{$this->protectiveCase->id}/history")
             ->assertOk()
@@ -185,7 +188,7 @@ describe('the protective-case filter', function () {
     });
 
     it('keeps patient-level rows visible — the documented residual', function () {
-        Sanctum::actingAs(auditUser('Supervisor'));
+        Sanctum::actingAs(auditUser('Case Manager', true));
         PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Maria', 'relationship_code' => 'spouse']);
 
         // Not case-attached, so nothing ties it to the protective episode. The

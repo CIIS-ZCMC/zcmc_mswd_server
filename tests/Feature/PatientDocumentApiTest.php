@@ -23,6 +23,7 @@ beforeEach(function () {
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
     $this->worker = User::factory()->create(['role' => 'Case Manager']);
     $this->worker->assignRole('Case Manager');
+    $this->worker->givePermissionTo('patients.update'); // watchers and documents are patient records
     Sanctum::actingAs($this->worker);
 
     $this->patient = documentPatient();

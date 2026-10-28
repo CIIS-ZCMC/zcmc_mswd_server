@@ -26,7 +26,7 @@ beforeEach(function () {
     ]);
 });
 
-function casePanelUser(string $role = 'MSS Head'): User
+function casePanelUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
@@ -131,7 +131,7 @@ it('blocks archiving an open case from the panel', function () {
 });
 
 it('gates the resource on case permissions', function () {
-    actingAs(casePanelUser('MSS Head'));
+    actingAs(casePanelUser('Admin'));
     expect(CaseResource::canViewAny())->toBeTrue()
         ->and(CaseResource::canCreate())->toBeTrue();
 

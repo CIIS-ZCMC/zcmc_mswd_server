@@ -19,6 +19,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'email', type: 'string', format: 'email', nullable: true),
         new OA\Property(property: 'role', type: 'string', nullable: true),
         new OA\Property(property: 'roles', type: 'array', items: new OA\Items(type: 'string'), description: 'Role names (when loaded).'),
+        new OA\Property(property: 'role_codes', type: 'array', items: new OA\Items(type: 'string'), description: 'Role system codes, e.g. case_manager (when loaded).'),
         new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string'), description: 'Effective permission names (when roles/permissions loaded).'),
         new OA\Property(property: 'is_active', type: 'boolean', example: true),
         new OA\Property(property: 'synced_at', type: 'string', format: 'date-time', nullable: true),
@@ -39,7 +40,8 @@ use OpenApi\Attributes as OA;
     description: 'A spatie role.',
     properties: [
         new OA\Property(property: 'id', type: 'integer', example: 1),
-        new OA\Property(property: 'name', type: 'string', example: 'case-manager'),
+        new OA\Property(property: 'name', type: 'string', example: 'Case Manager', description: 'Display name; may be renamed.'),
+        new OA\Property(property: 'code', type: 'string', example: 'case_manager', description: 'Stable system code, fixed once created. Optional on create (defaults to the name in snake case); never accepted on update.'),
         new OA\Property(property: 'guard_name', type: 'string', example: 'web'),
         new OA\Property(property: 'description', type: 'string', nullable: true),
         new OA\Property(property: 'permissions', type: 'array', items: new OA\Items(type: 'string'), description: 'Permission names (when loaded).'),

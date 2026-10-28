@@ -65,7 +65,7 @@ issue, one branch and one PR per phase, as the work was split in practice.
 4. **Guarantors** reuse the existing table. **Assistance sources** keep their API, dialog and `guarantee.create` gate.
 5. **Permissions:**
    - Guarantor and assistance-source writes keep using `guarantee.create`.
-   - Mode of assistance and fund source writes use the new `library.manage` (Admin, MSS Head, Supervisor).
+   - Mode of assistance and fund source writes use the new `library.manage` (Admin, Head, Supervisor). *(Superseded: roles are now per module, see CLAUDE.md.)*
    - The Library page and its nav link are gated by `library.manage`.
    - Filament stays gated by `settings.manage`.
 6. **Deletes are soft.** Responses carry `usage_count`; the UI prefers deactivating over deleting. A deleted row can be
@@ -80,7 +80,7 @@ issue, one branch and one PR per phase, as the work was split in practice.
   `add_guarantee_permissions`).
 - Models `ModeOfAssistance` and `FundSource`: `Auditable`, `SoftDeletes`. Both are in `AuditCoverageTest`.
 - `ModeOfAssistanceSeeder` and `FundSourceSeeder` (`firstOrCreate` on `code`); registered in `DatabaseSeeder`.
-- `library.manage` added to `RolesAndPermissionsSeeder` for Admin (all), MSS Head and Supervisor.
+- `library.manage` added to `RolesAndPermissionsSeeder` for Admin (all), Head and Supervisor. *(Superseded: roles are now per module, see CLAUDE.md.)*
 
 ## Phase 2 — Library API ☑
 

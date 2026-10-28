@@ -17,8 +17,9 @@ export function useAnyPermission(targetPermissions: string[]): boolean {
   return Array.isArray(perms) ? targetPermissions.some((permission) => perms.includes(permission)) : false
 }
 
-export function useHasRole(role: string): boolean {
-  const { roles, user } = useAuth()
-  const r = roles ?? user?.roles ?? []
-  return Array.isArray(r) ? r.includes(role) : false
+/** True if the user holds a role with this system code (e.g. "case_manager"). */
+export function useHasRole(code: string): boolean {
+  const { roleCodes, user } = useAuth()
+  const c = roleCodes ?? user?.roleCodes ?? []
+  return Array.isArray(c) ? c.includes(code) : false
 }

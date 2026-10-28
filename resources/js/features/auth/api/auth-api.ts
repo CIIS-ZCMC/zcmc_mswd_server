@@ -22,10 +22,13 @@ export async function getMe(): Promise<AuthUser> {
 }
 
 /**
- * POST /logout — logs out session cookie server-side.
+ * POST /logout — logs out session cookie server-side. `redirect` is the IAM
+ * logout URL when the IAM session should end too.
  */
-export async function logout(): Promise<void> {
-  await apiClient.post<void>("/logout", undefined, { baseUrl: "" })
+export async function logout(): Promise<{ redirect: string | null }> {
+  return apiClient.post<{ redirect: string | null }>("/logout", undefined, {
+    baseUrl: "",
+  })
 }
 
 /**

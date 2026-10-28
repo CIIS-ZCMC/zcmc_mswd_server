@@ -72,7 +72,7 @@ the Phase 6 docs PR.
   - Uses `Concerns\Auditable`, with `activityOwner()` pointing to the patient. `AuditCoverageTest` and
     `ActivityOwnershipResolverTest` are updated.
 - **Permission `queue.manage`:**
-  - Added to `RolesAndPermissionsSeeder` for MSS Head, Supervisor, Case Manager and Processor. Admin already has `*`.
+  - Added to `RolesAndPermissionsSeeder` for Head, Supervisor, Case Manager and Processor. Admin already has `*`. *(Superseded: roles are now per module, see CLAUDE.md.)*
   - An additive migration `add_queue_permission` grants it in existing environments; it is modeled on
     `add_dar_permission`.
   - `RolesAndPermissionsTest` is updated.

@@ -16,7 +16,7 @@ beforeEach(function () {
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
 });
 
-function mergeUser(string $role = 'MSS Head'): User
+function mergeUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);

@@ -25,11 +25,11 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
-    $this->worker = User::factory()->create(['role' => 'MSS Head']);
-    $this->worker->assignRole('MSS Head');
+    $this->worker = User::factory()->create(['role' => 'Admin']);
+    $this->worker->assignRole('Admin');
 });
 
-function chtUser(string $role = 'MSS Head'): User
+function chtUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);

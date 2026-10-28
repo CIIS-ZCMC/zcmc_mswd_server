@@ -406,7 +406,7 @@ it('seeds the lookups idempotently', function () {
 });
 
 it('lets settings managers maintain the lookups in the admin panel', function () {
-    actingAs(pgUser('Admin'));
+    actingAs(pgUser('Super Admin'));
 
     Livewire::test(ListGuarantors::class)->assertOk()->assertCanSeeTableRecords(Guarantor::all());
 });

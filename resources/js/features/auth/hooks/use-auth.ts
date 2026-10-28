@@ -8,6 +8,7 @@ interface SharedProps extends Record<string, unknown> {
   auth?: {
     user: AuthUser | null
     roles: string[]
+    roleCodes: string[]
     permissions: string[]
   }
 }
@@ -32,19 +33,29 @@ export function useAuth() {
 
   const logoutMutation = useMutation({
     mutationFn: logout,
-    onSettled: () => {
+    onSettled: (result) => {
       queryClient.setQueryData(AUTH_QUERY_KEY, null)
       queryClient.clear()
+
+      // Ending the IAM session is a real navigation: an XHR cannot follow a
+      // redirect to another origin.
+      if (result?.redirect) {
+        window.location.assign(result.redirect)
+        return
+      }
+
       router.visit("/login")
     },
   })
 
   const roles = page.props?.auth?.roles ?? user?.roles ?? []
+  const roleCodes = page.props?.auth?.roleCodes ?? user?.roleCodes ?? []
   const permissions = page.props?.auth?.permissions ?? user?.permissions ?? []
 
   return {
     user,
     roles,
+    roleCodes,
     permissions,
     isLoading: false,
     isAuthenticated: Boolean(user),

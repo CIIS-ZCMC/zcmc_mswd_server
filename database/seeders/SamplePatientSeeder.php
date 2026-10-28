@@ -128,7 +128,7 @@ class SamplePatientSeeder extends Seeder
             'santos' => ['Maria Santos, RSW', 'maria.santos@zcmc.test', 'Supervisor'],
             'torres' => ['Janice Torres, RSW', 'janice.torres@zcmc.test', 'Case Manager'],
             'villaflor' => ['Ramon Villaflor, RSW', 'ramon.villaflor@zcmc.test', 'Case Manager'],
-            'maguyon' => ['Elena Mag-uyon, RSW', 'elena.maguyon@zcmc.test', 'MSS Head'],
+            'maguyon' => ['Elena Mag-uyon, RSW', 'elena.maguyon@zcmc.test', 'Head'],
         ];
 
         $staff = [];

@@ -80,6 +80,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
   const pathname = pageObj.url.split("?")[0]
   const navigate = (url: string) => router.visit(url)
   const canViewAudit = usePermission("audit.view")
+  const canViewPatients = usePermission("patients.view")
   const canViewCases = usePermission("cases.view")
   const canViewReports = usePermission("reports.view")
   const canManageDar = usePermission("dar.manage")
@@ -110,24 +111,26 @@ export const Sidebar: React.FC<SidebarProps> = ({
     <aside className="flex h-full w-88 flex-col border-r border-border bg-card/60 text-foreground transition-colors duration-200">
       {/* View Selector Nav (Patients vs Caseload vs Reports vs DAR vs Global Audit Log) */}
       <div className="p-2.5 border-b border-border/80 bg-muted/30 flex items-center gap-1.5 flex-wrap">
-        <button
-          onClick={() => {
-            onViewChange?.("patients")
-            if (selectedPatientId) {
-              navigate(`/patients/${selectedPatientId}`)
-            } else {
-              navigate("/")
-            }
-          }}
-          className={cn(
-            "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer border min-w-20",
-            isPatientsRoute
-              ? "bg-primary text-primary-foreground border-primary shadow-xs"
-              : "bg-background text-muted-foreground border-border hover:bg-muted"
-          )}
-        >
-          <Users className="size-3.5" /> Patients
-        </button>
+        {canViewPatients && (
+          <button
+            onClick={() => {
+              onViewChange?.("patients")
+              if (selectedPatientId) {
+                navigate(`/patients/${selectedPatientId}`)
+              } else {
+                navigate("/")
+              }
+            }}
+            className={cn(
+              "flex-1 flex items-center justify-center gap-1.5 py-2 px-2.5 rounded-lg text-xs font-bold transition-all cursor-pointer border min-w-20",
+              isPatientsRoute
+                ? "bg-primary text-primary-foreground border-primary shadow-xs"
+                : "bg-background text-muted-foreground border-border hover:bg-muted"
+            )}
+          >
+            <Users className="size-3.5" /> Patients
+          </button>
+        )}
 
         {canViewCases && (
           <button

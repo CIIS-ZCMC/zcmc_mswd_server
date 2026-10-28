@@ -33,13 +33,13 @@ function permissionIds(array $names): array
 }
 
 it('lets an admin reach the roles list', function () {
-    actingAs(roleModuleUser('Admin'));
+    actingAs(roleModuleUser('Super Admin'));
 
     $this->get('/admin/roles')->assertOk();
 });
 
 it('creates a role with description and permissions, pinned to the web guard', function () {
-    actingAs(roleModuleUser('Admin'));
+    actingAs(roleModuleUser('Super Admin'));
 
     Livewire::test(CreateRole::class)
         ->fillForm([
@@ -60,7 +60,7 @@ it('creates a role with description and permissions, pinned to the web guard', f
 });
 
 it('edits a role to sync its permissions', function () {
-    actingAs(roleModuleUser('Admin'));
+    actingAs(roleModuleUser('Super Admin'));
     $role = Role::create(['name' => 'Editable', 'guard_name' => RolesAndPermissionsSeeder::GUARD]);
 
     Livewire::test(EditRole::class, ['record' => $role->getKey()])
@@ -72,7 +72,7 @@ it('edits a role to sync its permissions', function () {
 });
 
 it('rejects a duplicate role name', function () {
-    actingAs(roleModuleUser('Admin'));
+    actingAs(roleModuleUser('Super Admin'));
 
     Livewire::test(CreateRole::class)
         ->fillForm(['name' => 'Case Manager'])
@@ -81,7 +81,7 @@ it('rejects a duplicate role name', function () {
 });
 
 it('protects core roles from deletion but allows custom roles', function () {
-    actingAs(roleModuleUser('Admin'));
+    actingAs(roleModuleUser('Super Admin'));
     $core = Role::query()->where('name', 'Case Manager')->first();
     $custom = Role::create(['name' => 'Custom', 'guard_name' => RolesAndPermissionsSeeder::GUARD]);
 
@@ -92,14 +92,16 @@ it('protects core roles from deletion but allows custom roles', function () {
 });
 
 it('flags the super admin role', function () {
-    $admin = Role::query()->where('name', 'Admin')->first();
+    $admin = Role::query()->where('name', 'Super Admin')->first();
 
     expect(RoleResource::isSuperAdmin($admin))->toBeTrue()
         ->and(RoleResource::canDelete($admin))->toBeFalse();
 });
 
 it('hides role management from users without roles.manage', function () {
-    actingAs(roleModuleUser('MSS Head')); // panel.access + users.view, no roles.manage
+    $user = roleModuleUser('Head');
+    $user->givePermissionTo(['panel.access', 'users.view']); // panel.access + users.view, no roles.manage
+    actingAs($user);
 
     expect(RoleResource::canViewAny())->toBeFalse()
         ->and(RoleResource::canCreate())->toBeFalse();
@@ -108,7 +110,23 @@ it('hides role management from users without roles.manage', function () {
 });
 
 it('grants the super admin every ability via Gate::before', function () {
-    $admin = roleModuleUser('Admin');
+    $admin = roleModuleUser('Super Admin');
 
     expect($admin->can('a.nonexistent.ability'))->toBeTrue();
+});
+
+it('shows the system code but locks it once the role exists', function () {
+    actingAs(roleModuleUser('Super Admin'));
+    $role = Role::findByName('Case Manager');
+
+    Livewire::test(EditRole::class, ['record' => $role->getKey()])
+        ->assertFormFieldIsDisabled('code')
+        ->assertFormSet(['code' => 'case_manager']);
+
+    Livewire::test(CreateRole::class)
+        ->fillForm(['name' => 'Records Officer', 'code' => 'records'])
+        ->call('create')
+        ->assertHasNoFormErrors();
+
+    expect(Role::where('name', 'Records Officer')->value('code'))->toBe('records');
 });

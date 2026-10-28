@@ -246,7 +246,7 @@ who authored the SCSR.
 | `resources/views/pdf/partials/_styles.blade.php` | *(new)* — the intake template's `<style>` block extracted verbatim |
 | `resources/views/pdf/unified-intake-sheet.blade.php` | style block → `@include` |
 | `routes/api.php` | `+` the seven routes in §A.5 |
-| `database/seeders/RolesAndPermissionsSeeder.php` | `+ 'cases.finalize_social_case'` to `PERMISSIONS`; grant to `MSS Head` and `Supervisor` (Admin has `['*']`). **Not** Case Manager |
+| `database/seeders/RolesAndPermissionsSeeder.php` | `+ 'cases.finalize_social_case'` to `PERMISSIONS`; grant to `Head` and `Supervisor` (Admin has `['*']`). **Not** Case Manager |
 | `app/Console/Commands/PromoteExistingSocialCases.php` | *(new)* — opt-in, `--dry-run`, `--case=` |
 
 Plus the `assessment_expenses` surface in §A.10.
@@ -336,7 +336,7 @@ needed for the count.
 | `amend(Assessment $scsr, User $user, string $reason)` | Requires `finalized`. → `draft`, `revision++`, clears `noted_*` and `review_requested_at`. `CaseActivity` `social_case_amended` carrying the reason. **Prior `Document` untouched** |
 
 **Finalize is permitted direct from `draft`.** Requiring the review step in the
-schema would deadlock a one-person office and block MSS Head, who is a legitimate
+schema would deadlock a one-person office and block Head, who is a legitimate
 signer. The review step is optional by policy, mandatory by nothing.
 
 **Model-level immutability guard — a deliberate exception to "guards live in

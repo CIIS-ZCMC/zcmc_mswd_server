@@ -96,8 +96,8 @@ unknown columns — a column that does not exist is omitted rather than raising.
    interfaces, which do not extend `RepositoryInterface`.
 2. **A separate permission ability.** Gated on `hospital-patients.view`, not
    `patients.*` — browsing the raw HIS master is a distinct capability from
-   managing local patients. Seeded into `MSS Head`, `Supervisor`,
-   `Case Manager`, `Processor` (`Admin` via `*`).
+   managing local patients. Seeded into `Head`, `Supervisor`,
+   `Case Manager`, `Processor` (`Admin` via `*`). *(Superseded: roles are now per module, see CLAUDE.md.)*
 3. **Personal data is mapped, not `whenHas`-guessed.** The API resource sources
    personal data from the `personalData` relation via `toPatientAttributes()`.
    The previous `whenHas` on the `emdPatients` model emitted nothing, because

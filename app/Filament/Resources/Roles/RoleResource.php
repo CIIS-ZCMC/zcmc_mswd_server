@@ -7,7 +7,6 @@ use App\Filament\Resources\Roles\Pages\EditRole;
 use App\Filament\Resources\Roles\Pages\ListRoles;
 use App\Models\Role;
 use BackedEnum;
-use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Forms\Components\CheckboxList;
 use Filament\Forms\Components\Textarea;
 use Filament\Forms\Components\TextInput;
@@ -36,12 +35,12 @@ class RoleResource extends Resource
      */
     public static function isCore(?Role $role): bool
     {
-        return $role !== null && array_key_exists($role->name, RolesAndPermissionsSeeder::ROLES);
+        return $role !== null && $role->isCore();
     }
 
     public static function isSuperAdmin(?Role $role): bool
     {
-        return $role !== null && $role->name === RolesAndPermissionsSeeder::SUPER_ADMIN;
+        return $role !== null && $role->isSuperAdmin();
     }
 
     public static function form(Schema $schema): Schema
@@ -55,6 +54,14 @@ class RoleResource extends Resource
                     // Core role names are code-defined and must stay stable.
                     ->disabled(fn (?Role $record): bool => self::isCore($record))
                     ->dehydrated(fn (?Role $record): bool => ! self::isCore($record)),
+                TextInput::make('code')
+                    ->maxLength(64)
+                    ->regex('/^[a-z][a-z0-9_]*$/')
+                    ->unique(ignoreRecord: true)
+                    // The code is the stable key (IAM, code checks); fixed once created.
+                    ->disabled(fn (?Role $record): bool => $record !== null)
+                    ->dehydrated(fn (?Role $record): bool => $record === null)
+                    ->helperText('System code, e.g. case_manager. Leave blank to use the name in snake case. Cannot be changed after the role is created.'),
                 Textarea::make('description')
                     ->maxLength(255)
                     ->rows(2)
@@ -76,6 +83,10 @@ class RoleResource extends Resource
         return $table
             ->columns([
                 TextColumn::make('name')
+                    ->searchable()
+                    ->sortable(),
+                TextColumn::make('code')
+                    ->badge()
                     ->searchable()
                     ->sortable(),
                 TextColumn::make('description')

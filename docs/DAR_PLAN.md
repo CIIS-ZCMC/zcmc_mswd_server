@@ -53,7 +53,7 @@ as an on-screen table, printed as a PDF and exported as a CSV. Ships as one issu
     history.
   - Update `AuditCoverageTest` and `ActivityOwnershipResolverTest` for the new model.
 - **Permission `dar.manage`:**
-  - Add it to `RolesAndPermissionsSeeder` for MSS Head, Supervisor, Case Manager and Processor. Admin already has `*`.
+  - Add it to `RolesAndPermissionsSeeder` for Head, Supervisor, Case Manager and Processor. Admin already has `*`. *(Superseded: roles are now per module, see CLAUDE.md.)*
   - Add an additive migration modeled on `2026_10_09_010200_add_library_permission.php`.
   - Update `RolesAndPermissionsTest`.
 

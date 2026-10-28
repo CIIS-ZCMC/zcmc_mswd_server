@@ -12,7 +12,7 @@ final class LoginDocs
         operationId: 'auth.login',
         tags: ['Auth'],
         summary: 'Authenticate and issue a bearer token',
-        description: 'Public, but rate-limited to 6 requests/minute. Returns the user and a Sanctum token.',
+        description: 'Public, but rate-limited to 6 requests/minute. Returns the user and a Sanctum token. Only the local super admin can sign in this way; everyone else signs in through ZCMC IAM.',
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(ref: '#/components/schemas/LoginRequest')),
         responses: [
             new OA\Response(response: 200, description: 'Authenticated', content: new OA\JsonContent(ref: '#/components/schemas/LoginResponse')),

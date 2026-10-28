@@ -58,7 +58,7 @@ function aggregatePatient(bool $withTransactions = true): HospitalPatient
     return $patient;
 }
 
-function aggregateUser(string $role = 'MSS Head'): User
+function aggregateUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);

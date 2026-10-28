@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { usePage } from "@inertiajs/react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { usePermission } from "@/features/auth/hooks/use-permission"
 import { listPatients } from "../api/patients-api"
 import { toPatientListRecord } from "../api/patients-adapter"
 import type { PatientRecord } from "../types"
@@ -11,6 +12,7 @@ export const PATIENTS_LIST_QUERY_KEY = ["patients", "list"] as const
  * The sidebar/master list hook. Owns pagination and server-driven filter state.
  */
 export function usePatients() {
+  const canViewPatients = usePermission("patients.view")
   const pageObj = usePage<{ patientId?: string }>()
   const pathPatientId = pageObj.url.match(/^\/patients\/([^/?#]+)/)?.[1] || ""
   const routePatientId = pageObj.props?.patientId ?? pathPatientId ?? ""
@@ -67,6 +69,8 @@ export function usePatients() {
         intakeDate,
       }),
     placeholderData: keepPreviousData,
+    // Roles without Patients (e.g. Head) would only get a 403.
+    enabled: canViewPatients,
   })
 
   const patients: PatientRecord[] = (query.data?.data ?? []).map(toPatientListRecord)

@@ -30,7 +30,7 @@ it('seeds the current approver and MSWD Head through the migrations', function (
 });
 
 it('stores and returns a license number', function () {
-    Sanctum::actingAs(signatoryUser('Supervisor'));
+    Sanctum::actingAs(signatoryUser('Admin'));
     $head = Signatory::activeFor('mswd_head');
 
     $this->putJson("/api/signatories/{$head->id}", ['license_no' => '0020000'])
@@ -42,7 +42,7 @@ it('stores and returns a license number', function () {
 });
 
 it('lets library.manage create, update and soft-delete a signatory', function () {
-    Sanctum::actingAs(signatoryUser('Supervisor'));
+    Sanctum::actingAs(signatoryUser('Admin'));
     Signatory::query()->update(['is_active' => false]);
 
     $id = $this->postJson('/api/signatories', [
@@ -63,7 +63,7 @@ it('lets library.manage create, update and soft-delete a signatory', function ()
 });
 
 it('allows only one active signatory per role', function () {
-    Sanctum::actingAs(signatoryUser('Supervisor'));
+    Sanctum::actingAs(signatoryUser('Admin'));
 
     $this->postJson('/api/signatories', ['name' => 'DR. NEW', 'role' => 'allied_health_chief'])
         ->assertUnprocessable()
@@ -84,7 +84,7 @@ it('allows only one active signatory per role', function () {
 });
 
 it('rejects an unknown role', function () {
-    Sanctum::actingAs(signatoryUser('Supervisor'));
+    Sanctum::actingAs(signatoryUser('Admin'));
 
     $this->postJson('/api/signatories', ['name' => 'X', 'role' => 'janitor', 'is_active' => false])
         ->assertJsonValidationErrors('role');
@@ -103,7 +103,7 @@ it('refuses an unauthenticated caller', function () {
 });
 
 it('records an audit trail of edits', function () {
-    Sanctum::actingAs(signatoryUser('Supervisor'));
+    Sanctum::actingAs(signatoryUser('Admin'));
     $signatory = Signatory::activeFor('allied_health_chief');
 
     $this->putJson("/api/signatories/{$signatory->id}", ['title' => 'Chief, AHPS'])->assertOk();

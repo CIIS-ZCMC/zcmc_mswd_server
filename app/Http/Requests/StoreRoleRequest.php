@@ -22,6 +22,8 @@ class StoreRoleRequest extends FormRequest
 
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique($rolesTable, 'name')],
+            // Optional: defaults to the name in snake case. Fixed once created.
+            'code' => ['sometimes', 'string', 'max:64', 'regex:/^[a-z][a-z0-9_]*$/', Rule::unique($rolesTable, 'code')],
             'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['sometimes', 'array'],
             'permissions.*' => ['string', Rule::exists($permissionsTable, 'name')],

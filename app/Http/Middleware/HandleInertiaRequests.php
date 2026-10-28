@@ -45,6 +45,7 @@ class HandleInertiaRequests extends Middleware
             'auth' => [
                 'user' => $user ? UserResource::make($user->load('roles'))->resolve() : null,
                 'roles' => $user ? $user->getRoleNames()->values()->all() : [],
+                'roleCodes' => $user ? $user->roles->pluck('code')->values()->all() : [],
                 'permissions' => $user ? $user->getAllPermissions()->pluck('name')->values()->all() : [],
             ],
             'flash' => [

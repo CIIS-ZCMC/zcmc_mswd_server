@@ -23,6 +23,7 @@ function watcherApiUser(string $role = 'Case Manager'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
+    $user->givePermissionTo('patients.update');
 
     return $user;
 }
@@ -262,7 +263,7 @@ it('gates the waiver endpoints on cases.waive_watcher, not cases.update', functi
     $this->postJson("/api/cases/{$case->id}/watcher-waiver", ['watcher_waiver_reason' => 'unaccompanied'])
         ->assertForbidden();
 
-    $head = watcherApiUser('MSS Head');
+    $head = watcherApiUser('Admin');
     Sanctum::actingAs($head);
     $this->postJson("/api/cases/{$case->id}/watcher-waiver", ['watcher_waiver_reason' => 'unaccompanied'])
         ->assertOk()

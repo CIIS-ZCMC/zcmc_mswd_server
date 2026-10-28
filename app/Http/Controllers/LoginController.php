@@ -5,6 +5,7 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -12,8 +13,8 @@ use Illuminate\Validation\ValidationException;
 class LoginController extends Controller
 {
     /**
-     * Authenticate a user by employee number + password and issue a Sanctum
-     * API token. React stores the token and sends it as
+     * Authenticate the local super admin by employee number + password and
+     * issue a Sanctum API token. Everyone else signs in through ZCMC IAM. React stores the token and sends it as
      * `Authorization: Bearer <token>`.
      */
     public function __invoke(LoginRequest $request): JsonResponse
@@ -21,7 +22,11 @@ class LoginController extends Controller
         /** @var User|null $user */
         $user = User::where('employee_number', $request->validated('employee_number'))->first();
 
-        if (! $user || ! Hash::check($request->validated('password'), $user->password)) {
+        if (
+            ! $user
+            || ! $user->hasRoleCode(RolesAndPermissionsSeeder::SUPER_ADMIN_CODE)
+            || ! Hash::check($request->validated('password'), (string) $user->password)
+        ) {
             // Same message for unknown employee number and wrong password (no user enumeration).
             throw ValidationException::withMessages([
                 'employee_number' => 'These credentials do not match our records.',
