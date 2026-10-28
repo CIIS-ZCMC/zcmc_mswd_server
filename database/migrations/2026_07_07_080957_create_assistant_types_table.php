@@ -1,5 +1,6 @@
 <?php
 
+use Database\Seeders\AssistantTypeSeeder;
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -18,6 +19,9 @@ return new class extends Migration
             $table->timestamps();
             $table->softDeletes();
         });
+
+        // The Library's starting list of types of assistance.
+        (new AssistantTypeSeeder)->run();
     }
 
     public function down(): void

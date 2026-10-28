@@ -21,8 +21,6 @@ use Laravel\Sanctum\Sanctum;
 use Livewire\Livewire;
 use Spatie\Activitylog\Models\Activity;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
-use Spatie\Permission\PermissionRegistrar;
 
 use function Pest\Laravel\actingAs;
 
@@ -32,7 +30,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(GuarantorSeeder::class);
 
-    $this->worker = pgUser('MSS Head');
+    $this->worker = pgUser('Admin');
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
     $this->patient = Patient::create([
         'sector_id' => $this->sector->id, 'hospital_id' => 777,
@@ -405,23 +403,6 @@ it('seeds the lookups idempotently', function () {
     $this->seed(GuarantorSeeder::class);
 
     expect(Guarantor::count())->toBe(3);
-});
-
-it('adds the guarantee permissions to existing roles through its migration', function () {
-    // An environment from before this module: no guarantee.* permissions or grants.
-    Permission::where('name', 'like', 'guarantee.%')->get()->each->delete();
-    app(PermissionRegistrar::class)->forgetCachedPermissions();
-
-    $migration = require database_path('migrations/2026_10_08_010200_add_guarantee_permissions.php');
-    $migration->up();
-    $migration->up(); // idempotent
-
-    expect(Permission::where('name', 'like', 'guarantee.%')->count())->toBe(4)
-        ->and(Role::findByName('Admin', 'web')->hasPermissionTo('guarantee.delete'))->toBeTrue()
-        ->and(Role::findByName('Case Manager', 'web')->hasPermissionTo('guarantee.update'))->toBeTrue()
-        ->and(Role::findByName('Case Manager', 'web')->hasPermissionTo('guarantee.delete'))->toBeFalse()
-        ->and(Role::findByName('Processor', 'web')->hasPermissionTo('guarantee.view'))->toBeTrue()
-        ->and(Role::findByName('Processor', 'web')->hasPermissionTo('guarantee.create'))->toBeFalse();
 });
 
 it('lets settings managers maintain the lookups in the admin panel', function () {

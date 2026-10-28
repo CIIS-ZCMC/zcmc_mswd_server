@@ -13,6 +13,7 @@ return new class extends Migration
             $table->id();
             $table->string('name');
             $table->text('title')->nullable(); // printed under the name; may span lines
+            $table->string('license_no', 50)->nullable();
             $table->string('role')->index(); // a Signatory::ROLES key
             $table->boolean('is_active')->default(true);
             $table->unsignedInteger('sort_order')->default(0);

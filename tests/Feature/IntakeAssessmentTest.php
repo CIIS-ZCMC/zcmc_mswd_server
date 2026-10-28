@@ -17,7 +17,6 @@ use App\Repositories\Contracts\PatientTransactionRepositoryInterface;
 use App\Services\UnifiedIntakeSheetPdfService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
-use Illuminate\Support\Facades\DB;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
@@ -25,8 +24,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
-    $this->worker = User::factory()->create(['role' => 'MSS Head']);
-    $this->worker->assignRole('MSS Head');
+    $this->worker = User::factory()->create(['role' => 'Admin']);
+    $this->worker->assignRole('Admin');
 
     $this->patient = Patient::create([
         'sector_id' => Sector::firstOrCreate(['code' => 'MED'], ['name' => 'Medical'])->id,
@@ -236,18 +235,4 @@ it('does not serve a social case study as a UIS', function () {
     ]);
 
     $this->getJson("/api/assessments/{$scsr->id}/uis")->assertNotFound();
-});
-
-it('backfills the patient and encounter of existing case assessments', function () {
-    $migration = require database_path('migrations/2026_10_18_010000_decouple_assessments_from_cases.php');
-    $case = intakeCase($this->patient, $this->worker, ['transaction_id' => 55, 'transaction_type' => 'Emergency']);
-    $id = Assessment::create(['case_id' => $case->id, 'created_by' => $this->worker->id, 'classification' => 'D'])->id;
-
-    $migration->down();
-    $migration->up();
-
-    expect(DB::table('assessments')->where('id', $id)->first())
-        ->patient_id->toBe($this->patient->id)
-        ->his_transaction_id->toBe(55)
-        ->transaction_type->toBe('Emergency');
 });

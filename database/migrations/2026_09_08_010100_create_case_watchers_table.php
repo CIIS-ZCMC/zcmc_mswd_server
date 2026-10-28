@@ -19,17 +19,17 @@ return new class extends Migration
             default => 'CASE WHEN is_primary = 1 AND deleted_at IS NULL THEN case_id ELSE NULL END',
         };
 
-        Schema::create('case_watchers', function (Blueprint $table) use ($primaryGuardExpression) {
+        // A person is assigned to a case at most once while the assignment is live.
+        $assignmentGuardExpression = match (DB::getDriverName()) {
+            'mysql' => "IF(deleted_at IS NULL, CONCAT(case_id, '-', patient_watcher_id), NULL)",
+            default => "CASE WHEN deleted_at IS NULL THEN case_id || '-' || patient_watcher_id ELSE NULL END",
+        };
+
+        Schema::create('case_watchers', function (Blueprint $table) use ($primaryGuardExpression, $assignmentGuardExpression) {
             $table->id();
             $table->foreignId('case_id')->constrained('cases');
-            $table->foreignId('patient_watcher_id')->nullable()
-                ->constrained('patient_watchers'); // null = ad-hoc, not in the directory
-
-            // Snapshot at the time of this episode — the directory row may change later.
-            $table->string('name');
-            $table->string('relationship'); // from the watcher_relationship_types master list, not free text
-            $table->string('contact_number')->nullable();
-            $table->string('address')->nullable();
+            // The person is a patient_watchers row; this table is only the assignment.
+            $table->foreignId('patient_watcher_id')->constrained('patient_watchers');
 
             $table->boolean('is_primary')->default(false);
             $table->boolean('is_informant')->default(false);
@@ -52,6 +52,10 @@ return new class extends Migration
 
             $table->unsignedBigInteger('primary_key_guard')->nullable()->storedAs($primaryGuardExpression);
             $table->unique('primary_key_guard', 'uniq_case_primary_watcher');
+
+            $column = $table->string('assignment_guard')->nullable();
+            DB::getDriverName() === 'mysql' ? $column->storedAs($assignmentGuardExpression) : $column->virtualAs($assignmentGuardExpression);
+            $table->unique('assignment_guard', 'uniq_case_watcher_assignment');
         });
     }
 

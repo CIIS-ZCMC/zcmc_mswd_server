@@ -31,9 +31,12 @@ return new class extends Migration
         Schema::create('patient_guarantee_items', function (Blueprint $table) {
             $table->id();
             $table->foreignId('patient_guarantee_id')->constrained('patient_guarantees')->cascadeOnDelete();
-            $table->foreignId('assistance_source_id')->constrained('assistance_sources');
-            $table->string('others_specify')->nullable();
+            // A breakdown line: Type of Assistance -> Amount -> Mode of Assistance -> Fund Source.
+            $table->foreignId('assistant_type_id')->nullable()->constrained('assistant_types');
             $table->decimal('amount', 12, 2);
+            $table->foreignId('mode_of_assistance_id')->nullable()->constrained('mode_of_assistances');
+            $table->foreignId('fund_source_id')->nullable()->constrained('fund_sources');
+            $table->string('others_specify')->nullable();
             $table->timestamps();
         });
     }
