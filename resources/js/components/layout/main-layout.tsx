@@ -46,8 +46,6 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
           onPageChange={patientsState.setPage}
           searchQuery={patientsState.search}
           onSearchChange={patientsState.setSearch}
-          selectedCategory={patientsState.classification}
-          onCategoryChange={patientsState.setClassification}
           filterDate={filterDateValue}
           onDateChange={handleDateChange}
           onClearFilters={patientsState.clearFilters}

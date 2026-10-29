@@ -20,7 +20,6 @@ export function usePatients() {
   const [page, setPage] = useState<number>(1)
   const [search, setSearch] = useState<string>("")
   const [debouncedSearch, setDebouncedSearch] = useState<string>("")
-  const [classification, setClassification] = useState<string>("ALL")
   const [intakeDate, setIntakeDate] = useState<string | undefined>(undefined)
 
   useEffect(() => {
@@ -35,11 +34,6 @@ export function usePatients() {
     setPage(1)
   }, [])
 
-  const handleSetClassification = useCallback((val: string) => {
-    setClassification(val)
-    setPage(1)
-  }, [])
-
   const handleSetIntakeDate = useCallback((val: string | undefined) => {
     setIntakeDate(val)
     setPage(1)
@@ -48,14 +42,13 @@ export function usePatients() {
   const clearFilters = useCallback(() => {
     setSearch("")
     setDebouncedSearch("")
-    setClassification("ALL")
     setIntakeDate(undefined)
     setPage(1)
   }, [])
 
   const queryKey = [
     ...PATIENTS_LIST_QUERY_KEY,
-    { page, search: debouncedSearch, classification, intakeDate },
+    { page, search: debouncedSearch, intakeDate },
   ] as const
 
   const query = useQuery({
@@ -65,7 +58,6 @@ export function usePatients() {
         page,
         perPage: 25,
         search: debouncedSearch,
-        classification,
         intakeDate,
       }),
     placeholderData: keepPreviousData,
@@ -101,8 +93,6 @@ export function usePatients() {
     total,
     search,
     setSearch: handleSetSearch,
-    classification,
-    setClassification: handleSetClassification,
     intakeDate,
     setIntakeDate: handleSetIntakeDate,
     clearFilters,
