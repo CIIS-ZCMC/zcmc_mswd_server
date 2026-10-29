@@ -27,14 +27,14 @@ class ViewHospitalPatient extends ViewRecord
 
     /**
      * Copy this HIS patient into the local patients table (create the first
-     * time, refresh on repeat — keyed on hospital_id). Gated on patients.create.
+     * time, refresh on repeat — keyed on hospital_id). Gated on patients.import.
      */
     protected function importAction(): Action
     {
         return Action::make('import')
             ->label('Import to local patients')
             ->icon(Heroicon::OutlinedArrowDownTray)
-            ->visible(fn (): bool => auth()->user()?->can('patients.create') ?? false)
+            ->visible(fn (): bool => auth()->user()?->can('patients.import') ?? false)
             ->schema([
                 Select::make('sector_id')
                     ->label('Sector')

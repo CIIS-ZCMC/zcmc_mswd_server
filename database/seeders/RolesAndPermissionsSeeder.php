@@ -60,6 +60,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'patients.update',
         'patients.delete',
         'patients.merge',
+        // Import a HIS patient into the registry (the header's Search or Import Patient).
+        // Apart from patients.create so a read-only role can import without manual entry.
+        'patients.import',
         // Hospital (HIS) patients — read-only browse of the emdPatients master
         'hospital-patients.view',
         // Cases
@@ -122,7 +125,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // Every module of the client app, but none of the /admin panel (panel.access,
         // users.manage, roles.manage, settings.manage).
         'Admin' => [
-            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'hospital-patients.view',
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'patients.import', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view',
@@ -143,7 +146,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ],
         'Supervisor' => [
             // Patients
-            'patients.view', 'patients.create', 'patients.update', 'patients.merge', 'hospital-patients.view',
+            'patients.view', 'patients.create', 'patients.update', 'patients.merge', 'patients.import', 'hospital-patients.view',
             'intake.view',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
             'guarantee.view', 'guarantee.create', 'guarantee.update',
@@ -155,8 +158,8 @@ class RolesAndPermissionsSeeder extends Seeder
             'assistance.approve', 'cases.finalize_social_case', 'cases.waive_watcher',
         ],
         'Case Manager' => [
-            // Patients: read-only lookups the case work depends on
-            'patients.view', 'hospital-patients.view',
+            // Patients: read-only lookups the case work depends on, plus HIS import
+            'patients.view', 'patients.import', 'hospital-patients.view',
             // Cases
             'cases.view', 'cases.create', 'cases.update',
             'assistance.view', 'assistance.create', 'assistance.update',
@@ -169,7 +172,7 @@ class RolesAndPermissionsSeeder extends Seeder
         ],
         'Processor' => [
             // Patients
-            'patients.view', 'hospital-patients.view',
+            'patients.view', 'patients.import', 'hospital-patients.view',
             'intake.view',
             'socioeconomic.view',
             'guarantee.view',

@@ -162,7 +162,7 @@ it('validates the ids payload', function () {
         ->assertJsonValidationErrors('ids');
 });
 
-it('refuses the batch import without patients.create', function () {
+it('refuses the batch import without patients.import', function () {
     Sanctum::actingAs(User::factory()->create(['role' => 'Social Worker'])); // no permissions
 
     $this->postJson('/api/hospital-patients/import-batch', ['ids' => [1]])

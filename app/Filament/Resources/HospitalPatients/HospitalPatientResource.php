@@ -138,7 +138,7 @@ class HospitalPatientResource extends Resource
         return BulkAction::make('importSelected')
             ->label('Import to local patients')
             ->icon(Heroicon::OutlinedArrowDownTray)
-            ->visible(fn (): bool => auth()->user()?->can('patients.create') ?? false)
+            ->visible(fn (): bool => auth()->user()?->can('patients.import') ?? false)
             ->schema([
                 Select::make('sector_id')
                     ->label('Sector')

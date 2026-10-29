@@ -45,7 +45,7 @@ it('seeds every default role with the expected permission counts', function () {
 
     expect(Role::findByName('Processor')->permissions->pluck('name')->all())
         ->toEqualCanonicalizing([
-            'patients.view', 'hospital-patients.view',
+            'patients.view', 'patients.import', 'hospital-patients.view',
             'intake.view',
             'socioeconomic.view',
             'guarantee.view',
@@ -108,6 +108,12 @@ test('role permission matrix', function (string $role, string $permission, bool 
     'processor has no cases' => ['Processor', 'cases.view', false],
     'processor has no reports' => ['Processor', 'reports.view', false],
     'processor cannot create patients' => ['Processor', 'patients.create', false],
+    'processor imports HIS patients' => ['Processor', 'patients.import', true],
+    'case manager imports HIS patients' => ['Case Manager', 'patients.import', true],
+    'case manager cannot create patients' => ['Case Manager', 'patients.create', false],
+    'supervisor imports HIS patients' => ['Supervisor', 'patients.import', true],
+    'admin imports HIS patients' => ['Admin', 'patients.import', true],
+    'head cannot import HIS patients' => ['Head', 'patients.import', false],
     'admin manages the library' => ['Admin', 'library.manage', true],
     'head cannot manage the library' => ['Head', 'library.manage', false],
     'supervisor cannot manage the library' => ['Supervisor', 'library.manage', false],

@@ -8,7 +8,7 @@ class StoreHospitalPatientImportRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('patients.create') ?? false;
+        return $this->user()?->can('patients.import') ?? false;
     }
 
     /**

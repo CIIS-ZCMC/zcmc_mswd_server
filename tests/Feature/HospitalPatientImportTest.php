@@ -156,9 +156,25 @@ it('validates sector_id exists on import', function () {
         ->assertJsonValidationErrors('sector_id');
 });
 
-it('refuses the import to a user without patients.create', function () {
+it('refuses the import to a user without patients.import', function () {
     $user = User::factory()->create(['role' => 'Social Worker']); // no permissions assigned
     Sanctum::actingAs($user);
+
+    $this->postJson('/api/hospital-patients/5/import')->assertForbidden();
+});
+
+it('lets a role without patients.create import', function (string $role) {
+    Sanctum::actingAs(importUser($role));
+
+    $this->mock(HospitalPatientRepositoryInterface::class, function ($mock) {
+        $mock->shouldReceive('find')->with('5')->andReturn(hisPatientFixture());
+    });
+
+    $this->postJson('/api/hospital-patients/5/import')->assertCreated();
+})->with(['Processor', 'Case Manager']);
+
+it('refuses the import to Head', function () {
+    Sanctum::actingAs(importUser('Head'));
 
     $this->postJson('/api/hospital-patients/5/import')->assertForbidden();
 });
