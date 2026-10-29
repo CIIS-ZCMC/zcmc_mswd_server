@@ -185,7 +185,7 @@ it('validates a guarantor', function () {
 });
 
 it('lets guarantee.create manage guarantors and everyone else only read them', function () {
-    Sanctum::actingAs(libraryUser('Processor'));
+    Sanctum::actingAs(libraryUser('Head'));
 
     $this->getJson('/api/guarantors')->assertOk();
     $this->postJson('/api/guarantors', ['name' => 'X'])->assertForbidden();

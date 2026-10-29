@@ -343,16 +343,18 @@ it('shows and soft-deletes a guarantee', function () {
 it('enforces each guarantee permission separately', function () {
     $id = pgCreate();
 
-    // Processor: view only.
-    Sanctum::actingAs(pgUser('Processor'));
+    // View only.
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('guarantee.view');
+    Sanctum::actingAs($viewer);
     $this->getJson(pgStore($this->patient))->assertOk();
     $this->getJson("/api/guarantees/{$id}")->assertOk();
     $this->postJson(pgStore($this->patient), pgPayload())->assertForbidden();
     $this->putJson("/api/guarantees/{$id}", ['remarks' => 'x'])->assertForbidden();
     $this->deleteJson("/api/guarantees/{$id}")->assertForbidden();
 
-    // Case Manager: view, create, update — not delete.
-    Sanctum::actingAs(pgUser('Case Manager'));
+    // Supervisor: view, create, update — not delete.
+    Sanctum::actingAs(pgUser('Supervisor'));
     $this->postJson(pgStore($this->patient), pgPayload())->assertCreated();
     $this->putJson("/api/guarantees/{$id}", ['remarks' => 'ok'])->assertOk();
     $this->deleteJson("/api/guarantees/{$id}")->assertForbidden();

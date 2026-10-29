@@ -80,7 +80,9 @@ it('removes a family member from the patient view page', function () {
 it('gates create/edit/delete on patients.update', function () {
     $member = familyMemberFor($this->patient);
 
-    actingAs(familyRmUser('Processor')); // patients.view only
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('patients.view');
+    actingAs($viewer);
     $manager = new FamilyMembersRelationManager;
     expect($manager->canCreate())->toBeFalse()
         ->and($manager->canEdit($member))->toBeFalse()

@@ -64,8 +64,8 @@ Sign-in is ZCMC IAM (OAuth2 authorization code + PKCE, server-side exchange). Th
 
   | Role | Code | Modules |
   |---|---|---|
-  | Processor | `processor` | Patients, Queue, DAR |
-  | Case Manager | `case_manager` | Cases, Queue, DAR (+ read-only Patients, which the HIS lookups need) |
+  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge) |
+  | Case Manager | `case_manager` | Patients, Cases, Queue, DAR (full CRUD, no merge or sign-offs) |
   | Supervisor | `supervisor` | Patients, Queue, DAR, Reports |
   | Head (was `MSS Head`) | `head` | Reports |
   | Admin | `admin` | every client module (all permissions except the `/admin` panel ones: `panel.access`, `users.manage`, `roles.manage`, `settings.manage`) |
@@ -83,7 +83,7 @@ Sign-in is ZCMC IAM (OAuth2 authorization code + PKCE, server-side exchange). Th
 
 ### Patients (Registry)
 MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, socioeconomic, hospital encounters, UIS, social case, documents, history).
-- Patients are created by importing from HIS, keyed on `hospital_id` (`POST /hospital-patients/{id}/import`: 201 created, 200 refreshed). Import is its own permission, `patients.import`, held by every role but Head (so Processor and Case Manager import without `patients.create`); the header's Search or Import Patient shows for `patients.view`.
+- Patients are created by importing from HIS, keyed on `hospital_id` (`POST /hospital-patients/{id}/import`: 201 created, 200 refreshed). Import is its own permission, `patients.import`, held by every role but Head, so a role can import without `patients.create`; the header's Search or Import Patient shows for `patients.view`.
 - Patient merge and patient IDs are supported.
 - Documents tab: PDF/JPG/PNG uploads (max 10 MB) per patient, typed from the Library Document Types list, filed under a case optionally. Files are stored on the default disk (RustFS in dev, bucket `mss`; the disk is kept per row) and read **only through the server** (`GET /patients/{id}/documents/{doc}/file`, inline or `?download=1`), never a storage path. Delete is a soft delete and keeps the file. Finalized SCSR PDFs also appear here.
 - Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`, `DocumentService`.
@@ -112,7 +112,7 @@ Socio-economic classification of a patient for an encounter.
 A case is opened per HIS encounter (`cases.transaction_id`), with `created_by`, `assigned_user_id` and a manual card colour. Extra encounters link through `case_hospital_transactions` with a decision-time snapshot.
 - Actions: assign, refer, close, reopen, restore, reassess. Each records the worker's reason.
 - Social Case Study Report: `draft → for_review → finalized`, numbered `SCSR-{year}-{6}`, signed off, amendable, printable as PDF.
-- Caseload (`/caseload`), progress notes, case summary PDF.
+- Caseload (`/caseload`), progress notes, case summary PDF. Only a note's author may edit or delete it; holders of the `cases.finalize_social_case` sign-off can override.
 - Front: `features/cases`. Back: `CaseModelService`, `SocialCaseService`, `SocialCaseNumberService`, `CaseProgressNoteService`, `CaseHospitalTransactionService`, `CaseSummaryPdfService`, `SocialCaseStudyPdfService`.
 
 ### Watchers

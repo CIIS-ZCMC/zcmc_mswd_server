@@ -45,11 +45,19 @@ it('seeds every default role with the expected permission counts', function () {
 
     expect(Role::findByName('Processor')->permissions->pluck('name')->all())
         ->toEqualCanonicalizing([
-            'patients.view', 'patients.import', 'hospital-patients.view',
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
             'intake.view',
-            'socioeconomic.view',
-            'guarantee.view',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             'queue.manage', 'dar.manage',
+        ]);
+
+    // Case Manager holds Processor's modules plus Cases.
+    expect(Role::findByName('Case Manager')->permissions->pluck('name')->all())
+        ->toEqualCanonicalizing([
+            ...RolesAndPermissionsSeeder::ROLES['Processor'],
+            'cases.view', 'cases.create', 'cases.update', 'cases.delete',
+            'assistance.view', 'assistance.create', 'assistance.update',
         ]);
 
     expect(Role::findByName('Head')->permissions->pluck('name')->all())
@@ -97,7 +105,10 @@ test('role permission matrix', function (string $role, string $permission, bool 
     'case manager works cases' => ['Case Manager', 'cases.create', true],
     'case manager works assistance' => ['Case Manager', 'assistance.update', true],
     'case manager reads patients' => ['Case Manager', 'patients.view', true],
-    'case manager cannot edit patients' => ['Case Manager', 'patients.update', false],
+    'case manager edits patients' => ['Case Manager', 'patients.update', true],
+    'case manager deletes cases' => ['Case Manager', 'cases.delete', true],
+    'case manager cannot merge patients' => ['Case Manager', 'patients.merge', false],
+    'case manager cannot finalize social cases' => ['Case Manager', 'cases.finalize_social_case', false],
     'case manager has no reports' => ['Case Manager', 'reports.view', false],
     'case manager times the queue' => ['Case Manager', 'queue.manage', true],
     'case manager keeps a DAR' => ['Case Manager', 'dar.manage', true],
@@ -107,10 +118,14 @@ test('role permission matrix', function (string $role, string $permission, bool 
     'processor keeps a DAR' => ['Processor', 'dar.manage', true],
     'processor has no cases' => ['Processor', 'cases.view', false],
     'processor has no reports' => ['Processor', 'reports.view', false],
-    'processor cannot create patients' => ['Processor', 'patients.create', false],
+    'processor creates patients' => ['Processor', 'patients.create', true],
+    'processor deletes patients' => ['Processor', 'patients.delete', true],
+    'processor manages socioeconomic' => ['Processor', 'socioeconomic.delete', true],
+    'processor manages guarantees' => ['Processor', 'guarantee.create', true],
+    'processor cannot merge patients' => ['Processor', 'patients.merge', false],
     'processor imports HIS patients' => ['Processor', 'patients.import', true],
     'case manager imports HIS patients' => ['Case Manager', 'patients.import', true],
-    'case manager cannot create patients' => ['Case Manager', 'patients.create', false],
+    'case manager creates patients' => ['Case Manager', 'patients.create', true],
     'supervisor imports HIS patients' => ['Supervisor', 'patients.import', true],
     'admin imports HIS patients' => ['Admin', 'patients.import', true],
     'head cannot import HIS patients' => ['Head', 'patients.import', false],

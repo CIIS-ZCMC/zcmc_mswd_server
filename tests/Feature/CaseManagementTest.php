@@ -244,9 +244,10 @@ it('forbids creating a case without cases.create', function () {
 });
 
 it('forbids deleting a case without cases.delete', function () {
-    $worker = caseUser('Case Manager'); // no cases.delete
+    $case = caseOpenFor(caseUser(), $this->patient);
+    $worker = User::factory()->create();
+    $worker->givePermissionTo('cases.view', 'cases.update'); // no cases.delete
     Sanctum::actingAs($worker);
-    $case = caseOpenFor($worker, $this->patient);
 
     $this->deleteJson("/api/cases/{$case->id}")->assertForbidden();
 });

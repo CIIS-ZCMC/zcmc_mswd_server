@@ -157,25 +157,26 @@ class RolesAndPermissionsSeeder extends Seeder
             // Sign-off authority
             'assistance.approve', 'cases.finalize_social_case', 'cases.waive_watcher',
         ],
+        // Full CRUD on their modules; merge and sign-offs stay with Supervisor and Head.
         'Case Manager' => [
-            // Patients: read-only lookups the case work depends on, plus HIS import
-            'patients.view', 'patients.import', 'hospital-patients.view',
-            // Cases
-            'cases.view', 'cases.create', 'cases.update',
-            'assistance.view', 'assistance.create', 'assistance.update',
+            // Patients
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
             'intake.view',
-            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
-            'guarantee.view', 'guarantee.create', 'guarantee.update',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
+            // Cases
+            'cases.view', 'cases.create', 'cases.update', 'cases.delete',
+            'assistance.view', 'assistance.create', 'assistance.update',
             // Queue, DAR
             'queue.manage',
             'dar.manage',
         ],
         'Processor' => [
             // Patients
-            'patients.view', 'patients.import', 'hospital-patients.view',
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
             'intake.view',
-            'socioeconomic.view',
-            'guarantee.view',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             // Queue, DAR
             'queue.manage',
             'dar.manage',

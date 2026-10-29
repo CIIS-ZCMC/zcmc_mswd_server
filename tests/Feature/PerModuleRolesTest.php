@@ -58,6 +58,22 @@ it('lands each role on its first module', function (string $role, string $landin
     'head' => ['Head', '/reports/social-cases'],
 ]);
 
+it('gives existing Processor and Case Manager roles CRUD on their modules', function () {
+    Role::findByName('Processor')->revokePermissionTo(['patients.update', 'guarantee.delete']);
+    Role::findByName('Case Manager')->revokePermissionTo(['patients.update', 'cases.delete']);
+    $processor = perModuleRoleUser('Processor');
+    $caseManager = perModuleRoleUser('Case Manager');
+
+    (require database_path('migrations/2026_10_29_000200_grant_module_crud_to_processor_and_case_manager.php'))->up();
+
+    expect($processor->fresh()->can('patients.update'))->toBeTrue()
+        ->and($processor->fresh()->can('guarantee.delete'))->toBeTrue()
+        ->and($processor->fresh()->can('cases.view'))->toBeFalse()
+        ->and($caseManager->fresh()->can('patients.update'))->toBeTrue()
+        ->and($caseManager->fresh()->can('cases.delete'))->toBeTrue()
+        ->and($caseManager->fresh()->can('assistance.approve'))->toBeFalse();
+});
+
 it('moves the old Admin users to a new Super Admin and trims Admin to the client', function () {
     $user = perModuleRoleUser('Admin');
     DB::table('roles')->where('code', 'super_admin')->delete();

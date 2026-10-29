@@ -182,8 +182,8 @@ it('reads a file stored on a disk recorded before the default changed', function
 it('lets a viewer read documents but not upload or delete', function () {
     $id = uploadDocument($this->patient)->json('data.id');
 
-    $viewer = User::factory()->create(['role' => 'Processor']);
-    $viewer->assignRole('Processor');
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('patients.view');
     Sanctum::actingAs($viewer);
 
     $this->getJson("/api/patients/{$this->patient->id}/documents")->assertOk();
