@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -7,14 +8,19 @@ use Illuminate\Support\Facades\Hash;
 
 uses(RefreshDatabase::class);
 
-function authUser(array $overrides = []): User
+function authUser(array $overrides = [], string $role = RolesAndPermissionsSeeder::SUPER_ADMIN): User
 {
-    return User::factory()->create(array_merge([
+    $user = User::factory()->create(array_merge([
         'email' => 'worker@zcmc.test',
         'employee_number' => 100001,
         'password' => Hash::make('secret-pass'),
         'is_active' => true,
     ], $overrides));
+
+    Role::findOrCreate($role, RolesAndPermissionsSeeder::GUARD);
+    $user->assignRole($role);
+
+    return $user;
 }
 
 it('logs in via web session and authenticates the user', function () {
@@ -56,12 +62,26 @@ it('refuses inactive account on web login', function () {
     $this->assertGuest();
 });
 
+it('refuses password login for anyone but the super admin', function () {
+    authUser([], 'Case Manager');
+
+    $this->postJson('/login', [
+        'employee_number' => 100001,
+        'password' => 'secret-pass',
+    ])
+        ->assertStatus(422)
+        ->assertJsonValidationErrorFor('employee_number');
+
+    $this->assertGuest();
+});
+
 it('logs out web session', function () {
     $user = authUser();
 
     $this->actingAs($user)
         ->postJson('/logout')
-        ->assertNoContent();
+        ->assertOk()
+        ->assertJsonPath('redirect', null);
 
     $this->assertGuest();
 });
@@ -78,8 +98,7 @@ it('returns the authenticated user from /api/user with a session', function () {
 it('returns the current user with roles and permissions from /api/me with a session', function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
-    $user = authUser();
-    $user->assignRole('Supervisor');
+    $user = authUser([], 'Supervisor');
 
     $response = $this->actingAs($user, 'web')
         ->getJson('/api/me')

@@ -23,6 +23,9 @@ class User extends Authenticatable implements FilamentUser, HasName
     // protected $keyType = 'int';
 
     protected $fillable = [
+        'iam_sub',
+        'placement',
+        'iam_org_roles',
         'employee_id',
         'employee_number',
         'employee_name',
@@ -47,6 +50,7 @@ class User extends Authenticatable implements FilamentUser, HasName
     {
         return [
             'is_active' => 'boolean',
+            'iam_org_roles' => 'array',
             'synced_at' => 'datetime',
         ];
     }
@@ -58,6 +62,15 @@ class User extends Authenticatable implements FilamentUser, HasName
     public function canAccessPanel(Panel $panel): bool
     {
         return $this->is_active && $this->can('panel.access');
+    }
+
+    /**
+     * Whether any assigned role has the given system code (e.g. `case_manager`).
+     * Reads the loaded relation so the Gate::before hook costs no extra query.
+     */
+    public function hasRoleCode(string $code): bool
+    {
+        return $this->roles->contains('code', $code);
     }
 
     /**

@@ -18,7 +18,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
-    $this->worker = seUser('MSS Head');
+    $this->worker = seUser('Admin');
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
     $this->patient = Patient::create([
         'sector_id' => $this->sector->id, 'first_name' => 'Ana', 'last_name' => 'Reyes', 'sex' => 'female',
@@ -409,21 +409,23 @@ it('never leaks another patient\'s records', function () {
 it('enforces each socioeconomic permission separately', function () {
     $profile = seProfile($this->patient, $this->worker);
 
-    // Processor: view only.
-    Sanctum::actingAs(seUser('Processor'));
+    // View only.
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('socioeconomic.view');
+    Sanctum::actingAs($viewer);
     $this->getJson(seOverview($this->patient))->assertOk();
     $this->getJson("/api/socioeconomic-profiles/{$profile->id}")->assertOk();
     $this->postJson(seStore($this->patient), sePayload())->assertForbidden();
     $this->putJson("/api/socioeconomic-profiles/{$profile->id}", ['remarks' => 'x'])->assertForbidden();
     $this->deleteJson("/api/socioeconomic-profiles/{$profile->id}")->assertForbidden();
 
-    // Case Manager: view, create, update — not delete.
-    Sanctum::actingAs(seUser('Case Manager'));
+    // Supervisor: view, create, update — not delete.
+    Sanctum::actingAs(seUser('Supervisor'));
     $this->postJson(seStore($this->patient), sePayload())->assertCreated();
     $this->putJson("/api/socioeconomic-profiles/{$profile->id}", ['remarks' => 'ok'])->assertOk();
     $this->deleteJson("/api/socioeconomic-profiles/{$profile->id}")->assertForbidden();
 
-    // MSS Head may delete.
+    // Admin may delete.
     Sanctum::actingAs($this->worker);
     $this->deleteJson("/api/socioeconomic-profiles/{$profile->id}")->assertNoContent();
 });

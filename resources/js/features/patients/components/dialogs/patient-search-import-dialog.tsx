@@ -60,7 +60,7 @@ export const PatientSearchImportDialog: React.FC<
   const [confirmingId, setConfirmingId] = useState<number | null>(null)
   const [, startTransition] = useTransition()
 
-  const canCreate = usePermission("patients.create")
+  const canImport = usePermission("patients.import")
 
   // Debounce search query
   useEffect(() => {
@@ -458,7 +458,7 @@ export const PatientSearchImportDialog: React.FC<
                                 // second Enter on the reviewed row imports it.
                                 if (isRegistered && hp.local_patient_id) {
                                   handleSelectLocalPatient(hp.local_patient_id)
-                                } else if (canCreate) {
+                                } else if (canImport) {
                                   if (isConfirming) handleImportPatient(hp)
                                   else setConfirmingId(hp.id)
                                 }
@@ -526,7 +526,7 @@ export const PatientSearchImportDialog: React.FC<
                                     <span>Open</span>
                                     <ArrowRight className="size-3.5" />
                                   </Button>
-                                ) : canCreate ? (
+                                ) : canImport ? (
                                   <Button
                                     size="sm"
                                     disabled={isRowImporting || isConfirming}

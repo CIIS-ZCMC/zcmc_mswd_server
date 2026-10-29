@@ -22,7 +22,7 @@ beforeEach(function () {
     ]);
 });
 
-function familyRmUser(string $role = 'MSS Head'): User
+function familyRmUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
@@ -80,13 +80,15 @@ it('removes a family member from the patient view page', function () {
 it('gates create/edit/delete on patients.update', function () {
     $member = familyMemberFor($this->patient);
 
-    actingAs(familyRmUser('Processor')); // patients.view only
+    $viewer = User::factory()->create();
+    $viewer->givePermissionTo('patients.view');
+    actingAs($viewer);
     $manager = new FamilyMembersRelationManager;
     expect($manager->canCreate())->toBeFalse()
         ->and($manager->canEdit($member))->toBeFalse()
         ->and($manager->canDelete($member))->toBeFalse();
 
-    actingAs(familyRmUser('MSS Head'));
+    actingAs(familyRmUser('Admin'));
     expect($manager->canCreate())->toBeTrue()
         ->and($manager->canEdit($member))->toBeTrue()
         ->and($manager->canDelete($member))->toBeTrue();

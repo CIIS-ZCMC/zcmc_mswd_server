@@ -14,12 +14,20 @@ return new class extends Migration
         Schema::create('users', function (Blueprint $table) {
             $table->id();
 
-            $table->unsignedBigInteger('employee_id');   // UMIS user id, not auto-increment
-            $table->integer('employee_number');          // UMIS employee_id
+            // People who sign in through ZCMC IAM are keyed on the IAM subject. They have
+            // no UMIS identity and no local password, so those columns accept null; the
+            // local super admins are the only rows with a password.
+            $table->string('iam_sub')->nullable()->unique();
+            $table->unsignedBigInteger('employee_id')->nullable();   // UMIS user id, not auto-increment
+            $table->integer('employee_number')->nullable();          // UMIS employee_id
             $table->string('employee_name');             // UMIS full_name
+            $table->string('license_no')->nullable();
+            $table->string('position')->nullable();
+            $table->string('placement')->nullable();
+            $table->json('iam_org_roles')->nullable();
             $table->string('email');                     // UMIS email
-            $table->string('password');
-            $table->string('role');                        // display/filter cache only
+            $table->string('password')->nullable();
+            $table->string('role')->nullable();            // display/filter cache only
             $table->boolean('is_active')->default(true);
             $table->dateTime('synced_at')->nullable();
             $table->timestamps();

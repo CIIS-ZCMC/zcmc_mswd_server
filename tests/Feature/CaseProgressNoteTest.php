@@ -159,7 +159,7 @@ it('forbids a colleague from rewriting someone else\'s note', function () {
         ->assertCreated()->json('data.id');
 
     $colleague = User::factory()->create(['role' => 'Case Manager']);
-    $colleague->assignRole('Case Manager'); // cases.update but not cases.delete
+    $colleague->assignRole('Case Manager'); // cases.update but no sign-off
     Sanctum::actingAs($colleague);
 
     $this->putJson("/api/progress-notes/{$id}", ['narrative' => 'Rewritten.'])->assertForbidden();
@@ -172,8 +172,8 @@ it('lets a supervisor override, accountably', function () {
     $id = $this->postJson("/api/cases/{$this->case->id}/progress-notes", ['narrative' => 'Mine.'])
         ->assertCreated()->json('data.id');
 
-    $supervisor = User::factory()->create(['role' => 'Supervisor']);
-    $supervisor->assignRole('Supervisor'); // holds cases.delete
+    $supervisor = User::factory()->create(['role' => 'Admin']);
+    $supervisor->assignRole('Admin'); // holds the cases.finalize_social_case sign-off
     Sanctum::actingAs($supervisor);
 
     $this->putJson("/api/progress-notes/{$id}", ['narrative' => 'Corrected by supervisor.'])->assertOk();

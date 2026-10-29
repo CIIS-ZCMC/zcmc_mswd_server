@@ -33,7 +33,7 @@ MAIFIP, the lines are City Mayor ₱1,000 and Other Funds ₱1,000. Builds on th
 
 1. **One shared list of types**, used by every guarantor. Types are not tied to a guarantor.
 2. **The guarantor's amount stays computed**: it is still the sum of its breakdown lines.
-3. **Anyone with `guarantee.create`** can add, edit and delete types: Admin, MSS Head, Supervisor and Case Manager.
+3. **Anyone with `guarantee.create`** can add, edit and delete types: Admin, Head, Supervisor and Case Manager. *(Superseded: roles are now per module, see CLAUDE.md.)*
    Processors can only view.
 4. **Delete is a soft delete.**
    - Existing lines keep showing the type's name.

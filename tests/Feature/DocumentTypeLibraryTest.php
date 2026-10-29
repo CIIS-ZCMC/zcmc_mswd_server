@@ -16,8 +16,8 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(DocumentTypeSeeder::class);
 
-    $this->head = User::factory()->create(['role' => 'MSS Head']);
-    $this->head->assignRole('MSS Head');
+    $this->head = User::factory()->create(['role' => 'Admin']);
+    $this->head->assignRole('Admin');
     Sanctum::actingAs($this->head);
 });
 

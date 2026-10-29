@@ -11,11 +11,15 @@ return new class extends Migration
         Schema::create('patient_watchers', function (Blueprint $table) {
             $table->id();
             $table->foreignId('patient_id')->constrained('patients');
-            $table->string('name');
-            $table->string('relationship')->nullable();
+            $table->string('last_name')->nullable();
+            $table->string('first_name')->nullable();
+            $table->string('middle_name')->nullable();
+            $table->string('name'); // the composed full name
+            $table->string('relationship_code')->nullable()->index(); // from the watcher_relationship_types master list
             $table->string('contact_number')->nullable();
             $table->string('address')->nullable();
-            $table->boolean('is_primary')->default(false);
+            $table->foreignId('added_by')->nullable()->constrained('users');
+            $table->text('notes')->nullable();
             $table->timestamps();
             $table->softDeletes();
         });

@@ -78,7 +78,7 @@ it('aggregates counts matching hand-built fixtures', function () {
     // A case with no report at all — the gap the queue exists to close.
     reportCase($this->worker, $this->sector->id);
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
     $data = $this->getJson('/api/reports/social-cases')->assertOk()->json('data');
 
     // toEqual, not toBe: GROUP BY fixes no key order and none is promised.
@@ -97,7 +97,7 @@ it('honours the date range', function () {
         'created_at' => now()->subMonths(6),
     ]);
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
 
     expect($this->getJson('/api/reports/social-cases')->assertOk()->json('data.total'))->toBe(1);
 
@@ -118,7 +118,7 @@ it('reports the median days from start to finalize', function () {
         ]);
     }
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
 
     // JSON renders a whole float as 4, so compare loosely.
     expect($this->getJson('/api/reports/social-cases')->assertOk()->json('data.median_days_to_finalize'))
@@ -128,7 +128,7 @@ it('reports the median days from start to finalize', function () {
 it('reports no median when nothing has been finalized', function () {
     reportScsr(reportCase($this->worker, $this->sector->id), $this->worker);
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
 
     expect($this->getJson('/api/reports/social-cases')->assertOk()->json('data.median_days_to_finalize'))
         ->toBeNull();
@@ -145,7 +145,7 @@ it('counts overdue follow-ups', function () {
         'narrative' => 'Not yet due.', 'follow_up_on' => now()->addWeek()->toDateString(),
     ])->assertCreated();
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
 
     expect($this->getJson('/api/reports/social-cases')->assertOk()->json('data.overdue_follow_ups'))->toBe(1);
 });
@@ -169,7 +169,7 @@ it('includes protective cases for a user who holds audit.view_protective', funct
     reportScsr(reportCase($this->worker, $this->sector->id), $this->worker);
     reportScsr(reportCase($this->worker, $this->sector->id, ['is_protective' => true]), $this->worker);
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
     $full = $this->getJson('/api/reports/social-cases')->assertOk()->json('data');
 
     expect($full['total'])->toBe(2)
@@ -179,7 +179,8 @@ it('includes protective cases for a user who holds audit.view_protective', funct
 // ---------------------------------------------------------------- the gate
 
 it('lets reports.view read the dashboard but not the export', function () {
-    Sanctum::actingAs($this->worker); // Case Manager: reports.view, no reports.generate
+    $this->worker->givePermissionTo('reports.view');
+    Sanctum::actingAs($this->worker); // reports.view, no reports.generate
 
     $this->getJson('/api/reports/social-cases')->assertOk();
     $this->get('/api/reports/social-cases/export')->assertForbidden();
@@ -202,7 +203,7 @@ it('forbids the dashboard without reports.view', function () {
 it('emits a csv with the expected header row', function () {
     reportScsr(reportCase($this->worker, $this->sector->id), $this->worker);
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
     $response = $this->get('/api/reports/social-cases/export')->assertOk();
 
     $csv = $response->streamedContent();
@@ -216,7 +217,7 @@ it('emits a csv with the expected header row', function () {
 it('emits the export as a pdf on request', function () {
     reportScsr(reportCase($this->worker, $this->sector->id), $this->worker);
 
-    Sanctum::actingAs(reportUser('MSS Head'));
+    Sanctum::actingAs(reportUser('Admin'));
     $response = $this->get('/api/reports/social-cases/export?format=pdf')->assertOk();
 
     expect(substr($response->getContent(), 0, 4))->toBe('%PDF');

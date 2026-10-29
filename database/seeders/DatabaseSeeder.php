@@ -33,10 +33,10 @@ class DatabaseSeeder extends Seeder
             'employee_name' => 'Admin University',
             'employee_number' => 2023060551,
             'email' => 'zcmc@admin.com',
-            'role' => 'Admin',
+            'role' => 'Super Admin',
         ]);
 
-        $admin->assignRole('Admin');
+        $admin->assignRole('Super Admin');
         $admin->syncRoleCache();
     }
 }

@@ -26,7 +26,7 @@ it('renders the Queue page for users with queue.manage', function (string $role)
         ->get('/queue')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('Queue/Index'));
-})->with(['Admin', 'MSS Head', 'Supervisor', 'Case Manager', 'Processor']);
+})->with(['Admin', 'Supervisor', 'Case Manager', 'Processor']);
 
 it('forbids users without queue.manage from accessing the queue page', function () {
     $user = User::factory()->create();
@@ -42,7 +42,7 @@ it('renders the Turnaround reports page for users with reports.view', function (
         ->get('/reports/turnaround')
         ->assertOk()
         ->assertInertia(fn (Assert $page) => $page->component('Reports/Turnaround'));
-})->with(['Admin', 'MSS Head', 'Supervisor', 'Case Manager', 'Processor']);
+})->with(['Admin', 'Head', 'Supervisor']);
 
 it('forbids users without reports.view from accessing turnaround reports', function () {
     $user = User::factory()->create();

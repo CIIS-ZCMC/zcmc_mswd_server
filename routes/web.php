@@ -4,6 +4,7 @@ use App\Http\Controllers\Web\AuditPageController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CasesPageController;
 use App\Http\Controllers\Web\DarPageController;
+use App\Http\Controllers\Web\IamAuthController;
 use App\Http\Controllers\Web\LibraryPageController;
 use App\Http\Controllers\Web\PatientsPageController;
 use App\Http\Controllers\Web\QueuePageController;
@@ -13,7 +14,12 @@ use Illuminate\Support\Facades\Route;
 // Guest Authentication
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
+    // Password sign-in is for the local super admin only; everyone else uses ZCMC IAM.
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
+
+    // ZCMC IAM sign-in. /callback is the redirect URI registered with IAM.
+    Route::get('/auth/iam/redirect', [IamAuthController::class, 'redirect'])->name('iam.redirect');
+    Route::get('/callback', [IamAuthController::class, 'callback'])->name('iam.callback');
 });
 
 // Authenticated Application Routes
@@ -22,11 +28,17 @@ Route::middleware('auth')->group(function () {
 
     // Patients
     Route::get('/', [PatientsPageController::class, 'index'])->name('patients.index');
-    Route::get('/patients/{patient}', [PatientsPageController::class, 'show'])->name('patients.show');
+    Route::get('/patients/{patient}', [PatientsPageController::class, 'show'])
+        ->middleware('permission:patients.view')
+        ->name('patients.show');
 
     // Caseload & Cases
-    Route::get('/caseload', [CasesPageController::class, 'caseload'])->name('cases.caseload');
-    Route::get('/cases/{case}', [CasesPageController::class, 'show'])->name('cases.show');
+    Route::get('/caseload', [CasesPageController::class, 'caseload'])
+        ->middleware('permission:cases.view')
+        ->name('cases.caseload');
+    Route::get('/cases/{case}', [CasesPageController::class, 'show'])
+        ->middleware('permission:cases.view')
+        ->name('cases.show');
 
     // Daily Accomplishment Report (DAR)
     Route::get('/dar', [DarPageController::class, 'index'])
@@ -39,14 +51,20 @@ Route::middleware('auth')->group(function () {
         ->name('queue.index');
 
     // Reports
-    Route::get('/reports', [ReportsPageController::class, 'index'])->name('reports.index');
-    Route::get('/reports/social-cases', [ReportsPageController::class, 'socialCases'])->name('reports.social-cases');
+    Route::get('/reports', [ReportsPageController::class, 'index'])
+        ->middleware('permission:reports.view')
+        ->name('reports.index');
+    Route::get('/reports/social-cases', [ReportsPageController::class, 'socialCases'])
+        ->middleware('permission:reports.view')
+        ->name('reports.social-cases');
     Route::get('/reports/turnaround', [ReportsPageController::class, 'turnaround'])
         ->middleware('permission:reports.view')
         ->name('reports.turnaround');
 
     // Audit Log
-    Route::get('/audit', [AuditPageController::class, 'index'])->name('audit.index');
+    Route::get('/audit', [AuditPageController::class, 'index'])
+        ->middleware('permission:audit.view')
+        ->name('audit.index');
 
     // Library Settings
     Route::get('/library', [LibraryPageController::class, 'index'])

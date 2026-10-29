@@ -117,12 +117,12 @@ class CaseProgressNoteService
     /**
      * Clinical narrative is attributable: a colleague silently rewriting
      * someone else's note is the failure mode to prevent. A supervisor holding
-     * cases.delete can still override, and the audit log makes that
-     * accountable.
+     * the cases.finalize_social_case sign-off can still override, and the
+     * audit log makes that accountable.
      */
     private function assertMayWrite(CaseProgressNote $note, User $actor): void
     {
-        if ($note->author_id === $actor->id || $actor->can('cases.delete')) {
+        if ($note->author_id === $actor->id || $actor->can('cases.finalize_social_case')) {
             return;
         }
 

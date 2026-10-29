@@ -21,8 +21,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
-    $this->worker = User::factory()->create(['role' => 'MSS Head', 'employee_name' => 'Rosa Cruz']);
-    $this->worker->assignRole('MSS Head');
+    $this->worker = User::factory()->create(['role' => 'Admin', 'employee_name' => 'Rosa Cruz']);
+    $this->worker->assignRole('Admin');
 
     $this->patient = Patient::create([
         'sector_id' => Sector::firstOrCreate(['code' => 'MED'], ['name' => 'Medical'])->id,
@@ -164,7 +164,7 @@ it('prints the interview date and the worker who conducted it, not the reprint',
         ->and($intake->interviewed_at->toDateString())->toBe('2026-09-14');
 
     // A different worker reprints it a year on.
-    $other = User::factory()->create(['role' => 'MSS Head', 'employee_name' => 'Jose Dela Cruz']);
+    $other = User::factory()->create(['role' => 'Admin', 'employee_name' => 'Jose Dela Cruz']);
     $this->travel(1)->years();
     $html = renderSheet($intake, $other);
 
@@ -234,8 +234,8 @@ it('refreshes the frozen copy on request, stamping who and when', function () {
     $this->patient->update(['occupation' => 'Teacher']);
     PatientFamilyMember::create(['patient_id' => $this->patient->id, 'name' => 'Luz Reyes']);
 
-    $other = User::factory()->create(['role' => 'MSS Head']);
-    $other->assignRole('MSS Head');
+    $other = User::factory()->create(['role' => 'Admin']);
+    $other->assignRole('Admin');
     Sanctum::actingAs($other);
 
     $this->postJson("/api/assessments/{$intake->id}/uis-snapshot/refresh")

@@ -78,7 +78,7 @@ it('lists, shows and updates a case', function () {
 });
 
 it('reassigns a case and records the previous worker', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
     $other = caseUser('Case Manager');
@@ -93,7 +93,7 @@ it('reassigns a case and records the previous worker', function () {
 });
 
 it('closes a case, stamping the close date and milestone', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
@@ -107,7 +107,7 @@ it('closes a case, stamping the close date and milestone', function () {
 });
 
 it('requires a reason to close a case', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
@@ -119,7 +119,7 @@ it('requires a reason to close a case', function () {
 });
 
 it('refers a case, recording the agency, reason and notes', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
@@ -134,7 +134,7 @@ it('refers a case, recording the agency, reason and notes', function () {
 });
 
 it('requires the agency and reason to refer a case', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
@@ -146,7 +146,7 @@ it('requires the agency and reason to refer a case', function () {
 });
 
 it('reopens a case, recording the reason', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
     app(CaseModelService::class)->close($case, $worker, 'Goals met');
@@ -160,7 +160,7 @@ it('reopens a case, recording the reason', function () {
 });
 
 it('requires a reason to reopen a case', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
     app(CaseModelService::class)->close($case, $worker, 'Goals met');
@@ -173,7 +173,7 @@ it('requires a reason to reopen a case', function () {
 });
 
 it('records the notes given when reassigning a case', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
     $other = caseUser('Case Manager');
@@ -186,7 +186,7 @@ it('records the notes given when reassigning a case', function () {
 });
 
 it('names the acting worker on the case timeline', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
@@ -197,7 +197,7 @@ it('names the acting worker on the case timeline', function () {
 });
 
 it('blocks archiving an open case but allows a closed one, then restores', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
@@ -215,7 +215,7 @@ it('blocks archiving an open case but allows a closed one, then restores', funct
 });
 
 it('returns the case profile and audit history', function () {
-    $worker = caseUser('MSS Head');
+    $worker = caseUser('Admin');
     Sanctum::actingAs($worker);
     $case = caseOpenFor($worker, $this->patient);
 
@@ -244,9 +244,10 @@ it('forbids creating a case without cases.create', function () {
 });
 
 it('forbids deleting a case without cases.delete', function () {
-    $worker = caseUser('Case Manager'); // no cases.delete
+    $case = caseOpenFor(caseUser(), $this->patient);
+    $worker = User::factory()->create();
+    $worker->givePermissionTo('cases.view', 'cases.update'); // no cases.delete
     Sanctum::actingAs($worker);
-    $case = caseOpenFor($worker, $this->patient);
 
     $this->deleteJson("/api/cases/{$case->id}")->assertForbidden();
 });

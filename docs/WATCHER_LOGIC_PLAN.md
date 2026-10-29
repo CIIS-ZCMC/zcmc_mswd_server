@@ -581,8 +581,7 @@ Form Request just returns `true`):
   `PromoteCaseWatcherController`, `RevokeWatcherPassController`,
   `StoreWatcherWaiverController` + `DestroyWatcherWaiverController` (new
   `WatcherWaiverService`, files/clears the four waiver columns).
-- `cases.waive_watcher` added to the permission catalog, granted to `MSS
-  Head` (this codebase's closest match to "section head") and implicitly to
+- `cases.waive_watcher` added to the permission catalog, granted to `Head` (this codebase's closest match to "section head") and implicitly to *(Superseded: roles are now per module, see CLAUDE.md.)*
   `Admin` via its `['*']` grant. `RolesAndPermissionsTest`'s exact-count
   assertions read `count(RolesAndPermissionsSeeder::PERMISSIONS)` dynamically,
   so adding one didn't need a test update.

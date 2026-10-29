@@ -27,7 +27,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 });
 
-function hisLookupUser(string $role = 'MSS Head'): User
+function hisLookupUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);

@@ -39,9 +39,12 @@ return new class extends Migration
                 $table->index($columnNames['team_foreign_key'], 'roles_team_foreign_key_index');
             }
             $table->string('name');       // For MyISAM use string('name', 225); // (or 166 for InnoDB with Redundant/Compact row format)
+            // Stable, machine-readable identifier (e.g. `case_manager`), so a role can be renamed.
+            $table->string('code', 64);
             $table->string('guard_name'); // For MyISAM use string('guard_name', 25);
             $table->string('description')->nullable();
             $table->timestamps();
+            $table->unique(['code', 'guard_name']);
             if ($teams || config('permission.testing')) {
                 $table->unique([$columnNames['team_foreign_key'], 'name', 'guard_name']);
             } else {

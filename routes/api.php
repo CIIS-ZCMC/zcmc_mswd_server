@@ -157,11 +157,11 @@ Route::middleware('auth:sanctum')->group(function () {
 
     // Import a hospital (HIS) patient into the local patients table (create/refresh by hospital_id).
     Route::post('hospital-patients/{id}/import', ImportHospitalPatientController::class)
-        ->middleware('permission:patients.create');
+        ->middleware('permission:patients.import');
 
     // Bulk import: queue many HIS patients, then poll the batch for per-row outcomes.
     Route::post('hospital-patients/import-batch', StoreHospitalPatientImportBatchController::class)
-        ->middleware('permission:patients.create');
+        ->middleware('permission:patients.import');
     Route::get('hospital-patients/import-batches/{importBatch}', ShowHospitalPatientImportBatchController::class)
         ->middleware('permission:patients.view');
 

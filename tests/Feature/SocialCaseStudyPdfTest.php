@@ -17,8 +17,8 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     Storage::fake();
     $this->seed(RolesAndPermissionsSeeder::class);
-    $this->head = User::factory()->create(['role' => 'MSS Head']);
-    $this->head->assignRole('MSS Head');
+    $this->head = User::factory()->create(['role' => 'Admin']);
+    $this->head->assignRole('Admin');
 
     $sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
     $this->patient = Patient::create([

@@ -28,7 +28,7 @@ beforeEach(function () {
         'sex' => 'female',
         'address' => '12 Mabini St',
     ]);
-    $this->owner = assistanceUser('MSS Head');
+    $this->owner = assistanceUser('Admin');
     $this->case = CaseModel::create([
         'patient_id' => $this->patient->id,
         'assigned_user_id' => $this->owner->id,
@@ -104,7 +104,7 @@ it('lists, shows and updates a pending assistance', function () {
 });
 
 it('refuses to edit an assistance once it is no longer pending', function () {
-    $worker = assistanceUser('MSS Head');
+    $worker = assistanceUser('Admin');
     Sanctum::actingAs($worker);
     $aid = pendingAssistanceFor($worker);
 
@@ -115,7 +115,7 @@ it('refuses to edit an assistance once it is no longer pending', function () {
 });
 
 it('walks the approve then release lifecycle and snapshots a report', function () {
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     Sanctum::actingAs($head);
     $aid = pendingAssistanceFor($head);
 
@@ -142,7 +142,7 @@ it('walks the approve then release lifecycle and snapshots a report', function (
 
 it('mirrors a patient with no hospital or mswd id onto the report', function () {
     $this->patient->update(['hospital_id' => null, 'mswd_id' => null]);
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     Sanctum::actingAs($head);
     $aid = pendingAssistanceFor($head);
 
@@ -155,7 +155,7 @@ it('mirrors a patient with no hospital or mswd id onto the report', function () 
 });
 
 it('rejects releasing an assistance that was never approved', function () {
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     Sanctum::actingAs($head);
     $aid = pendingAssistanceFor($head);
 
@@ -164,7 +164,7 @@ it('rejects releasing an assistance that was never approved', function () {
 });
 
 it('cancels a pending assistance but not a released one', function () {
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     Sanctum::actingAs($head);
     $aid = pendingAssistanceFor($head);
 
@@ -182,7 +182,7 @@ it('cancels a pending assistance but not a released one', function () {
 });
 
 it('will not delete a released assistance', function () {
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     Sanctum::actingAs($head);
     $aid = pendingAssistanceFor($head);
 
@@ -196,7 +196,7 @@ it('will not delete a released assistance', function () {
 });
 
 it('lists logs, history and reports for an assistance', function () {
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     Sanctum::actingAs($head);
     $aid = pendingAssistanceFor($head);
     $this->postJson("/api/assistances/{$aid->id}/approve")->assertOk();
@@ -209,7 +209,7 @@ it('lists logs, history and reports for an assistance', function () {
 });
 
 it('voids a report and keeps it on record', function () {
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     Sanctum::actingAs($head);
     $aid = pendingAssistanceFor($head);
     $this->postJson("/api/assistances/{$aid->id}/approve")->assertOk();
@@ -234,7 +234,7 @@ it('denies a processor without the create permission', function () {
     Sanctum::actingAs($processor);
 
     // Processor lacks reports.generate, so voiding must be forbidden.
-    $head = assistanceUser('MSS Head');
+    $head = assistanceUser('Admin');
     $aid = pendingAssistanceFor($head);
     app(PatientAssistanceService::class)->approve($aid, $head);
     app(PatientAssistanceService::class)->release($aid, $head);

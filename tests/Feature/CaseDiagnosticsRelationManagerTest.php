@@ -28,7 +28,7 @@ beforeEach(function () {
     ]);
 });
 
-function diagUser(string $role = 'MSS Head'): User
+function diagUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
@@ -136,7 +136,7 @@ it('deletes a report removed from the reports modal', function () {
 });
 
 it('hides report management from a user without cases.update', function () {
-    $case = diagCase(diagUser('MSS Head'), $this->patient);
+    $case = diagCase(diagUser('Admin'), $this->patient);
     $diag = $case->diagnostics()->create([
         'created_by' => auth()->id() ?? 1, 'diagnosis_name' => 'Pneumonia', 'diagnosis_date' => now(),
     ]);

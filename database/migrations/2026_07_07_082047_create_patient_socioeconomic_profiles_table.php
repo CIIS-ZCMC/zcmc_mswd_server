@@ -19,16 +19,24 @@ return new class extends Migration
             $table->foreignId('patient_id')->constrained('patients');
             $table->date('recorded_on');
             $table->foreignId('recorded_by')->constrained('users');
+            // The family's monthly income, snapshotted when the record is created:
+            // the patient's and each family member's, plus other sources typed in.
+            $table->decimal('patient_income', 12, 2)->nullable();
+            $table->json('income_members')->nullable();       // [{name, relationship, monthly_income}]
+            $table->json('other_income_sources')->nullable(); // [{source, amount}]
             $table->decimal('total_family_income', 12, 2)->nullable();
-            $table->json('other_income_sources')->nullable();
             $table->string('house_tenure')->nullable();          // owned | rented
-            $table->string('housing_type')->nullable();          // free text
             $table->json('light_source')->nullable();            // electricity | kerosene | candle
             $table->json('water_source')->nullable();            // owned | public | artesian_well
-            $table->string('utilities_access')->nullable();      // free text
+            // ANNEX B section III "List of Expenses": one column per fixed item.
+            foreach ([
+                'house_rent_amount', 'food', 'transport', 'medical', 'insurance',
+                'education', 'clothing', 'house_help', 'others',
+            ] as $expense) {
+                $table->decimal($expense, 12, 2)->nullable();
+            }
+            $table->string('others_specify')->nullable();
             $table->text('remarks')->nullable();
-            $table->unsignedSmallInteger('household_size');      // family members + 1 at record time
-            $table->decimal('net_per_capita_income', 12, 2)->nullable();
             $table->timestamps();
             $table->softDeletes();
 

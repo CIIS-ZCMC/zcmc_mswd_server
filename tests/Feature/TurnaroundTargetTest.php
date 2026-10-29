@@ -22,7 +22,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(TurnaroundTargetSeeder::class);
 
-    $this->supervisor = targetUser('Supervisor');
+    $this->supervisor = targetUser('Admin');
     $this->worker = targetUser('Case Manager');
     $this->admin = targetUser('Admin');
 

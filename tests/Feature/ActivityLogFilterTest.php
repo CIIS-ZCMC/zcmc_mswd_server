@@ -22,8 +22,8 @@ beforeEach(function () {
     $this->patient = Patient::create([
         'sector_id' => $this->sector->id, 'first_name' => 'Ana', 'last_name' => 'Reyes', 'sex' => 'female',
     ]);
-    $this->auditor = User::factory()->create(['role' => 'MSS Head']);
-    $this->auditor->assignRole('MSS Head');
+    $this->auditor = User::factory()->create(['role' => 'Admin']);
+    $this->auditor->assignRole('Admin');
 });
 
 it('filters the log by causer', function () {
@@ -78,8 +78,9 @@ it('ignores an unrecognised event rather than erroring', function () {
 });
 
 it('keeps hiding a protective case that has since been soft-deleted', function () {
-    $supervisor = User::factory()->create(['role' => 'Supervisor']);
-    $supervisor->assignRole('Supervisor');
+    $supervisor = User::factory()->create(['role' => 'Case Manager']);
+    $supervisor->assignRole('Case Manager');
+    $supervisor->givePermissionTo('audit.view');
     Sanctum::actingAs($supervisor);
 
     $protective = CaseModel::create([

@@ -13,7 +13,7 @@ return new class extends Migration
         // is logged here (who, when, for which case/encounter).
         Schema::create('uis_print_logs', function (Blueprint $table) {
             $table->id();
-            $table->foreignId('case_id')->constrained('cases')->restrictOnDelete();
+            $table->foreignId('case_id')->nullable()->constrained('cases')->restrictOnDelete();
             $table->foreignId('patient_id')->constrained('patients')->restrictOnDelete();
             // The HIS encounter (cases.transaction_id), denormalized at print time
             // so history is queryable per encounter without joining through cases.
@@ -26,6 +26,7 @@ return new class extends Migration
 
             $table->index(['case_id', 'printed_at']);
             $table->index('transaction_id');
+            $table->index(['patient_id', 'transaction_id', 'printed_at'], 'uis_print_logs_patient_encounter_index');
         });
     }
 

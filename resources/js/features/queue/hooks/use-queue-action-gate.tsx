@@ -9,7 +9,7 @@ export type QueueActionState = "waiting" | "in_progress" | "completed" | "none"
 export interface QueueActionGateContextValue {
   /**
    * Whether the user can perform write/edit/print actions right now.
-   * True if user is exempt (Admin / MSS Head) OR active visit is "in_progress".
+   * True if user is exempt (Admin) OR active visit is "in_progress".
    */
   canPerformActions: boolean
 
@@ -25,7 +25,7 @@ export interface QueueActionGateContextValue {
   /** Human-readable explanation of current permission/lock state */
   reason: string
 
-  /** Whether the user is bypassing via Super Admin / MSS Head role */
+  /** Whether the user is bypassing via Super Admin role */
   isExempt: boolean
 
   /** Whether visit queries are currently loading */
@@ -54,12 +54,10 @@ export const QueueActionGateProvider: React.FC<QueueActionGateProviderProps> = (
   transactionId,
   children,
 }) => {
-  const { roles, user } = useAuth()
-  const userRoles = roles ?? user?.roles ?? []
-  const isExempt =
-    userRoles.includes("Super Admin") ||
-    userRoles.includes("MSS Head") ||
-    userRoles.includes("Admin")
+  const { roleCodes, user } = useAuth()
+  const isExempt = (roleCodes ?? user?.roleCodes ?? []).some((code) =>
+    ["admin", "super_admin"].includes(code)
+  )
 
   const { data: visits = [], isLoading } = usePatientVisits(
     patientId,

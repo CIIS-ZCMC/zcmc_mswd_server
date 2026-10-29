@@ -2,10 +2,10 @@
 
 namespace Database\Seeders;
 
+use App\Models\Role;
 use Illuminate\Database\Seeder;
 use Illuminate\Support\Facades\DB;
 use Spatie\Permission\Models\Permission;
-use Spatie\Permission\Models\Role;
 use Spatie\Permission\PermissionRegistrar;
 
 class RolesAndPermissionsSeeder extends Seeder
@@ -13,7 +13,26 @@ class RolesAndPermissionsSeeder extends Seeder
     /**
      * The all-powerful role. Protected from rename/deletion everywhere.
      */
-    public const SUPER_ADMIN = 'Admin';
+    public const SUPER_ADMIN = 'Super Admin';
+
+    /**
+     * The super admin's stable code. Match on this, not the display name.
+     */
+    public const SUPER_ADMIN_CODE = 'super_admin';
+
+    /**
+     * Each default role's stable system code. Core roles are the ones listed here.
+     *
+     * @var array<string, string>
+     */
+    public const ROLE_CODES = [
+        'Super Admin' => 'super_admin',
+        'Admin' => 'admin',
+        'Head' => 'head',
+        'Supervisor' => 'supervisor',
+        'Case Manager' => 'case_manager',
+        'Processor' => 'processor',
+    ];
 
     /**
      * The guard all RBAC data is stored under.
@@ -41,6 +60,9 @@ class RolesAndPermissionsSeeder extends Seeder
         'patients.update',
         'patients.delete',
         'patients.merge',
+        // Import a HIS patient into the registry (the header's Search or Import Patient).
+        // Apart from patients.create so a read-only role can import without manual entry.
+        'patients.import',
         // Hospital (HIS) patients — read-only browse of the emdPatients master
         'hospital-patients.view',
         // Cases
@@ -97,9 +119,13 @@ class RolesAndPermissionsSeeder extends Seeder
      * @var array<string, list<string>>
      */
     public const ROLES = [
-        'Admin' => ['*'],
-        'MSS Head' => [
-            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'hospital-patients.view',
+        // The superuser: every permission, plus the Gate::before bypass. The only role
+        // that opens the /admin panel and manages users and roles.
+        'Super Admin' => ['*'],
+        // Every module of the client app, but none of the /admin panel (panel.access,
+        // users.manage, roles.manage, settings.manage).
+        'Admin' => [
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'patients.import', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
             'intake.view',
@@ -108,43 +134,52 @@ class RolesAndPermissionsSeeder extends Seeder
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
             'dar.manage', 'queue.manage',
-            'settings.manage',
             'library.manage',
             'users.view',
-            'panel.access',
+        ],
+        // Per-module roles: each one holds only its modules. Library, Audit, users/roles
+        // and the /admin panel stay with Admin and Super Admin.
+        'Head' => [
+            'reports.view', 'reports.generate',
+            // Sign-off authority
+            'assistance.approve', 'cases.finalize_social_case', 'cases.waive_watcher',
         ],
         'Supervisor' => [
-            'patients.view', 'patients.create', 'patients.update', 'patients.merge', 'hospital-patients.view',
-            'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.finalize_social_case',
-            'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
+            // Patients
+            'patients.view', 'patients.create', 'patients.update', 'patients.merge', 'patients.import', 'hospital-patients.view',
             'intake.view',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
             'guarantee.view', 'guarantee.create', 'guarantee.update',
-            'audit.view',
+            // Queue, DAR, Reports
+            'queue.manage',
+            'dar.manage',
             'reports.view', 'reports.generate',
-            'dar.manage', 'queue.manage',
-            'library.manage',
-            'panel.access',
+            // Sign-off authority
+            'assistance.approve', 'cases.finalize_social_case', 'cases.waive_watcher',
         ],
+        // Full CRUD on their modules; merge and sign-offs stay with Supervisor and Head.
         'Case Manager' => [
-            'patients.view', 'patients.create', 'patients.update', 'hospital-patients.view',
-            'cases.view', 'cases.create', 'cases.update',
-            'assistance.view', 'assistance.create', 'assistance.update',
+            // Patients
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
             'intake.view',
-            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
-            'guarantee.view', 'guarantee.create', 'guarantee.update',
-            'reports.view',
-            'dar.manage', 'queue.manage',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
+            // Cases
+            'cases.view', 'cases.create', 'cases.update', 'cases.delete',
+            'assistance.view', 'assistance.create', 'assistance.update',
+            // Queue, DAR
+            'queue.manage',
+            'dar.manage',
         ],
         'Processor' => [
-            'patients.view', 'hospital-patients.view',
-            'cases.view',
-            'assistance.view', 'assistance.create', 'assistance.update',
+            // Patients
+            'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
             'intake.view',
-            'socioeconomic.view',
-            'guarantee.view',
-            'reports.view',
-            'dar.manage', 'queue.manage',
+            'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
+            // Queue, DAR
+            'queue.manage',
+            'dar.manage',
         ],
     ];
 
@@ -167,7 +202,16 @@ class RolesAndPermissionsSeeder extends Seeder
             app(PermissionRegistrar::class)->forgetCachedPermissions();
 
             foreach (self::ROLES as $roleName => $permissions) {
-                $role = Role::findOrCreate($roleName, $guard);
+                // The code is passed explicitly: with model events suppressed the Role
+                // model's creating hook, which fills a missing code, does not run.
+                $role = Role::firstOrCreate(
+                    ['name' => $roleName, 'guard_name' => $guard],
+                    ['code' => self::ROLE_CODES[$roleName]],
+                );
+
+                if ($role->code !== self::ROLE_CODES[$roleName]) {
+                    $role->forceFill(['code' => self::ROLE_CODES[$roleName]])->save();
+                }
 
                 $grant = $permissions === ['*'] ? self::PERMISSIONS : $permissions;
 

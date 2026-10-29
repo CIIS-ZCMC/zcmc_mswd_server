@@ -20,7 +20,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 
-    Sanctum::actingAs(typeUser('Supervisor'));
+    Sanctum::actingAs(typeUser('Admin'));
 });
 
 function typeUser(string $role): User
@@ -97,7 +97,7 @@ it('lets library.manage write and everyone else only read', function () {
     $this->getJson('/api/assistant-types')->assertOk();
     $this->postJson('/api/assistant-types', ['name' => 'X', 'code' => 'x', 'category' => 'food'])->assertForbidden();
 
-    Sanctum::actingAs(typeUser('MSS Head'));
+    Sanctum::actingAs(typeUser('Admin'));
     $this->postJson('/api/assistant-types', ['name' => 'X', 'code' => 'x', 'category' => 'food'])->assertCreated();
 });
 
@@ -125,7 +125,7 @@ it('offers active types plus the ones a record already uses', function () {
 });
 
 it('manages Types of Assistance in the admin panel', function () {
-    actingAs(typeUser('Admin'));
+    actingAs(typeUser('Super Admin'));
 
     Livewire::test(ListAssistantTypes::class)->assertOk()->assertCanSeeTableRecords(AssistantType::all());
 

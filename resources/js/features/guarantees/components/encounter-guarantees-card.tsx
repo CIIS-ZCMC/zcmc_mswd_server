@@ -56,6 +56,8 @@ interface EncounterGuaranteesCardProps {
   className?: string
   targetGuarantor?: { name: string; mswdGuarantorId?: number | null } | null
   onClearTargetGuarantor?: () => void
+  onRequestAdd?: () => void
+  onRequestEdit?: (guarantee: PatientGuarantee) => void
 }
 
 export const EncounterGuaranteesCard: React.FC<
@@ -66,6 +68,8 @@ export const EncounterGuaranteesCard: React.FC<
   className = "",
   targetGuarantor,
   onClearTargetGuarantor,
+  onRequestAdd,
+  onRequestEdit,
 }) => {
   const canView = usePermission("guarantee.view")
   const canCreate = usePermission("guarantee.create")
@@ -121,6 +125,10 @@ export const EncounterGuaranteesCard: React.FC<
   }
 
   const handleAdd = () => {
+    if (onRequestAdd) {
+      onRequestAdd()
+      return
+    }
     setEditingGuarantee(null)
     setInitialGuarantorName(null)
     setInitialGuarantorId(null)
@@ -129,6 +137,10 @@ export const EncounterGuaranteesCard: React.FC<
   }
 
   const handleEdit = (g: PatientGuarantee) => {
+    if (onRequestEdit) {
+      onRequestEdit(g)
+      return
+    }
     setEditingGuarantee(g)
     setInitialGuarantorName(null)
     setInitialGuarantorId(null)

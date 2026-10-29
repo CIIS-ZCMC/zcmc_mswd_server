@@ -22,7 +22,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 });
 
-function lookupUser(string $role = 'MSS Head'): User
+function lookupUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);

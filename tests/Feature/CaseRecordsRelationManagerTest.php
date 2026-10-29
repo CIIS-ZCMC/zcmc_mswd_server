@@ -29,7 +29,7 @@ beforeEach(function () {
     ]);
 });
 
-function recRmUser(string $role = 'MSS Head'): User
+function recRmUser(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
@@ -104,7 +104,7 @@ it('gates create/edit/delete on cases.update', function () {
     expect((new AssessmentsRelationManager)->canCreate())->toBeFalse()
         ->and((new InterventionsRelationManager)->canCreate())->toBeFalse();
 
-    actingAs(recRmUser('MSS Head'));
+    actingAs(recRmUser('Admin'));
     expect((new AssessmentsRelationManager)->canCreate())->toBeTrue()
         ->and((new InterventionsRelationManager)->canCreate())->toBeTrue();
 });

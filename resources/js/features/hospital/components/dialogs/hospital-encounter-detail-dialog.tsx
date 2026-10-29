@@ -17,7 +17,26 @@ import { RegistryStatusBadge } from "../registry-status-badge"
 import { AssessEncounterDialog } from "./assess-encounter-dialog"
 import { OpenCaseDialog } from "@/features/cases/components/dialogs/open-case-dialog"
 import { EncounterUisPanel } from "@/features/cases/components/encounter-uis-panel"
-import { EncounterGuaranteesCard, useGuarantees } from "@/features/guarantees"
+import {
+  AcknowledgementSlipDialog,
+  GuaranteeBreakdownTable,
+  GuaranteeForm,
+  isMaifipGuarantee,
+  useDeleteGuarantee,
+  useGuarantees,
+} from "@/features/guarantees"
+import type { PatientGuarantee } from "@/features/guarantees/types"
+import { formatCurrency } from "@/lib/format-currency"
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from "@/components/ui/alert-dialog"
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -36,14 +55,17 @@ import type { HospitalEncounter, HospitalLookup } from "../../types/hospital-tra
 import type { PatientRecord } from "@/features/patients/types"
 import {
   AlertCircle,
+  ArrowLeft,
   BadgeCheck,
   Building2,
   Calendar,
   CheckCircle2,
   ChevronDown,
+  ChevronRight,
   ClipboardCheck,
   Clock,
   CreditCard,
+  Edit2,
   ExternalLink,
   FileCheck2,
   FileText,
@@ -51,8 +73,10 @@ import {
   Loader2,
   Plus,
   Printer,
+  Receipt,
   ShieldCheck,
   Stethoscope,
+  Trash2,
   XCircle,
 } from "lucide-react"
 import { useNavigate } from "@/lib/inertia-router-hooks"
@@ -143,10 +167,78 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
   const { data: assignableCases = [] } = useAssignableCases(encounterId, open && encounterId > 0)
   const canManageQueue = usePermission("queue.manage")
   const canCreateGuarantee = usePermission("guarantee.create")
-  const [targetGuarantorForBreakdown, setTargetGuarantorForBreakdown] = useState<{
-    name: string
-    mswdGuarantorId?: number | null
-  } | null>(null)
+  const canUpdateGuarantee = usePermission("guarantee.update")
+  const canDeleteGuarantee = usePermission("guarantee.delete")
+  const [expandedRowIds, setExpandedRowIds] = useState<Set<number>>(new Set())
+  const [deletingGuarantee, setDeletingGuarantee] = useState<PatientGuarantee | null>(null)
+  const [slipGuaranteeId, setSlipGuaranteeId] = useState<number | null>(null)
+  const deleteGuaranteeMutation = useDeleteGuarantee(
+    patient?.id,
+    encounterId > 0 ? encounterId : undefined
+  )
+
+  const toggleExpandRow = (id: number) => {
+    setExpandedRowIds((prev) => {
+      const next = new Set(prev)
+      if (next.has(id)) next.delete(id)
+      else next.add(id)
+      return next
+    })
+  }
+
+  const handleDeleteGuaranteeConfirm = async () => {
+    if (!deletingGuarantee) return
+    try {
+      await deleteGuaranteeMutation.mutateAsync(deletingGuarantee.id)
+    } finally {
+      setDeletingGuarantee(null)
+    }
+  }
+
+  const [viewMode, setViewMode] = useState<"encounter" | "guarantor-form">("encounter")
+  const [formGuarantee, setFormGuarantee] = useState<PatientGuarantee | null>(null)
+  const [formGuarantorName, setFormGuarantorName] = useState<string | null>(null)
+  const [formGuarantorId, setFormGuarantorId] = useState<number | null>(null)
+  const [formLockGuarantor, setFormLockGuarantor] = useState(false)
+  const [isFormDirty, setIsFormDirty] = useState(false)
+  const [confirmDiscardOpen, setConfirmDiscardOpen] = useState(false)
+  const [pendingActionAfterDiscard, setPendingActionAfterDiscard] = useState<(() => void) | null>(null)
+
+  const handleRequestBack = () => {
+    if (isFormDirty) {
+      setPendingActionAfterDiscard(() => () => {
+        setViewMode("encounter")
+        setIsFormDirty(false)
+        setActiveTab("charges")
+      })
+      setConfirmDiscardOpen(true)
+    } else {
+      setViewMode("encounter")
+      setActiveTab("charges")
+    }
+  }
+
+  const handleDialogClose = (nextOpen: boolean) => {
+    if (!nextOpen) {
+      if (viewMode === "guarantor-form") {
+        if (isFormDirty) {
+          setPendingActionAfterDiscard(() => () => {
+            setViewMode("encounter")
+            setIsFormDirty(false)
+            onOpenChange(false)
+          })
+          setConfirmDiscardOpen(true)
+          return
+        } else {
+          setViewMode("encounter")
+          onOpenChange(false)
+          return
+        }
+      }
+    }
+    onOpenChange(nextOpen)
+  }
+
   const { data: mswdGuaranteesData } = useGuarantees(
     patient?.id,
     encounterId > 0 ? encounterId : undefined,
@@ -154,10 +246,13 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
   )
   const mswdGuaranteesList = mswdGuaranteesData?.data ?? []
 
-  // Reset tab on open
+  // Reset tab and view mode on open
   React.useEffect(() => {
     if (open) {
       setActiveTab(initialTab)
+      setViewMode("encounter")
+      setFormGuarantee(null)
+      setIsFormDirty(false)
     }
   }, [open, initialTab])
 
@@ -172,10 +267,79 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
 
   return (
     <>
-      <Dialog open={open} onOpenChange={onOpenChange}>
-        <DialogContent className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden">
-          {/* Header */}
-          <DialogHeader className="p-5 pb-4 border-b bg-muted/20 shrink-0">
+      <Dialog open={open} onOpenChange={handleDialogClose}>
+        <DialogContent
+          className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
+          onPointerDownOutside={(e) => {
+            if (viewMode === "guarantor-form") {
+              e.preventDefault()
+            }
+          }}
+          onEscapeKeyDown={(e) => {
+            if (viewMode === "guarantor-form") {
+              e.preventDefault()
+              handleRequestBack()
+            }
+          }}
+        >
+          {viewMode === "guarantor-form" ? (
+            <>
+              {/* Guarantor Form Subview Header */}
+              <DialogHeader className="p-5 pb-4 border-b bg-muted/20 shrink-0">
+                <div className="flex flex-wrap items-center justify-between gap-3 pr-6">
+                  <div className="space-y-1.5">
+                    <div>
+                      <Button
+                        type="button"
+                        variant="ghost"
+                        size="sm"
+                        onClick={handleRequestBack}
+                        className="h-8 gap-1.5 px-2.5 text-xs font-bold text-muted-foreground hover:text-foreground hover:bg-muted/60"
+                      >
+                        <ArrowLeft className="size-4 text-primary" />
+                        <span>Back to Encounter</span>
+                      </Button>
+                    </div>
+                    <div className="flex items-center gap-2 pt-0.5">
+                      <DialogTitle className="text-lg sm:text-xl font-bold text-foreground flex items-center gap-2">
+                        <CreditCard className="size-5 text-primary shrink-0" />
+                        {formGuarantee?.id ? "Edit Patient Guarantor" : "Add Patient Guarantor"}
+                      </DialogTitle>
+                    </div>
+                    <DialogDescription className="text-xs text-muted-foreground">
+                      Record the guarantor for this hospital encounter and break it down by type of assistance, mode of assistance and fund source.
+                      <span className="ml-2 font-medium text-foreground">
+                        (Patient: {patient.fullName} • Encounter #{activeEncounter.id})
+                      </span>
+                    </DialogDescription>
+                  </div>
+                </div>
+              </DialogHeader>
+
+              {/* Form Body */}
+              <div className="flex-1 overflow-y-auto p-4 sm:p-6">
+                <GuaranteeForm
+                  patientId={patient.id}
+                  transactionId={activeEncounter.id}
+                  guarantee={formGuarantee}
+                  initialGuarantorId={formGuarantorId}
+                  initialGuarantorName={formGuarantorName}
+                  lockGuarantor={formLockGuarantor}
+                  onDirtyChange={setIsFormDirty}
+                  onSuccess={() => {
+                    setIsFormDirty(false)
+                    setViewMode("encounter")
+                    setActiveTab("charges")
+                  }}
+                  onCancel={handleRequestBack}
+                  cancelLabel="Cancel"
+                />
+              </div>
+            </>
+          ) : (
+            <>
+              {/* Header */}
+              <DialogHeader className="p-5 pb-4 border-b bg-muted/20 shrink-0">
             <div className="flex flex-wrap items-start justify-between gap-3 pr-6">
               <div className="space-y-1.5">
                 <div className="flex items-center gap-2.5 flex-wrap">
@@ -494,9 +658,11 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
                       <Table>
                         <TableHeader className="bg-muted/50">
                           <TableRow>
+                            <TableHead className="w-9 px-2 text-center"></TableHead>
                             <TableHead className="text-xs font-bold text-foreground">Guarantor Name</TableHead>
-                            <TableHead className="text-xs font-bold text-foreground text-right">Amount</TableHead>
+                            <TableHead className="text-xs font-bold text-foreground text-right">HIS Amount</TableHead>
                             <TableHead className="text-xs font-bold text-foreground">General Ledger Status</TableHead>
+                            <TableHead className="text-xs font-bold text-foreground text-right">MSWD Breakdown</TableHead>
                             <TableHead className="text-xs font-bold text-foreground text-right">Action</TableHead>
                           </TableRow>
                         </TableHeader>
@@ -507,53 +673,207 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
                                 mg.guarantor?.name.trim().toLowerCase() ===
                                 (g.name?.trim().toLowerCase() ?? "")
                             )
+                            const isExpanded = expandedRowIds.has(g.id)
+                            const itemCount = match?.items?.length ?? 0
+                            const isMaifip = match ? isMaifipGuarantee(match) : false
 
                             return (
-                              <TableRow key={g.id} className="hover:bg-muted/30">
-                                <TableCell className="font-semibold text-sm">{text(g.name)}</TableCell>
-                                <TableCell className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400">
-                                  {peso(g.amount)}
-                                </TableCell>
-                                <TableCell className="text-xs font-medium">
-                                  {g.glPosted ? (
-                                    <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-500/15 px-2 py-0.5 rounded text-xs">
-                                      <CheckCircle2 className="w-3.5 h-3.5" /> Posted ({text(g.glPostDate)})
-                                    </span>
-                                  ) : (
-                                    <span className="text-muted-foreground text-xs">Not Posted</span>
-                                  )}
-                                </TableCell>
-                                <TableCell className="text-right">
-                                  {match ? (
-                                    <Badge
-                                      variant="secondary"
-                                      className="bg-emerald-500/15 text-[11px] font-semibold text-emerald-700 dark:text-emerald-300"
-                                    >
-                                      Breakdown recorded
-                                    </Badge>
-                                  ) : canCreateGuarantee ? (
-                                    <Button
-                                      type="button"
-                                      variant="outline"
-                                      size="sm"
-                                      disabled={!canPerformActions}
-                                      title={!canPerformActions ? reason : undefined}
-                                      onClick={() =>
-                                        setTargetGuarantorForBreakdown({
-                                          name: g.name ?? "",
-                                          mswdGuarantorId: g.mswdGuarantorId,
-                                        })
-                                      }
-                                      className="h-7 cursor-pointer gap-1 border-primary/30 px-2 text-xs font-bold text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
-                                    >
-                                      <Plus className="size-3" />
-                                      Add Breakdown
-                                    </Button>
-                                  ) : (
-                                    <span className="text-xs text-muted-foreground italic">—</span>
-                                  )}
-                                </TableCell>
-                              </TableRow>
+                              <React.Fragment key={g.id}>
+                                <TableRow className="hover:bg-muted/30">
+                                  {/* Expand/Collapse Chevron */}
+                                  <TableCell className="w-9 px-2 text-center align-middle">
+                                    {match && itemCount > 0 ? (
+                                      <Button
+                                        type="button"
+                                        variant="ghost"
+                                        size="icon"
+                                        onClick={() => toggleExpandRow(g.id)}
+                                        className="size-6 cursor-pointer text-muted-foreground hover:text-foreground"
+                                        aria-label={
+                                          isExpanded
+                                            ? "Collapse assistance breakdown"
+                                            : "Expand assistance breakdown"
+                                        }
+                                      >
+                                        {isExpanded ? (
+                                          <ChevronDown className="size-4 text-primary" />
+                                        ) : (
+                                          <ChevronRight className="size-4" />
+                                        )}
+                                      </Button>
+                                    ) : (
+                                      <span className="inline-block size-6" />
+                                    )}
+                                  </TableCell>
+
+                                  {/* Guarantor Name & Lines badge */}
+                                  <TableCell className="font-semibold text-sm">
+                                    <div className="flex items-center gap-2">
+                                      <span>{text(g.name)}</span>
+                                      {match && (
+                                        <Badge
+                                          variant="secondary"
+                                          className="h-4 cursor-pointer bg-muted px-1.5 py-0 text-[10px] font-semibold text-muted-foreground hover:bg-muted/80"
+                                          onClick={() => toggleExpandRow(g.id)}
+                                        >
+                                          {itemCount} {itemCount === 1 ? "line" : "lines"}
+                                        </Badge>
+                                      )}
+                                    </div>
+                                    {match?.remarks && (
+                                      <div className="mt-0.5 line-clamp-1 text-[11px] font-normal text-muted-foreground">
+                                        {match.remarks}
+                                      </div>
+                                    )}
+                                  </TableCell>
+
+                                  {/* HIS Amount */}
+                                  <TableCell className="text-right font-bold text-sm text-emerald-600 dark:text-emerald-400">
+                                    {peso(g.amount)}
+                                  </TableCell>
+
+                                  {/* GL Status */}
+                                  <TableCell className="text-xs font-medium">
+                                    {g.glPosted ? (
+                                      <span className="inline-flex items-center gap-1 text-emerald-700 dark:text-emerald-300 font-semibold bg-emerald-500/15 px-2 py-0.5 rounded text-xs">
+                                        <CheckCircle2 className="w-3.5 h-3.5" /> Posted ({text(g.glPostDate)})
+                                      </span>
+                                    ) : (
+                                      <span className="text-muted-foreground text-xs">Not Posted</span>
+                                    )}
+                                  </TableCell>
+
+                                  {/* MSWD Breakdown Total */}
+                                  <TableCell className="text-right text-sm font-black text-emerald-600 dark:text-emerald-400">
+                                    {match ? (
+                                      formatCurrency(match.total)
+                                    ) : (
+                                      <span className="text-xs font-normal text-muted-foreground italic">No breakdown</span>
+                                    )}
+                                  </TableCell>
+
+                                  {/* Action Buttons */}
+                                  <TableCell className="text-right">
+                                    <div className="flex items-center justify-end gap-1.5">
+                                      {match ? (
+                                        <>
+                                          {isMaifip && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              onClick={() => setSlipGuaranteeId(match.id)}
+                                              className="size-7 cursor-pointer text-primary hover:bg-primary/10"
+                                              title="Print Acknowledgement Slip (MAIFIP)"
+                                            >
+                                              <Printer className="size-3.5" />
+                                            </Button>
+                                          )}
+                                          {canUpdateGuarantee && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              disabled={!canPerformActions}
+                                              onClick={() => {
+                                                setFormGuarantee(match)
+                                                setFormGuarantorName(null)
+                                                setFormGuarantorId(null)
+                                                setFormLockGuarantor(false)
+                                                setIsFormDirty(false)
+                                                setViewMode("guarantor-form")
+                                              }}
+                                              className="size-7 cursor-pointer text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
+                                              title={!canPerformActions ? reason : "Edit assistance breakdown"}
+                                            >
+                                              <Edit2 className="size-3.5" />
+                                            </Button>
+                                          )}
+                                          {canDeleteGuarantee && (
+                                            <Button
+                                              type="button"
+                                              variant="ghost"
+                                              size="icon"
+                                              disabled={!canPerformActions}
+                                              onClick={() => setDeletingGuarantee(match)}
+                                              className="size-7 cursor-pointer text-destructive hover:bg-destructive/10 hover:text-destructive disabled:opacity-50 disabled:cursor-not-allowed"
+                                              title={!canPerformActions ? reason : "Delete assistance breakdown"}
+                                            >
+                                              <Trash2 className="size-3.5" />
+                                            </Button>
+                                          )}
+                                        </>
+                                      ) : canCreateGuarantee ? (
+                                        <Button
+                                          type="button"
+                                          variant="outline"
+                                          size="sm"
+                                          disabled={!canPerformActions}
+                                          title={!canPerformActions ? reason : undefined}
+                                          onClick={() => {
+                                            setFormGuarantee(null)
+                                            setFormGuarantorName(g.name ?? "")
+                                            setFormGuarantorId(g.mswdGuarantorId ?? null)
+                                            setFormLockGuarantor(true)
+                                            setIsFormDirty(false)
+                                            setViewMode("guarantor-form")
+                                          }}
+                                          className="h-7 cursor-pointer gap-1 border-primary/30 px-2 text-xs font-bold text-primary hover:bg-primary/10 disabled:opacity-50 disabled:cursor-not-allowed"
+                                        >
+                                          <Plus className="size-3" />
+                                          Add Breakdown
+                                        </Button>
+                                      ) : (
+                                        <span className="text-xs text-muted-foreground italic">—</span>
+                                      )}
+                                    </div>
+                                  </TableCell>
+                                </TableRow>
+
+                                {/* Collapsible Expanded Breakdown Area */}
+                                {isExpanded && match && (
+                                  <TableRow className="border-b bg-muted/15 hover:bg-muted/20">
+                                    <TableCell colSpan={6} className="p-3.5 pl-10">
+                                      <div className="space-y-3">
+                                        <div className="flex items-center justify-between gap-2">
+                                          <div className="flex items-center gap-1.5 text-[11px] font-bold tracking-wider text-muted-foreground uppercase">
+                                            <Receipt className="size-3.5 text-primary" />
+                                            Assistance Breakdown ({text(g.name)})
+                                          </div>
+                                          <div className="flex items-center gap-3 text-xs text-muted-foreground">
+                                            {match.referenceNo && (
+                                              <span>
+                                                Ref/GL:{" "}
+                                                <strong className="font-mono text-foreground">
+                                                  {match.referenceNo}
+                                                </strong>
+                                              </span>
+                                            )}
+                                            {match.guaranteedOn && (
+                                              <span>
+                                                Date:{" "}
+                                                <strong className="text-foreground">
+                                                  {match.guaranteedOn}
+                                                </strong>
+                                              </span>
+                                            )}
+                                            {match.recordedBy && (
+                                              <span>
+                                                Recorded by:{" "}
+                                                <strong className="text-foreground">
+                                                  {match.recordedBy.name}
+                                                </strong>
+                                              </span>
+                                            )}
+                                          </div>
+                                        </div>
+
+                                        <GuaranteeBreakdownTable items={match.items} />
+                                      </div>
+                                    </TableCell>
+                                  </TableRow>
+                                )}
+                              </React.Fragment>
                             )
                           })}
                         </TableBody>
@@ -561,14 +881,6 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
                     </div>
                   )}
                 </div>
-
-                {/* MSWD Patient Guarantors */}
-                <EncounterGuaranteesCard
-                  patientId={patient.id}
-                  transactionId={activeEncounter.id}
-                  targetGuarantor={targetGuarantorForBreakdown}
-                  onClearTargetGuarantor={() => setTargetGuarantorForBreakdown(null)}
-                />
               </TabsContent>
 
               {/* TAB 4: MSWD CASE & UIS INTAKE */}
@@ -675,8 +987,44 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
               </Button>
             </div>
           </DialogFooter>
-        </DialogContent>
-      </Dialog>
+        </>
+      )}
+    </DialogContent>
+  </Dialog>
+
+      {/* Confirm Discard Dialog */}
+      <AlertDialog open={confirmDiscardOpen} onOpenChange={setConfirmDiscardOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="size-5" />
+              Discard unsaved changes?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              You have unsaved changes in the guarantor breakdown. If you leave now, these changes will be lost.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Continue Editing</AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={() => {
+                setConfirmDiscardOpen(false)
+                if (pendingActionAfterDiscard) {
+                  const action = pendingActionAfterDiscard
+                  setPendingActionAfterDiscard(null)
+                  action()
+                } else {
+                  setViewMode("encounter")
+                  setIsFormDirty(false)
+                }
+              }}
+            >
+              Discard Changes
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       {/* Sub-Dialogs */}
       <AssessEncounterDialog
@@ -710,6 +1058,47 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
         encounter={activeEncounter}
         patient={patient}
         caseId={activeCase?.id ?? patient.latestCaseId}
+      />
+
+      {/* Delete Guarantee Confirmation Dialog */}
+      <AlertDialog
+        open={deletingGuarantee !== null}
+        onOpenChange={(open) => !open && setDeletingGuarantee(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle className="flex items-center gap-2 text-destructive">
+              <AlertCircle className="size-5" />
+              Delete Assistance Breakdown?
+            </AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete the assistance breakdown for{" "}
+              <strong>{deletingGuarantee?.guarantor?.name}</strong>? This action
+              cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={deleteGuaranteeMutation.isPending}>
+              Cancel
+            </AlertDialogCancel>
+            <AlertDialogAction
+              variant="destructive"
+              onClick={handleDeleteGuaranteeConfirm}
+              disabled={deleteGuaranteeMutation.isPending}
+            >
+              {deleteGuaranteeMutation.isPending ? "Deleting..." : "Delete Breakdown"}
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
+
+      {/* Acknowledgement Slip Dialog (MAIFIP) */}
+      <AcknowledgementSlipDialog
+        open={slipGuaranteeId !== null}
+        onOpenChange={(open) => !open && setSlipGuaranteeId(null)}
+        patientId={patient.id}
+        transactionId={activeEncounter.id}
+        guaranteeId={slipGuaranteeId}
       />
     </>
   )

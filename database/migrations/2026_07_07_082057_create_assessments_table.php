@@ -20,7 +20,18 @@ return new class extends Migration
 
         Schema::create('assessments', function (Blueprint $table) use ($socialCaseGuardExpression) {
             $table->id();
-            $table->foreignId('case_id')->constrained('cases');
+            // An assessment belongs to a patient and a HIS encounter, and only optionally to a case.
+            $table->foreignId('patient_id')->nullable()->constrained('patients');
+            $table->unsignedBigInteger('his_transaction_id')->nullable();
+            $table->string('transaction_type')->nullable();
+            $table->dateTime('encounter_date')->nullable();
+            // Frozen copy of the patient's identity and family at intake (the UIS sheet).
+            $table->json('uis_snapshot')->nullable();
+            $table->timestamp('uis_snapshot_at')->nullable();
+            $table->foreignId('uis_snapshot_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->dateTime('interviewed_at')->nullable();
+            $table->foreignId('interviewed_by')->nullable()->constrained('users')->nullOnDelete();
+            $table->foreignId('case_id')->nullable()->constrained('cases');
             $table->foreignId('parent_assessment_id')->nullable()->constrained('assessments')->nullOnDelete();
             $table->string('reassessment_reason')->nullable();
             $table->foreignId('created_by')->constrained('users');
@@ -34,6 +45,11 @@ return new class extends Migration
 
             $table->decimal('total_family_income', 12, 2)->nullable();
             $table->decimal('net_per_capita_income', 12, 2)->nullable();
+            $table->unsignedInteger('household_size')->nullable(); // frozen with the snapshot
+            // The socio-economic record this intake's section III and income were imported from.
+            $table->foreignId('socioeconomic_profile_id')->nullable()
+                ->constrained('patient_socioeconomic_profiles')->nullOnDelete();
+            $table->timestamp('socioeconomic_imported_at')->nullable();
             $table->decimal('calculated_discount_rate', 5, 2)->nullable();
             $table->string('housing_type')->nullable();
             $table->string('house_tenure', 20)->nullable(); // owned|rented
@@ -78,6 +94,7 @@ return new class extends Migration
             $table->softDeletes();
 
             $table->index('social_case_status');
+            $table->index(['patient_id', 'his_transaction_id'], 'assessments_patient_encounter_index');
 
             $table->unsignedBigInteger('social_case_guard')->nullable()->storedAs($socialCaseGuardExpression);
             $table->unique('social_case_guard', 'uniq_case_social_case');

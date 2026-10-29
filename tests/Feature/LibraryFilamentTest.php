@@ -31,8 +31,8 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(GuarantorSeeder::class);
 
-    $this->admin = User::factory()->create(['role' => 'Admin']);
-    $this->admin->assignRole('Admin');
+    $this->admin = User::factory()->create(['role' => 'Super Admin']);
+    $this->admin->assignRole('Super Admin');
     actingAs($this->admin);
 });
 

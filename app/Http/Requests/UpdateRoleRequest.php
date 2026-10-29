@@ -27,6 +27,8 @@ class UpdateRoleRequest extends FormRequest
                 'max:255',
                 Rule::unique($rolesTable, 'name')->ignore($this->route('role')?->id),
             ],
+            // A role's code is fixed once created; sending it is ignored.
+            'code' => ['prohibited'],
             'description' => ['nullable', 'string', 'max:255'],
             'permissions' => ['sometimes', 'array'],
             'permissions.*' => ['string', Rule::exists($permissionsTable, 'name')],

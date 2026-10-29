@@ -14,6 +14,7 @@ return new class extends Migration
         // ledger entry (psGntrLedgers), so exactly one of the two sources is set.
         Schema::create('acknowledgement_slip_print_logs', function (Blueprint $table) {
             $table->id();
+            $table->string('form')->default('maifip'); // which acknowledgement slip was printed
             $table->foreignId('patient_guarantee_id')->nullable()->constrained('patient_guarantees')->restrictOnDelete();
             // psGntrLedgers.PK_TRXNO when printed from the HIS ledger.
             $table->unsignedBigInteger('his_guarantor_entry_id')->nullable();
@@ -30,6 +31,7 @@ return new class extends Migration
             // Explicit names: the generated ones exceed MySQL's 64-character limit.
             $table->index(['patient_guarantee_id', 'printed_at'], 'ack_slip_prints_guarantee_printed_at_index');
             $table->index('his_transaction_id', 'ack_slip_prints_his_transaction_id_index');
+            $table->index('form', 'ack_slip_prints_form_index');
         });
     }
 

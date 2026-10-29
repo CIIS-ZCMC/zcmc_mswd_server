@@ -25,7 +25,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
 });
 
-function hpPanelActor(string $role = 'MSS Head'): User
+function hpPanelActor(string $role = 'Admin'): User
 {
     $user = User::factory()->create(['role' => $role]);
     $user->assignRole($role);
@@ -72,7 +72,7 @@ function hpPanelPatient(int $key = 5, int $patid = 777, bool $withTransactions =
 }
 
 it('gates the resource on hospital-patients.view and is read-only', function () {
-    actingAs(hpPanelActor('MSS Head'));
+    actingAs(hpPanelActor('Admin'));
     expect(HospitalPatientResource::canViewAny())->toBeTrue();
 
     actingAs(User::factory()->create()); // no roles

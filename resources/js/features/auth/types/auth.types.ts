@@ -11,6 +11,7 @@ export interface AuthUser {
   email: string
   role: string | null
   roles: string[]
+  roleCodes?: string[]
   permissions: string[]
   is_active: boolean
   synced_at: string | null

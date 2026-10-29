@@ -21,7 +21,7 @@ beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(GuarantorSeeder::class);
 
-    Sanctum::actingAs(libraryUser('Supervisor'));
+    Sanctum::actingAs(libraryUser('Admin'));
 });
 
 function libraryUser(string $role): User
@@ -136,7 +136,7 @@ it('lets library.manage write and everyone else only read', function (string $ur
     $this->getJson("/api/{$uri}")->assertOk();
     $this->postJson("/api/{$uri}", ['name' => 'X', 'code' => 'x'])->assertForbidden();
 
-    Sanctum::actingAs(libraryUser('MSS Head'));
+    Sanctum::actingAs(libraryUser('Admin'));
     $this->postJson("/api/{$uri}", ['name' => 'X', 'code' => 'x'])->assertCreated();
 })->with('lookups');
 
@@ -185,7 +185,7 @@ it('validates a guarantor', function () {
 });
 
 it('lets guarantee.create manage guarantors and everyone else only read them', function () {
-    Sanctum::actingAs(libraryUser('Processor'));
+    Sanctum::actingAs(libraryUser('Head'));
 
     $this->getJson('/api/guarantors')->assertOk();
     $this->postJson('/api/guarantors', ['name' => 'X'])->assertForbidden();

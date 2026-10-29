@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Middleware\EnsureIamSessionIsLive;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -20,6 +21,9 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
+        // Runs after the session starts, on both the web and the cookie-session API.
+        $middleware->appendToGroup('web', EnsureIamSessionIsLive::class);
+        $middleware->appendToGroup('api', EnsureIamSessionIsLive::class);
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,

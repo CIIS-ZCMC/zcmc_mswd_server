@@ -1,6 +1,7 @@
 import { useState, useEffect, useCallback } from "react"
 import { usePage } from "@inertiajs/react"
 import { useQuery, keepPreviousData } from "@tanstack/react-query"
+import { usePermission } from "@/features/auth/hooks/use-permission"
 import { listPatients } from "../api/patients-api"
 import { toPatientListRecord } from "../api/patients-adapter"
 import type { PatientRecord } from "../types"
@@ -11,6 +12,7 @@ export const PATIENTS_LIST_QUERY_KEY = ["patients", "list"] as const
  * The sidebar/master list hook. Owns pagination and server-driven filter state.
  */
 export function usePatients() {
+  const canViewPatients = usePermission("patients.view")
   const pageObj = usePage<{ patientId?: string }>()
   const pathPatientId = pageObj.url.match(/^\/patients\/([^/?#]+)/)?.[1] || ""
   const routePatientId = pageObj.props?.patientId ?? pathPatientId ?? ""
@@ -18,7 +20,6 @@ export function usePatients() {
   const [page, setPage] = useState<number>(1)
   const [search, setSearch] = useState<string>("")
   const [debouncedSearch, setDebouncedSearch] = useState<string>("")
-  const [classification, setClassification] = useState<string>("ALL")
   const [intakeDate, setIntakeDate] = useState<string | undefined>(undefined)
 
   useEffect(() => {
@@ -33,11 +34,6 @@ export function usePatients() {
     setPage(1)
   }, [])
 
-  const handleSetClassification = useCallback((val: string) => {
-    setClassification(val)
-    setPage(1)
-  }, [])
-
   const handleSetIntakeDate = useCallback((val: string | undefined) => {
     setIntakeDate(val)
     setPage(1)
@@ -46,14 +42,13 @@ export function usePatients() {
   const clearFilters = useCallback(() => {
     setSearch("")
     setDebouncedSearch("")
-    setClassification("ALL")
     setIntakeDate(undefined)
     setPage(1)
   }, [])
 
   const queryKey = [
     ...PATIENTS_LIST_QUERY_KEY,
-    { page, search: debouncedSearch, classification, intakeDate },
+    { page, search: debouncedSearch, intakeDate },
   ] as const
 
   const query = useQuery({
@@ -63,10 +58,11 @@ export function usePatients() {
         page,
         perPage: 25,
         search: debouncedSearch,
-        classification,
         intakeDate,
       }),
     placeholderData: keepPreviousData,
+    // Roles without Patients (e.g. Head) would only get a 403.
+    enabled: canViewPatients,
   })
 
   const patients: PatientRecord[] = (query.data?.data ?? []).map(toPatientListRecord)
@@ -97,8 +93,6 @@ export function usePatients() {
     total,
     search,
     setSearch: handleSetSearch,
-    classification,
-    setClassification: handleSetClassification,
     intakeDate,
     setIntakeDate: handleSetIntakeDate,
     clearFilters,

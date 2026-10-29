@@ -55,13 +55,35 @@ Request flow: `routes/api.php` → thin `Http/Controllers` (mostly single-action
 Frontend lives in `resources/js/features/<feature>/{api,components,hooks,types}`. Each module below: purpose, key rules, main backend/frontend pieces.
 
 ### Auth & Users
-Session login, roles and permissions shared as Inertia props (`auth.user`, `auth.roles`, `auth.permissions`).
-- Front: `features/auth` (`useAuth`, `usePermission`, `useHasRole`).
-- Back: `UserService`, `RoleService`, `PermissionService`; Filament Users/Roles/Permissions.
+Sign-in is ZCMC IAM (OAuth2 authorization code + PKCE, server-side exchange). The cookie session stays; roles and permissions are shared as Inertia props (`auth.user`, `auth.roles`, `auth.permissions`).
+- Flow: `GET /auth/iam/redirect` (a plain link, never an Inertia visit) → IAM → `GET /callback` (the redirect URI registered with IAM). `IamAuthService` swaps the code, reads `/api/v1/userinfo`, and creates or updates the user **keyed on `users.iam_sub`, never email**. Settings: `services.iam` / `IAM_*` env (see `.env.example`).
+- Roles are synced from the IAM `roles` claim on every sign-in. A claim value matches a local role by its system **code** first (`case_manager`), then by name; `services.iam.role_map` can rename a value first. Values with no local role are dropped, never created. IAM can never grant `Super Admin`. `org_roles` and `placement` are stored on the user (`iam_org_roles`, `placement`) and kept apart from roles.
+- `EnsureIamSessionIsLive` (web + api groups) renews the IAM token a minute before expiry and ends the session if the refresh is refused. Sessions without IAM tokens pass through.
+- Logout (`POST /logout`) returns `{redirect}`: the IAM logout URL when the session came from IAM and `IAM_END_SESSION_ON_LOGOUT` is on, so the client navigates for real.
+- Default roles are **per module** (`RolesAndPermissionsSeeder::ROLES` is the source of truth). A role holds only its listed modules:
+
+  | Role | Code | Modules |
+  |---|---|---|
+  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge) |
+  | Case Manager | `case_manager` | Patients, Cases, Queue, DAR (full CRUD, no merge or sign-offs) |
+  | Supervisor | `supervisor` | Patients, Queue, DAR, Reports |
+  | Head (was `MSS Head`) | `head` | Reports |
+  | Admin | `admin` | every client module (all permissions except the `/admin` panel ones: `panel.access`, `users.manage`, `roles.manage`, `settings.manage`) |
+  | Super Admin | `super_admin` | everything (`*`, `Gate::before` bypass); the only role for `/admin` |
+
+  Every role has a stable, unique system `code` (`roles.code`, lower snake case) beside its display `name`. Code and IAM matching key on the code (`User::hasRoleCode()`, `RolesAndPermissionsSeeder::ROLE_CODES`, `SUPER_ADMIN_CODE`), so a role can be renamed safely. Core roles are the ones in `ROLE_CODES`; the code is fixed once created (the API rejects it on update, Filament disables it) and defaults to the name in snake case when omitted. The frontend gets `auth.roleCodes`; `useHasRole(code)` matches codes.
+
+  Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); users/roles and `/admin` (`panel.access`) are Super Admin only. `admin` can be granted from IAM; `super_admin` never.
+- Web page routes carry the same `permission:` gates as the API. `/` sends a user without `patients.view` to their first module (cases, queue, DAR, reports). The sidebar tabs and the patient-list query follow `usePermission`.
+- `IAM_ROLE_MAP` is only needed when IAM sends a value that is neither a role code nor a name.
+- Password login (`POST /login`, `POST /api/login`) exists for the local **Super Admin (`super_admin`) only**; the `users` rows that predate IAM are those accounts (migration `split_super_admin_from_admin` moved them from `Admin`). The login page tucks it under "Administrator sign-in".
+- Not built: back-channel logout endpoint and the revocation queue consumer (IAM has no `logout_uri` registered yet).
+- Front: `features/auth` (`LoginForm`, `useAuth`, `usePermission`, `useHasRole`).
+- Back: `IamAuthService`, `Web/IamAuthController`, `UserService`, `RoleService`, `PermissionService`; Filament Users/Roles/Permissions.
 
 ### Patients (Registry)
 MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, socioeconomic, hospital encounters, UIS, social case, documents, history).
-- Patients are created by importing from HIS, keyed on `hospital_id` (`POST /hospital-patients/{id}/import`: 201 created, 200 refreshed).
+- Patients are created by importing from HIS, keyed on `hospital_id` (`POST /hospital-patients/{id}/import`: 201 created, 200 refreshed). Import is its own permission, `patients.import`, held by every role but Head, so a role can import without `patients.create`; the header's Search or Import Patient shows for `patients.view`.
 - Patient merge and patient IDs are supported.
 - Documents tab: PDF/JPG/PNG uploads (max 10 MB) per patient, typed from the Library Document Types list, filed under a case optionally. Files are stored on the default disk (RustFS in dev, bucket `mss`; the disk is kept per row) and read **only through the server** (`GET /patients/{id}/documents/{doc}/file`, inline or `?download=1`), never a storage path. Delete is a soft delete and keeps the file. Finalized SCSR PDFs also appear here.
 - Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`, `DocumentService`.
@@ -90,7 +112,7 @@ Socio-economic classification of a patient for an encounter.
 A case is opened per HIS encounter (`cases.transaction_id`), with `created_by`, `assigned_user_id` and a manual card colour. Extra encounters link through `case_hospital_transactions` with a decision-time snapshot.
 - Actions: assign, refer, close, reopen, restore, reassess. Each records the worker's reason.
 - Social Case Study Report: `draft → for_review → finalized`, numbered `SCSR-{year}-{6}`, signed off, amendable, printable as PDF.
-- Caseload (`/caseload`), progress notes, case summary PDF.
+- Caseload (`/caseload`), progress notes, case summary PDF. Only a note's author may edit or delete it; holders of the `cases.finalize_social_case` sign-off can override.
 - Front: `features/cases`. Back: `CaseModelService`, `SocialCaseService`, `SocialCaseNumberService`, `CaseProgressNoteService`, `CaseHospitalTransactionService`, `CaseSummaryPdfService`, `SocialCaseStudyPdfService`.
 
 ### Watchers
@@ -126,7 +148,7 @@ Social case reports and the TAT report (CSV/PDF), plus patient assistance report
 - Front: `features/reports`. Back: `SocialCaseReportService`, `TurnaroundReportService`, `PatientAssistanceReportService`.
 
 ### Library
-Reference lists managed in-app (`/library`, `library.manage`) and in Filament: guarantors, types of assistance, modes of assistance, fund sources, document types (the Docs tab dropdown), signatories printed on forms, TAT targets.
+Reference lists managed in-app (`/library`, `library.manage`, Admin only; reads are open to any signed-in user) and in Filament: guarantors, types of assistance, modes of assistance, fund sources, document types (the Docs tab dropdown), signatories printed on forms, TAT targets.
 - Front: `features/library`. Back: `AssistantTypeService`, `GuarantorService`, models `FundSource`, `ModeOfAssistance`, `DocumentType`, `Signatory`, `TurnaroundTarget`.
 
 ### Audit

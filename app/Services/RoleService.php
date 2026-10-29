@@ -69,11 +69,11 @@ class RoleService
      */
     public function isCore(Role $role): bool
     {
-        return array_key_exists($role->name, RolesAndPermissionsSeeder::ROLES);
+        return $role->isCore();
     }
 
     public function isSuperAdmin(Role $role): bool
     {
-        return $role->name === RolesAndPermissionsSeeder::SUPER_ADMIN;
+        return $role->isSuperAdmin();
     }
 }

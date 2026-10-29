@@ -29,7 +29,7 @@ function moduleUser(string $role): User
 }
 
 it('lets an admin create a custom permission through the panel', function () {
-    actingAs(moduleUser('Admin'));
+    actingAs(moduleUser('Super Admin'));
 
     Livewire::test(CreatePermission::class)
         ->fillForm(['name' => 'reports.export', 'guard_name' => 'web'])
@@ -41,7 +41,7 @@ it('lets an admin create a custom permission through the panel', function () {
 });
 
 it('lets an admin rename a custom permission', function () {
-    actingAs(moduleUser('Admin'));
+    actingAs(moduleUser('Super Admin'));
     $permission = Permission::create(['name' => 'reports.export', 'guard_name' => 'web']);
 
     Livewire::test(EditPermission::class, ['record' => $permission->getKey()])
@@ -53,7 +53,7 @@ it('lets an admin rename a custom permission', function () {
 });
 
 it('rejects a duplicate permission name', function () {
-    actingAs(moduleUser('Admin'));
+    actingAs(moduleUser('Super Admin'));
 
     Livewire::test(CreatePermission::class)
         ->fillForm(['name' => 'patients.view', 'guard_name' => 'web'])
@@ -62,7 +62,7 @@ it('rejects a duplicate permission name', function () {
 });
 
 it('protects core catalog permissions from edit and delete', function () {
-    actingAs(moduleUser('Admin'));
+    actingAs(moduleUser('Super Admin'));
     $core = Permission::findByName('patients.view');
 
     expect(PermissionResource::isCore($core))->toBeTrue()
@@ -71,7 +71,7 @@ it('protects core catalog permissions from edit and delete', function () {
 });
 
 it('allows edit and delete of custom permissions', function () {
-    actingAs(moduleUser('Admin'));
+    actingAs(moduleUser('Super Admin'));
     $custom = Permission::create(['name' => 'reports.export', 'guard_name' => 'web']);
 
     expect(PermissionResource::isCore($custom))->toBeFalse()
@@ -87,7 +87,7 @@ it('forbids permission management without roles.manage', function () {
 });
 
 it('prevents deleting the Admin super-admin role from anywhere', function () {
-    $admin = Role::findByName('Admin');
+    $admin = Role::findByName('Super Admin');
 
     expect(fn () => $admin->delete())->toThrow(RuntimeException::class);
     expect(Role::whereKey($admin->getKey())->exists())->toBeTrue();
@@ -102,8 +102,8 @@ it('still allows deleting a non-super-admin role', function () {
 });
 
 it('returns 403 when deleting the Admin role via the API', function () {
-    Sanctum::actingAs(moduleUser('Admin'));
-    $adminRole = Role::where('name', 'Admin')->firstOrFail();
+    Sanctum::actingAs(moduleUser('Super Admin'));
+    $adminRole = Role::where('name', 'Super Admin')->firstOrFail();
 
     $this->deleteJson("/api/roles/{$adminRole->getKey()}")->assertForbidden();
 
@@ -111,7 +111,7 @@ it('returns 403 when deleting the Admin role via the API', function () {
 });
 
 it('deletes a custom role via the API', function () {
-    Sanctum::actingAs(moduleUser('Admin'));
+    Sanctum::actingAs(moduleUser('Super Admin'));
     $role = Role::create(['name' => 'Temp', 'guard_name' => 'web']);
 
     $this->deleteJson("/api/roles/{$role->getKey()}")->assertNoContent();
