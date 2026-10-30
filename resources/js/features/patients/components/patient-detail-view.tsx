@@ -434,6 +434,8 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
       <FamilyMemberDialog
         isOpen={isAddFamilyOpen || editingFamilyMember !== null}
         initialMember={editingFamilyMember}
+        patientCivilStatus={patient.civilStatus}
+        existingMembers={patient.familyMembers}
         onClose={() => {
           setIsAddFamilyOpen(false)
           setEditingFamilyMember(null)
