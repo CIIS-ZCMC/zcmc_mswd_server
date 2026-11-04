@@ -73,6 +73,8 @@ Sign-in is ZCMC IAM (OAuth2 authorization code + PKCE, server-side exchange). Th
 
   Every role has a stable, unique system `code` (`roles.code`, lower snake case) beside its display `name`. Code and IAM matching key on the code (`User::hasRoleCode()`, `RolesAndPermissionsSeeder::ROLE_CODES`, `SUPER_ADMIN_CODE`), so a role can be renamed safely. Core roles are the ones in `ROLE_CODES`; the code is fixed once created (the API rejects it on update, Filament disables it) and defaults to the name in snake case when omitted. The frontend gets `auth.roleCodes`; `useHasRole(code)` matches codes.
 
+  Supervisor and Admin hold `queue.override` (taking over another worker's visit); Processor and Case Manager don't.
+
   Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); users/roles and `/admin` (`panel.access`) are Super Admin only. `admin` can be granted from IAM; `super_admin` never.
 - Web page routes carry the same `permission:` gates as the API. `/` sends a user without `patients.view` to their first module (cases, queue, DAR, reports). The sidebar tabs and the patient-list query follow `usePermission`.
 - `IAM_ROLE_MAP` is only needed when IAM sends a value that is neither a role code nor a name.
@@ -136,11 +138,14 @@ In `hospital/components/dialogs/`:
 ### Queue & Turnaround Time (TAT)
 Time in → Start → Complete (or Cancel) per HIS encounter visit, stamped by the server clock.
 - One open visit per encounter. `served_by` = whoever clicks Start. Cancelled visits are excluded from TAT figures.
+- A visit in progress belongs to its `served_by`: only they can complete or cancel it (403 otherwise), and `useQueueActionGate` makes the patient's records view-only for everyone else except Admin and Super Admin. That records lock is UI only; the record APIs don't check it.
+- `queue.override` (Supervisor, Admin, Super Admin) can Take Over a visit with a reason (`POST /service-visits/{id}/take-over`). The timer keeps running and `served_by` moves to them.
+- Completing a visit offers "Add to DAR?". A visit left unfiled shows Add to DAR on the worker's Served Today card.
 - Targets per stage (waiting / processing / total, minutes) are set in the Library.
-- Front: `features/queue` (`QueueBoard`, `ServiceVisitPanel`). Back: `ServiceVisitService`; permission `queue.manage`.
+- Front: `features/queue` (`QueueBoard`, `ServiceVisitPanel`, `VisitDarPrompt`, `TakeOverVisitDialog`, `lib/visit-lock.ts`). Back: `ServiceVisitService`; permissions `queue.manage`, `queue.override`.
 
 ### DAR (Daily Accomplishment Report)
-Manual entries by each worker: patient (registry only), activity, time served, remarks. Own entries only, one day per report; PDF (Prepared by) and CSV.
+Entries by each worker: patient (registry only), activity, time served, remarks. Own entries only, one day per report; PDF (Prepared by) and CSV. A line can be filed from a queue visit the worker completed (`dar_entries.service_visit_id`), once per worker; a deleted line can be filed again.
 - Front: `features/dar`. Back: `DarReportService`; permission `dar.manage`.
 
 ### Reports
@@ -171,6 +176,6 @@ System-wide activity log viewer (`/audit`) and per-record history popovers.
 
 ## Plans
 
-- `docs/` holds only plans for work in active development. Current: `WATCHER_MODULE_PLAN.md`.
+- `docs/` holds only plans for work in active development. Current: `WATCHER_MODULE_PLAN.md`, `QUEUE_LOCK_PLAN.md`.
 - Write a plan in `docs/<FEATURE>_PLAN.md` for multi-session or multi-layer work. Remove it when the feature ships, and update the module's entry above.
 - Finished plans are in git history (`git log -- docs/`). The code and migrations are the source of truth.

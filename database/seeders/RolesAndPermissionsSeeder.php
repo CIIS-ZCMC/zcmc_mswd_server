@@ -100,6 +100,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'dar.manage',
         // Turnaround time: timing patients in, starting and completing their service
         'queue.manage',
+        // Taking over a visit another worker has in progress
+        'queue.override',
         // Reference / lookup data
         'settings.manage',
         // In-app Library: modes of assistance and fund sources offered on the UIS
@@ -133,7 +135,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
-            'dar.manage', 'queue.manage',
+            'dar.manage', 'queue.manage', 'queue.override',
             'library.manage',
             'users.view',
         ],
@@ -152,6 +154,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'guarantee.view', 'guarantee.create', 'guarantee.update',
             // Queue, DAR, Reports
             'queue.manage',
+            'queue.override',
             'dar.manage',
             'reports.view', 'reports.generate',
             // Sign-off authority

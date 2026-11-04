@@ -40,6 +40,10 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'served_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),
         new OA\Property(property: 'completed_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),
         new OA\Property(property: 'cancelled_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),
+        new OA\Property(property: 'taken_over_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),
+        new OA\Property(property: 'taken_over_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'takeover_reason', type: 'string', nullable: true),
+        new OA\Property(property: 'dar_entry_id', type: 'integer', nullable: true, description: "The caller's own DAR line for this visit."),
         new OA\Property(property: 'patient', type: 'object', nullable: true, description: 'Same shape as the DAR patient.'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
         new OA\Property(property: 'updated_at', type: 'string', format: 'date-time'),
@@ -136,7 +140,7 @@ final class ServiceVisitDocs
         operationId: 'service-visits.start',
         tags: ['Queue'],
         summary: 'Start serving a waiting patient',
-        description: 'waiting → in_progress; the caller becomes `served_by`. 422 from any other status. Requires the `queue.manage` permission.',
+        description: 'waiting → in_progress; the caller becomes `served_by` and holds the visit. 422 from any other status. Requires the `queue.manage` permission.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'visit', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
@@ -156,7 +160,7 @@ final class ServiceVisitDocs
         operationId: 'service-visits.complete',
         tags: ['Queue'],
         summary: 'Complete a visit in progress',
-        description: 'in_progress → completed; stops the turnaround clock. 422 from any other status. Requires the `queue.manage` permission.',
+        description: 'in_progress → completed; stops the turnaround clock. 403 unless the caller is `served_by`; 422 from any other status. Requires the `queue.manage` permission.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'visit', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(required: false, content: new OA\JsonContent(properties: [
@@ -179,7 +183,7 @@ final class ServiceVisitDocs
         operationId: 'service-visits.cancel',
         tags: ['Queue'],
         summary: 'Cancel an open visit',
-        description: 'waiting or in_progress → cancelled, with a reason. Cancelled visits are left out of turnaround figures. Requires the `queue.manage` permission.',
+        description: 'waiting or in_progress → cancelled, with a reason. A visit in progress can be cancelled only by its `served_by` (403 otherwise). Cancelled visits are left out of turnaround figures. Requires the `queue.manage` permission.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'visit', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
@@ -197,4 +201,28 @@ final class ServiceVisitDocs
         ],
     )]
     public function cancel(): void {}
+
+    #[OA\Post(
+        path: '/service-visits/{visit}/take-over',
+        operationId: 'service-visits.take-over',
+        tags: ['Queue'],
+        summary: "Take over another worker's visit in progress",
+        description: 'The caller becomes `served_by`, with a reason; the turnaround clock keeps running. 422 unless in progress, or when it is already the caller\'s. Requires the `queue.manage` and `queue.override` permissions.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'visit', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(
+            required: ['takeover_reason'],
+            properties: [new OA\Property(property: 'takeover_reason', type: 'string', maxLength: 255)],
+        )),
+        responses: [
+            new OA\Response(response: 200, description: 'The visit', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/ServiceVisit'),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+        ],
+    )]
+    public function takeOver(): void {}
 }

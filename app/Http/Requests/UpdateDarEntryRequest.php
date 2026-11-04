@@ -4,7 +4,7 @@ namespace App\Http\Requests;
 
 use Illuminate\Contracts\Validation\ValidationRule;
 
-/** A partial edit of a DAR line: the store rules, each field optional. */
+/** A partial edit of a DAR line: the store rules, each field optional. The visit it was filed from stays fixed. */
 class UpdateDarEntryRequest extends StoreDarEntryRequest
 {
     /**
@@ -13,6 +13,7 @@ class UpdateDarEntryRequest extends StoreDarEntryRequest
     public function rules(): array
     {
         return collect(parent::rules())
+            ->except('service_visit_id')
             ->map(fn (array $rules) => ['sometimes', ...array_filter($rules, fn ($rule) => $rule !== 'required')])
             ->all();
     }

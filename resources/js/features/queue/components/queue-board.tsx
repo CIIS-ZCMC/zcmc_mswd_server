@@ -15,6 +15,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/features/auth/hooks/use-auth"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { ApiError } from "@/lib/api-client"
 import {
@@ -36,7 +37,9 @@ import {
   useStartVisit,
 } from "../hooks/use-queue"
 import { QueueCard } from "./queue-card"
+import { TakeOverVisitDialog } from "./take-over-visit-dialog"
 import { TimeInDialog } from "./time-in-dialog"
+import { VisitDarPrompt } from "./visit-dar-prompt"
 import type { ServiceVisit } from "../types"
 
 function getTodayString(): string {
@@ -49,6 +52,9 @@ function getTodayString(): string {
 
 export const QueueBoard: React.FC = () => {
   const canManage = usePermission("queue.manage")
+  const canOverride = usePermission("queue.override")
+  const canAddToDar = usePermission("dar.manage")
+  const { user } = useAuth()
   const [selectedDate, setSelectedDate] = useState<string>(getTodayString)
   const [searchQuery, setSearchQuery] = useState("")
   const [timeInOpen, setTimeInOpen] = useState(false)
@@ -86,6 +92,11 @@ export const QueueBoard: React.FC = () => {
 
   const [actionError, setActionError] = useState<string | null>(null)
 
+  const [takeOverVisit, setTakeOverVisit] = useState<ServiceVisit | null>(null)
+  const [darVisit, setDarVisit] = useState<ServiceVisit | null>(null)
+  // True when the card's Add to DAR opened it, so the "Add to DAR?" question is skipped.
+  const [darDirect, setDarDirect] = useState(false)
+
   const handleStart = async (visit: ServiceVisit) => {
     setActionError(null)
     try {
@@ -107,12 +118,16 @@ export const QueueBoard: React.FC = () => {
     if (!activeVisit) return
     setActionError(null)
     try {
-      await completeMutation.mutateAsync({
+      const completed = await completeMutation.mutateAsync({
         visitId: activeVisit.id,
         input: { remarks: completeRemarks.trim() || undefined },
       })
       setCompleteOpen(false)
       setActiveVisit(null)
+      if (canAddToDar) {
+        setDarDirect(false)
+        setDarVisit(completed)
+      }
     } catch (err) {
       setActionError(
         err instanceof ApiError ? err.message : "Failed to complete visit."
@@ -362,8 +377,11 @@ export const QueueBoard: React.FC = () => {
                     visit={visit}
                     now={now}
                     canManage={canManage}
+                    currentUserId={user?.id}
+                    canOverride={canOverride}
                     onComplete={handleOpenComplete}
                     onCancel={handleOpenCancel}
+                    onTakeOver={setTakeOverVisit}
                     onViewEncounter={handleViewEncounter}
                   />
                 ))
@@ -405,6 +423,12 @@ export const QueueBoard: React.FC = () => {
                     visit={visit}
                     now={now}
                     canManage={canManage}
+                    currentUserId={user?.id}
+                    canAddToDar={canAddToDar}
+                    onAddToDar={(completed) => {
+                      setDarDirect(true)
+                      setDarVisit(completed)
+                    }}
                     onViewEncounter={handleViewEncounter}
                   />
                 ))
@@ -539,6 +563,15 @@ export const QueueBoard: React.FC = () => {
       </Dialog>
 
       <TimeInDialog open={timeInOpen} onOpenChange={setTimeInOpen} />
+      <TakeOverVisitDialog
+        visit={takeOverVisit}
+        onClose={() => setTakeOverVisit(null)}
+      />
+      <VisitDarPrompt
+        visit={darVisit}
+        skipQuestion={darDirect}
+        onClose={() => setDarVisit(null)}
+      />
     </div>
   )
 }

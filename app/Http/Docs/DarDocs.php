@@ -13,6 +13,7 @@ use OpenApi\Attributes as OA;
     schema: 'DarEntry',
     properties: [
         new OA\Property(property: 'id', type: 'integer'),
+        new OA\Property(property: 'service_visit_id', type: 'integer', nullable: true, description: 'The queue visit this line was filed from.'),
         new OA\Property(property: 'entry_date', type: 'string', format: 'date'),
         new OA\Property(property: 'served_time', type: 'string', nullable: true, example: '09:30'),
         new OA\Property(property: 'activity', type: 'string', enum: ['interview', 'assessment', 'counseling', 'guarantee_assistance', 'referral', 'follow_up', 'home_ward_visit', 'documentation', 'other']),
@@ -36,6 +37,7 @@ use OpenApi\Attributes as OA;
     description: 'A registry patient (not deleted), a date no later than today, and an activity key. On update every field is optional.',
     properties: [
         new OA\Property(property: 'patient_id', type: 'integer'),
+        new OA\Property(property: 'service_visit_id', type: 'integer', nullable: true, description: 'On create only: a visit the caller completed for this patient, once per worker.'),
         new OA\Property(property: 'entry_date', type: 'string', format: 'date'),
         new OA\Property(property: 'served_time', type: 'string', nullable: true, example: '09:30'),
         new OA\Property(property: 'activity', type: 'string'),

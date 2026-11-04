@@ -5,11 +5,13 @@ import {
   getPatientVisits,
   getQueue,
   startVisit,
+  takeOverVisit,
   timeInVisit,
 } from "../api/queue-api"
 import type {
   CancelVisitInput,
   CompleteVisitInput,
+  TakeOverVisitInput,
   TimeInInput,
 } from "../types"
 import { PATIENTS_LIST_QUERY_KEY } from "@/features/patients/hooks/use-patients"
@@ -62,7 +64,7 @@ export function usePatientVisits(
 }
 
 /** An ISO timestamp as the "HH:mm" an `<input type="time">` takes. */
-function toTimeInput(iso: string | null): string {
+export function toTimeInput(iso: string | null): string {
   if (!iso) return ""
   const date = new Date(iso)
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
@@ -107,11 +109,14 @@ export function useTimeInVisit() {
   })
 }
 
+// The mutations below refresh on failure too: a refusal usually means another
+// worker got there first, and the screen should show that straight away.
+
 export function useStartVisit() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (visitId: number) => startVisit(visitId),
-    onSuccess: () => invalidateVisitQueries(queryClient),
+    onSettled: () => invalidateVisitQueries(queryClient),
   })
 }
 
@@ -125,7 +130,7 @@ export function useCompleteVisit() {
       visitId: number
       input?: CompleteVisitInput
     }) => completeVisit(visitId, input),
-    onSuccess: () => invalidateVisitQueries(queryClient),
+    onSettled: () => invalidateVisitQueries(queryClient),
   })
 }
 
@@ -139,6 +144,20 @@ export function useCancelVisit() {
       visitId: number
       input: CancelVisitInput
     }) => cancelVisit(visitId, input),
-    onSuccess: () => invalidateVisitQueries(queryClient),
+    onSettled: () => invalidateVisitQueries(queryClient),
+  })
+}
+
+export function useTakeOverVisit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      visitId,
+      input,
+    }: {
+      visitId: number
+      input: TakeOverVisitInput
+    }) => takeOverVisit(visitId, input),
+    onSettled: () => invalidateVisitQueries(queryClient),
   })
 }

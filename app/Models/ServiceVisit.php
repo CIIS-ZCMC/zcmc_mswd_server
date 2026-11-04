@@ -6,6 +6,7 @@ use App\Models\Concerns\Auditable;
 use Illuminate\Database\Eloquent\Builder;
 use Illuminate\Database\Eloquent\Model;
 use Illuminate\Database\Eloquent\Relations\BelongsTo;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Support\Carbon;
 
 /**
@@ -43,6 +44,9 @@ class ServiceVisit extends Model
         'served_by',
         'completed_by',
         'cancelled_by',
+        'taken_over_by',
+        'taken_over_at',
+        'takeover_reason',
     ];
 
     protected function casts(): array
@@ -53,6 +57,7 @@ class ServiceVisit extends Model
             'started_at' => 'datetime',
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
+            'taken_over_at' => 'datetime',
         ];
     }
 
@@ -79,6 +84,17 @@ class ServiceVisit extends Model
     public function cancelledBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'cancelled_by');
+    }
+
+    public function takenOverBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'taken_over_by');
+    }
+
+    /** The DAR lines workers filed for this visit. */
+    public function darEntries(): HasMany
+    {
+        return $this->hasMany(DarEntry::class);
     }
 
     public function scopeOpen(Builder $query): void

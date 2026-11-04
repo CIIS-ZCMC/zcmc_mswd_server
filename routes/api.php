@@ -416,6 +416,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('service-visits/{visit}/start', [ServiceVisitController::class, 'start']);
     Route::post('service-visits/{visit}/complete', [ServiceVisitController::class, 'complete']);
     Route::post('service-visits/{visit}/cancel', [ServiceVisitController::class, 'cancel']);
+    Route::post('service-visits/{visit}/take-over', [ServiceVisitController::class, 'takeOver']);
 
     // Released-aid report snapshots
     Route::get('assistances/{assistance}/reports', [PatientAssistanceReportController::class, 'forAssistance']);

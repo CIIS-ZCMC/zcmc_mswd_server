@@ -5,9 +5,11 @@ use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\ServiceVisit;
 use App\Models\User;
+use App\Services\ServiceVisitService;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Carbon;
+use Illuminate\Validation\ValidationException;
 use Laravel\Sanctum\Sanctum;
 
 uses(RefreshDatabase::class);
@@ -176,6 +178,123 @@ it('validates the time-in body', function () {
         ->assertJsonValidationErrors(['his_transaction_id', 'purpose']);
 });
 
+// ── Holding a visit in progress ──────────────────────────────────────────────
+
+it('refuses another worker finishing a visit in progress', function (string $action) {
+    $visit = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->desk->id]);
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson("/api/service-visits/{$visit->id}/{$action}", ['cancel_reason' => 'x'])
+        ->assertForbidden()
+        ->assertJsonPath('message', 'Being served by Ana Desk.');
+
+    expect($visit->fresh()->status)->toBe(ServiceVisit::STATUS_IN_PROGRESS);
+})->with(['complete', 'cancel']);
+
+it('lets the server finish their own visit', function (string $action, string $status) {
+    $visit = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->desk->id]);
+    Sanctum::actingAs($this->desk);
+
+    $this->postJson("/api/service-visits/{$visit->id}/{$action}", ['cancel_reason' => 'x'])
+        ->assertOk()
+        ->assertJsonPath('data.status', $status);
+})->with([
+    ['complete', 'completed'],
+    ['cancel', 'cancelled'],
+]);
+
+it('leaves a visit with no recorded server open to any worker', function () {
+    $visit = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now()]);
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson("/api/service-visits/{$visit->id}/complete")->assertOk();
+});
+
+it('refuses a second start, naming who is serving, and keeps the first server', function () {
+    $visit = queueVisit($this->patient, $this->desk);
+
+    Sanctum::actingAs($this->desk);
+    $this->postJson("/api/service-visits/{$visit->id}/start")->assertOk();
+
+    Sanctum::actingAs($this->worker);
+    $this->postJson("/api/service-visits/{$visit->id}/start")
+        ->assertUnprocessable()
+        ->assertJsonPath('errors.status.0', 'Ana Desk is already serving this patient.');
+
+    expect($visit->fresh()->served_by)->toBe($this->desk->id);
+});
+
+it('decides a start by the current row, not a copy loaded before someone else started', function () {
+    $visit = queueVisit($this->patient, $this->desk);
+    $stale = ServiceVisit::find($visit->id);
+    $service = app(ServiceVisitService::class);
+
+    $service->start($visit, $this->desk);
+
+    expect(fn () => $service->start($stale, $this->worker))->toThrow(ValidationException::class)
+        ->and($visit->fresh()->served_by)->toBe($this->desk->id);
+});
+
+it('lets a supervisor or admin take over, moving the visit without touching its clock', function (string $role) {
+    $visit = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->desk->id]);
+    $boss = queueWorker($role, ['employee_name' => 'Boss']);
+
+    Carbon::setTestNow('2026-10-14 09:00:00');
+    Sanctum::actingAs($boss);
+
+    $this->postJson("/api/service-visits/{$visit->id}/take-over", ['takeover_reason' => 'Ana went home'])
+        ->assertOk()
+        ->assertJsonPath('data.status', 'in_progress')
+        ->assertJsonPath('data.served_by.id', $boss->id)
+        ->assertJsonPath('data.taken_over_by.name', 'Boss')
+        ->assertJsonPath('data.takeover_reason', 'Ana went home')
+        ->assertJsonPath('data.processing_minutes', 60);
+
+    expect($visit->fresh()->started_at->toDateTimeString())->toBe('2026-10-14 08:00:00');
+
+    $row = Activity::query()->forSubjectKey($visit->getMorphClass(), $visit->id)->latest('id')->first();
+    expect($row->attribute_changes['old']['served_by'] ?? $row->properties['old']['served_by'])->toBe($this->desk->id);
+
+    // The previous server is now the one locked out.
+    Sanctum::actingAs($this->desk);
+    $this->postJson("/api/service-visits/{$visit->id}/complete")->assertForbidden();
+
+    Sanctum::actingAs($boss);
+    $this->postJson("/api/service-visits/{$visit->id}/complete")->assertOk();
+})->with(['Supervisor', 'Admin']);
+
+it('keeps take over from processors and case managers', function (string $role) {
+    $visit = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->desk->id]);
+    Sanctum::actingAs(queueWorker($role));
+
+    $this->postJson("/api/service-visits/{$visit->id}/take-over", ['takeover_reason' => 'x'])->assertForbidden();
+
+    expect($visit->fresh()->served_by)->toBe($this->desk->id);
+})->with(['Processor', 'Case Manager']);
+
+it('requires a reason to take over', function () {
+    $visit = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->desk->id]);
+    Sanctum::actingAs(queueWorker('Supervisor'));
+
+    $this->postJson("/api/service-visits/{$visit->id}/take-over")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('takeover_reason');
+});
+
+it('refuses a take over of your own visit or one not in progress', function () {
+    $boss = queueWorker('Supervisor');
+    Sanctum::actingAs($boss);
+
+    $own = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $boss->id]);
+    $waiting = queueVisit($this->patient, $this->desk, ['his_transaction_id' => 556]);
+
+    foreach ([$own, $waiting] as $visit) {
+        $this->postJson("/api/service-visits/{$visit->id}/take-over", ['takeover_reason' => 'x'])
+            ->assertUnprocessable()
+            ->assertJsonValidationErrors('status');
+    }
+});
+
 // ── Reads ────────────────────────────────────────────────────────────────────
 
 it('lists the queue: open visits from any day, and the day\'s completions', function () {
@@ -235,6 +354,7 @@ it('forbids every route without queue.manage', function (string $method, string 
     ['POST', '/api/service-visits/{visit}/start'],
     ['POST', '/api/service-visits/{visit}/complete'],
     ['POST', '/api/service-visits/{visit}/cancel'],
+    ['POST', '/api/service-visits/{visit}/take-over'],
 ]);
 
 it('rejects guests', function () {

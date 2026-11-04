@@ -7,19 +7,27 @@ import {
   CheckCircle2,
   Clock,
   ExternalLink,
+  FileCheck,
   Play,
   User,
   UserCheck,
+  UserCog,
 } from "lucide-react"
+import { visitLockedBy } from "../lib/visit-lock"
 import type { ServiceVisit } from "../types"
 
 interface QueueCardProps {
   visit: ServiceVisit
   now: number
   canManage: boolean
+  currentUserId?: number | null
+  canOverride?: boolean
+  canAddToDar?: boolean
   onStart?: (visit: ServiceVisit) => void
   onComplete?: (visit: ServiceVisit) => void
   onCancel?: (visit: ServiceVisit) => void
+  onTakeOver?: (visit: ServiceVisit) => void
+  onAddToDar?: (visit: ServiceVisit) => void
   onViewEncounter?: (visit: ServiceVisit) => void
 }
 
@@ -39,14 +47,23 @@ export const QueueCard: React.FC<QueueCardProps> = ({
   visit,
   now,
   canManage,
+  currentUserId,
+  canOverride = false,
+  canAddToDar = false,
   onStart,
   onComplete,
   onCancel,
+  onTakeOver,
+  onAddToDar,
   onViewEncounter,
 }) => {
   const isWaiting = visit.status === "waiting"
   const isInProgress = visit.status === "in_progress"
   const isCompleted = visit.status === "completed"
+  const lockedBy = visitLockedBy(visit, currentUserId)
+  // A DAR is its owner's, so only the worker who finished the visit can file it.
+  const canFileDar =
+    canAddToDar && isCompleted && visit.completedBy?.id === currentUserId
 
   // Live seconds calculation
   const elapsedSeconds = useMemo(() => {
@@ -218,6 +235,12 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                   <strong className="text-foreground">
                     {visit.servedBy?.name || "Worker"}
                   </strong>
+                  {visit.takenOverBy && (
+                    <span title={visit.takeoverReason ?? undefined}>
+                      {" "}
+                      (took over)
+                    </span>
+                  )}
                 </span>
               </>
             ) : isCompleted ? (
@@ -269,7 +292,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
 
           {canManage && (
             <div className="ml-auto flex items-center gap-1.5">
-              {(isWaiting || isInProgress) && onCancel && (
+              {(isWaiting || (isInProgress && !lockedBy)) && onCancel && (
                 <Button
                   size="sm"
                   variant="ghost"
@@ -292,7 +315,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                 </Button>
               )}
 
-              {isInProgress && onComplete && (
+              {isInProgress && !lockedBy && onComplete && (
                 <Button
                   size="sm"
                   onClick={() => onComplete(visit)}
@@ -302,6 +325,41 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                   Complete
                 </Button>
               )}
+
+              {lockedBy && canOverride && onTakeOver && (
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={() => onTakeOver(visit)}
+                  className="h-7 gap-1 px-2.5 text-[11px] font-bold"
+                >
+                  <UserCog className="size-3" />
+                  Take Over
+                </Button>
+              )}
+
+              {canFileDar &&
+                (visit.darEntryId !== null ? (
+                  <Badge
+                    variant="outline"
+                    className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"
+                  >
+                    <FileCheck className="size-3" />
+                    In DAR
+                  </Badge>
+                ) : (
+                  onAddToDar && (
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={() => onAddToDar(visit)}
+                      className="h-7 gap-1 px-2.5 text-[11px] font-bold"
+                    >
+                      <FileCheck className="size-3" />
+                      Add to DAR
+                    </Button>
+                  )
+                ))}
             </div>
           )}
         </div>

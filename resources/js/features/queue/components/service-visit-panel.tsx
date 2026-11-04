@@ -22,6 +22,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Skeleton } from "@/components/ui/skeleton"
+import { useAuth } from "@/features/auth/hooks/use-auth"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { ApiError } from "@/lib/api-client"
 import {
@@ -33,6 +34,7 @@ import {
   LogIn,
   Play,
   Timer,
+  UserCog,
 } from "lucide-react"
 import {
   useCancelVisit,
@@ -41,6 +43,10 @@ import {
   useStartVisit,
   useTimeInVisit,
 } from "../hooks/use-queue"
+import { visitLockedBy } from "../lib/visit-lock"
+import type { ServiceVisit } from "../types"
+import { TakeOverVisitDialog } from "./take-over-visit-dialog"
+import { VisitDarPrompt } from "./visit-dar-prompt"
 
 interface ServiceVisitPanelProps {
   patientId: number | string
@@ -64,6 +70,9 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
   transactionId,
 }) => {
   const canManage = usePermission("queue.manage")
+  const canOverride = usePermission("queue.override")
+  const canAddToDar = usePermission("dar.manage")
+  const { user } = useAuth()
   const { data: visits = [], isLoading } = usePatientVisits(
     patientId,
     transactionId,
@@ -98,6 +107,9 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
 
   const [dialogError, setDialogError] = useState<string | null>(null)
 
+  const [takeOverOpen, setTakeOverOpen] = useState(false)
+  const [darVisit, setDarVisit] = useState<ServiceVisit | null>(null)
+
   // Find active open visit (waiting or in_progress)
   const openVisit = useMemo(
     () =>
@@ -106,6 +118,8 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
       ) ?? null,
     [visits]
   )
+
+  const lockedBy = openVisit ? visitLockedBy(openVisit, user?.id) : null
 
   const handleTimeInSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -146,7 +160,7 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
     if (!openVisit) return
     setDialogError(null)
     try {
-      await completeMutation.mutateAsync({
+      const completed = await completeMutation.mutateAsync({
         visitId: openVisit.id,
         input: {
           remarks: completeRemarks.trim() || undefined,
@@ -154,6 +168,7 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
       })
       setCompleteOpen(false)
       setCompleteRemarks("")
+      if (canAddToDar) setDarVisit(completed)
     } catch (err) {
       setDialogError(
         err instanceof ApiError ? err.message : "Failed to complete visit."
@@ -346,19 +361,41 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
             {/* Quick Actions for Open Visit */}
             {canManage && (
               <div className="mt-4 flex flex-wrap items-center justify-end gap-2 border-t border-border/60 pt-3">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={() => {
-                    setDialogError(null)
-                    setCancelReason("")
-                    setCancelOpen(true)
-                  }}
-                  className="h-8 gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
-                >
-                  <Ban className="size-3.5" />
-                  Cancel Visit
-                </Button>
+                {lockedBy && (
+                  <span className="mr-auto text-xs text-muted-foreground">
+                    Being served by{" "}
+                    <strong className="text-foreground">{lockedBy.name}</strong>
+                    . Only they can complete or cancel this visit.
+                  </span>
+                )}
+
+                {lockedBy && canOverride && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => setTakeOverOpen(true)}
+                    className="h-8 gap-1.5 text-xs font-bold"
+                  >
+                    <UserCog className="size-3.5" />
+                    Take Over
+                  </Button>
+                )}
+
+                {!lockedBy && (
+                  <Button
+                    size="sm"
+                    variant="outline"
+                    onClick={() => {
+                      setDialogError(null)
+                      setCancelReason("")
+                      setCancelOpen(true)
+                    }}
+                    className="h-8 gap-1.5 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                  >
+                    <Ban className="size-3.5" />
+                    Cancel Visit
+                  </Button>
+                )}
 
                 {openVisit.status === "waiting" && (
                   <Button
@@ -376,7 +413,7 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
                   </Button>
                 )}
 
-                {openVisit.status === "in_progress" && (
+                {openVisit.status === "in_progress" && !lockedBy && (
                   <Button
                     size="sm"
                     onClick={() => {
@@ -757,6 +794,12 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
           </form>
         </DialogContent>
       </Dialog>
+
+      <TakeOverVisitDialog
+        visit={takeOverOpen ? openVisit : null}
+        onClose={() => setTakeOverOpen(false)}
+      />
+      <VisitDarPrompt visit={darVisit} onClose={() => setDarVisit(null)} />
     </div>
   )
 }
