@@ -10,8 +10,14 @@ interface SharedProps extends Record<string, unknown> {
     roles: string[]
     roleCodes: string[]
     permissions: string[]
+    /** Which sign-in staff use, from `services.auth_provider`. */
+    provider: AuthProvider
+    /** The ZCMC Portal (UMIS landing page); null until configured. */
+    portalUrl: string | null
   }
 }
+
+export type AuthProvider = "umis" | "iam"
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const
 
@@ -37,8 +43,8 @@ export function useAuth() {
       queryClient.setQueryData(AUTH_QUERY_KEY, null)
       queryClient.clear()
 
-      // Ending the IAM session is a real navigation: an XHR cannot follow a
-      // redirect to another origin.
+      // Leaving for the sign-in provider (e.g. ending the IAM session) is a
+      // real navigation: an XHR cannot follow a redirect to another origin.
       if (result?.redirect) {
         window.location.assign(result.redirect)
         return
@@ -51,8 +57,12 @@ export function useAuth() {
   const roles = page.props?.auth?.roles ?? user?.roles ?? []
   const roleCodes = page.props?.auth?.roleCodes ?? user?.roleCodes ?? []
   const permissions = page.props?.auth?.permissions ?? user?.permissions ?? []
+  const authProvider: AuthProvider = page.props?.auth?.provider ?? "umis"
+  const portalUrl = page.props?.auth?.portalUrl ?? null
 
   return {
+    authProvider,
+    portalUrl,
     user,
     roles,
     roleCodes,

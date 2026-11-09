@@ -9,6 +9,7 @@ uses(RefreshDatabase::class);
 
 beforeEach(function () {
     config([
+        'services.auth_provider' => 'iam',
         'services.iam.base_url' => 'https://iam.test',
         'services.iam.client_id' => 'client-123',
         'services.iam.client_secret' => 'secret-456',
@@ -132,7 +133,7 @@ it('rejects a callback whose state does not match', function () {
 
     $this->get('/callback?code=abc&state=forged')
         ->assertRedirect('/login')
-        ->assertSessionHas('iam_error');
+        ->assertSessionHas('auth_error');
 
     $this->assertGuest();
     Http::assertNothingSent();
@@ -141,7 +142,7 @@ it('rejects a callback whose state does not match', function () {
 it('shows the reason when IAM refuses the person', function () {
     $this->get('/callback?error=access_denied')
         ->assertRedirect('/login')
-        ->assertSessionHas('iam_error', fn ($m) => str_contains($m, 'not admitted'));
+        ->assertSessionHas('auth_error', fn ($m) => str_contains($m, 'not admitted'));
 
     $this->assertGuest();
 });
@@ -162,7 +163,7 @@ it('refuses sign-in when IAM rejects the code exchange', function () {
 
     $this->get('/callback?code=abc&state='.$state)
         ->assertRedirect('/login')
-        ->assertSessionHas('iam_error');
+        ->assertSessionHas('auth_error');
 
     $this->assertGuest();
 });

@@ -1,6 +1,8 @@
 <?php
 
+use App\Http\Middleware\EnsureAuthProvider;
 use App\Http\Middleware\EnsureIamSessionIsLive;
+use App\Http\Middleware\EnsureUmisSessionIsLive;
 use App\Http\Middleware\HandleInertiaRequests;
 use Illuminate\Foundation\Application;
 use Illuminate\Foundation\Configuration\Exceptions;
@@ -21,13 +23,18 @@ return Application::configure(basePath: dirname(__DIR__))
         $middleware->web(append: [
             HandleInertiaRequests::class,
         ]);
-        // Runs after the session starts, on both the web and the cookie-session API.
+        // Run after the session starts, on both the web and the cookie-session API.
+        // Each passes straight through sessions its provider did not start, so
+        // both stay registered whichever provider is switched on.
         $middleware->appendToGroup('web', EnsureIamSessionIsLive::class);
         $middleware->appendToGroup('api', EnsureIamSessionIsLive::class);
+        $middleware->appendToGroup('web', EnsureUmisSessionIsLive::class);
+        $middleware->appendToGroup('api', EnsureUmisSessionIsLive::class);
         $middleware->alias([
             'role' => RoleMiddleware::class,
             'permission' => PermissionMiddleware::class,
             'role_or_permission' => RoleOrPermissionMiddleware::class,
+            'auth.provider' => EnsureAuthProvider::class,
         ]);
     })
     ->withExceptions(function (Exceptions $exceptions): void {

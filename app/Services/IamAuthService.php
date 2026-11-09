@@ -3,9 +3,8 @@
 namespace App\Services;
 
 use App\Exceptions\IamSignInException;
-use App\Models\Role;
 use App\Models\User;
-use Database\Seeders\RolesAndPermissionsSeeder;
+use App\Support\ExternalRoleMatcher;
 use Illuminate\Http\Client\ConnectionException;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
@@ -227,10 +226,7 @@ class IamAuthService
     }
 
     /**
-     * Translate IAM role values into local role names. A value matches a local role
-     * by its system code (`case_manager`) first, then by name; values with no local
-     * role are dropped rather than created, and IAM can never grant the super admin
-     * role: that one is held only by local password accounts.
+     * Translate IAM role values into local role names (see ExternalRoleMatcher).
      *
      * @param  array<int, string>  $iamRoles
      * @return array<int, string>
@@ -240,23 +236,7 @@ class IamAuthService
         /** @var array<string, string> $map */
         $map = config('services.iam.role_map', []);
 
-        $local = Role::query()
-            ->where('guard_name', RolesAndPermissionsSeeder::GUARD)
-            ->where('code', '!=', RolesAndPermissionsSeeder::SUPER_ADMIN_CODE)
-            ->get(['name', 'code']);
-
-        $names = [];
-
-        foreach ($iamRoles as $value) {
-            $value = $map[$value] ?? $value;
-            $match = $local->firstWhere('code', $value) ?? $local->firstWhere('name', $value);
-
-            if ($match !== null) {
-                $names[] = $match->name;
-            }
-        }
-
-        return array_values(array_unique($names));
+        return ExternalRoleMatcher::match($iamRoles, $map);
     }
 
     /**

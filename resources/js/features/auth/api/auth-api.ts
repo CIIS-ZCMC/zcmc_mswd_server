@@ -22,8 +22,10 @@ export async function getMe(): Promise<AuthUser> {
 }
 
 /**
- * POST /logout — logs out session cookie server-side. `redirect` is the IAM
- * logout URL when the IAM session should end too.
+ * POST /logout — logs out session cookie server-side. `redirect` is where the
+ * browser goes next: the ZCMC Portal for a session that came from UMIS, or the
+ * IAM logout URL when the IAM session should end too. Null for a password
+ * session.
  */
 export async function logout(): Promise<{ redirect: string | null }> {
   return apiClient.post<{ redirect: string | null }>("/logout", undefined, {

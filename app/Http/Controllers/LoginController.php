@@ -5,7 +5,6 @@ namespace App\Http\Controllers;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
 use App\Models\User;
-use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Support\Facades\Hash;
 use Illuminate\Validation\ValidationException;
@@ -24,7 +23,7 @@ class LoginController extends Controller
 
         if (
             ! $user
-            || ! $user->hasRoleCode(RolesAndPermissionsSeeder::SUPER_ADMIN_CODE)
+            || ! $user->canSignInWithPassword()
             || ! Hash::check($request->validated('password'), (string) $user->password)
         ) {
             // Same message for unknown employee number and wrong password (no user enumeration).
