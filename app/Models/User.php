@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
 use Filament\Panel;
@@ -79,6 +80,16 @@ class User extends Authenticatable implements FilamentUser, HasName
     public function getFilamentName(): string
     {
         return $this->employee_name ?? (string) $this->email;
+    }
+
+    /**
+     * Password sign-in is for the local Super Admin only. In the `local`
+     * environment any role may use it, so seeded test accounts can log in.
+     */
+    public function canSignInWithPassword(): bool
+    {
+        return app()->environment('local')
+            || $this->hasRoleCode(RolesAndPermissionsSeeder::SUPER_ADMIN_CODE);
     }
 
     /**

@@ -55,11 +55,16 @@ Request flow: `routes/api.php` → thin `Http/Controllers` (mostly single-action
 Frontend lives in `resources/js/features/<feature>/{api,components,hooks,types}`. Each module below: purpose, key rules, main backend/frontend pieces.
 
 ### Auth & Users
-Sign-in is ZCMC IAM (OAuth2 authorization code + PKCE, server-side exchange). The cookie session stays; roles and permissions are shared as Inertia props (`auth.user`, `auth.roles`, `auth.permissions`).
-- Flow: `GET /auth/iam/redirect` (a plain link, never an Inertia visit) → IAM → `GET /callback` (the redirect URI registered with IAM). `IamAuthService` swaps the code, reads `/api/v1/userinfo`, and creates or updates the user **keyed on `users.iam_sub`, never email**. Settings: `services.iam` / `IAM_*` env (see `.env.example`).
-- Roles are synced from the IAM `roles` claim on every sign-in. A claim value matches a local role by its system **code** first (`case_manager`), then by name; `services.iam.role_map` can rename a value first. Values with no local role are dropped, never created. IAM can never grant `Super Admin`. `org_roles` and `placement` are stored on the user (`iam_org_roles`, `placement`) and kept apart from roles.
-- `EnsureIamSessionIsLive` (web + api groups) renews the IAM token a minute before expiry and ends the session if the refresh is refused. Sessions without IAM tokens pass through.
-- Logout (`POST /logout`) returns `{redirect}`: the IAM logout URL when the session came from IAM and `IAM_END_SESSION_ON_LOGOUT` is on, so the client navigates for real.
+Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM is kept behind a switch. `services.auth_provider` (`AUTH_PROVIDER=umis|iam`) picks one; the other's routes answer 404 (`EnsureAuthProvider`, alias `auth.provider`). The cookie session stays; roles and permissions are shared as Inertia props (`auth.user`, `auth.roles`, `auth.permissions`, plus `auth.provider` and `auth.portalUrl` for the login page).
+- **UMIS flow:** staff sign in on the ZCMC Portal (repo `umis-landing-page`) and click MSWD → UMIS sends them to `GET /signing-in/{uuid}` → `UmisAuthService` swaps the id server to server (`POST {UMIS}/api/auth-with-session-id`, header `UMIS-Api-Key`) and creates or updates the user **keyed on `users.employee_id` (the UMIS employee profile id), never email**.
+  - Every UMIS API reply is AES-256-CBC encrypted; `Support/UmisPayload` decrypts it with `UMIS_PAYLOAD_KEY`.
+  - The reply must name system `UMIS_SYSTEM_CODE` (`MSWD`); anything else is "not admitted".
+  - The route is not guest-only: whoever is signed in on a shared terminal is signed out first.
+  - Settings: `services.umis` / `UMIS_*` env (see `.env.example`). Plan and UMIS setup: `docs/UMIS_AUTH_PLAN.md`.
+- **UMIS roles** are synced from `permissions.roles[*].name` on every sign-in and recheck, through `Support/ExternalRoleMatcher` (shared with IAM): match by system **code** first (`case_manager`), then by name; `role_map` can rename first. Values with no local role are dropped, never created, and `Super Admin` is never granted.
+- `EnsureUmisSessionIsLive` (web + api) asks UMIS again every `UMIS_RECHECK_MINUTES`: a 401 (signed out of UMIS), another system, or a different person ends the session; UMIS unreachable or a 5xx keeps it. Logout of a UMIS session returns `{redirect: portal_url}`; UMIS has no logout for other systems.
+- **IAM flow** (only with `AUTH_PROVIDER=iam`): `GET /auth/iam/redirect` (a plain link, never an Inertia visit) → IAM → `GET /callback`. `IamAuthService` swaps the code, reads `/api/v1/userinfo`, and keys the user on `users.iam_sub`. `org_roles` and `placement` are stored on the user. `EnsureIamSessionIsLive` renews the IAM token and ends the session if the refresh is refused; logout returns the IAM logout URL when `IAM_END_SESSION_ON_LOGOUT` is on.
+- `/login` sends guests to the provider (IAM, or the portal once `UMIS_PORTAL_URL` is set) unless it is showing a sign-in error (`auth_error` flash) or `?admin`.
 - Default roles are **per module** (`RolesAndPermissionsSeeder::ROLES` is the source of truth). A role holds only its listed modules:
 
   | Role | Code | Modules |
@@ -71,15 +76,15 @@ Sign-in is ZCMC IAM (OAuth2 authorization code + PKCE, server-side exchange). Th
   | Admin | `admin` | every client module (all permissions except the `/admin` panel ones: `panel.access`, `users.manage`, `roles.manage`, `settings.manage`) |
   | Super Admin | `super_admin` | everything (`*`, `Gate::before` bypass); the only role for `/admin` |
 
-  Every role has a stable, unique system `code` (`roles.code`, lower snake case) beside its display `name`. Code and IAM matching key on the code (`User::hasRoleCode()`, `RolesAndPermissionsSeeder::ROLE_CODES`, `SUPER_ADMIN_CODE`), so a role can be renamed safely. Core roles are the ones in `ROLE_CODES`; the code is fixed once created (the API rejects it on update, Filament disables it) and defaults to the name in snake case when omitted. The frontend gets `auth.roleCodes`; `useHasRole(code)` matches codes.
+  Every role has a stable, unique system `code` (`roles.code`, lower snake case) beside its display `name`. Code checks and UMIS/IAM role matching key on the code (`User::hasRoleCode()`, `RolesAndPermissionsSeeder::ROLE_CODES`, `SUPER_ADMIN_CODE`), so a role can be renamed safely. Core roles are the ones in `ROLE_CODES`; the code is fixed once created (the API rejects it on update, Filament disables it) and defaults to the name in snake case when omitted. The frontend gets `auth.roleCodes`; `useHasRole(code)` matches codes.
 
-  Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); users/roles and `/admin` (`panel.access`) are Super Admin only. `admin` can be granted from IAM; `super_admin` never.
+  Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); users/roles and `/admin` (`panel.access`) are Super Admin only. `admin` can be granted from UMIS or IAM; `super_admin` never.
 - Web page routes carry the same `permission:` gates as the API. `/` sends a user without `patients.view` to their first module (cases, queue, DAR, reports). The sidebar tabs and the patient-list query follow `usePermission`.
-- `IAM_ROLE_MAP` is only needed when IAM sends a value that is neither a role code nor a name.
-- Password login (`POST /login`, `POST /api/login`) exists for the local **Super Admin (`super_admin`) only**; the `users` rows that predate IAM are those accounts (migration `split_super_admin_from_admin` moved them from `Admin`). The login page tucks it under "Administrator sign-in".
-- Not built: back-channel logout endpoint and the revocation queue consumer (IAM has no `logout_uri` registered yet).
+- `services.umis.role_map` / `services.iam.role_map` (config arrays) are only needed when the provider sends a value that is neither a role code nor a name.
+- Password login (`POST /login`, `POST /api/login`) exists for the local **Super Admin (`super_admin`) only**, under either provider; in the `local` environment any role may use it (`User::canSignInWithPassword()`), so seeded accounts can log in. The `users` rows that predate IAM are those accounts (migration `split_super_admin_from_admin` moved them from `Admin`). The login page links it as "Administrator sign-in" (`/login?admin`).
+- Not built: IAM back-channel logout and its revocation queue consumer.
 - Front: `features/auth` (`LoginForm`, `useAuth`, `usePermission`, `useHasRole`).
-- Back: `IamAuthService`, `Web/IamAuthController`, `UserService`, `RoleService`, `PermissionService`; Filament Users/Roles/Permissions.
+- Back: `UmisAuthService`, `Web/UmisAuthController`, `IamAuthService`, `Web/IamAuthController`, `UserService`, `RoleService`, `PermissionService`; Filament Users/Roles/Permissions.
 
 ### Patients (Registry)
 MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, socioeconomic, hospital encounters, UIS, social case, documents, history).
@@ -171,6 +176,6 @@ System-wide activity log viewer (`/audit`) and per-record history popovers.
 
 ## Plans
 
-- `docs/` holds only plans for work in active development. Current: `WATCHER_MODULE_PLAN.md`.
+- `docs/` holds only plans for work in active development. Current: `WATCHER_MODULE_PLAN.md`, `UMIS_AUTH_PLAN.md`.
 - Write a plan in `docs/<FEATURE>_PLAN.md` for multi-session or multi-layer work. Remove it when the feature ships, and update the module's entry above.
 - Finished plans are in git history (`git log -- docs/`). The code and migrations are the source of truth.

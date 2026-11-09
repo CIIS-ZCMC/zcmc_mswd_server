@@ -29,6 +29,40 @@ return [
     ],
 
     /*
+    | Which sign-in staff use: `umis` (the ZCMC Portal hands users over) or
+    | `iam` (ZCMC IAM). The other one's routes answer 404. The local super
+    | admin's password sign-in works under either.
+    */
+    'auth_provider' => env('AUTH_PROVIDER', 'umis'),
+
+    /*
+    | UMIS — the hospital's user management system. Staff sign in on the ZCMC
+    | Portal (the UMIS landing page) and pick MSWD there; UMIS sends them to
+    | /signing-in/{session_id}, and this server swaps that id for the person
+    | and their MSWD roles, server to server.
+    */
+    'umis' => [
+        'base_url' => env('UMIS_API_URL', 'https://umis.zcmc.online'),
+        // MSWD's key exactly as the UMIS "Manage Systems" screen shows it.
+        'api_key' => env('UMIS_API_KEY'),
+        // UMIS encrypts every API reply with its API_PAYLOAD_KEY.
+        'payload_key' => env('UMIS_PAYLOAD_KEY'),
+        // The code MSWD is registered under in UMIS; a reply for any other
+        // system means the person has no MSWD access.
+        'system_code' => env('UMIS_SYSTEM_CODE', 'MSWD'),
+        // The landing page staff sign in on. Guests are sent here from /login,
+        // and everyone is sent back here on logout.
+        'portal_url' => env('UMIS_PORTAL_URL'),
+        // How often a live session asks UMIS whether the person is still
+        // signed in there (and picks up role changes).
+        'recheck_minutes' => (int) env('UMIS_RECHECK_MINUTES', 5),
+        'timeout' => (int) env('UMIS_TIMEOUT', 10),
+        // UMIS role name => local role code or name. Names not listed are used
+        // as they arrive; names that match no local role are dropped.
+        'role_map' => [],
+    ],
+
+    /*
     | ZCMC IAM — the single sign-on every staff member uses to get in. The client
     | secret stays on the server; the browser only ever holds the PKCE verifier.
     */
