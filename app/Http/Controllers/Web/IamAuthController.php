@@ -30,7 +30,7 @@ class IamAuthController extends Controller
         try {
             $this->iam->signIn($request);
         } catch (IamSignInException $e) {
-            return redirect()->route('login')->with('iam_error', $e->getMessage());
+            return redirect()->route('login')->with('auth_error', $e->getMessage());
         }
 
         return redirect()->intended('/');

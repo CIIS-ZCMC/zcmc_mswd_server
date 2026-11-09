@@ -47,6 +47,10 @@ class HandleInertiaRequests extends Middleware
                 'roles' => $user ? $user->getRoleNames()->values()->all() : [],
                 'roleCodes' => $user ? $user->roles->pluck('code')->values()->all() : [],
                 'permissions' => $user ? $user->getAllPermissions()->pluck('name')->values()->all() : [],
+                // Which sign-in staff use (`umis` or `iam`); the login page follows it.
+                'provider' => config('services.auth_provider'),
+                // The ZCMC Portal (UMIS landing page) staff sign in on; null when unset.
+                'portalUrl' => config('services.umis.portal_url') ?: null,
             ],
             'flash' => [
                 'success' => fn () => $request->session()->get('success'),

@@ -1,13 +1,13 @@
 import { LoginForm } from "@/features/auth/components/login-form"
 
 interface LoginPageProps {
-  iamError?: string | null
+  authError?: string | null
   adminLogin?: boolean
 }
 
 export default function LoginPage({
-  iamError = null,
+  authError = null,
   adminLogin = false,
 }: LoginPageProps) {
-  return <LoginForm iamError={iamError} adminLogin={adminLogin} />
+  return <LoginForm authError={authError} adminLogin={adminLogin} />
 }

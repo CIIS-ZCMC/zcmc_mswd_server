@@ -9,18 +9,30 @@ use App\Http\Controllers\Web\LibraryPageController;
 use App\Http\Controllers\Web\PatientsPageController;
 use App\Http\Controllers\Web\QueuePageController;
 use App\Http\Controllers\Web\ReportsPageController;
+use App\Http\Controllers\Web\UmisAuthController;
 use Illuminate\Support\Facades\Route;
 
 // Guest Authentication
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    // Password sign-in is for the local super admin only; everyone else uses ZCMC IAM.
+    // Password sign-in is for the local super admin only (any role in `local`).
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 
-    // ZCMC IAM sign-in. /callback is the redirect URI registered with IAM.
-    Route::get('/auth/iam/redirect', [IamAuthController::class, 'redirect'])->name('iam.redirect');
-    Route::get('/callback', [IamAuthController::class, 'callback'])->name('iam.callback');
+    // ZCMC IAM sign-in, only while AUTH_PROVIDER=iam (404 otherwise).
+    // /callback is the redirect URI registered with IAM.
+    Route::middleware('auth.provider:iam')->group(function () {
+        Route::get('/auth/iam/redirect', [IamAuthController::class, 'redirect'])->name('iam.redirect');
+        Route::get('/callback', [IamAuthController::class, 'callback'])->name('iam.callback');
+    });
 });
+
+// UMIS hand-off from the ZCMC Portal, only while AUTH_PROVIDER=umis (404 otherwise).
+// Not guest-only: on a shared terminal whoever is signed in is signed out first.
+// The path is fixed by UMIS ({system domain}/signing-in/{session_id}).
+Route::get('/signing-in/{sessionId}', [UmisAuthController::class, 'callback'])
+    ->whereUuid('sessionId')
+    ->middleware(['auth.provider:umis', 'throttle:20,1'])
+    ->name('umis.callback');
 
 // Authenticated Application Routes
 Route::middleware('auth')->group(function () {

@@ -19,16 +19,17 @@ import { useAuth } from "../hooks/use-auth"
 import { router } from "@inertiajs/react"
 
 interface LoginFormProps {
-  iamError?: string | null
+  /** Why the last sign-in through the provider (IAM or UMIS) failed. */
+  authError?: string | null
   /** The local super admin's password form, reached at /login?admin. */
   adminLogin?: boolean
 }
 
 export const LoginForm: React.FC<LoginFormProps> = ({
-  iamError = null,
+  authError = null,
   adminLogin = false,
 }) => {
-  const { login, isLoggingIn, loginError } = useAuth()
+  const { login, isLoggingIn, loginError, authProvider, portalUrl } = useAuth()
   const [employeeNumber, setEmployeeNumber] = useState("")
   const [password, setPassword] = useState("")
 
@@ -61,23 +62,54 @@ export const LoginForm: React.FC<LoginFormProps> = ({
           </div>
         </CardHeader>
         <CardContent className="flex flex-col gap-5">
-          {iamError && (
+          {authError && (
             <Alert variant="destructive" className="px-3 py-2.5">
               <AlertCircle className="size-4" />
               <AlertTitle className="text-sm">Sign-in failed</AlertTitle>
-              <AlertDescription className="text-sm">{iamError}</AlertDescription>
+              <AlertDescription className="text-sm">{authError}</AlertDescription>
             </Alert>
           )}
 
-          {/* A plain link, not an Inertia <Link>: leaving for IAM is a real
-              navigation, and an XHR would die on CORS following the redirect. */}
-          <Button
-            nativeButton={false}
-            render={<a href="/auth/iam/redirect" />}
-            className="h-12 gap-2 text-base font-bold"
-          >
-            Sign in with ZCMC
-          </Button>
+          {authProvider === "iam" ? (
+            // A plain link, not an Inertia <Link>: leaving for IAM is a real
+            // navigation, and an XHR would die on CORS following the redirect.
+            <Button
+              nativeButton={false}
+              render={<a href="/auth/iam/redirect" />}
+              className="h-12 gap-2 text-base font-bold"
+            >
+              Sign in with ZCMC
+            </Button>
+          ) : portalUrl ? (
+            // Staff sign in on the ZCMC Portal and pick MSWD there; it sends
+            // them back signed in. A plain link: the portal is another origin.
+            <Button
+              nativeButton={false}
+              render={<a href={portalUrl} />}
+              className="h-12 gap-2 text-base font-bold"
+            >
+              Sign in through the ZCMC Portal
+            </Button>
+          ) : (
+            <div className="flex flex-col gap-1.5 text-center">
+              <Button disabled className="h-12 gap-2 text-base font-bold">
+                Sign in through the ZCMC Portal
+              </Button>
+              <p className="text-xs text-muted-foreground">
+                The portal address is not set up yet. Open MSWD from the ZCMC
+                Portal, or contact your administrator.
+              </p>
+            </div>
+          )}
+
+          {!adminLogin && (
+            <a
+              href="/login?admin"
+              className="text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
+            >
+              Administrator sign-in
+            </a>
+          )}
 
           {adminLogin && (
             <form onSubmit={handleSubmit} className="flex flex-col gap-5 border-t pt-5">

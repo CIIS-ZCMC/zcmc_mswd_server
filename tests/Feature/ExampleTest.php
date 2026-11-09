@@ -12,14 +12,34 @@ test('guests are redirected to the login page', function () {
     $response->assertRedirect('/login');
 });
 
-test('the login page sends guests straight to ZCMC IAM', function () {
+test('under IAM the login page sends guests straight to ZCMC IAM', function () {
+    config(['services.auth_provider' => 'iam']);
+
     $this->get('/login')->assertRedirect(route('iam.redirect'));
 });
 
-test('the login page renders for a failed IAM sign-in', function () {
-    $this->withSession(['iam_error' => 'Denied'])->get('/login')
+test('under IAM the login page renders for a failed sign-in', function () {
+    config(['services.auth_provider' => 'iam']);
+
+    $this->withSession(['auth_error' => 'Denied'])->get('/login')
         ->assertOk()
-        ->assertInertia(fn (Assert $page) => $page->component('Auth/Login')->where('iamError', 'Denied'));
+        ->assertInertia(fn (Assert $page) => $page->component('Auth/Login')->where('authError', 'Denied'));
+});
+
+test('IAM is switched off by default: the login page renders and the IAM routes are gone', function () {
+    expect(config('services.auth_provider'))->toBe('umis');
+    // With a portal URL set, /login sends guests there instead (UmisAuthTest).
+    config(['services.umis.portal_url' => null]);
+
+    $this->get('/login')
+        ->assertOk()
+        ->assertInertia(fn (Assert $page) => $page
+            ->component('Auth/Login')
+            ->where('auth.provider', 'umis')
+        );
+
+    $this->get('/auth/iam/redirect')->assertNotFound();
+    $this->get('/callback?code=abc&state=xyz')->assertNotFound();
 });
 
 test('the administrator password form is at /login?admin', function () {

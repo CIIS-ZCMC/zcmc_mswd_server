@@ -3,6 +3,7 @@
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Facades\Hash;
 
@@ -73,6 +74,31 @@ it('refuses password login for anyone but the super admin', function () {
         ->assertJsonValidationErrorFor('employee_number');
 
     $this->assertGuest();
+});
+
+it('lets any role use password login in the local environment', function () {
+    $user = authUser([], 'Case Manager');
+    // Outside `testing` the CSRF check switches back on; it is not what this test is about.
+    $this->app['env'] = 'local';
+    $this->withoutMiddleware(ValidateCsrfToken::class);
+
+    $this->postJson('/login', [
+        'employee_number' => 100001,
+        'password' => 'secret-pass',
+    ])->assertOk();
+
+    $this->assertAuthenticatedAs($user);
+});
+
+it('lets any role get an API token in the local environment only', function () {
+    authUser([], 'Case Manager');
+    $payload = ['employee_number' => 100001, 'password' => 'secret-pass', 'device_name' => 'test'];
+
+    $this->postJson('/api/login', $payload)->assertStatus(422);
+
+    $this->app['env'] = 'local';
+
+    $this->postJson('/api/login', $payload)->assertOk();
 });
 
 it('logs out web session', function () {
