@@ -58,8 +58,15 @@ return [
         'recheck_minutes' => (int) env('UMIS_RECHECK_MINUTES', 5),
         'timeout' => (int) env('UMIS_TIMEOUT', 10),
         // UMIS role name => local role code or name. Names not listed are used
-        // as they arrive; names that match no local role are dropped.
-        'role_map' => [],
+        // as they arrive; names that match no local role are dropped. UMIS
+        // names MSWD's roles with an "MSS " prefix.
+        'role_map' => [
+            'MSS Processor' => 'processor',
+            'MSS Case Manager' => 'case_manager',
+            'MSS Supervisor' => 'supervisor',
+            'MSS Head' => 'head',
+            'MSS Admin' => 'admin',
+        ],
     ],
 
     /*
