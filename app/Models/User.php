@@ -2,6 +2,7 @@
 
 namespace App\Models;
 
+use App\Enums\AuthProvider;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Filament\Models\Contracts\FilamentUser;
 use Filament\Models\Contracts\HasName;
@@ -83,12 +84,12 @@ class User extends Authenticatable implements FilamentUser, HasName
     }
 
     /**
-     * Password sign-in is for the local Super Admin only. In the `local`
-     * environment any role may use it, so seeded test accounts can log in.
+     * Password sign-in is for the local Super Admin under every provider. With
+     * AUTH_PROVIDER=local it is how everyone signs in, so any role may use it.
      */
     public function canSignInWithPassword(): bool
     {
-        return app()->environment('local')
+        return AuthProvider::isLocal()
             || $this->hasRoleCode(RolesAndPermissionsSeeder::SUPER_ADMIN_CODE);
     }
 

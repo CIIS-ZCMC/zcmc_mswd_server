@@ -80,7 +80,7 @@ Done when IAM is unreachable with the default config, `AUTH_PROVIDER=iam` brings
 4. When the user signs out of UMIS, the session id is deleted, and calling step 3 again returns 401.
 
 ### What MSWD must handle
-- **The reply is encrypted.** Every UMIS API reply, errors included, is `{"encrypted": true, "payload": base64(IV16 + AES-256-CBC)}`, using UMIS's `API_PAYLOAD_KEY` padded to 32 characters with `0` (`EncryptApiResponse`). Status codes are not encrypted. Do not use UMIS's `X-No-Encryption` bypass header.
+- **The reply may be encrypted** (UMIS encryption is off for now, so replies are plain JSON). When it is on, every UMIS API reply, errors included, is `{"encrypted": true, "payload": base64(IV16 + AES-256-CBC)}`, using UMIS's `API_PAYLOAD_KEY` padded to 32 characters with `0` (`EncryptApiResponse`). Status codes are not encrypted. Do not use UMIS's `X-No-Encryption` bypass header.
 - **The API key** is sent exactly as the UMIS systems screen shows it: the stored, encrypted string.
 - **No MSWD access:** UMIS can return another system's `permissions` (public roles are not filtered), or a 500. Require `permissions.code === UMIS_SYSTEM_CODE`; anything else means no access.
 - **Session ids** never expire until UMIS sign-out and travel in the URL. Swap the id once, redirect at once to a clean URL, and never log it.
@@ -129,7 +129,7 @@ Done when IAM is unreachable with the default config, `AUTH_PROVIDER=iam` brings
 ## Phase 4: Register MSWD in UMIS **[UMIS]**
 Can run at any time; only Phase 6 needs it.
 1. Create a system with code `MSWD` and domain = MSWD's `APP_URL`, and generate its API key. Put the key in `UMIS_API_KEY` exactly as the UMIS systems screen shows it.
-2. Get UMIS's `API_PAYLOAD_KEY` for `UMIS_PAYLOAD_KEY`.
+2. Only if UMIS encrypts its replies: get UMIS's `API_PAYLOAD_KEY` for `UMIS_PAYLOAD_KEY`. UMIS encryption is off for now, so it stays blank.
 3. Create the MSWD roles **Processor, Case Manager, Supervisor, Head, Admin**, each with at least one module permission.
 4. Assign the roles to designations or to people. Never mark an MSWD role public, or everyone gets it.
 
@@ -169,5 +169,5 @@ Done when a user with an MSWD role sees the tile and lands in MSWD signed in, an
 
 ## Open items
 - The landing page's production address for `UMIS_PORTAL_URL`. It is probably `https://zcmc.online`; in dev it is `http://localhost:3001`.
-- `UMIS_API_KEY` and `UMIS_PAYLOAD_KEY` for each environment.
+- `UMIS_API_KEY` for each environment (`UMIS_PAYLOAD_KEY` too, only if UMIS turns encryption on).
 - The landing page team accepting the MSWD tile PR.

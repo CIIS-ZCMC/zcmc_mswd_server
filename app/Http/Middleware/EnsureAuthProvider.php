@@ -2,6 +2,7 @@
 
 namespace App\Http\Middleware;
 
+use App\Enums\AuthProvider;
 use Closure;
 use Illuminate\Http\Request;
 use Symfony\Component\HttpFoundation\Response;
@@ -15,7 +16,7 @@ class EnsureAuthProvider
 {
     public function handle(Request $request, Closure $next, string $provider): Response
     {
-        abort_unless(config('services.auth_provider') === $provider, 404);
+        abort_unless(AuthProvider::current() === AuthProvider::from($provider), 404);
 
         return $next($request);
     }

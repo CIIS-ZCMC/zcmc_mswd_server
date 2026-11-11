@@ -2,6 +2,7 @@
 
 namespace App\Http\Controllers\Web;
 
+use App\Enums\AuthProvider;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\LoginRequest;
 use App\Http\Resources\UserResource;
@@ -28,7 +29,8 @@ class AuthController extends Controller
      * Send visitors straight to where staff sign in: ZCMC IAM, or the ZCMC Portal
      * under UMIS (when its URL is set). The page itself only renders to report a
      * failed sign-in (so a refusal cannot loop back) or, at `/login?admin`, for
-     * the local super admin's password form.
+     * the local super admin's password form. Under the `local` provider the
+     * password form is the sign-in, so it always renders.
      */
     public function showLogin(Request $request): Response|SymfonyResponse
     {
@@ -36,18 +38,18 @@ class AuthController extends Controller
             return redirect()->intended('/');
         }
 
+        $provider = AuthProvider::current();
         $authError = session('auth_error');
-        $admin = $request->has('admin');
+        $admin = $request->has('admin') || $provider === AuthProvider::Local;
 
         if ($authError === null && ! $admin) {
-            $provider = config('services.auth_provider');
             $portal = config('services.umis.portal_url');
 
-            if ($provider === 'iam') {
+            if ($provider === AuthProvider::Iam) {
                 return redirect()->route('iam.redirect');
             }
 
-            if ($provider === 'umis' && is_string($portal) && $portal !== '') {
+            if ($provider === AuthProvider::Umis && is_string($portal) && $portal !== '') {
                 // Another origin: Inertia::location makes an Inertia visit leave
                 // for real instead of an XHR dying on CORS.
                 return Inertia::location($portal);
@@ -61,10 +63,9 @@ class AuthController extends Controller
     }
 
     /**
-     * Authenticate the local super admin by password. Everyone else signs in
-     * through the configured provider, so any other account is refused with the
-     * same message as a wrong password (except in `local`, see
-     * User::canSignInWithPassword).
+     * Authenticate by password: the local super admin, or anyone under the
+     * `local` provider (User::canSignInWithPassword). Under UMIS or IAM any
+     * other account is refused with the same message as a wrong password.
      */
     public function login(LoginRequest $request): JsonResponse
     {
