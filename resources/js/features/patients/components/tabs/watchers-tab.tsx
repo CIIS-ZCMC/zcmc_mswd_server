@@ -274,7 +274,7 @@ export const WatchersTab: React.FC<WatchersTabProps> = ({
           setEditingWatcher(null)
         }}
         editingWatcher={editingWatcher}
-        defaults={{ contactNo: patient?.contactNo, address: patient?.address }}
+        defaults={{ contactNo: patient?.contactNo, address: patient?.presentAddressPsgc }}
         onSave={handleSaveWatcher}
         isSubmitting={watcherMutations.isCreating || watcherMutations.isUpdating}
       />

@@ -1,3 +1,5 @@
+import type { PsgcAddressValue } from "@/features/reference/types/psgc.types"
+
 /** One case a patient watcher is assigned to (a `case_watchers` row). */
 export interface WatcherAssignment {
   id: string
@@ -27,6 +29,8 @@ export interface Watcher {
   relationshipCode: string
   contactNo: string
   address: string
+  /** The address as picked from PSGC (empty cityCode: still free text). */
+  addressPsgc?: PsgcAddressValue
   notes: string
   assignments: WatcherAssignment[]
 }

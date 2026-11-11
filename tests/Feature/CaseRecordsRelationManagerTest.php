@@ -258,7 +258,6 @@ it('saves the informant details and mode/fund selects from the assessment form',
             'informant_last_name' => 'Reyes',
             'informant_first_name' => 'Ana',
             'informant_middle_name' => 'M.',
-            'informant_address' => 'Sta. Maria',
             'informant_contact_number' => '09171234567',
             'recommendation_mode' => 'hospital_discount',
             'fund_source' => 'maip',
@@ -267,7 +266,6 @@ it('saves the informant details and mode/fund selects from the assessment form',
 
     $assessment = Assessment::sole();
     expect($assessment->informant_last_name)->toBe('Reyes')
-        ->and($assessment->informant_address)->toBe('Sta. Maria')
         ->and($assessment->informant_contact_number)->toBe('09171234567')
         ->and($assessment->recommendation_mode)->toBe('hospital_discount')
         ->and($assessment->fund_source)->toBe('maip');

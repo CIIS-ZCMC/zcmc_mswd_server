@@ -8,6 +8,7 @@ use App\Models\Patient;
 use App\Models\PatientFamilyMember;
 use App\Models\Sector;
 use App\Models\User;
+use Database\Seeders\PsgcFixtureSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\WatcherRelationshipTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,6 +23,7 @@ beforeEach(function () {
     Storage::fake();
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(WatcherRelationshipTypeSeeder::class);
+    $this->seed(PsgcFixtureSeeder::class);
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
 });
 
@@ -203,7 +205,7 @@ it('manages patient records through nested endpoints', function () {
 
     // Watcher
     $this->postJson("/api/patients/{$patient->id}/watchers", [
-        'last_name' => 'Reyes', 'first_name' => 'Pedro', 'relationship_code' => 'parent', 'contact_number' => '0917', 'address' => 'Zone 1',
+        'last_name' => 'Reyes', 'first_name' => 'Pedro', 'relationship_code' => 'parent', 'contact_number' => '0917', ...psgcAddress(),
     ])
         ->assertCreated();
 

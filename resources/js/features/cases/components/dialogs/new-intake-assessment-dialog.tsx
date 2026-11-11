@@ -81,7 +81,7 @@ export const NewIntakeAssessmentDialog: React.FC<
         patientId={patient.id}
         transactionId={formTransactionId}
         patientName={patient.fullName}
-        patientAddress={patient.address}
+        patientAddressPsgc={patient.presentAddressPsgc}
         patientContact={patient.contactNo}
         patientMonthlyIncome={patient.monthlyIncome}
       />

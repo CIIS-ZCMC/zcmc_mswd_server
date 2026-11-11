@@ -635,10 +635,7 @@ export const CaseDetailPage: React.FC = () => {
         caseId={Number(caseId)}
         caseCode={caseRecord.caseCode}
         patientName={caseRecord.patient?.fullName}
-        patientAddress={
-          caseRecord.patient?.address ||
-          [caseRecord.patient?.barangay, caseRecord.patient?.city].filter(Boolean).join(", ")
-        }
+        patientAddressPsgc={caseRecord.patient?.presentAddressPsgc}
         patientContact={caseRecord.patient?.contactNo}
         patientMonthlyIncome={caseRecord.patient?.monthlyIncome}
         existingAssessment={assessments[0] ?? null}

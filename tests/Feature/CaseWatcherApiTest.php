@@ -6,6 +6,7 @@ use App\Models\Patient;
 use App\Models\PatientWatcher;
 use App\Models\Sector;
 use App\Models\User;
+use Database\Seeders\PsgcFixtureSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\WatcherRelationshipTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -16,6 +17,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(WatcherRelationshipTypeSeeder::class);
+    $this->seed(PsgcFixtureSeeder::class);
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
 });
 
@@ -60,7 +62,7 @@ it('creates an inline watcher and its directory entry together', function () {
     $case = watcherApiCase(watcherApiPatient(), $worker);
 
     $response = $this->postJson("/api/cases/{$case->id}/watchers", [
-        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'spouse', 'contact_number' => '0917', 'address' => 'Zone 1'],
+        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'spouse', 'contact_number' => '0917', ...psgcAddress()],
         'is_primary' => true,
     ])->assertCreated();
 
@@ -95,7 +97,7 @@ it('rejects a relationship not in the master list', function () {
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
 
-    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'best_friend', 'contact_number' => '0917', 'address' => 'Zone 1']])
+    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'best_friend', 'contact_number' => '0917', ...psgcAddress()]])
         ->assertUnprocessable()
         ->assertJsonValidationErrorFor('watcher.relationship_code');
 });
@@ -110,7 +112,7 @@ it('demotes the existing primary when a new one is created as primary', function
     ]);
 
     $this->postJson("/api/cases/{$case->id}/watchers", [
-        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Second', 'relationship_code' => 'parent', 'contact_number' => '0917', 'address' => 'Zone 1'],
+        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Second', 'relationship_code' => 'parent', 'contact_number' => '0917', ...psgcAddress()],
         'is_primary' => true,
     ])->assertCreated();
 
@@ -313,7 +315,7 @@ it('creates and assigns a new person from a nested watcher', function () {
     $case = watcherApiCase($patient, $worker);
 
     $this->postJson("/api/cases/{$case->id}/watchers", [
-        'watcher' => ['last_name' => 'Cruz', 'first_name' => 'Lola', 'middle_name' => 'Santos', 'relationship_code' => 'grandparent', 'contact_number' => '0917', 'address' => 'Zone 1'],
+        'watcher' => ['last_name' => 'Cruz', 'first_name' => 'Lola', 'middle_name' => 'Santos', 'relationship_code' => 'grandparent', 'contact_number' => '0917', ...psgcAddress()],
         'is_informant' => true,
     ])->assertCreated()->assertJsonPath('data.watcher.relationship_code', 'grandparent');
 
@@ -368,7 +370,7 @@ it('treats assignments on a closed case as read-only history', function () {
     $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
     $assignment = assignWatcher(['case_id' => $case->id, 'patient_watcher_id' => $person->id, 'added_by' => $worker->id]);
 
-    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'New', 'relationship_code' => 'friend', 'contact_number' => '0917', 'address' => 'Zone 1']])
+    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'New', 'relationship_code' => 'friend', 'contact_number' => '0917', ...psgcAddress()]])
         ->assertUnprocessable()->assertJsonValidationErrorFor('case');
     $this->postJson("/api/case-watchers/{$assignment->id}/promote")->assertUnprocessable();
     $this->postJson("/api/case-watchers/{$assignment->id}/issue-pass", [])->assertUnprocessable();

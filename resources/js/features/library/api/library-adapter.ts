@@ -1,3 +1,4 @@
+import { fromPsgcFields, toPsgcPayload } from "@/features/reference/lib/psgc-address"
 import type {
   ApiAssessmentLookup,
   ApiAssistantType,
@@ -131,6 +132,7 @@ export function toGuarantor(raw: ApiGuarantor): Guarantor {
     id: raw.id,
     name: raw.name ?? "",
     address: raw.address ?? null,
+    addressPsgc: fromPsgcFields(raw as unknown as Record<string, unknown>, "address"),
     isActive: Boolean(raw.is_active),
     usageCount: Number(raw.usage_count ?? 0),
     createdAt: raw.created_at,
@@ -143,7 +145,7 @@ export function toApiSaveGuarantorPayload(
 ): ApiSaveGuarantorPayload {
   return {
     name: input.name.trim(),
-    address: input.address?.trim() ? input.address.trim() : null,
+    ...(input.addressPsgc ? toPsgcPayload("address", input.addressPsgc) : {}),
     is_active: input.isActive ?? true,
   }
 }

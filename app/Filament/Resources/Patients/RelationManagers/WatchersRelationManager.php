@@ -31,7 +31,9 @@ class WatchersRelationManager extends RelationManager
                 ->options(fn () => WatcherRelationshipType::orderBy('name')->pluck('name', 'code'))
                 ->required(),
             TextInput::make('contact_number')->required(),
-            TextInput::make('address')->required(),
+            TextInput::make('address')
+                ->disabled()->dehydrated(false)
+                ->helperText('Picked from PSGC in the MSWD app; shown here read-only.'),
             Textarea::make('notes'),
         ]);
     }

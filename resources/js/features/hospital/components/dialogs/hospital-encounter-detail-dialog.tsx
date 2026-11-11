@@ -894,7 +894,7 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
                   caseId={activeCase?.id}
                   caseCode={activeCase?.caseCode}
                   patientName={patient.fullName}
-                  patientAddress={patient.address}
+                  patientAddressPsgc={patient.presentAddressPsgc}
                   patientContact={patient.contactNo}
                   patientMonthlyIncome={patient.monthlyIncome}
                   transactionId={activeEncounter.id}

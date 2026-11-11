@@ -94,6 +94,16 @@ MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, soc
 - Documents tab: PDF/JPG/PNG uploads (max 10 MB) per patient, typed from the Library Document Types list, filed under a case optionally. Files are stored on the default disk (RustFS in dev, bucket `mss`; the disk is kept per row) and read **only through the server** (`GET /patients/{id}/documents/{doc}/file`, inline or `?download=1`), never a storage path. Delete is a soft delete and keeps the file. Finalized SCSR PDFs also appear here.
 - Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`, `DocumentService`.
 
+### Addresses (PSGC)
+Every address is a free-text line (house, street, purok) plus a Philippine Standard Geographic Code (PSGC) city or municipality and one of its barangays; region and province follow from the city.
+- Where: patient present and permanent address, patient place of birth (city or municipality only), watcher address, UIS informant address, guarantor address.
+- Data: `psgc_areas` (`PsgcArea`: region, province, city, barangay; a city is any city, municipality, Manila district `SubMun` or SGU). Loaded from `database/data/psgc.json.gz` by `php artisan psgc:load` (no internet; run after `migrate` on every deploy; `DatabaseSeeder` runs it). Codes PSA drops are retired, never deleted. `php artisan psgc:sync` re-crawls PSGC Cloud (`PSGC_API_URL`, 120 requests a minute, about 15 minutes) and rewrites the file; run it by hand when PSA publishes an update and commit the file. Tests use `PsgcFixtureSeeder` and the `psgcAddress()` helper in `tests/Pest.php`.
+- Lookup API (any signed-in user): `GET /psgc/cities?search=&code=` (30 results; home region `PSGC_HOME_REGION` first; only areas with barangays) and `GET /psgc/cities/{code}/barangays`.
+- Columns: each structured address has `{base}_line`, `_region_code`, `_province_code`, `_city_code`, `_barangay_code` beside its composed string (`present_address`, `permanent_address`, `address`, `informant_address`). Clients send `{base}_line`, `{base}_city_code`, `{base}_barangay_code`; `Support/PsgcAddress` resolves them, `Rules/PsgcBarangayInCity` validates the pair, and the server writes the composed string, so every PDF and screen keeps reading it. An address left out of an update is untouched; sent with no city and barangay it is cleared; once given, both are required.
+- The patient's present address also fills the older `address` (line), `barangay`, `municipality`, `province`, which PDFs and the registry search still read. HIS import never overwrites a permanent address or place of birth that has PSGC codes.
+- Old free-text addresses stay as they are until edited; the picker shows them as "Not matched to PSGC". Filament shows these fields read-only.
+- Front: `features/reference` (`PsgcAddressFields`, `PsgcCityPicker`, `usePsgc*`, `toPsgcPayload` / `fromPsgcFields`). Back: `PsgcCatalogService`, `CitySearchController`, `CityBarangaysController`.
+
 ### Hospital (HIS Encounters)
 Read-only view of HIS patients and their transactions (encounters), with guarantors and diagnosis. The encounter dialog hosts the printables and the Queue & TAT tab.
 - Front: `features/hospital`. Back: `HospitalPatientService`, `PatientTransactionService`.

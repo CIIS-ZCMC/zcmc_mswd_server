@@ -81,6 +81,8 @@ use App\Http\Controllers\PatientWatcherController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PromoteAssessmentToSocialCaseController;
 use App\Http\Controllers\PromoteCaseWatcherController;
+use App\Http\Controllers\Psgc\CityBarangaysController;
+use App\Http\Controllers\Psgc\CitySearchController;
 use App\Http\Controllers\ReassessCaseController;
 use App\Http\Controllers\ReferCaseController;
 use App\Http\Controllers\RefreshUisSnapshotController;
@@ -140,6 +142,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // Library: turnaround time targets; read by everyone, written by library.manage.
     Route::apiResource('turnaround-targets', TurnaroundTargetController::class)->only(['index', 'show', 'update'])->parameters(['turnaround-targets' => 'turnaroundTarget']);
     Route::apiResource('watcher-relationship-types', WatcherRelationshipTypeController::class)->only(['index', 'show'])->parameters(['watcher-relationship-types' => 'watcherRelationshipType']);
+    // PSGC address pickers: find a city or municipality, then its barangays.
+    Route::get('psgc/cities', CitySearchController::class)->name('psgc.cities');
+    Route::get('psgc/cities/{city}/barangays', CityBarangaysController::class)
+        ->where('city', '[0-9]{10}')
+        ->name('psgc.cities.barangays');
 
     // Users (read-only) + role assignment
     Route::apiResource('users', UserController::class)->only(['index', 'show']);

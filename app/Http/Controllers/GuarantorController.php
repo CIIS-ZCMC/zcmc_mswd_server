@@ -8,6 +8,7 @@ use App\Http\Resources\GuarantorResource;
 use App\Models\Guarantor;
 use App\Models\PatientGuarantee;
 use App\Services\PatientGuarantorService;
+use App\Support\PsgcAddress;
 use Illuminate\Http\JsonResponse;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
@@ -88,7 +89,7 @@ class GuarantorController extends Controller implements HasMiddleware
 
     public function store(StoreGuarantorRequest $request): JsonResponse
     {
-        $guarantor = Guarantor::create($request->validated());
+        $guarantor = Guarantor::create(self::attributes($request->validated()));
 
         return GuarantorResource::make($guarantor->refresh()->loadCount(self::USAGE))
             ->response()
@@ -97,9 +98,21 @@ class GuarantorController extends Controller implements HasMiddleware
 
     public function update(UpdateGuarantorRequest $request, Guarantor $guarantor): GuarantorResource
     {
-        $guarantor->update($request->validated());
+        $guarantor->update(self::attributes($request->validated()));
 
         return GuarantorResource::make($guarantor->refresh()->loadCount(self::USAGE));
+    }
+
+    /**
+     * The validated input with the PSGC address resolved into its columns and
+     * the composed `address`.
+     *
+     * @param  array<string, mixed>  $validated
+     * @return array<string, mixed>
+     */
+    private static function attributes(array $validated): array
+    {
+        return [...$validated, ...PsgcAddress::columnsFrom($validated, 'address')];
     }
 
     /**

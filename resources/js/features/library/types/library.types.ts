@@ -2,6 +2,8 @@
  * Types for the Library Settings module (Lookups management).
  */
 
+import type { PsgcAddressValue } from "@/features/reference/types/psgc.types"
+
 export interface LookupUsage {
   assessments?: number
   guarantee_lines?: number
@@ -109,6 +111,10 @@ export interface ApiGuarantor {
   id: number
   name: string
   address?: string | null
+  /** PSGC parts of the address; null while it is still free text. */
+  address_line?: string | null
+  address_city_code?: string | null
+  address_barangay_code?: string | null
   is_active: boolean
   usage_count?: number
   created_at?: string
@@ -119,6 +125,8 @@ export interface Guarantor {
   id: number
   name: string
   address: string | null
+  /** The address as picked from PSGC (empty cityCode: still free text). */
+  addressPsgc: PsgcAddressValue
   isActive: boolean
   usageCount: number
   createdAt?: string
@@ -127,13 +135,17 @@ export interface Guarantor {
 
 export interface ApiSaveGuarantorPayload {
   name: string
-  address?: string | null
+  /** Picked from PSGC: the server writes the composed `address`. */
+  address_line?: string | null
+  address_city_code?: string | null
+  address_barangay_code?: string | null
   is_active?: boolean
 }
 
 export interface SaveGuarantorInput {
   name: string
-  address?: string | null
+  /** Left out: the address is untouched. An empty value clears it. */
+  addressPsgc?: PsgcAddressValue
   isActive?: boolean
 }
 

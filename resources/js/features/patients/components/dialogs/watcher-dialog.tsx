@@ -19,6 +19,17 @@ import {
 } from "@/components/ui/select"
 import { Textarea } from "@/components/ui/textarea"
 import { useWatcherRelationshipTypes } from "@/features/cases/hooks/use-case-watchers"
+import { PsgcAddressFields } from "@/features/reference/components/psgc-address-fields"
+import {
+  isPsgcAddressComplete,
+  isPsgcAddressEmpty,
+  legacyAddressText,
+  toPsgcPayload,
+} from "@/features/reference/lib/psgc-address"
+import {
+  EMPTY_PSGC_ADDRESS,
+  type PsgcAddressValue,
+} from "@/features/reference/types/psgc.types"
 import type { CreateWatcherPayload } from "../../api/patients-api"
 import type { Watcher } from "../../types/watcher.types"
 
@@ -28,7 +39,7 @@ interface WatcherDialogProps {
   /** The watcher being edited; null to add a new one. */
   editingWatcher?: Watcher | null
   /** Prefilled for a new watcher, since family often shares the patient's contact and address. */
-  defaults?: { contactNo?: string; address?: string }
+  defaults?: { contactNo?: string; address?: PsgcAddressValue }
   onSave: (payload: CreateWatcherPayload, watcherId?: number) => Promise<void>
   isSubmitting?: boolean
 }
@@ -114,7 +125,7 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
     middleName: "",
     relationshipCode: "",
     contactNumber: "",
-    address: "",
+    address: { ...EMPTY_PSGC_ADDRESS } as PsgcAddressValue,
     notes: "",
   })
   const [error, setError] = useState<string | null>(null)
@@ -134,7 +145,7 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
         middleName: editingWatcher.middleName || parsed.middleName,
         relationshipCode: editingWatcher.relationshipCode,
         contactNumber: extract10DigitPhone(editingWatcher.contactNo),
-        address: editingWatcher.address,
+        address: editingWatcher.addressPsgc ?? { ...EMPTY_PSGC_ADDRESS },
         notes: editingWatcher.notes,
       })
     } else {
@@ -144,18 +155,26 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
         middleName: "",
         relationshipCode: relationshipTypes[0]?.code ?? "",
         contactNumber: extract10DigitPhone(defaults?.contactNo ?? ""),
-        address: defaults?.address ?? "",
+        address: defaults?.address ?? { ...EMPTY_PSGC_ADDRESS },
         notes: "",
       })
     }
   }
+
+  // The address is picked from PSGC. A watcher still on free text can be
+  // edited without touching it; the old text stays until an area is picked.
+  const keepsOldAddress =
+    !!editingWatcher &&
+    editingWatcher.address.trim() !== "" &&
+    isPsgcAddressEmpty(formData.address)
+  const addressOk = isPsgcAddressComplete(formData.address) || keepsOldAddress
 
   const canSave =
     formData.lastName.trim() !== "" &&
     formData.firstName.trim() !== "" &&
     formData.relationshipCode !== "" &&
     formData.contactNumber.trim().length === 10 &&
-    formData.address.trim() !== ""
+    addressOk
 
   const handleSave = async () => {
     if (!canSave) return
@@ -180,7 +199,9 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
           last_name: formData.lastName.trim(),
           relationship_code: formData.relationshipCode,
           contact_number: formattedContact,
-          address: formData.address.trim(),
+          ...(isPsgcAddressComplete(formData.address)
+            ? toPsgcPayload("address", formData.address)
+            : {}),
           notes: formData.notes.trim() || null,
         },
         editingWatcher ? Number(editingWatcher.id) : undefined
@@ -298,15 +319,14 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
             </div>
           </div>
 
-          <div>
-            <Label className="text-xs font-semibold">Address *</Label>
-            <Input
-              placeholder="Street, barangay, city"
-              value={formData.address}
-              onChange={(e) => setFormData({ ...formData, address: e.target.value })}
-              className="mt-1 h-10"
-            />
-          </div>
+          <PsgcAddressFields
+            label="Address *"
+            value={formData.address}
+            onChange={(address) => setFormData({ ...formData, address })}
+            legacyText={legacyAddressText(editingWatcher?.address, editingWatcher?.addressPsgc)}
+            required
+            disabled={isSubmitting}
+          />
 
           <div>
             <Label className="text-xs font-semibold">Notes / Remarks</Label>

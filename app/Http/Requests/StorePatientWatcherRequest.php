@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PsgcAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -66,7 +67,8 @@ class StorePatientWatcherRequest extends FormRequest
             'name' => ['required_without:first_name', 'nullable', 'string', 'max:255'],
             'relationship_code' => ['required', 'string', Rule::exists('watcher_relationship_types', 'code')],
             'contact_number' => ['required', 'string', 'max:255'],
-            'address' => ['required', 'string', 'max:255'],
+            // Picked from PSGC; the server writes the composed `address`.
+            ...PsgcAddress::rules('address', required: true),
             'notes' => ['nullable', 'string'],
         ];
     }

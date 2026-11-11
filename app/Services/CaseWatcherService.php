@@ -6,6 +6,7 @@ use App\Enums\WatcherRequirement;
 use App\Models\CaseModel;
 use App\Models\CaseWatcher;
 use App\Models\PatientWatcher;
+use App\Support\PsgcAddress;
 use App\Support\RetriesOnDuplicateKey;
 use Illuminate\Support\Facades\DB;
 use Illuminate\Validation\ValidationException;
@@ -46,7 +47,7 @@ class CaseWatcherService
                     'last_name' => $newWatcher['last_name'] ?? null,
                     'relationship_code' => $newWatcher['relationship_code'],
                     'contact_number' => $newWatcher['contact_number'] ?? null,
-                    'address' => $newWatcher['address'] ?? null,
+                    ...PsgcAddress::columnsFrom($newWatcher, 'address'),
                     'notes' => $newWatcher['notes'] ?? null,
                     'added_by' => $attributes['added_by'] ?? null,
                 ])->id;

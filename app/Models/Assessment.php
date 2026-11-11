@@ -88,6 +88,12 @@ class Assessment extends Model
         'informant_middle_name',
         'informant_relationship',
         'informant_address',
+        // PSGC parts of the informant address (App\Support\PsgcAddress).
+        'informant_address_line',
+        'informant_address_region_code',
+        'informant_address_province_code',
+        'informant_address_city_code',
+        'informant_address_barangay_code',
         'informant_contact_number',
         'other_income_sources',
         'referral_source',

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PsgcAddress;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -48,6 +49,7 @@ class AssessmentResource extends JsonResource
             'informant_middle_name' => $this->informant_middle_name,
             'informant_relationship' => $this->informant_relationship,
             'informant_address' => $this->informant_address,
+            ...PsgcAddress::resourceFields($this->resource, 'informant_address'),
             'informant_contact_number' => $this->informant_contact_number,
             'other_income_sources' => $this->other_income_sources,
             'referral_source' => $this->referral_source,

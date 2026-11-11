@@ -7,6 +7,7 @@ use App\Models\ModeOfAssistance;
 use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\User;
+use Database\Seeders\PsgcFixtureSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Laravel\Sanctum\Sanctum;
@@ -161,20 +162,22 @@ it('falls back to the calculated classification when it is cleared on update', f
 });
 
 it('stores the informant name parts, address and contact, accepting the legacy contact alias', function () {
+    $this->seed(PsgcFixtureSeeder::class);
     $response = $this->postJson("/api/cases/{$this->case->id}/assessments", [
         'informant_name' => 'Reyes, Ana M.',
         'informant_last_name' => 'Reyes',
         'informant_first_name' => 'Ana',
         'informant_middle_name' => 'M.',
         'informant_relationship' => 'Mother',
-        'informant_address' => 'Sta. Maria, Zamboanga City',
+        ...psgcAddress('informant_address', 'Sta. Maria'),
         'informant_contact' => '09171234567', // the form also sends informant_contact_number
         'total_family_income' => 4500,
     ])->assertCreated()
         ->assertJsonPath('data.informant_last_name', 'Reyes')
         ->assertJsonPath('data.informant_first_name', 'Ana')
         ->assertJsonPath('data.informant_middle_name', 'M.')
-        ->assertJsonPath('data.informant_address', 'Sta. Maria, Zamboanga City')
+        ->assertJsonPath('data.informant_address', 'Sta. Maria, Arena Blanco, City of Zamboanga')
+        ->assertJsonPath('data.informant_address_city_code', PsgcFixtureSeeder::ZAMBOANGA_CITY)
         ->assertJsonPath('data.informant_contact_number', '09171234567');
 
     $this->putJson('/api/assessments/'.$response->json('data.id'), [

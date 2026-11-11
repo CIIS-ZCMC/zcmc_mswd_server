@@ -9,6 +9,7 @@ import { useLatestAssessment } from "../hooks/use-assessment"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import { PrintUisDialog } from "./dialogs/print-uis-dialog"
 import { IntakeAssessmentDialog } from "./dialogs/intake-assessment-dialog"
+import type { PsgcAddressValue } from "@/features/reference/types/psgc.types"
 import { UisPrintHistoryTable } from "./uis-print-history-table"
 import { MISSING_SECTION_LABELS } from "../lib/uis-labels"
 import {
@@ -23,7 +24,7 @@ export interface EncounterUisPanelProps {
   caseId?: number | null
   caseCode?: string | null
   patientName?: string | null
-  patientAddress?: string | null
+  patientAddressPsgc?: PsgcAddressValue
   patientContact?: string | null
   patientMonthlyIncome?: number | null
   transactionId?: number | null
@@ -37,7 +38,7 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
   caseId,
   caseCode,
   patientName,
-  patientAddress,
+  patientAddressPsgc,
   patientContact,
   patientMonthlyIncome,
   transactionId,
@@ -220,7 +221,7 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
         caseId={Number(caseId)}
         caseCode={caseCode ?? undefined}
         patientName={patientName ?? undefined}
-        patientAddress={patientAddress ?? undefined}
+        patientAddressPsgc={patientAddressPsgc}
         patientContact={patientContact ?? undefined}
         patientMonthlyIncome={patientMonthlyIncome}
         existingAssessment={latestAssessment}

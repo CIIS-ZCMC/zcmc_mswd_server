@@ -95,6 +95,19 @@ return [
         'role_map' => [],
     ],
 
+    /*
+    | PSGC Cloud — the Philippine Standard Geographic Code API that
+    | `php artisan psgc:sync` reads. The app never calls it at runtime: the
+    | areas live in `psgc_areas`, loaded from database/data/psgc.json.gz.
+    */
+    'psgc' => [
+        'base_url' => env('PSGC_API_URL', 'https://psgc.cloud/api'),
+        'timeout' => (int) env('PSGC_TIMEOUT', 30),
+        // Cities in this region come first in the address picker (Region IX,
+        // Zamboanga Peninsula, for ZCMC).
+        'home_region' => env('PSGC_HOME_REGION', '0900000000'),
+    ],
+
     'slack' => [
         'notifications' => [
             'bot_user_oauth_token' => env('SLACK_BOT_USER_OAUTH_TOKEN'),
