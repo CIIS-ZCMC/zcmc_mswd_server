@@ -21,6 +21,15 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useWatcherRelationshipTypes } from "@/features/cases/hooks/use-case-watchers"
 import type { CreateCaseWatcherPayload } from "@/features/cases/api/case-watchers-api"
+import { PsgcAddressFields } from "@/features/reference/components/psgc-address-fields"
+import {
+  isPsgcAddressComplete,
+  toPsgcPayload,
+} from "@/features/reference/lib/psgc-address"
+import {
+  EMPTY_PSGC_ADDRESS,
+  type PsgcAddressValue,
+} from "@/features/reference/types/psgc.types"
 import type { OpenCase, Watcher } from "../../types/watcher.types"
 
 const NEW_PERSON = "new"
@@ -99,7 +108,7 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
     middleName: "",
     relationshipCode: "",
     contactNumber: "",
-    address: "",
+    address: { ...EMPTY_PSGC_ADDRESS } as PsgcAddressValue,
   })
   const [flags, setFlags] = useState({ isPrimary: false, isInformant: false, presentFrom: "", presentUntil: "", notes: "" })
   const [error, setError] = useState<string | null>(null)
@@ -128,7 +137,7 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
       middleName: "",
       relationshipCode: relationshipTypes[0]?.code ?? "",
       contactNumber: "",
-      address: "",
+      address: { ...EMPTY_PSGC_ADDRESS },
     })
     setFlags({ isPrimary: false, isInformant: false, presentFrom: "", presentUntil: "", notes: "" })
   }
@@ -141,7 +150,7 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
         person.firstName.trim() !== "" &&
         person.relationshipCode !== "" &&
         person.contactNumber.trim().length === 10 &&
-        person.address.trim() !== ""
+        isPsgcAddressComplete(person.address)
       : watcherId !== NEW_PERSON)
 
   const handleSave = async () => {
@@ -163,7 +172,7 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
               last_name: person.lastName.trim(),
               relationship_code: person.relationshipCode,
               contact_number: formattedContact,
-              address: person.address.trim(),
+              ...toPsgcPayload("address", person.address),
             },
           }
         : { patient_watcher_id: Number(watcher?.id ?? watcherId) }),
@@ -310,11 +319,11 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
                       10-digit number required ({person.contactNumber.length}/10)
                     </p>
                   )}
-                  <Input
-                    placeholder="Address *"
+                  <PsgcAddressFields
+                    label="Address *"
                     value={person.address}
-                    onChange={(e) => setPerson({ ...person, address: e.target.value })}
-                    className="h-10 bg-background"
+                    onChange={(address) => setPerson({ ...person, address })}
+                    required
                   />
                 </div>
               )}

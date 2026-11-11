@@ -2,6 +2,8 @@
 
 namespace App\DTOs;
 
+use App\Support\PsgcAddress;
+
 class PatientWatcherDto
 {
     /**
@@ -24,6 +26,8 @@ class PatientWatcherDto
         public readonly ?string $notes = null,
         public readonly ?int $added_by = null,
         array $suppliedKeys = [],
+        /** PSGC address columns, composed `address` included (App\Support\PsgcAddress). */
+        public readonly array $addressColumns = [],
     ) {
         $this->suppliedKeys = $suppliedKeys;
     }
@@ -42,6 +46,7 @@ class PatientWatcherDto
             notes: $data['notes'] ?? null,
             added_by: $data['added_by'] ?? null,
             suppliedKeys: array_keys($data),
+            addressColumns: PsgcAddress::columnsFrom($data, 'address'),
         );
     }
 
@@ -64,10 +69,13 @@ class PatientWatcherDto
 
         // The owning patient, the author and the required fields can never be
         // nulled by an update.
-        return array_filter(
-            $attributes,
-            fn ($value, $key) => ! in_array($key, ['patient_id', 'added_by', 'name', 'first_name', 'last_name', 'relationship_code'], true) || $value !== null,
-            ARRAY_FILTER_USE_BOTH,
-        );
+        return [
+            ...array_filter(
+                $attributes,
+                fn ($value, $key) => ! in_array($key, ['patient_id', 'added_by', 'name', 'first_name', 'last_name', 'relationship_code'], true) || $value !== null,
+                ARRAY_FILTER_USE_BOTH,
+            ),
+            ...$this->addressColumns,
+        ];
     }
 }

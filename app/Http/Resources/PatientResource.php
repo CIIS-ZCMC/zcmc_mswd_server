@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PsgcAddress;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -42,6 +43,10 @@ class PatientResource extends JsonResource
             'place_of_birth' => $this->place_of_birth,
             'permanent_address' => $this->permanent_address,
             'present_address' => $this->present_address,
+            // PSGC parts (null for an address still in free text).
+            ...PsgcAddress::resourceFields($this->resource, 'present_address'),
+            ...PsgcAddress::resourceFields($this->resource, 'permanent_address'),
+            'place_of_birth_city_code' => $this->place_of_birth_city_code,
             'educational_attainment' => $this->educational_attainment,
             'occupation' => $this->occupation,
             'employer' => $this->employer,

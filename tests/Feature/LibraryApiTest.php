@@ -9,6 +9,7 @@ use App\Models\Patient;
 use App\Models\Sector;
 use App\Models\User;
 use Database\Seeders\GuarantorSeeder;
+use Database\Seeders\PsgcFixtureSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Illuminate\Support\Str;
@@ -20,6 +21,7 @@ uses(RefreshDatabase::class);
 beforeEach(function () {
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(GuarantorSeeder::class);
+    $this->seed(PsgcFixtureSeeder::class);
 
     Sanctum::actingAs(libraryUser('Admin'));
 });
@@ -158,10 +160,11 @@ it('audits every change to a row', function (string $uri, string $model) {
 // ── Guarantors ───────────────────────────────────────────────────────────────
 
 it('adds, renames, retires and deletes a guarantor', function () {
-    $id = $this->postJson('/api/guarantors', ['name' => 'Malasakit Center', 'address' => 'Zamboanga City'])
+    $id = $this->postJson('/api/guarantors', ['name' => 'Malasakit Center', ...psgcAddress(line: 'ZCMC Compound')])
         ->assertCreated()
         ->assertJsonPath('data.name', 'Malasakit Center')
-        ->assertJsonPath('data.address', 'Zamboanga City')
+        ->assertJsonPath('data.address', 'ZCMC Compound, Arena Blanco, City of Zamboanga')
+        ->assertJsonPath('data.address_barangay_code', PsgcFixtureSeeder::ARENA_BLANCO)
         ->assertJsonPath('data.is_active', true)
         ->assertJsonPath('data.usage_count', 0)
         ->json('data.id');
@@ -181,7 +184,15 @@ it('validates a guarantor', function () {
     $this->postJson('/api/guarantors', ['name' => 'PCSO'])->assertUnprocessable()->assertJsonValidationErrors('name');
 
     $pcso = Guarantor::where('name', 'PCSO')->firstOrFail();
-    $this->putJson("/api/guarantors/{$pcso->id}", ['name' => 'PCSO', 'address' => 'Manila'])->assertOk();
+    $this->putJson("/api/guarantors/{$pcso->id}", ['name' => 'PCSO', ...psgcAddress()])->assertOk();
+
+    // An address needs both a PSGC city and one of its barangays.
+    $this->putJson("/api/guarantors/{$pcso->id}", ['address_line' => 'Somewhere'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['address_city_code']);
+    $this->putJson("/api/guarantors/{$pcso->id}", psgcAddress(barangay: PsgcFixtureSeeder::AURORA_POBLACION))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['address_barangay_code']);
 });
 
 it('lets guarantee.create manage guarantors and everyone else only read them', function () {
@@ -196,7 +207,7 @@ it('lets guarantee.create manage guarantors and everyone else only read them', f
 
 it('audits every change to a guarantor', function () {
     $id = $this->postJson('/api/guarantors', ['name' => 'Audited'])->json('data.id');
-    $this->putJson("/api/guarantors/{$id}", ['address' => 'Somewhere']);
+    $this->putJson("/api/guarantors/{$id}", psgcAddress(line: 'Somewhere'));
     $this->deleteJson("/api/guarantors/{$id}");
 
     expect(Activity::where('subject_type', (new Guarantor)->getMorphClass())->where('subject_id', $id)->pluck('event')->all())

@@ -172,14 +172,14 @@ export const LibraryPage: React.FC = () => {
                     id: data.id,
                     input: {
                       name: data.name,
-                      address: data.address,
+                      addressPsgc: data.addressPsgc,
                       isActive: data.isActive,
                     },
                   })
                 } else {
                   await createGuarantorMut.mutateAsync({
                     name: data.name,
-                    address: data.address,
+                    addressPsgc: data.addressPsgc,
                     isActive: data.isActive,
                   })
                 }

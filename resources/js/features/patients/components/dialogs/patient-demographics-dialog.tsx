@@ -12,6 +12,7 @@ import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
 import { Spinner } from "@/components/ui/spinner"
+import { PsgcCityPicker } from "@/features/reference/components/psgc-address-fields"
 import type { UpdatePatientBackgroundPayload } from "../../api/patients-api"
 import type { PatientRecord } from "../../types"
 
@@ -55,7 +56,7 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
     religion: patient.religion ?? "",
     nationality: patient.nationality ?? "",
     civil_status: patient.civilStatus ?? "",
-    place_of_birth: patient.placeOfBirth ?? "",
+    place_of_birth_city_code: patient.placeOfBirthCityCode ?? null,
     educational_attainment: patient.educationalAttainment ?? "",
   }))
 
@@ -65,7 +66,7 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
         religion: patient.religion ?? "",
         nationality: patient.nationality ?? "",
         civil_status: patient.civilStatus ?? "",
-        place_of_birth: patient.placeOfBirth ?? "",
+        place_of_birth_city_code: patient.placeOfBirthCityCode ?? null,
         educational_attainment: patient.educationalAttainment ?? "",
       })
     }
@@ -76,7 +77,10 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
       religion: form.religion || undefined,
       nationality: form.nationality || undefined,
       civil_status: form.civil_status || undefined,
-      place_of_birth: form.place_of_birth || undefined,
+      // Only when changed: a place still in free text is left alone.
+      ...(form.place_of_birth_city_code !== (patient.placeOfBirthCityCode ?? null)
+        ? { place_of_birth_city_code: form.place_of_birth_city_code }
+        : {}),
       educational_attainment: form.educational_attainment || undefined,
     })
   }
@@ -115,12 +119,14 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
 
           <div>
             <Label className="text-sm font-bold">Place of Birth</Label>
-            <Input
-              value={form.place_of_birth}
-              onChange={(e) => setForm({ ...form, place_of_birth: e.target.value })}
-              className="h-11 text-base mt-1"
-              placeholder="City / Municipality, Province"
-            />
+            <div className="mt-1">
+              <PsgcCityPicker
+                value={form.place_of_birth_city_code}
+                onChange={(code) => setForm({ ...form, place_of_birth_city_code: code })}
+                legacyText={patient.placeOfBirthCityCode ? undefined : patient.placeOfBirth}
+                disabled={isSaving}
+              />
+            </div>
           </div>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

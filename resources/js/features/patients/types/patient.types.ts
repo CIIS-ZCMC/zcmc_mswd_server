@@ -2,6 +2,7 @@ import type { AuditHistory } from "./audit.types"
 import type { FamilyMember, MedicalCategory, SocialCaseStudy, StaffAssignment } from "./case-study.types"
 import type { DocumentItem } from "./document.types"
 import type { OpenCase, Watcher } from "./watcher.types"
+import type { PsgcAddressValue } from "@/features/reference/types/psgc.types"
 
 /**
  * Backend `cases.admission_type`, `patients.sex` and `patients.civil_status`
@@ -57,8 +58,13 @@ export interface PatientRecord {
   religion?: string
   nationality?: string
   placeOfBirth?: string
+  /** PSGC city or municipality of birth; undefined while the place is free text. */
+  placeOfBirthCityCode?: string
   permanentAddress?: string
   presentAddress?: string
+  /** The two addresses as picked from PSGC (empty cityCode: still free text). */
+  presentAddressPsgc?: PsgcAddressValue
+  permanentAddressPsgc?: PsgcAddressValue
   educationalAttainment?: string
   occupation?: string
   employer?: string

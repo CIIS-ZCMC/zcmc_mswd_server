@@ -4,6 +4,7 @@ namespace App\Http\Requests;
 
 use App\Models\Assessment;
 use App\Rules\SelectableLookupCode;
+use App\Support\PsgcAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -54,7 +55,8 @@ class StoreAssessmentRequest extends FormRequest
             'informant_first_name' => ['nullable', 'string', 'max:255'],
             'informant_middle_name' => ['nullable', 'string', 'max:255'],
             'informant_relationship' => ['nullable', 'string', 'max:255'],
-            'informant_address' => ['nullable', 'string', 'max:500'],
+            // Picked from PSGC; the server writes the composed `informant_address`.
+            ...PsgcAddress::rules('informant_address'),
             'informant_contact_number' => ['nullable', 'string', 'max:50'],
             'other_income_sources' => ['nullable', 'array'],
             'other_income_sources.*.source' => ['required', 'string', 'max:255'],

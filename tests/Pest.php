@@ -3,6 +3,7 @@
 use App\Models\CaseModel;
 use App\Models\CaseWatcher;
 use App\Models\PatientWatcher;
+use Database\Seeders\PsgcFixtureSeeder;
 use Illuminate\Support\Arr;
 use Tests\TestCase;
 
@@ -50,6 +51,22 @@ expect()->extend('toBeOne', function () {
 function something()
 {
     // ..
+}
+
+/**
+ * The three fields a client sends for a PSGC address under `{base}`, pointing
+ * at PsgcFixtureSeeder's Zamboanga City, Arena Blanco. Seed that fixture first.
+ * Composes to "{line}, Arena Blanco, City of Zamboanga".
+ *
+ * @return array<string, string|null>
+ */
+function psgcAddress(string $base = 'address', ?string $line = 'Zone 1', string $barangay = PsgcFixtureSeeder::ARENA_BLANCO, string $city = PsgcFixtureSeeder::ZAMBOANGA_CITY): array
+{
+    return [
+        "{$base}_line" => $line,
+        "{$base}_city_code" => $city,
+        "{$base}_barangay_code" => $barangay,
+    ];
 }
 
 /**

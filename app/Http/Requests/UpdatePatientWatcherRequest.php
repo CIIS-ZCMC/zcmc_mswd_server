@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PsgcAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -35,7 +36,8 @@ class UpdatePatientWatcherRequest extends FormRequest
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'relationship_code' => ['sometimes', 'required', 'string', Rule::exists('watcher_relationship_types', 'code')],
             'contact_number' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            // Picked from PSGC; left alone when not sent.
+            ...PsgcAddress::rules('address'),
             'notes' => ['nullable', 'string'],
         ];
     }

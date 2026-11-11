@@ -22,6 +22,12 @@ class PatientWatcher extends Model
         'relationship_code',
         'contact_number',
         'address',
+        // PSGC parts of the address; `address` is composed from them.
+        'address_line',
+        'address_region_code',
+        'address_province_code',
+        'address_city_code',
+        'address_barangay_code',
         'added_by',
         'notes',
     ];

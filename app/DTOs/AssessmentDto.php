@@ -2,6 +2,8 @@
 
 namespace App\DTOs;
 
+use App\Support\PsgcAddress;
+
 class AssessmentDto
 {
     /**
@@ -52,6 +54,8 @@ class AssessmentDto
         /** Expense lines created together with the assessment (not an assessment column). */
         public readonly ?array $expenses = null,
         array $suppliedKeys = [],
+        /** PSGC informant address columns, composed `informant_address` included. */
+        public readonly array $informantAddressColumns = [],
     ) {
         $this->suppliedKeys = $suppliedKeys;
     }
@@ -96,6 +100,7 @@ class AssessmentDto
             intervention_plan: $data['intervention_plan'] ?? null,
             expenses: $data['expenses'] ?? null,
             suppliedKeys: array_keys($data),
+            informantAddressColumns: PsgcAddress::columnsFrom($data, 'informant_address'),
         );
     }
 
@@ -141,10 +146,13 @@ class AssessmentDto
 
         $attributes = array_intersect_key($all, array_flip($this->suppliedKeys));
 
-        return array_filter(
-            $attributes,
-            fn ($value, $key) => ! in_array($key, ['case_id', 'created_by'], true) || $value !== null,
-            ARRAY_FILTER_USE_BOTH,
-        );
+        return [
+            ...array_filter(
+                $attributes,
+                fn ($value, $key) => ! in_array($key, ['case_id', 'created_by'], true) || $value !== null,
+                ARRAY_FILTER_USE_BOTH,
+            ),
+            ...$this->informantAddressColumns,
+        ];
     }
 }

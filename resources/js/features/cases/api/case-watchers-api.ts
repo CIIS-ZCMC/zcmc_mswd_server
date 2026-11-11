@@ -13,7 +13,10 @@ export interface CreateCaseWatcherPayload {
     last_name?: string | null
     relationship_code: string
     contact_number?: string | null
-    address?: string | null
+    /** Picked from PSGC: the server writes the composed address. */
+    address_line?: string | null
+    address_city_code?: string | null
+    address_barangay_code?: string | null
   }
   is_primary?: boolean
   is_informant?: boolean

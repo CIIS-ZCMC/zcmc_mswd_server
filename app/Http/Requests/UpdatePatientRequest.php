@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PsgcAddress;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -36,16 +37,16 @@ class UpdatePatientRequest extends FormRequest
             'estimated_age' => ['nullable', 'integer'],
             'sex' => ['sometimes', 'required', 'string', 'max:255'],
             'civil_status' => ['nullable', 'string', 'max:255'],
-            'address' => ['nullable', 'string', 'max:255'],
-            'barangay' => ['nullable', 'string', 'max:255'],
-            'municipality' => ['nullable', 'string', 'max:255'],
-            'province' => ['nullable', 'string', 'max:255'],
+            // Addresses and place of birth are picked from PSGC; the composed
+            // strings are written by the server and not accepted here. An
+            // address left out of the request is left alone; sent with no
+            // city and barangay, it is cleared.
+            ...PsgcAddress::rules('present_address'),
+            ...PsgcAddress::rules('permanent_address'),
+            ...PsgcAddress::cityRules('place_of_birth'),
             'contact_number' => ['nullable', 'string', 'max:255'],
             'religion' => ['nullable', 'string', 'max:255'],
             'nationality' => ['nullable', 'string', 'max:255'],
-            'place_of_birth' => ['nullable', 'string', 'max:255'],
-            'permanent_address' => ['nullable', 'string', 'max:255'],
-            'present_address' => ['nullable', 'string', 'max:255'],
             'educational_attainment' => ['nullable', 'string', 'max:255'],
             'occupation' => ['nullable', 'string', 'max:255'],
             'employer' => ['nullable', 'string', 'max:255'],

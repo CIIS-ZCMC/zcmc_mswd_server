@@ -187,7 +187,8 @@ class PatientAssistanceService
             'hospital_id' => $patient->hospital_id,
             'mswd_id' => $patient->mswd_id,
             'patient_name' => $this->patientName($patient),
-            'patient_address' => $patient->address,
+            // The full address as forms print it, not just the street line.
+            'patient_address' => $patient->printedAddress(),
             'assistant_type' => $assistance->assistantType?->name ?? '',
             'category' => $assistance->assistantType?->category ?? '',
             'amount' => $assistance->amount,
@@ -222,7 +223,7 @@ class PatientAssistanceService
                 'hospital_id' => $patient->hospital_id,
                 'mswd_id' => $patient->mswd_id,
                 'name' => $this->patientName($patient),
-                'address' => $patient->address,
+                'address' => $patient->printedAddress(),
             ],
         ];
     }

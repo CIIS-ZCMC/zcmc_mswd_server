@@ -9,6 +9,17 @@ import {
 } from "@/components/ui/dialog"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
+import { PsgcAddressFields } from "@/features/reference/components/psgc-address-fields"
+import {
+  isPsgcAddressComplete,
+  isPsgcAddressEmpty,
+  legacyAddressText,
+  toPsgcPayload,
+} from "@/features/reference/lib/psgc-address"
+import {
+  EMPTY_PSGC_ADDRESS,
+  type PsgcAddressValue,
+} from "@/features/reference/types/psgc.types"
 import { Label } from "@/components/ui/label"
 import { Textarea } from "@/components/ui/textarea"
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select"
@@ -55,7 +66,8 @@ interface IntakeAssessmentDialogProps {
   patientFirstName?: string
   patientMiddleName?: string
   patientLastName?: string
-  patientAddress?: string
+  /** The patient's present address as picked from PSGC; copied when the informant is the patient. */
+  patientAddressPsgc?: PsgcAddressValue
   patientContact?: string
   patientMonthlyIncome?: number | null
   existingAssessment?: Assessment | null
@@ -111,7 +123,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   patientFirstName,
   patientMiddleName,
   patientLastName,
-  patientAddress,
+  patientAddressPsgc,
   patientContact,
   existingAssessment,
   transactionId,
@@ -144,7 +156,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   const [informantMiddleName, setInformantMiddleName] = useState("")
   const [informantRelationship, setInformantRelationship] = useState("")
   const [customRelationship, setCustomRelationship] = useState("")
-  const [informantAddress, setInformantAddress] = useState("")
+  const [informantAddress, setInformantAddress] = useState<PsgcAddressValue>(EMPTY_PSGC_ADDRESS)
   const [informantContact, setInformantContact] = useState("")
 
   // Problem & Medical / Assessment
@@ -219,7 +231,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
           setCustomRelationship("")
         }
 
-        setInformantAddress(existingAssessment.informantAddress ?? "")
+        setInformantAddress(existingAssessment.informantAddressPsgc ?? EMPTY_PSGC_ADDRESS)
         setInformantContact(existingAssessment.informantContact ?? "")
         const isSelf =
           existingAssessment.informantRelationship?.toLowerCase() === "patient" ||
@@ -271,7 +283,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         setInformantMiddleName("")
         setInformantRelationship("")
         setCustomRelationship("")
-        setInformantAddress("")
+        setInformantAddress(EMPTY_PSGC_ADDRESS)
         setInformantContact("")
         setPresentingProblem(defaultDiagnosis)
         setProblemCategories([])
@@ -290,7 +302,6 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
     existingAssessment,
     assistanceTypeOptionsData,
     patientName,
-    patientAddress,
     patientContact,
     encounterFinalDiagnosis,
     encounter?.finalDiagnosis,
@@ -314,7 +325,9 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
       }
       setInformantRelationship("Patient")
       setCustomRelationship("")
-      if (patientAddress) setInformantAddress(patientAddress)
+      if (patientAddressPsgc && isPsgcAddressComplete(patientAddressPsgc)) {
+        setInformantAddress({ ...patientAddressPsgc })
+      }
       if (patientContact) setInformantContact(patientContact)
     } else {
       setInformantLastName("")
@@ -322,7 +335,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
       setInformantMiddleName("")
       setInformantRelationship("")
       setCustomRelationship("")
-      setInformantAddress("")
+      setInformantAddress(EMPTY_PSGC_ADDRESS)
       setInformantContact("")
     }
   }
@@ -338,6 +351,20 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setErrorMsg(null)
+
+    // A half-picked address cannot be saved: it needs the city and barangay.
+    if (!isPsgcAddressComplete(informantAddress) && !isPsgcAddressEmpty(informantAddress)) {
+      setErrorMsg("Pick both a city or municipality and a barangay for the informant address, or clear it.")
+      return
+    }
+
+    // A complete address is saved; clearing one that was picked from PSGC
+    // clears it; free text that nobody touched is left alone.
+    const informantAddressPayload: Record<string, string | null> = isPsgcAddressComplete(informantAddress)
+      ? toPsgcPayload("informant_address", informantAddress)
+      : existingAssessment?.informantAddressPsgc?.cityCode
+        ? toPsgcPayload("informant_address", informantAddress)
+        : {}
 
     const combinedName = combineInformantName(informantLastName, informantFirstName, informantMiddleName)
 
@@ -360,7 +387,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         informant_first_name: informantFirstName.trim() || null,
         informant_middle_name: informantMiddleName.trim() || null,
         informant_relationship: effectiveRelationship,
-        informant_address: informantAddress.trim() || null,
+        ...informantAddressPayload,
         informant_contact_number: informantContact.trim() || null,
         informant_contact: informantContact.trim() || null,
         presenting_problem: presentingProblem.trim() || null,
@@ -392,7 +419,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         informant_first_name: informantFirstName.trim() || null,
         informant_middle_name: informantMiddleName.trim() || null,
         informant_relationship: effectiveRelationship,
-        informant_address: informantAddress.trim() || null,
+        ...informantAddressPayload,
         informant_contact_number: informantContact.trim() || null,
         informant_contact: informantContact.trim() || null,
         presenting_problem: presentingProblem.trim() || null,
@@ -577,12 +604,14 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
             {/* Informant Address */}
             <div className="space-y-1.5">
               <Label className="text-xs font-bold uppercase tracking-wider">Informant Address</Label>
-              <Input
-                placeholder="e.g. House No., Street, Barangay, City/Municipality"
+              <PsgcAddressFields
                 value={informantAddress}
-                onChange={(e) => setInformantAddress(e.target.value)}
+                onChange={setInformantAddress}
+                legacyText={legacyAddressText(
+                  existingAssessment?.informantAddress,
+                  existingAssessment?.informantAddressPsgc
+                )}
                 disabled={isInformantPatient}
-                className="h-11 text-sm font-medium disabled:opacity-75 disabled:bg-muted/40 disabled:cursor-not-allowed"
               />
             </div>
           </div>

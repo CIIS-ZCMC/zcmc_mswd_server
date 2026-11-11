@@ -1,4 +1,5 @@
 import type { ApiAssessment, ApiMswdClassificationMatrix, ApiUisSnapshot } from "@/features/patients/types/api.types"
+import { fromPsgcFields } from "@/features/reference/lib/psgc-address"
 import type {
   Assessment,
   LegacyClassification,
@@ -141,6 +142,7 @@ export function adaptAssessment(api: ApiAssessment): Assessment {
     informantLastName: api.informant_last_name ?? null,
     informantRelationship: api.informant_relationship ?? null,
     informantAddress: api.informant_address ?? null,
+    informantAddressPsgc: fromPsgcFields(api as unknown as Record<string, unknown>, "informant_address"),
     informantContact: api.informant_contact_number ?? api.informant_contact ?? null,
     otherIncomeSources: (api.other_income_sources ?? []).map((i) => ({
       source: i.source,

@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PsgcAddress;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -18,6 +19,7 @@ class GuarantorResource extends JsonResource
             'id' => $this->id,
             'name' => $this->name,
             'address' => $this->address,
+            ...PsgcAddress::resourceFields($this->resource, 'address'),
             'is_active' => $this->is_active,
             // Patient guarantees plus assistance records that name this guarantor, when counted.
             'usage_count' => $this->when(

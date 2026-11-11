@@ -21,6 +21,7 @@ import type { DocumentItem } from "../types/document.types"
 import type { AuditEvent, AuditFieldChange, AuditHistory } from "../types/audit.types"
 import type { PatientIdCredential, PatientRecord } from "../types/patient.types"
 import type { OpenCase, Watcher } from "../types/watcher.types"
+import { fromPsgcFields } from "@/features/reference/lib/psgc-address"
 import type {
   ApiActivity,
   ApiAssessment,
@@ -132,6 +133,7 @@ export function toWatcher(raw: ApiWatcher): Watcher {
     relationshipCode: raw.relationship_code ?? "",
     contactNo: raw.contact_number ?? "",
     address: raw.address ?? "",
+    addressPsgc: fromPsgcFields(raw as unknown as Record<string, unknown>, "address"),
     notes: raw.notes ?? "",
     assignments: (raw.assignments ?? []).map((a) => ({
       id: String(a.id),
@@ -320,8 +322,11 @@ export function toPatientListRecord(raw: ApiPatient): PatientRecord {
     religion: raw.religion ?? undefined,
     nationality: raw.nationality ?? undefined,
     placeOfBirth: raw.place_of_birth ?? undefined,
+    placeOfBirthCityCode: raw.place_of_birth_city_code ?? undefined,
     permanentAddress: raw.permanent_address ?? undefined,
     presentAddress: raw.present_address ?? undefined,
+    presentAddressPsgc: fromPsgcFields(raw as unknown as Record<string, unknown>, "present_address"),
+    permanentAddressPsgc: fromPsgcFields(raw as unknown as Record<string, unknown>, "permanent_address"),
     educationalAttainment: raw.educational_attainment ?? undefined,
     occupation: raw.occupation ?? undefined,
     employer: raw.employer ?? undefined,
