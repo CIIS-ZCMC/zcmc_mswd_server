@@ -12,9 +12,10 @@ use Illuminate\Validation\ValidationException;
 class LoginController extends Controller
 {
     /**
-     * Authenticate the local super admin by employee number + password and
-     * issue a Sanctum API token. Everyone else signs in through ZCMC IAM. React stores the token and sends it as
-     * `Authorization: Bearer <token>`.
+     * Authenticate by employee number + password and issue a Sanctum API token:
+     * the local super admin, or anyone under the `local` provider
+     * (User::canSignInWithPassword). Everyone else signs in through UMIS or IAM.
+     * The client sends the token as `Authorization: Bearer <token>`.
      */
     public function __invoke(LoginRequest $request): JsonResponse
     {

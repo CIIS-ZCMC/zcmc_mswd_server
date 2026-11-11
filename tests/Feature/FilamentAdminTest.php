@@ -84,6 +84,10 @@ it('syncs the role cache when roles are changed via the Filament editor', functi
         ->and($target->role)->toBe('Case Manager');
 });
 
-it('does not allow creating users through the panel', function () {
+it('does not allow creating users through the panel under UMIS or IAM', function (string $provider) {
+    config(['services.auth_provider' => $provider]);
+    actingAs(panelUser('Super Admin'));
+
     expect(UserResource::canCreate())->toBeFalse();
-});
+    $this->get('/admin/users/create')->assertForbidden();
+})->with(['umis', 'iam']);

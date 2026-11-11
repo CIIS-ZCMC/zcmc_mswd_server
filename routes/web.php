@@ -15,7 +15,7 @@ use Illuminate\Support\Facades\Route;
 // Guest Authentication
 Route::middleware('guest')->group(function () {
     Route::get('/login', [AuthController::class, 'showLogin'])->name('login');
-    // Password sign-in is for the local super admin only (any role in `local`).
+    // Password sign-in: the local super admin, or any role under AUTH_PROVIDER=local.
     Route::post('/login', [AuthController::class, 'login'])->middleware('throttle:6,1');
 
     // ZCMC IAM sign-in, only while AUTH_PROVIDER=iam (404 otherwise).

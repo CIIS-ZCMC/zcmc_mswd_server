@@ -1,4 +1,4 @@
-import React, { useEffect, useId, useMemo, useRef, useState } from "react"
+import React, { useEffect, useId, useMemo, useState } from "react"
 import { Link } from "@inertiajs/react"
 import { Button } from "@/components/ui/button"
 import { Input } from "@/components/ui/input"
@@ -58,6 +58,20 @@ function emptyLine(localId: string): FormLineItem {
     fundSourceId: null,
     othersSpecify: "",
   }
+}
+
+/** What the form would save, as a string, to tell whether it was edited. */
+function snapshotOf(guarantorId: number | null, lines: FormLineItem[]): string {
+  return JSON.stringify({
+    guarantorId,
+    lines: lines.map((l) => ({
+      assistanceTypeId: l.assistanceTypeId,
+      amount: l.amount.trim(),
+      modeOfAssistanceId: l.modeOfAssistanceId,
+      fundSourceId: l.fundSourceId,
+      othersSpecify: l.othersSpecify.trim(),
+    })),
+  })
 }
 
 function lineOptions(
@@ -152,20 +166,12 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
   const [serverErrors, setServerErrors] = useState<Record<string, string[]>>({})
   const [generalError, setGeneralError] = useState<string | null>(null)
 
-  // Track initial snapshot to detect dirtiness
-  const initialSnapshotRef = useRef<string>("")
-  const snapshotCurrent = useMemo(() => {
-    return JSON.stringify({
-      guarantorId,
-      lines: lines.map((l) => ({
-        assistanceTypeId: l.assistanceTypeId,
-        amount: l.amount.trim(),
-        modeOfAssistanceId: l.modeOfAssistanceId,
-        fundSourceId: l.fundSourceId,
-        othersSpecify: l.othersSpecify.trim(),
-      })),
-    })
-  }, [guarantorId, lines])
+  // The form as loaded (or last saved), to tell whether it was edited.
+  const [initialSnapshot, setInitialSnapshot] = useState("")
+  const snapshotCurrent = useMemo(
+    () => snapshotOf(guarantorId, lines),
+    [guarantorId, lines]
+  )
 
   // Reset or initialize on guarantee change
   useEffect(() => {
@@ -186,33 +192,13 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
 
       setGuarantorId(gId)
       setLines(initLines)
-
-      initialSnapshotRef.current = JSON.stringify({
-        guarantorId: gId,
-        lines: initLines.map((l) => ({
-          assistanceTypeId: l.assistanceTypeId,
-          amount: l.amount.trim(),
-          modeOfAssistanceId: l.modeOfAssistanceId,
-          fundSourceId: l.fundSourceId,
-          othersSpecify: l.othersSpecify.trim(),
-        })),
-      })
+      setInitialSnapshot(snapshotOf(gId, initLines))
     } else {
       const gId = initialGuarantorId ?? null
       setGuarantorId(gId)
       const initLines = [emptyLine("line-1")]
       setLines(initLines)
-
-      initialSnapshotRef.current = JSON.stringify({
-        guarantorId: gId,
-        lines: initLines.map((l) => ({
-          assistanceTypeId: l.assistanceTypeId,
-          amount: l.amount.trim(),
-          modeOfAssistanceId: l.modeOfAssistanceId,
-          fundSourceId: l.fundSourceId,
-          othersSpecify: l.othersSpecify.trim(),
-        })),
-      })
+      setInitialSnapshot(snapshotOf(gId, initLines))
     }
     setServerErrors({})
     setGeneralError(null)
@@ -233,10 +219,7 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
   }, [guarantee, initialGuarantorName, guarantorId, guarantorOptions])
 
   // Compute dirtiness and notify caller
-  const isDirty = useMemo(() => {
-    if (!initialSnapshotRef.current) return false
-    return snapshotCurrent !== initialSnapshotRef.current
-  }, [snapshotCurrent])
+  const isDirty = initialSnapshot !== "" && snapshotCurrent !== initialSnapshot
 
   useEffect(() => {
     onDirtyChange?.(isDirty)
@@ -375,7 +358,7 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
         result = await createMutation.mutateAsync(input)
       }
       // Re-align snapshot so it's not marked dirty on unmount
-      initialSnapshotRef.current = snapshotCurrent
+      setInitialSnapshot(snapshotCurrent)
       onSuccess?.(result)
     } catch (err: unknown) {
       if (err instanceof ApiError) {

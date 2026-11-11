@@ -17,7 +17,7 @@ interface SharedProps extends Record<string, unknown> {
   }
 }
 
-export type AuthProvider = "umis" | "iam"
+export type AuthProvider = "umis" | "iam" | "local"
 
 export const AUTH_QUERY_KEY = ["auth", "me"] as const
 

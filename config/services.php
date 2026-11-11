@@ -29,9 +29,13 @@ return [
     ],
 
     /*
-    | Which sign-in staff use: `umis` (the ZCMC Portal hands users over) or
-    | `iam` (ZCMC IAM). The other one's routes answer 404. The local super
-    | admin's password sign-in works under either.
+    | Which sign-in staff use (App\Enums\AuthProvider):
+    | - `umis`: the ZCMC Portal hands users over;
+    | - `iam`: ZCMC IAM;
+    | - `local`: every role signs in with employee number + password on this
+    |   server, and the Super Admin creates accounts in /admin.
+    | The routes of a provider not in use answer 404. The local super admin's
+    | password sign-in works under all three.
     */
     'auth_provider' => env('AUTH_PROVIDER', 'umis'),
 
@@ -45,7 +49,9 @@ return [
         'base_url' => env('UMIS_API_URL', 'https://umis.zcmc.online'),
         // MSWD's key exactly as the UMIS "Manage Systems" screen shows it.
         'api_key' => env('UMIS_API_KEY'),
-        // UMIS encrypts every API reply with its API_PAYLOAD_KEY.
+        // UMIS's API_PAYLOAD_KEY, used only to read replies UMIS encrypts
+        // (`"encrypted": true`). Leave blank while UMIS encryption is off; plain
+        // replies are read as they are.
         'payload_key' => env('UMIS_PAYLOAD_KEY'),
         // The code MSWD is registered under in UMIS; a reply for any other
         // system means the person has no MSWD access.
