@@ -209,6 +209,21 @@ it('applies the configured role map', function () {
     expect(User::where('employee_id', 501)->first()->getRoleNames()->all())->toBe(['Case Manager']);
 });
 
+it('maps the "MSS " role names UMIS uses for MSWD by default', function () {
+    // The shipped config, not the empty map beforeEach sets.
+    config(['services.umis.role_map' => (require config_path('services.php'))['umis']['role_map']]);
+    fakeUmis(umisReply(permissions: ['roles' => [
+        ['id' => 1, 'name' => 'MSS Head'],
+        ['id' => 2, 'name' => 'MSS Processor'],
+        ['id' => 3, 'name' => 'MSS Case Manager'],
+    ]]));
+
+    handOff($this);
+
+    expect(User::where('employee_id', 501)->first()->getRoleNames()->sort()->values()->all())
+        ->toBe(['Case Manager', 'Head', 'Processor']);
+});
+
 it('keeps a sign-in whose UMIS employee number is not a plain number', function () {
     fakeUmis(umisReply(['employee_id' => 'JO-2024-17']));
 
