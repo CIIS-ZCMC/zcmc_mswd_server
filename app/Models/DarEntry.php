@@ -34,6 +34,7 @@ class DarEntry extends Model
     protected $fillable = [
         'user_id',
         'patient_id',
+        'service_visit_id',
         'entry_date',
         'served_time',
         'activity',
@@ -55,6 +56,12 @@ class DarEntry extends Model
     public function patient(): BelongsTo
     {
         return $this->belongsTo(Patient::class);
+    }
+
+    /** The queue visit this line was filed from, if any. */
+    public function serviceVisit(): BelongsTo
+    {
+        return $this->belongsTo(ServiceVisit::class);
     }
 
     /** One worker's lines for one day, in the order they were served. */

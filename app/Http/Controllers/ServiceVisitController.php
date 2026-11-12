@@ -24,7 +24,10 @@ class ServiceVisitController extends Controller implements HasMiddleware
 
     public static function middleware(): array
     {
-        return [new Middleware('permission:queue.manage')];
+        return [
+            new Middleware('permission:queue.manage'),
+            new Middleware('permission:queue.override', only: ['takeOver']),
+        ];
     }
 
     /** The queue board for a day (`?date=`, default today). */
@@ -87,5 +90,12 @@ class ServiceVisitController extends Controller implements HasMiddleware
         $validated = $request->validate(['cancel_reason' => ['required', 'string', 'max:255']]);
 
         return ServiceVisitResource::make($this->visits->cancel($visit, $request->user(), $validated['cancel_reason']));
+    }
+
+    public function takeOver(Request $request, ServiceVisit $visit): ServiceVisitResource
+    {
+        $validated = $request->validate(['takeover_reason' => ['required', 'string', 'max:255']]);
+
+        return ServiceVisitResource::make($this->visits->takeOver($visit, $request->user(), $validated['takeover_reason']));
     }
 }

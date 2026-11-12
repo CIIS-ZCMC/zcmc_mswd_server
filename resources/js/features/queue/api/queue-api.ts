@@ -6,6 +6,7 @@ import type {
   CompleteVisitInput,
   QueueBoardData,
   ServiceVisit,
+  TakeOverVisitInput,
   TimeInInput,
 } from "../types"
 import { toQueueBoardData, toServiceVisit } from "./queue-adapter"
@@ -74,6 +75,19 @@ export async function cancelVisit(
     `/service-visits/${visitId}/cancel`,
     {
       cancel_reason: input.cancelReason,
+    }
+  )
+  return toServiceVisit(res.data)
+}
+
+export async function takeOverVisit(
+  visitId: number,
+  input: TakeOverVisitInput
+): Promise<ServiceVisit> {
+  const res = await apiClient.post<{ data: ApiServiceVisit }>(
+    `/service-visits/${visitId}/take-over`,
+    {
+      takeover_reason: input.takeoverReason,
     }
   )
   return toServiceVisit(res.data)

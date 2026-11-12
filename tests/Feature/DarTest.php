@@ -4,6 +4,7 @@ use App\Models\Activity;
 use App\Models\DarEntry;
 use App\Models\Patient;
 use App\Models\Sector;
+use App\Models\ServiceVisit;
 use App\Models\User;
 use App\Services\DarReportService;
 use Database\Seeders\RolesAndPermissionsSeeder;
@@ -65,6 +66,90 @@ it('adds a line to the caller\'s own DAR', function () {
         ->assertJsonPath('data.patient.hospital_id', 1702854);
 
     expect(DarEntry::sole()->user_id)->toBe($this->worker->id);
+});
+
+// ── Lines filed from a queue visit ───────────────────────────────────────────
+
+function darVisit(Patient $patient, User $completedBy, array $attributes = []): ServiceVisit
+{
+    return ServiceVisit::create([
+        'patient_id' => $patient->id, 'his_transaction_id' => 555,
+        'status' => ServiceVisit::STATUS_COMPLETED, 'arrived_at' => now(), 'started_at' => now(), 'completed_at' => now(),
+        'received_by' => $completedBy->id, 'served_by' => $completedBy->id, 'completed_by' => $completedBy->id,
+        ...$attributes,
+    ]);
+}
+
+function darLinePayload(Patient $patient, ?ServiceVisit $visit): array
+{
+    return [
+        'patient_id' => $patient->id, 'entry_date' => today()->toDateString(),
+        'activity' => 'interview', 'service_visit_id' => $visit?->id,
+    ];
+}
+
+it('links a line to the visit, and shows the link to its owner only', function () {
+    $visit = darVisit($this->patient, $this->worker);
+    Sanctum::actingAs($this->worker);
+
+    $id = $this->postJson('/api/dar-entries', darLinePayload($this->patient, $visit))
+        ->assertCreated()
+        ->assertJsonPath('data.service_visit_id', $visit->id)
+        ->json('data.id');
+
+    $this->getJson("/api/patients/{$this->patient->id}/service-visits")
+        ->assertJsonPath('data.0.dar_entry_id', $id);
+
+    Sanctum::actingAs($this->other);
+    $this->getJson("/api/patients/{$this->patient->id}/service-visits")
+        ->assertJsonPath('data.0.dar_entry_id', null);
+});
+
+it('refuses filing the same visit twice, until the line is deleted', function () {
+    $visit = darVisit($this->patient, $this->worker);
+    Sanctum::actingAs($this->worker);
+
+    $id = $this->postJson('/api/dar-entries', darLinePayload($this->patient, $visit))->assertCreated()->json('data.id');
+
+    $this->postJson('/api/dar-entries', darLinePayload($this->patient, $visit))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('service_visit_id');
+
+    $this->deleteJson("/api/dar-entries/{$id}")->assertNoContent();
+
+    $this->postJson('/api/dar-entries', darLinePayload($this->patient, $visit))->assertCreated();
+});
+
+it('refuses a visit the worker cannot file', function (ServiceVisit $visit) {
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson('/api/dar-entries', darLinePayload($this->patient, $visit))
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('service_visit_id');
+
+    expect(DarEntry::count())->toBe(0);
+})->with([
+    'another patient\'s visit' => fn () => darVisit(darPatient('Juan', 'Santos'), $this->worker),
+    'a visit not completed' => fn () => darVisit($this->patient, $this->worker, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'completed_at' => null, 'completed_by' => null]),
+    'a visit someone else completed' => fn () => darVisit($this->patient, $this->other),
+]);
+
+it('still accepts a line with no visit', function () {
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson('/api/dar-entries', darLinePayload($this->patient, null))
+        ->assertCreated()
+        ->assertJsonPath('data.service_visit_id', null);
+});
+
+it('does not let an edit move a line onto a visit', function () {
+    $entry = darEntry($this->worker, $this->patient);
+    $visit = darVisit($this->patient, $this->worker);
+    Sanctum::actingAs($this->worker);
+
+    $this->patchJson("/api/dar-entries/{$entry->id}", ['service_visit_id' => $visit->id])->assertOk();
+
+    expect($entry->fresh()->service_visit_id)->toBeNull();
 });
 
 it('ignores a user_id in the body', function () {

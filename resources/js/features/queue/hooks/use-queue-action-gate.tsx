@@ -1,15 +1,17 @@
 import React, { createContext, useContext, useMemo } from "react"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { usePatientVisits } from "./use-queue"
-import type { ServiceVisit } from "../types"
-import { Clock } from "lucide-react"
+import { pickActiveVisit, visitLockedBy } from "../lib/visit-lock"
+import type { ServiceVisit, ServiceVisitUser } from "../types"
+import { Clock, Lock } from "lucide-react"
 
 export type QueueActionState = "waiting" | "in_progress" | "completed" | "none"
 
 export interface QueueActionGateContextValue {
   /**
    * Whether the user can perform write/edit/print actions right now.
-   * True if user is exempt (Admin) OR active visit is "in_progress".
+   * True if user is exempt (Admin) OR the active visit is "in_progress" and
+   * not held by another worker.
    */
   canPerformActions: boolean
 
@@ -18,6 +20,9 @@ export interface QueueActionGateContextValue {
 
   /** The active visit (waiting or in_progress), if any */
   activeVisit: ServiceVisit | null
+
+  /** The other worker serving the active visit, if it isn't this user */
+  lockedBy: ServiceVisitUser | null
 
   /** The latest completed visit, if any */
   latestCompletedVisit: ServiceVisit | null
@@ -39,9 +44,8 @@ export interface QueueActionGateContextValue {
   }
 }
 
-const QueueActionGateContext = createContext<QueueActionGateContextValue | null>(
-  null
-)
+const QueueActionGateContext =
+  createContext<QueueActionGateContextValue | null>(null)
 
 export interface QueueActionGateProviderProps {
   patientId?: number | string | null
@@ -49,11 +53,9 @@ export interface QueueActionGateProviderProps {
   children: React.ReactNode
 }
 
-export const QueueActionGateProvider: React.FC<QueueActionGateProviderProps> = ({
-  patientId,
-  transactionId,
-  children,
-}) => {
+export const QueueActionGateProvider: React.FC<
+  QueueActionGateProviderProps
+> = ({ patientId, transactionId, children }) => {
   const { roleCodes, user } = useAuth()
   const isExempt = (roleCodes ?? user?.roleCodes ?? []).some((code) =>
     ["admin", "super_admin"].includes(code)
@@ -66,11 +68,11 @@ export const QueueActionGateProvider: React.FC<QueueActionGateProviderProps> = (
   )
 
   const activeVisit = useMemo(
-    () =>
-      visits.find((v) => v.status === "waiting" || v.status === "in_progress") ??
-      null,
-    [visits]
+    () => pickActiveVisit(visits, user?.id),
+    [visits, user?.id]
   )
+
+  const lockedBy = activeVisit ? visitLockedBy(activeVisit, user?.id) : null
 
   const latestCompletedVisit = useMemo(
     () => visits.find((v) => v.status === "completed") ?? null,
@@ -87,11 +89,16 @@ export const QueueActionGateProvider: React.FC<QueueActionGateProviderProps> = (
     return "none"
   }, [activeVisit, latestCompletedVisit])
 
-  const canPerformActions = isExempt || queueStatus === "in_progress"
+  const canPerformActions =
+    isExempt || (queueStatus === "in_progress" && !lockedBy)
 
+  const lockedByName = lockedBy?.name
   const reason = useMemo(() => {
-    if (isExempt && queueStatus !== "in_progress") {
+    if (isExempt && (queueStatus !== "in_progress" || lockedByName)) {
       return "Administrator override: Actions allowed without active queue session."
+    }
+    if (lockedByName) {
+      return `${lockedByName} is serving this patient. Only they can edit or print until the service ends.`
     }
     switch (queueStatus) {
       case "in_progress":
@@ -104,7 +111,7 @@ export const QueueActionGateProvider: React.FC<QueueActionGateProviderProps> = (
       default:
         return "Service must be in progress to perform this action. Queue the patient to begin."
     }
-  }, [isExempt, queueStatus])
+  }, [isExempt, queueStatus, lockedByName])
 
   const getActionProps = (actionName?: string) => {
     if (canPerformActions) {
@@ -122,6 +129,7 @@ export const QueueActionGateProvider: React.FC<QueueActionGateProviderProps> = (
     canPerformActions,
     queueStatus,
     activeVisit,
+    lockedBy,
     latestCompletedVisit,
     reason,
     isExempt,
@@ -145,6 +153,7 @@ export function useQueueActionGate(): QueueActionGateContextValue {
     canPerformActions: true,
     queueStatus: "in_progress",
     activeVisit: null,
+    lockedBy: null,
     latestCompletedVisit: null,
     reason: "",
     isExempt: false,
@@ -164,7 +173,23 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
   onNavigateToQueue,
   onQueuePatient,
 }) => {
-  const { queueStatus, isExempt } = useQueueActionGate()
+  const { queueStatus, isExempt, lockedBy } = useQueueActionGate()
+
+  if (queueStatus === "in_progress" && lockedBy && !isExempt) {
+    return (
+      <div
+        className={`flex items-center gap-2 rounded-lg border border-amber-500/30 bg-amber-500/10 px-3.5 py-2.5 text-xs text-amber-900 dark:text-amber-200 ${className}`}
+      >
+        <Lock className="size-3.5 shrink-0" />
+        <div>
+          <strong className="font-bold">
+            Being served by {lockedBy.name}:
+          </strong>{" "}
+          Records are view-only for you until they finish.
+        </div>
+      </div>
+    )
+  }
 
   if (queueStatus === "in_progress") {
     return (
@@ -183,7 +208,7 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
           </div>
         </div>
         {isExempt && (
-          <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-emerald-800 dark:text-emerald-300">
+          <span className="rounded bg-emerald-500/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-emerald-800 uppercase dark:text-emerald-300">
             Admin
           </span>
         )}
@@ -210,7 +235,7 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
         <div className="flex items-center gap-2">
           {isExempt && (
             <span
-              className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-amber-800 dark:text-amber-300"
+              className="rounded bg-amber-500/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-amber-800 uppercase dark:text-amber-300"
               title="Administrator override active"
             >
               Admin Override
@@ -241,12 +266,12 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
             <strong className="font-semibold text-foreground">
               Service Completed:
             </strong>{" "}
-            Turnaround session for this visit has ended. Records are in view-only
-            mode.
+            Turnaround session for this visit has ended. Records are in
+            view-only mode.
           </div>
         </div>
         {isExempt && (
-          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-foreground">
+          <span className="rounded bg-muted px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-foreground uppercase">
             Admin Override Active
           </span>
         )}
@@ -269,7 +294,7 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
       </div>
       <div className="flex items-center gap-2">
         {isExempt && (
-          <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-bold uppercase tracking-wider text-sky-800 dark:text-sky-300">
+          <span className="rounded bg-sky-500/20 px-1.5 py-0.5 text-[10px] font-bold tracking-wider text-sky-800 uppercase dark:text-sky-300">
             Admin Override Active
           </span>
         )}
