@@ -295,8 +295,8 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::get('cases/{case}/uis/prints', CaseUisPrintHistoryController::class);
 
     // Intake Assessment (UIS) for a patient's HIS encounter, with or without a case
-    // (docs/INTAKE_ASSESSMENT_PLAN.md). Written under cases.create, like a case's
-    // assessment; its sheet routes need intake.view (on the controller).
+    // (docs/INTAKE_ASSESSMENT_PLAN.md). Written under intake.create (set on
+    // the controller), so a Processor can take one; its sheet routes need intake.view (on the controller).
     Route::post('patients/{patient}/intake-assessments', [IntakeAssessmentController::class, 'store']);
     Route::get('assessments/{assessment}/uis', [AssessmentUisController::class, 'readiness']);
     Route::get('assessments/{assessment}/uis/pdf', [AssessmentUisController::class, 'pdf']);
@@ -325,7 +325,7 @@ Route::middleware('auth:sanctum')->group(function () {
     });
 
     // MSWD Classification Matrix
-    Route::get('mswd-classification-matrix', [MswdClassificationMatrixController::class, 'index'])->middleware('permission:cases.view');
+    Route::get('mswd-classification-matrix', [MswdClassificationMatrixController::class, 'index'])->middleware('permission:cases.view|intake.create');
 
     // Case clinical records (per-action permissions declared on the controllers)
     Route::get('cases/{case}/assessments', [AssessmentController::class, 'index']);
@@ -423,6 +423,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('service-visits/{visit}/start', [ServiceVisitController::class, 'start']);
     Route::post('service-visits/{visit}/complete', [ServiceVisitController::class, 'complete']);
     Route::post('service-visits/{visit}/cancel', [ServiceVisitController::class, 'cancel']);
+    Route::post('service-visits/{visit}/take-over', [ServiceVisitController::class, 'takeOver']);
 
     // Released-aid report snapshots
     Route::get('assistances/{assistance}/reports', [PatientAssistanceReportController::class, 'forAssistance']);

@@ -376,9 +376,7 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
               {/* Header Print Actions */}
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  disabled={!canPerformActions}
-                  title={!canPerformActions ? reason : undefined}
-                  className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-sm font-bold gap-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-sm font-bold gap-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
                   aria-label="Print documents for encounter"
                 >
                   <Printer className="size-4.5 text-primary" />

@@ -83,7 +83,9 @@ class PatientSocioeconomicService
                 'rent_amount' => $profile->house_tenure === 'rented' ? $this->money($profile->house_rent_amount) : null,
             ],
             'light_source' => $profile->light_source ?? [],
+            'light_amount' => ! empty($profile->light_source) ? $this->money($profile->light_amount) : null,
             'water_source' => $profile->water_source ?? [],
+            'water_amount' => ! empty($profile->water_source) ? $this->money($profile->water_amount) : null,
             'expenses' => $expenses,
             'total' => $total,
             'income' => [

@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PhPhoneNumber;
 use App\Support\PsgcAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -19,8 +20,12 @@ class StorePatientWatcherRequest extends FormRequest
             $this->merge(['patient_id' => $this->route('patient')->id]);
         }
 
+        if ($this->has('contact_number')) {
+            $this->merge(['contact_number' => PhPhoneNumber::normalize($this->input('contact_number'))]);
+        }
+
         if ($this->filled('first_name') && $this->filled('last_name') && ! $this->filled('name')) {
-            $fullName = trim(preg_replace('/\s+/', ' ', "{$this->input('first_name')} {$this->input('middle_name')} {$this->input('last_name')}"));
+            $fullName = trim(preg_replace('/\s+/', ' ', "{$this->input('first_name')} {$this->input('middle_name')} {$this->input('last_name')} {$this->input('extension_name')}"));
             $this->merge(['name' => $fullName]);
         } elseif ($this->filled('name') && ! $this->filled('first_name') && ! $this->filled('last_name')) {
             $trimmed = trim($this->input('name'));
@@ -64,9 +69,10 @@ class StorePatientWatcherRequest extends FormRequest
             'first_name' => ['required_without:name', 'nullable', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['required_without:name', 'nullable', 'string', 'max:255'],
+            'extension_name' => ['nullable', 'string', 'max:50'],
             'name' => ['required_without:first_name', 'nullable', 'string', 'max:255'],
             'relationship_code' => ['required', 'string', Rule::exists('watcher_relationship_types', 'code')],
-            'contact_number' => ['required', 'string', 'max:255'],
+            'contact_number' => PhPhoneNumber::rules(['required']),
             // Picked from PSGC; the server writes the composed `address`.
             ...PsgcAddress::rules('address', required: true),
             'notes' => ['nullable', 'string'],

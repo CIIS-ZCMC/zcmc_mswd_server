@@ -14,11 +14,17 @@ import { Textarea } from "@/components/ui/textarea"
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import type { PatientRecord } from "../../types"
 import {
+  TakeOverVisitDialog,
+  VisitDarPrompt,
+  VisitPrintPrompt,
   useCancelVisit,
   useCompleteVisit,
   useStartVisit,
+  useMyActiveVisit,
+  visitLockedBy,
   type ServiceVisit,
 } from "@/features/queue"
+import { useAuth } from "@/features/auth/hooks/use-auth"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { toast } from "@/components/ui/toast"
 import { ApiError } from "@/lib/api-client"
@@ -30,6 +36,7 @@ import {
   Hourglass,
   Loader2,
   Play,
+  UserCog,
 } from "lucide-react"
 import { useNavigate } from "@/lib/inertia-router-hooks"
 
@@ -84,9 +91,19 @@ export const PatientActiveQueueStatusDialog: React.FC<
 > = ({ open, onOpenChange, patient, activeVisit }) => {
   const navigate = useNavigate()
   const canManage = usePermission("queue.manage")
+  const canOverride = usePermission("queue.override")
+  const canAddToDar = usePermission("dar.manage")
+  const { user } = useAuth()
+
+  const [takeOverOpen, setTakeOverOpen] = useState(false)
+  // Lives outside the Dialog below, which closes itself on completion.
+  const [darVisit, setDarVisit] = useState<ServiceVisit | null>(null)
+  // The completed visit being offered printables; the DAR question follows it.
+  const [printVisit, setPrintVisit] = useState<ServiceVisit | null>(null)
 
   const startMutation = useStartVisit()
   const completeMutation = useCompleteVisit()
+  const myActiveVisit = useMyActiveVisit()
   const cancelMutation = useCancelVisit()
 
   const [mode, setMode] = useState<DialogMode>("status")
@@ -126,6 +143,12 @@ export const PatientActiveQueueStatusDialog: React.FC<
 
   const isWaiting = currentVisit.status === "waiting"
   const isServing = currentVisit.status === "in_progress"
+  const lockedBy = visitLockedBy(currentVisit, user?.id)
+  // One visit at a time: the server refuses a second Start or Take Over.
+  const busyHint =
+    myActiveVisit && myActiveVisit.id !== currentVisit.id
+      ? `Complete ${myActiveVisit.patient?.name ?? "your current patient"} first`
+      : null
 
   const waitSeconds = isWaiting
     ? getElapsedSeconds(currentVisit.arrivedAt, now)
@@ -178,7 +201,7 @@ export const PatientActiveQueueStatusDialog: React.FC<
     if (!currentVisit) return
     setActionError(null)
     try {
-      await completeMutation.mutateAsync({
+      const completed = await completeMutation.mutateAsync({
         visitId: currentVisit.id,
         input: {
           remarks: completeRemarks.trim() || undefined,
@@ -190,9 +213,12 @@ export const PatientActiveQueueStatusDialog: React.FC<
         type: "success",
       })
       onOpenChange(false)
+      setPrintVisit(completed)
     } catch (err) {
       const msg =
-        err instanceof ApiError ? err.message : "Failed to complete service visit."
+        err instanceof ApiError
+          ? err.message
+          : "Failed to complete service visit."
       setActionError(msg)
     }
   }
@@ -216,402 +242,438 @@ export const PatientActiveQueueStatusDialog: React.FC<
       onOpenChange(false)
     } catch (err) {
       const msg =
-        err instanceof ApiError ? err.message : "Failed to cancel service visit."
+        err instanceof ApiError
+          ? err.message
+          : "Failed to cancel service visit."
       setActionError(msg)
     }
   }
 
   return (
-    <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full gap-4 p-6 sm:max-w-md">
-        {mode === "status" && (
-          <>
-            <DialogHeader>
-              <div className="flex items-center justify-between pr-4">
-                <DialogTitle className="flex items-center gap-2 text-lg font-bold">
-                  <Clock className="size-5 text-amber-500" />
-                  Active Queue Status
-                </DialogTitle>
-                <Badge
-                  variant="outline"
-                  className={`px-2.5 py-0.5 text-xs font-bold ${
-                    isServing
-                      ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
-                      : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
-                  }`}
-                >
-                  <span
-                    className={`mr-1.5 size-2 animate-pulse rounded-full ${
-                      isServing ? "bg-emerald-500" : "bg-amber-500"
+    <>
+      <Dialog open={open} onOpenChange={onOpenChange}>
+        <DialogContent className="w-full gap-4 p-6 sm:max-w-md">
+          {mode === "status" && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-between pr-4">
+                  <DialogTitle className="flex items-center gap-2 text-lg font-bold">
+                    <Clock className="size-5 text-amber-500" />
+                    Active Queue Status
+                  </DialogTitle>
+                  <Badge
+                    variant="outline"
+                    className={`px-2.5 py-0.5 text-xs font-bold ${
+                      isServing
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "border-amber-500/30 bg-amber-500/10 text-amber-600 dark:text-amber-400"
                     }`}
+                  >
+                    <span
+                      className={`mr-1.5 size-2 animate-pulse rounded-full ${
+                        isServing ? "bg-emerald-500" : "bg-amber-500"
+                      }`}
+                    />
+                    {isServing ? "Currently in Service" : "Waiting in Queue"}
+                  </Badge>
+                </div>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  {patient.fullName} is currently tracked on today&apos;s
+                  Service Desk queue.
+                </DialogDescription>
+              </DialogHeader>
+
+              <div className="space-y-4 pt-2">
+                {actionError && (
+                  <Alert variant="destructive" className="py-2 text-xs">
+                    <AlertDescription>{actionError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Live Turnaround Time Ticker Card */}
+                <div className="grid grid-cols-2 gap-3">
+                  <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
+                      <Hourglass className="size-3.5" />
+                      {isWaiting ? "Elapsed Wait Time" : "Total Wait Time"}
+                    </div>
+                    <div className="mt-1 font-mono text-2xl font-black tracking-tight text-foreground">
+                      {formatElapsed(waitSeconds)}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      Arrived: {formatDateTime(currentVisit.arrivedAt)}
+                    </div>
+                  </div>
+
+                  <div className="rounded-xl border border-border bg-card p-3.5 text-center">
+                    <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground">
+                      <Play className="size-3.5 text-primary" />
+                      Service Time
+                    </div>
+                    <div className="mt-1 font-mono text-2xl font-black tracking-tight text-foreground">
+                      {isServing ? formatElapsed(serviceSeconds) : "—"}
+                    </div>
+                    <div className="mt-0.5 text-[11px] text-muted-foreground">
+                      {isServing
+                        ? `Started: ${formatDateTime(currentVisit.startedAt)}`
+                        : "Awaiting worker"}
+                    </div>
+                  </div>
+                </div>
+
+                {/* Visit & Encounter Details */}
+                <div className="space-y-2 rounded-xl border bg-muted/30 p-3.5 text-xs">
+                  <div className="flex items-center justify-between border-b border-border/50 py-1">
+                    <span className="font-semibold text-muted-foreground">
+                      Encounter ID
+                    </span>
+                    <span className="font-mono font-bold text-foreground">
+                      #{currentVisit.hisTransactionId}
+                    </span>
+                  </div>
+
+                  <div className="flex items-center justify-between border-b border-border/50 py-1">
+                    <span className="font-semibold text-muted-foreground">
+                      Purpose
+                    </span>
+                    <span className="max-w-[200px] truncate text-right font-semibold text-foreground">
+                      {currentVisit.purpose || "General Assistance"}
+                    </span>
+                  </div>
+
+                  {currentVisit.receivedBy && (
+                    <div className="flex items-center justify-between border-b border-border/50 py-1">
+                      <span className="font-semibold text-muted-foreground">
+                        Received By
+                      </span>
+                      <span className="font-medium text-foreground">
+                        {currentVisit.receivedBy.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {currentVisit.servedBy && (
+                    <div className="flex items-center justify-between border-b border-border/50 py-1">
+                      <span className="font-semibold text-muted-foreground">
+                        Handled By
+                      </span>
+                      <span className="font-bold text-primary">
+                        {currentVisit.servedBy.name}
+                      </span>
+                    </div>
+                  )}
+
+                  {currentVisit.remarks && (
+                    <div className="pt-1">
+                      <span className="mb-0.5 block font-semibold text-muted-foreground">
+                        Remarks
+                      </span>
+                      <p className="rounded bg-background p-2 text-muted-foreground italic">
+                        &ldquo;{currentVisit.remarks}&rdquo;
+                      </p>
+                    </div>
+                  )}
+                </div>
+              </div>
+
+              <DialogFooter className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
+                <div>
+                  {canManage && (isWaiting || isServing) && !lockedBy && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      className="h-8 gap-1 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
+                      onClick={() => {
+                        setCancelReason("")
+                        setActionError(null)
+                        setMode("cancel")
+                      }}
+                      disabled={isAnyPending}
+                    >
+                      <Ban className="size-3.5" />
+                      Cancel Visit
+                    </Button>
+                  )}
+                </div>
+
+                <div className="flex flex-wrap items-center justify-end gap-2">
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 text-xs"
+                    onClick={() => onOpenChange(false)}
+                    disabled={isAnyPending}
+                  >
+                    Close
+                  </Button>
+                  <Button
+                    type="button"
+                    variant="outline"
+                    size="sm"
+                    className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
+                    onClick={() => {
+                      onOpenChange(false)
+                      navigate("/queue")
+                    }}
+                    disabled={isAnyPending}
+                  >
+                    <ExternalLink className="size-3.5" />
+                    Queue Board
+                  </Button>
+
+                  {canManage && isWaiting && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 gap-1.5 bg-blue-600 font-bold text-white shadow-xs hover:bg-blue-700"
+                      onClick={handleStartService}
+                      disabled={isAnyPending || busyHint !== null}
+                      title={busyHint ?? undefined}
+                    >
+                      {startMutation.isPending ? (
+                        <Loader2 className="size-3.5 animate-spin" />
+                      ) : (
+                        <Play className="size-3.5 fill-current" />
+                      )}
+                      Start Service
+                    </Button>
+                  )}
+
+                  {canManage && lockedBy && canOverride && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      variant="outline"
+                      className="h-8 gap-1.5 text-xs font-bold"
+                      onClick={() => setTakeOverOpen(true)}
+                      disabled={isAnyPending || busyHint !== null}
+                      title={busyHint ?? undefined}
+                    >
+                      <UserCog className="size-3.5" />
+                      Take Over
+                    </Button>
+                  )}
+
+                  {canManage && isServing && !lockedBy && (
+                    <Button
+                      type="button"
+                      size="sm"
+                      className="h-8 gap-1.5 bg-emerald-600 font-bold text-white shadow-xs hover:bg-emerald-700"
+                      onClick={() => {
+                        setCompleteRemarks(currentVisit.remarks || "")
+                        setActionError(null)
+                        setMode("complete")
+                      }}
+                      disabled={isAnyPending}
+                    >
+                      <CheckCircle2 className="size-3.5" />
+                      End Service
+                    </Button>
+                  )}
+                </div>
+              </DialogFooter>
+            </>
+          )}
+
+          {mode === "complete" && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-between pr-4">
+                  <DialogTitle className="flex items-center gap-2 text-base font-bold text-emerald-600 dark:text-emerald-400">
+                    <CheckCircle2 className="size-5" />
+                    End Service Visit
+                  </DialogTitle>
+                  <Badge
+                    variant="outline"
+                    className="border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400"
+                  >
+                    Encounter #{currentVisit.hisTransactionId}
+                  </Badge>
+                </div>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Finalize and complete service for {patient.fullName}.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                id="complete-visit-form"
+                onSubmit={handleCompleteSubmit}
+                className="space-y-4 pt-1"
+              >
+                {actionError && (
+                  <Alert variant="destructive" className="py-2 text-xs">
+                    <AlertDescription>{actionError}</AlertDescription>
+                  </Alert>
+                )}
+
+                {/* Summary of Turnaround Time */}
+                <div className="grid grid-cols-2 gap-2 rounded-xl border bg-muted/30 p-3 text-xs">
+                  <div>
+                    <span className="text-[11px] font-semibold text-muted-foreground">
+                      Wait Time
+                    </span>
+                    <div className="mt-0.5 font-mono text-base font-bold text-foreground">
+                      {formatElapsed(waitSeconds)}
+                    </div>
+                  </div>
+                  <div>
+                    <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                      Service Time
+                    </span>
+                    <div className="mt-0.5 font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
+                      {formatElapsed(serviceSeconds)}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="completeRemarks"
+                    className="text-xs font-semibold"
+                  >
+                    Completion Remarks / Resolution{" "}
+                    <span className="font-normal text-muted-foreground">
+                      (Optional)
+                    </span>
+                  </Label>
+                  <Textarea
+                    id="completeRemarks"
+                    value={completeRemarks}
+                    onChange={(e) => setCompleteRemarks(e.target.value)}
+                    placeholder="e.g. Guarantee letter issued, assessment completed, slip released..."
+                    rows={3}
+                    className="text-xs"
+                    autoFocus
                   />
-                  {isServing ? "Currently in Service" : "Waiting in Queue"}
-                </Badge>
-              </div>
-              <DialogDescription className="text-xs text-muted-foreground">
-                {patient.fullName} is currently tracked on today&apos;s Service
-                Desk queue.
-              </DialogDescription>
-            </DialogHeader>
-
-            <div className="space-y-4 pt-2">
-              {actionError && (
-                <Alert variant="destructive" className="py-2 text-xs">
-                  <AlertDescription>{actionError}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Live Turnaround Time Ticker Card */}
-              <div className="grid grid-cols-2 gap-3">
-                <div className="rounded-xl border border-amber-500/20 bg-amber-500/5 p-3.5 text-center">
-                  <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-amber-700 dark:text-amber-400">
-                    <Hourglass className="size-3.5" />
-                    {isWaiting ? "Elapsed Wait Time" : "Total Wait Time"}
-                  </div>
-                  <div className="mt-1 font-mono text-2xl font-black tracking-tight text-foreground">
-                    {formatElapsed(waitSeconds)}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-muted-foreground">
-                    Arrived: {formatDateTime(currentVisit.arrivedAt)}
-                  </div>
                 </div>
 
-                <div className="rounded-xl border border-border bg-card p-3.5 text-center">
-                  <div className="flex items-center justify-center gap-1.5 text-xs font-semibold text-muted-foreground">
-                    <Play className="size-3.5 text-primary" />
-                    Service Time
-                  </div>
-                  <div className="mt-1 font-mono text-2xl font-black tracking-tight text-foreground">
-                    {isServing ? formatElapsed(serviceSeconds) : "—"}
-                  </div>
-                  <div className="mt-0.5 text-[11px] text-muted-foreground">
-                    {isServing
-                      ? `Started: ${formatDateTime(currentVisit.startedAt)}`
-                      : "Awaiting worker"}
-                  </div>
-                </div>
-              </div>
-
-              {/* Visit & Encounter Details */}
-              <div className="space-y-2 rounded-xl border bg-muted/30 p-3.5 text-xs">
-                <div className="flex items-center justify-between border-b border-border/50 py-1">
-                  <span className="font-semibold text-muted-foreground">
-                    Encounter ID
-                  </span>
-                  <span className="font-mono font-bold text-foreground">
-                    #{currentVisit.hisTransactionId}
-                  </span>
-                </div>
-
-                <div className="flex items-center justify-between border-b border-border/50 py-1">
-                  <span className="font-semibold text-muted-foreground">
-                    Purpose
-                  </span>
-                  <span className="max-w-[200px] truncate text-right font-semibold text-foreground">
-                    {currentVisit.purpose || "General Assistance"}
-                  </span>
-                </div>
-
-                {currentVisit.receivedBy && (
-                  <div className="flex items-center justify-between border-b border-border/50 py-1">
-                    <span className="font-semibold text-muted-foreground">
-                      Received By
-                    </span>
-                    <span className="font-medium text-foreground">
-                      {currentVisit.receivedBy.name}
-                    </span>
-                  </div>
-                )}
-
-                {currentVisit.servedBy && (
-                  <div className="flex items-center justify-between border-b border-border/50 py-1">
-                    <span className="font-semibold text-muted-foreground">
-                      Handled By
-                    </span>
-                    <span className="font-bold text-primary">
-                      {currentVisit.servedBy.name}
-                    </span>
-                  </div>
-                )}
-
-                {currentVisit.remarks && (
-                  <div className="pt-1">
-                    <span className="mb-0.5 block font-semibold text-muted-foreground">
-                      Remarks
-                    </span>
-                    <p className="rounded bg-background p-2 text-muted-foreground italic">
-                      &ldquo;{currentVisit.remarks}&rdquo;
-                    </p>
-                  </div>
-                )}
-              </div>
-            </div>
-
-            <DialogFooter className="flex flex-col-reverse gap-2 pt-2 sm:flex-row sm:items-center sm:justify-between sm:gap-2">
-              <div>
-                {canManage && (isWaiting || isServing) && (
+                <DialogFooter className="gap-2 pt-2 sm:gap-0">
                   <Button
                     type="button"
-                    variant="ghost"
+                    variant="outline"
                     size="sm"
-                    className="h-8 gap-1 px-2 text-xs text-destructive hover:bg-destructive/10 hover:text-destructive"
                     onClick={() => {
-                      setCancelReason("")
                       setActionError(null)
-                      setMode("cancel")
+                      setMode("status")
                     }}
-                    disabled={isAnyPending}
+                    disabled={completeMutation.isPending}
                   >
-                    <Ban className="size-3.5" />
-                    Cancel Visit
+                    Back
                   </Button>
-                )}
-              </div>
-
-              <div className="flex flex-wrap items-center justify-end gap-2">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 text-xs"
-                  onClick={() => onOpenChange(false)}
-                  disabled={isAnyPending}
-                >
-                  Close
-                </Button>
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  className="h-8 gap-1.5 text-xs text-muted-foreground hover:text-foreground"
-                  onClick={() => {
-                    onOpenChange(false)
-                    navigate("/queue")
-                  }}
-                  disabled={isAnyPending}
-                >
-                  <ExternalLink className="size-3.5" />
-                  Queue Board
-                </Button>
-
-                {canManage && isWaiting && (
                   <Button
-                    type="button"
+                    type="submit"
                     size="sm"
-                    className="h-8 gap-1.5 bg-blue-600 font-bold text-white shadow-xs hover:bg-blue-700"
-                    onClick={handleStartService}
-                    disabled={isAnyPending}
+                    disabled={completeMutation.isPending}
+                    className="gap-2 bg-emerald-600 font-bold text-white hover:bg-emerald-700"
                   >
-                    {startMutation.isPending ? (
+                    {completeMutation.isPending && (
                       <Loader2 className="size-3.5 animate-spin" />
-                    ) : (
-                      <Play className="size-3.5 fill-current" />
                     )}
-                    Start Service
+                    Confirm Complete
                   </Button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+
+          {mode === "cancel" && (
+            <>
+              <DialogHeader>
+                <div className="flex items-center justify-between pr-4">
+                  <DialogTitle className="flex items-center gap-2 text-base font-bold text-destructive">
+                    <Ban className="size-5" />
+                    Cancel Service Visit
+                  </DialogTitle>
+                  <Badge
+                    variant="outline"
+                    className="border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-xs font-bold text-destructive"
+                  >
+                    Encounter #{currentVisit.hisTransactionId}
+                  </Badge>
+                </div>
+                <DialogDescription className="text-xs text-muted-foreground">
+                  Cancel visit for {patient.fullName}. Cancelled visits are
+                  excluded from turnaround time metrics.
+                </DialogDescription>
+              </DialogHeader>
+
+              <form
+                id="cancel-visit-form"
+                onSubmit={handleCancelSubmit}
+                className="space-y-4 pt-1"
+              >
+                {actionError && (
+                  <Alert variant="destructive" className="py-2 text-xs">
+                    <AlertDescription>{actionError}</AlertDescription>
+                  </Alert>
                 )}
 
-                {canManage && isServing && (
+                <div className="space-y-1.5">
+                  <Label
+                    htmlFor="cancelReason"
+                    className="text-xs font-semibold"
+                  >
+                    Reason for Cancellation{" "}
+                    <span className="text-destructive">*</span>
+                  </Label>
+                  <Textarea
+                    id="cancelReason"
+                    value={cancelReason}
+                    onChange={(e) => setCancelReason(e.target.value)}
+                    placeholder="e.g. Patient had to leave, duplicate entry, medical emergency..."
+                    rows={3}
+                    required
+                    className="text-xs"
+                    autoFocus
+                  />
+                </div>
+
+                <DialogFooter className="gap-2 pt-2 sm:gap-0">
                   <Button
                     type="button"
+                    variant="outline"
                     size="sm"
-                    className="h-8 gap-1.5 bg-emerald-600 font-bold text-white shadow-xs hover:bg-emerald-700"
                     onClick={() => {
-                      setCompleteRemarks(currentVisit.remarks || "")
                       setActionError(null)
-                      setMode("complete")
+                      setMode("status")
                     }}
-                    disabled={isAnyPending}
+                    disabled={cancelMutation.isPending}
                   >
-                    <CheckCircle2 className="size-3.5" />
-                    End Service
+                    Keep Visit
                   </Button>
-                )}
-              </div>
-            </DialogFooter>
-          </>
-        )}
+                  <Button
+                    type="submit"
+                    variant="destructive"
+                    size="sm"
+                    disabled={cancelMutation.isPending || !cancelReason.trim()}
+                    className="gap-2 font-bold"
+                  >
+                    {cancelMutation.isPending && (
+                      <Loader2 className="size-3.5 animate-spin" />
+                    )}
+                    Confirm Cancellation
+                  </Button>
+                </DialogFooter>
+              </form>
+            </>
+          )}
+        </DialogContent>
+      </Dialog>
 
-        {mode === "complete" && (
-          <>
-            <DialogHeader>
-              <div className="flex items-center justify-between pr-4">
-                <DialogTitle className="flex items-center gap-2 text-base font-bold text-emerald-600 dark:text-emerald-400">
-                  <CheckCircle2 className="size-5" />
-                  End Service Visit
-                </DialogTitle>
-                <Badge
-                  variant="outline"
-                  className="border-emerald-500/30 bg-emerald-500/10 px-2.5 py-0.5 text-xs font-bold text-emerald-600 dark:text-emerald-400"
-                >
-                  Encounter #{currentVisit.hisTransactionId}
-                </Badge>
-              </div>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Finalize and complete service for {patient.fullName}.
-              </DialogDescription>
-            </DialogHeader>
-
-            <form
-              id="complete-visit-form"
-              onSubmit={handleCompleteSubmit}
-              className="space-y-4 pt-1"
-            >
-              {actionError && (
-                <Alert variant="destructive" className="py-2 text-xs">
-                  <AlertDescription>{actionError}</AlertDescription>
-                </Alert>
-              )}
-
-              {/* Summary of Turnaround Time */}
-              <div className="grid grid-cols-2 gap-2 rounded-xl border bg-muted/30 p-3 text-xs">
-                <div>
-                  <span className="text-[11px] font-semibold text-muted-foreground">
-                    Wait Time
-                  </span>
-                  <div className="mt-0.5 font-mono text-base font-bold text-foreground">
-                    {formatElapsed(waitSeconds)}
-                  </div>
-                </div>
-                <div>
-                  <span className="text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-                    Service Time
-                  </span>
-                  <div className="mt-0.5 font-mono text-base font-bold text-emerald-600 dark:text-emerald-400">
-                    {formatElapsed(serviceSeconds)}
-                  </div>
-                </div>
-              </div>
-
-              <div className="space-y-1.5">
-                <Label
-                  htmlFor="completeRemarks"
-                  className="text-xs font-semibold"
-                >
-                  Completion Remarks / Resolution{" "}
-                  <span className="font-normal text-muted-foreground">
-                    (Optional)
-                  </span>
-                </Label>
-                <Textarea
-                  id="completeRemarks"
-                  value={completeRemarks}
-                  onChange={(e) => setCompleteRemarks(e.target.value)}
-                  placeholder="e.g. Guarantee letter issued, assessment completed, slip released..."
-                  rows={3}
-                  className="text-xs"
-                  autoFocus
-                />
-              </div>
-
-              <DialogFooter className="gap-2 pt-2 sm:gap-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setActionError(null)
-                    setMode("status")
-                  }}
-                  disabled={completeMutation.isPending}
-                >
-                  Back
-                </Button>
-                <Button
-                  type="submit"
-                  size="sm"
-                  disabled={completeMutation.isPending}
-                  className="gap-2 bg-emerald-600 font-bold text-white hover:bg-emerald-700"
-                >
-                  {completeMutation.isPending && (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  )}
-                  Confirm Complete
-                </Button>
-              </DialogFooter>
-            </form>
-          </>
-        )}
-
-        {mode === "cancel" && (
-          <>
-            <DialogHeader>
-              <div className="flex items-center justify-between pr-4">
-                <DialogTitle className="flex items-center gap-2 text-base font-bold text-destructive">
-                  <Ban className="size-5" />
-                  Cancel Service Visit
-                </DialogTitle>
-                <Badge
-                  variant="outline"
-                  className="border-destructive/30 bg-destructive/10 px-2.5 py-0.5 text-xs font-bold text-destructive"
-                >
-                  Encounter #{currentVisit.hisTransactionId}
-                </Badge>
-              </div>
-              <DialogDescription className="text-xs text-muted-foreground">
-                Cancel visit for {patient.fullName}. Cancelled visits are
-                excluded from turnaround time metrics.
-              </DialogDescription>
-            </DialogHeader>
-
-            <form
-              id="cancel-visit-form"
-              onSubmit={handleCancelSubmit}
-              className="space-y-4 pt-1"
-            >
-              {actionError && (
-                <Alert variant="destructive" className="py-2 text-xs">
-                  <AlertDescription>{actionError}</AlertDescription>
-                </Alert>
-              )}
-
-              <div className="space-y-1.5">
-                <Label htmlFor="cancelReason" className="text-xs font-semibold">
-                  Reason for Cancellation{" "}
-                  <span className="text-destructive">*</span>
-                </Label>
-                <Textarea
-                  id="cancelReason"
-                  value={cancelReason}
-                  onChange={(e) => setCancelReason(e.target.value)}
-                  placeholder="e.g. Patient had to leave, duplicate entry, medical emergency..."
-                  rows={3}
-                  required
-                  className="text-xs"
-                  autoFocus
-                />
-              </div>
-
-              <DialogFooter className="gap-2 pt-2 sm:gap-0">
-                <Button
-                  type="button"
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setActionError(null)
-                    setMode("status")
-                  }}
-                  disabled={cancelMutation.isPending}
-                >
-                  Keep Visit
-                </Button>
-                <Button
-                  type="submit"
-                  variant="destructive"
-                  size="sm"
-                  disabled={cancelMutation.isPending || !cancelReason.trim()}
-                  className="gap-2 font-bold"
-                >
-                  {cancelMutation.isPending && (
-                    <Loader2 className="size-3.5 animate-spin" />
-                  )}
-                  Confirm Cancellation
-                </Button>
-              </DialogFooter>
-            </form>
-          </>
-        )}
-      </DialogContent>
-    </Dialog>
+      <TakeOverVisitDialog
+        visit={takeOverOpen ? currentVisit : null}
+        onClose={() => setTakeOverOpen(false)}
+      />
+      <VisitPrintPrompt
+        visit={printVisit}
+        onClose={() => {
+          if (canAddToDar && printVisit) setDarVisit(printVisit)
+          setPrintVisit(null)
+        }}
+      />
+      <VisitDarPrompt visit={darVisit} onClose={() => setDarVisit(null)} />
+    </>
   )
 }

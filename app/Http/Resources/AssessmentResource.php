@@ -47,6 +47,7 @@ class AssessmentResource extends JsonResource
             'informant_last_name' => $this->informant_last_name,
             'informant_first_name' => $this->informant_first_name,
             'informant_middle_name' => $this->informant_middle_name,
+            'informant_extension_name' => $this->informant_extension_name,
             'informant_relationship' => $this->informant_relationship,
             'informant_address' => $this->informant_address,
             ...PsgcAddress::resourceFields($this->resource, 'informant_address'),

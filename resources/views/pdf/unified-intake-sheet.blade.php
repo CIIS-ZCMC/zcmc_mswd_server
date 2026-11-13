@@ -363,30 +363,33 @@
     <tr><td>
         <table class="plain" style="table-layout: fixed; width: 100%;"><tr>
             {{-- left: home/utilities checkboxes --}}
-            <td style="width: 54%; padding: 3px 4px; vertical-align: top;">
+            <td style="width: 58%; padding: 3px 4px; vertical-align: top;">
                 <table class="plain" style="table-layout: fixed; width: 100%; font-size: 7.5px;">
                     <tr>
-                        <td style="width: 24%; padding: 2px 1px; vertical-align: middle;"><b>House/Lot:</b></td>
-                        <td style="width: 20%; padding: 2px 1px; vertical-align: middle;">{!! $optL($a?->house_tenure === 'owned', 'Owned/Sarili') !!}</td>
-                        <td style="width: 26%; padding: 2px 1px; vertical-align: middle;">{!! $optL($a?->house_tenure === 'rented', 'Rented/Inuupahan') !!}</td>
-                        <td style="width: 30%; padding: 2px 1px 2px 6px; vertical-align: middle; white-space: nowrap;">How much/Magkano: {{ $num($slots['housing']) }}</td>
+                        <td style="width: 22%; padding: 2px 1px; vertical-align: middle;"><b>House/Lot:</b></td>
+                        <td style="width: 17%; padding: 2px 1px; vertical-align: middle;">{!! $optL($a?->house_tenure === 'owned', 'Owned/Sarili') !!}</td>
+                        <td style="width: 21%; padding: 2px 1px; vertical-align: middle;">{!! $optL($a?->house_tenure === 'rented', 'Rented/Inuupahan') !!}</td>
+                        <td style="width: 16%; padding: 2px 1px; vertical-align: middle;">&nbsp;</td>
+                        <td style="width: 24%; padding: 2px 1px 2px 4px; vertical-align: middle; white-space: nowrap;">&nbsp;</td>
                     </tr>
                     <tr>
                         <td style="padding: 2px 1px; vertical-align: middle;"><b>Light Source</b><br><i>(Pinagmumulan ng ilaw)</i>:</td>
                         <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->light_source, 'electricity'), 'Electricity') !!}</td>
                         <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->light_source, 'kerosene'), 'Kerosene') !!}</td>
-                        <td style="padding: 2px 1px 2px 6px; vertical-align: middle;">{!! $optL($has($a?->light_source, 'candle'), 'Candle') !!}</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->light_source, 'candle'), 'Candle') !!}</td>
+                        <td style="padding: 2px 1px 2px 4px; vertical-align: middle; white-space: nowrap;">&nbsp;</td>
                     </tr>
                     <tr>
                         <td style="padding: 2px 1px; vertical-align: middle;"><b>Water Source</b><br><i>(Pinagmumulan ng Tubig)</i>:</td>
                         <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->water_source, 'owned'), 'Owned') !!}</td>
                         <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->water_source, 'public'), 'Public') !!}</td>
-                        <td style="padding: 2px 1px 2px 6px; vertical-align: middle;">{!! $optL($has($a?->water_source, 'artesian_well'), 'Artesian Well') !!}</td>
+                        <td style="padding: 2px 1px; vertical-align: middle;">{!! $optL($has($a?->water_source, 'artesian_well'), 'Artesian Well') !!}</td>
+                        <td style="padding: 2px 1px 2px 4px; vertical-align: middle; white-space: nowrap;">&nbsp;</td>
                     </tr>
                 </table>
             </td>
             {{-- right: itemised amounts matching official ANNEX B layout --}}
-            <td style="width: 50%; padding: 3px 4px; vertical-align: top;">
+            <td style="width: 42%; padding: 3px 4px; vertical-align: top;">
                 <table class="plain" style="width: 100%; border-collapse: collapse; font-size: 7.5px;"><tr>
                     <td style="width: 50%; padding: 0; vertical-align: top;">
                         <table style="width: 100%; border-collapse: collapse;">

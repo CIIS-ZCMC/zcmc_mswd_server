@@ -22,6 +22,11 @@ import {
   EMPTY_PSGC_ADDRESS,
   type PsgcAddressValue,
 } from "@/features/reference/types/psgc.types"
+import {
+  extract10DigitPhPhone,
+  formatPhPhonePayload,
+  isValidPhPhone10,
+} from "@/lib/ph-phone"
 import type { UpdatePatientBackgroundPayload } from "../../api/patients-api"
 import type { PatientRecord } from "../../types"
 
@@ -64,23 +69,27 @@ export const PatientContactDialog: React.FC<PatientContactDialogProps> = ({
   const originalPresent = patient.presentAddressPsgc ?? EMPTY_PSGC_ADDRESS
   const originalPermanent = patient.permanentAddressPsgc ?? EMPTY_PSGC_ADDRESS
 
-  const [contactNumber, setContactNumber] = useState(patient.contactNo ?? "")
+  const [contactNumber, setContactNumber] = useState(() =>
+    extract10DigitPhPhone(patient.contactNo)
+  )
   const [present, setPresent] = useState<PsgcAddressValue>(originalPresent)
   const [permanent, setPermanent] = useState<PsgcAddressValue>(originalPermanent)
 
   useEffect(() => {
     if (isOpen) {
-      setContactNumber(patient.contactNo ?? "")
+      setContactNumber(extract10DigitPhPhone(patient.contactNo))
       setPresent(patient.presentAddressPsgc ?? EMPTY_PSGC_ADDRESS)
       setPermanent(patient.permanentAddressPsgc ?? EMPTY_PSGC_ADDRESS)
     }
   }, [isOpen, patient])
 
-  const canSave = isSavable(present) && isSavable(permanent)
+  const contactOk = isValidPhPhone10(contactNumber, false)
+  const canSave = contactOk && isSavable(present) && isSavable(permanent)
 
   const handleSave = () => {
+    if (!canSave) return
     onSave({
-      contact_number: contactNumber || undefined,
+      contact_number: contactNumber ? formatPhPhonePayload(contactNumber) : undefined,
       ...addressPayload("present_address", present, originalPresent),
       ...addressPayload("permanent_address", permanent, originalPermanent),
     })
@@ -99,12 +108,27 @@ export const PatientContactDialog: React.FC<PatientContactDialogProps> = ({
         <div className="grid gap-6 py-4 text-base">
           <div>
             <Label className="text-sm font-bold">Contact Number</Label>
-            <Input
-              value={contactNumber}
-              onChange={(e) => setContactNumber(e.target.value)}
-              className="h-11 text-base mt-1 font-mono"
-              placeholder="e.g. 09171234567"
-            />
+            <div className="mt-1 flex items-stretch">
+              <div className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-3 text-sm font-bold text-muted-foreground select-none">
+                +63 -
+              </div>
+              <Input
+                type="tel"
+                inputMode="numeric"
+                placeholder="9XX XXX XXXX"
+                maxLength={10}
+                value={contactNumber}
+                onChange={(e) =>
+                  setContactNumber(extract10DigitPhPhone(e.target.value))
+                }
+                className="h-11 rounded-l-none font-mono text-base tracking-wider"
+              />
+            </div>
+            {contactNumber.length > 0 && !contactOk && (
+              <p className="mt-1 text-xs text-muted-foreground">
+                10-digit PH mobile number starting with 9 required ({contactNumber.length}/10)
+              </p>
+            )}
           </div>
 
           <PsgcAddressFields

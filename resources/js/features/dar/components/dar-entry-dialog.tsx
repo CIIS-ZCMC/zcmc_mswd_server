@@ -47,11 +47,21 @@ const DEFAULT_ACTIVITIES: Record<string, string> = {
   other: "Other",
 }
 
+/** A new line filed from a completed queue visit. The patient can't be changed. */
+export interface DarEntryPrefill {
+  patient: DarPatient
+  servedTime: string
+  remarks: string
+  serviceVisitId: number
+}
+
 interface DarEntryDialogProps {
   open: boolean
   onOpenChange: (open: boolean) => void
   currentDate: string
   entry?: DarEntry | null
+  /** Keep this a stable object: the form resets whenever it changes. */
+  prefill?: DarEntryPrefill
   activitiesMap?: Record<string, string>
   onSaved?: () => void
 }
@@ -61,6 +71,7 @@ export const DarEntryDialog: React.FC<DarEntryDialogProps> = ({
   onOpenChange,
   currentDate,
   entry,
+  prefill,
   activitiesMap = DEFAULT_ACTIVITIES,
   onSaved,
 }) => {
@@ -115,15 +126,15 @@ export const DarEntryDialog: React.FC<DarEntryDialogProps> = ({
       setRemarks(entry.remarks ?? "")
       setError(null)
     } else {
-      setSelectedPatient(null)
+      setSelectedPatient(prefill?.patient ?? null)
       setPatientSearch("")
       setDebouncedSearch("")
       setActivity("interview")
-      setServedTime("")
-      setRemarks("")
+      setServedTime(prefill?.servedTime ?? "")
+      setRemarks(prefill?.remarks ?? "")
       setError(null)
     }
-  }, [open, entry])
+  }, [open, entry, prefill])
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -154,6 +165,7 @@ export const DarEntryDialog: React.FC<DarEntryDialogProps> = ({
       } else {
         await createMutation.mutateAsync({
           patient_id: selectedPatient.id,
+          service_visit_id: prefill?.serviceVisitId,
           entry_date: currentDate,
           served_time: servedTime || null,
           activity,
@@ -219,15 +231,17 @@ export const DarEntryDialog: React.FC<DarEntryDialogProps> = ({
                     <UserCheck className="size-4.5 shrink-0 text-emerald-600 dark:text-emerald-400" />
                     <span>{selectedPatient.name}</span>
                   </div>
-                  <Button
-                    type="button"
-                    variant="ghost"
-                    size="sm"
-                    onClick={() => setSelectedPatient(null)}
-                    className="h-7 px-2 text-xs font-bold text-muted-foreground hover:text-foreground"
-                  >
-                    <X className="mr-1 size-3.5" /> Change
-                  </Button>
+                  {!prefill && (
+                    <Button
+                      type="button"
+                      variant="ghost"
+                      size="sm"
+                      onClick={() => setSelectedPatient(null)}
+                      className="h-7 px-2 text-xs font-bold text-muted-foreground hover:text-foreground"
+                    >
+                      <X className="mr-1 size-3.5" /> Change
+                    </Button>
+                  )}
                 </div>
                 <div className="grid grid-cols-2 gap-2 text-xs text-muted-foreground">
                   <div>

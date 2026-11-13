@@ -49,6 +49,10 @@ export interface ApiFamilyMember {
   id: number
   patient_id: number
   name: string
+  first_name?: string | null
+  middle_name?: string | null
+  last_name?: string | null
+  extension_name?: string | null
   relationship: string | null
   age: number | null
   birthdate: string | null
@@ -82,6 +86,7 @@ export interface ApiWatcher {
   first_name?: string | null
   middle_name?: string | null
   last_name?: string | null
+  extension_name?: string | null
   relationship_code: string | null
   relationship_label: string | null
   /** Same as relationship_label; the old free-text field name. */
@@ -216,6 +221,7 @@ export interface ApiAssessment {
   informant_first_name?: string | null
   informant_middle_name?: string | null
   informant_last_name?: string | null
+  informant_extension_name?: string | null
   informant_relationship?: string | null
   informant_address?: string | null
   /** PSGC parts of the informant address; null while it is still free text. */

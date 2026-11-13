@@ -5,14 +5,19 @@ import {
   getPatientVisits,
   getQueue,
   startVisit,
+  takeOverVisit,
   timeInVisit,
 } from "../api/queue-api"
 import type {
   CancelVisitInput,
   CompleteVisitInput,
+  ServiceVisit,
+  TakeOverVisitInput,
   TimeInInput,
 } from "../types"
 import { PATIENTS_LIST_QUERY_KEY } from "@/features/patients/hooks/use-patients"
+import { useAuth } from "@/features/auth/hooks/use-auth"
+import { usePermission } from "@/features/auth/hooks/use-permission"
 
 /**
  * Every visit mutation changes a patient's queue status, which the registry
@@ -35,13 +40,33 @@ export const queueKeys = {
     ] as const,
 }
 
-export function useQueue(date?: string) {
+export function useQueue(date?: string, enabled = true) {
   return useQuery({
     queryKey: queueKeys.queue(date),
     queryFn: () => getQueue(date),
     refetchInterval: 30000,
     staleTime: 10000,
+    enabled,
   })
+}
+
+/**
+ * The visit the signed-in worker is serving right now, if any. A worker serves one
+ * visit at a time (ServiceVisitService refuses a second Start or Take Over), so this
+ * is at most one row. Reads today's queue board, which lists every open visit.
+ */
+export function useMyActiveVisit(): ServiceVisit | null {
+  const { user } = useAuth()
+  const canManage = usePermission("queue.manage")
+  const { data } = useQueue(undefined, canManage && Boolean(user))
+
+  if (!user || !data) return null
+
+  return (
+    data.inProgress.find(
+      (visit) => String(visit.servedBy?.id) === String(user.id)
+    ) ?? null
+  )
 }
 
 export function usePatientVisits(
@@ -62,7 +87,7 @@ export function usePatientVisits(
 }
 
 /** An ISO timestamp as the "HH:mm" an `<input type="time">` takes. */
-function toTimeInput(iso: string | null): string {
+export function toTimeInput(iso: string | null): string {
   if (!iso) return ""
   const date = new Date(iso)
   return `${String(date.getHours()).padStart(2, "0")}:${String(date.getMinutes()).padStart(2, "0")}`
@@ -107,11 +132,14 @@ export function useTimeInVisit() {
   })
 }
 
+// The mutations below refresh on failure too: a refusal usually means another
+// worker got there first, and the screen should show that straight away.
+
 export function useStartVisit() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (visitId: number) => startVisit(visitId),
-    onSuccess: () => invalidateVisitQueries(queryClient),
+    onSettled: () => invalidateVisitQueries(queryClient),
   })
 }
 
@@ -125,7 +153,7 @@ export function useCompleteVisit() {
       visitId: number
       input?: CompleteVisitInput
     }) => completeVisit(visitId, input),
-    onSuccess: () => invalidateVisitQueries(queryClient),
+    onSettled: () => invalidateVisitQueries(queryClient),
   })
 }
 
@@ -139,6 +167,20 @@ export function useCancelVisit() {
       visitId: number
       input: CancelVisitInput
     }) => cancelVisit(visitId, input),
-    onSuccess: () => invalidateVisitQueries(queryClient),
+    onSettled: () => invalidateVisitQueries(queryClient),
+  })
+}
+
+export function useTakeOverVisit() {
+  const queryClient = useQueryClient()
+  return useMutation({
+    mutationFn: ({
+      visitId,
+      input,
+    }: {
+      visitId: number
+      input: TakeOverVisitInput
+    }) => takeOverVisit(visitId, input),
+    onSettled: () => invalidateVisitQueries(queryClient),
   })
 }

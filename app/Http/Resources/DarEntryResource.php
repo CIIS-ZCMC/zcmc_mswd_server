@@ -21,6 +21,7 @@ class DarEntryResource extends JsonResource
     {
         return [
             'id' => $this->id,
+            'service_visit_id' => $this->service_visit_id,
             'entry_date' => $this->entry_date?->toDateString(),
             'served_time' => $this->served_time === null ? null : substr($this->served_time, 0, 5),
             'activity' => $this->activity,

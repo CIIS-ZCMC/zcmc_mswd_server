@@ -68,6 +68,10 @@ export function getCaseAssessments(caseId: number) {
 
 export interface CreateFamilyMemberPayload {
   name: string
+  first_name?: string
+  middle_name?: string | null
+  last_name?: string
+  extension_name?: string | null
   relationship?: string
   birthdate?: string
   sex?: string
@@ -89,6 +93,10 @@ export function createFamilyMember(patientId: number, payload: CreateFamilyMembe
 
 export interface UpdateFamilyMemberPayload {
   name?: string
+  first_name?: string
+  middle_name?: string | null
+  last_name?: string
+  extension_name?: string | null
   relationship?: string
   birthdate?: string
   sex?: string
@@ -148,6 +156,7 @@ export interface CreateWatcherPayload {
   first_name?: string | null
   middle_name?: string | null
   last_name?: string | null
+  extension_name?: string | null
   relationship_code: string
   contact_number: string
   /** Picked from PSGC: the server writes the composed address. */

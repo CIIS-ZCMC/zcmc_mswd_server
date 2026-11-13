@@ -73,7 +73,9 @@ export interface ApiSocioeconomicCurrent {
   remarks: string | null
   house: ApiHouse
   light_source: string[]
+  light_amount: number | null
   water_source: string[]
+  water_amount: number | null
   expenses: ApiExpenseItems
   total: number | null
   income: ApiProfileIncome
@@ -101,7 +103,9 @@ export interface ApiSaveSocioeconomicPayload {
   house_tenure: string | null
   house_rent_amount: number | null
   light_source: string[]
+  light_amount: number | null
   water_source: string[]
+  water_amount: number | null
   food: number | null
   transport: number | null
   medical: number | null

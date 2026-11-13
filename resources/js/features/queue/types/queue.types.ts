@@ -41,6 +41,10 @@ export interface ApiServiceVisit {
   served_by?: ServiceVisitUser | null
   completed_by?: ServiceVisitUser | null
   cancelled_by?: ServiceVisitUser | null
+  taken_over_by?: ServiceVisitUser | null
+  taken_over_at?: string | null
+  takeover_reason?: string | null
+  dar_entry_id?: number | null
   patient?: ServiceVisitPatient | null
   created_at: string
   updated_at: string
@@ -70,6 +74,11 @@ export interface ServiceVisit {
   servedBy: ServiceVisitUser | null
   completedBy: ServiceVisitUser | null
   cancelledBy: ServiceVisitUser | null
+  takenOverBy: ServiceVisitUser | null
+  takenOverAt: string | null
+  takeoverReason: string | null
+  /** The signed-in user's own DAR line for this visit. */
+  darEntryId: number | null
   patient: ServiceVisitPatient | null
   createdAt: string
   updatedAt: string
@@ -111,4 +120,8 @@ export interface CompleteVisitInput {
 
 export interface CancelVisitInput {
   cancelReason: string
+}
+
+export interface TakeOverVisitInput {
+  takeoverReason: string
 }

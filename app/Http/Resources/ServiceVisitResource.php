@@ -46,6 +46,11 @@ class ServiceVisitResource extends JsonResource
             'served_by' => $this->whenLoaded('servedBy', fn () => self::user($this->servedBy)),
             'completed_by' => $this->whenLoaded('completedBy', fn () => self::user($this->completedBy)),
             'cancelled_by' => $this->whenLoaded('cancelledBy', fn () => self::user($this->cancelledBy)),
+            'taken_over_by' => $this->whenLoaded('takenOverBy', fn () => self::user($this->takenOverBy)),
+            'taken_over_at' => $this->taken_over_at,
+            'takeover_reason' => $this->takeover_reason,
+            // A DAR is its owner's only, so this is the caller's own line for the visit.
+            'dar_entry_id' => $this->whenLoaded('darEntries', fn () => $this->darEntries->firstWhere('user_id', $request->user()?->id)?->id),
             'patient' => $this->whenLoaded('patient', fn () => $this->patient === null
                 ? null
                 : app(DarReportService::class)->patient($this->patient, $this->arrived_at)),

@@ -11,6 +11,7 @@ export interface CreateCaseWatcherPayload {
     first_name?: string | null
     middle_name?: string | null
     last_name?: string | null
+    extension_name?: string | null
     relationship_code: string
     contact_number?: string | null
     /** Picked from PSGC: the server writes the composed address. */

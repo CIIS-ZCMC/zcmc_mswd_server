@@ -140,6 +140,7 @@ export function adaptAssessment(api: ApiAssessment): Assessment {
     informantFirstName: api.informant_first_name ?? null,
     informantMiddleName: api.informant_middle_name ?? null,
     informantLastName: api.informant_last_name ?? null,
+    informantExtensionName: api.informant_extension_name ?? null,
     informantRelationship: api.informant_relationship ?? null,
     informantAddress: api.informant_address ?? null,
     informantAddressPsgc: fromPsgcFields(api as unknown as Record<string, unknown>, "informant_address"),

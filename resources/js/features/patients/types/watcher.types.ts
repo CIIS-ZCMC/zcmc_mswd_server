@@ -23,6 +23,7 @@ export interface Watcher {
   firstName?: string
   middleName?: string
   lastName?: string
+  extensionName?: string
   /** Display label, e.g. "Barangay Official". */
   relationship: string
   /** Master-list code, e.g. "barangay_official" — what the API takes. */

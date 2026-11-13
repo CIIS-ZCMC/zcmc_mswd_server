@@ -106,7 +106,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
   initialAssessOpen = false,
   initialPrintOpen = false,
 }) => {
-  const canCreate = usePermission("cases.create")
+  const canCreate = usePermission("intake.create")
   const canUpdate = usePermission("cases.update")
 
   const [activeSubTab, setActiveSubTab] = useState("identifying-family")
@@ -302,11 +302,6 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
     slotValues.length > 0 ? slotValues.reduce((a, b) => a + b, 0) : null
 
   const expenseRows = [
-    {
-      key: "housing",
-      label: "House & Lot (Rent / Amortization)",
-      value: expenseSlots?.housing,
-    },
     { key: "food", label: "Food & Nutrition", value: expenseSlots?.food },
     {
       key: "education",
@@ -907,7 +902,8 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Light / Power Source
                       </span>
                       <span className="font-bold text-foreground">
-                        {Array.isArray(assessment?.lightSource)
+                        {Array.isArray(assessment?.lightSource) &&
+                        assessment.lightSource.length > 0
                           ? assessment.lightSource
                               .map(
                                 (l) => labelFor(LIGHT_SOURCE_OPTIONS, l) || l
@@ -921,7 +917,8 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                         Water Source
                       </span>
                       <span className="font-bold text-foreground">
-                        {Array.isArray(assessment?.waterSource)
+                        {Array.isArray(assessment?.waterSource) &&
+                        assessment.waterSource.length > 0
                           ? assessment.waterSource
                               .map(
                                 (w) => labelFor(WATER_SOURCE_OPTIONS, w) || w

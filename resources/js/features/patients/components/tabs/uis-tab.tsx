@@ -30,6 +30,7 @@ import {
 import {
   DropdownMenu,
   DropdownMenuContent,
+  DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
   DropdownMenuSeparator,
@@ -98,7 +99,7 @@ export const UisTab: React.FC<UisTabProps> = ({
 }) => {
   const canView = usePermission("intake.view")
   const canCreateCase = usePermission("cases.create")
-  const canCreateAssessment = usePermission("cases.create")
+  const canCreateAssessment = usePermission("intake.create")
   const canUpdateAssessment = usePermission("cases.update")
   const { canPerformActions, reason } = useQueueActionGate()
   const [searchParams, setSearchParams] = useSearchParams()
@@ -817,10 +818,10 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  disabled={!canPerformActions || printingRowKey === row.key}
+                                  disabled={printingRowKey === row.key}
                                   onClick={() => handleDirectPrint(row)}
                                   className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
-                                  title={!canPerformActions ? reason : "Print Unified Intake Sheet"}
+                                  title="Print Unified Intake Sheet"
                                 >
                                   {printingRowKey === row.key ? (
                                     <Loader2 className="size-3.5 animate-spin text-primary" />
@@ -854,10 +855,10 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 <Button
                                   variant="ghost"
                                   size="sm"
-                                  disabled={!canPerformActions || printingRowKey === row.key}
+                                  disabled={printingRowKey === row.key}
                                   onClick={() => handleDirectPrint(row)}
                                   className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
-                                  title={!canPerformActions ? reason : "Print Blank UIS Form"}
+                                  title="Print Blank UIS Form"
                                 >
                                   {printingRowKey === row.key ? (
                                     <Loader2 className="size-3.5 animate-spin text-primary" />
@@ -885,9 +886,11 @@ export const UisTab: React.FC<UisTabProps> = ({
                                 align="end"
                                 className="w-52 text-xs"
                               >
-                                <DropdownMenuLabel className="text-[11px] font-bold text-muted-foreground">
-                                  Actions for {rowLabel(row)}
-                                </DropdownMenuLabel>
+                                <DropdownMenuGroup>
+                                  <DropdownMenuLabel className="text-[11px] font-bold text-muted-foreground">
+                                    Actions for {rowLabel(row)}
+                                  </DropdownMenuLabel>
+                                </DropdownMenuGroup>
                                 <DropdownMenuSeparator />
 
                                 <DropdownMenuItem
@@ -898,27 +901,31 @@ export const UisTab: React.FC<UisTabProps> = ({
                                   View Details (Modal)
                                 </DropdownMenuItem>
 
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenAssessDialog(row)}
-                                  disabled={!canPerformActions}
-                                  className="cursor-pointer gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {row.uis.hasAssessment ? (
-                                    <>
-                                      <FileEdit className="size-3.5 text-primary" />
-                                      Assess / Re-Assess
-                                    </>
-                                  ) : (
-                                    <>
-                                      <Plus className="size-3.5 text-primary" />
-                                      Conduct Assessment
-                                    </>
-                                  )}
-                                </DropdownMenuItem>
+                                {(row.uis.hasAssessment
+                                  ? canUpdateAssessment
+                                  : canCreateAssessment) && (
+                                  <DropdownMenuItem
+                                    onClick={() => handleOpenAssessDialog(row)}
+                                    disabled={!canPerformActions}
+                                    className="cursor-pointer gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
+                                  >
+                                    {row.uis.hasAssessment ? (
+                                      <>
+                                        <FileEdit className="size-3.5 text-primary" />
+                                        Assess / Re-Assess
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Plus className="size-3.5 text-primary" />
+                                        Conduct Assessment
+                                      </>
+                                    )}
+                                  </DropdownMenuItem>
+                                )}
 
                                 <DropdownMenuItem
                                   onClick={() => handleDirectPrint(row)}
-                                  disabled={!canPerformActions || printingRowKey === row.key}
+                                  disabled={printingRowKey === row.key}
                                   className="cursor-pointer gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
                                 >
                                   {printingRowKey === row.key ? (

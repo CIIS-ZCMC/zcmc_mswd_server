@@ -16,6 +16,7 @@ import {
   Receipt,
   User,
 } from "lucide-react"
+import { useAuth } from "@/features/auth/hooks/use-auth"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import {
   useAddFamilyMember,
@@ -30,6 +31,7 @@ import { PatientActiveQueueStatusDialog } from "./dialogs/patient-active-queue-s
 import {
   QueueActionGateProvider,
   QueueStatusBanner,
+  pickActiveVisit,
   usePatientVisits,
 } from "@/features/queue"
 import { DocumentsTab } from "./tabs/documents-tab"
@@ -105,6 +107,7 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
   const [isActiveQueueStatusOpen, setIsActiveQueueStatusOpen] = useState(false)
 
   const canManageQueue = usePermission("queue.manage")
+  const { user } = useAuth()
 
   const { data: visits = [] } = usePatientVisits(
     patient.id,
@@ -112,11 +115,8 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
     canManageQueue
   )
   const activeVisit = useMemo(
-    () =>
-      visits.find(
-        (v) => v.status === "waiting" || v.status === "in_progress"
-      ) ?? null,
-    [visits]
+    () => pickActiveVisit(visits, user?.id),
+    [visits, user?.id]
   )
 
   const addFamilyMember = useAddFamilyMember(patient.id)
@@ -126,6 +126,10 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
   const handleAddFamilyMember = (newFamily: Omit<FamilyMember, "id">) => {
     addFamilyMember.mutate({
       name: newFamily.fullName,
+      first_name: newFamily.firstName || undefined,
+      middle_name: newFamily.middleName || null,
+      last_name: newFamily.lastName || undefined,
+      extension_name: newFamily.extensionName || null,
       relationship: newFamily.relationship,
       birthdate: newFamily.birthdate || undefined,
       sex: newFamily.sex || undefined,
@@ -147,6 +151,10 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
       memberId,
       payload: {
         name: updatedFamily.fullName,
+        first_name: updatedFamily.firstName || undefined,
+        middle_name: updatedFamily.middleName || null,
+        last_name: updatedFamily.lastName || undefined,
+        extension_name: updatedFamily.extensionName || null,
         relationship: updatedFamily.relationship,
         birthdate: updatedFamily.birthdate || undefined,
         sex: updatedFamily.sex || undefined,

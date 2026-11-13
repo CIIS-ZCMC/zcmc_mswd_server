@@ -12,6 +12,7 @@ export interface DarPatient {
 /** One record line on the worker's Daily Accomplishment Report. */
 export interface DarEntry {
   id: number
+  service_visit_id?: number | null
   entry_date: string
   served_time: string | null
   activity: string
@@ -40,6 +41,7 @@ export interface DarResponse {
 /** POST /api/dar-entries request payload. */
 export interface StoreDarEntryPayload {
   patient_id: number
+  service_visit_id?: number | null
   entry_date: string
   served_time?: string | null
   activity: string

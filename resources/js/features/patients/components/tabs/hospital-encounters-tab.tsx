@@ -60,7 +60,7 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
   const hospitalNumber = patient.hospitalId
   const canAssess = usePermission("cases.update")
   const canCreateCase = usePermission("cases.create")
-  const { canPerformActions, reason } = useQueueActionGate()
+  const { canPerformActions } = useQueueActionGate()
 
   // Data fetching
   const { data: encounters = [], isLoading, error } = useHospitalEncounters(hospitalNumber)
@@ -371,9 +371,7 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
                             {/* Print Dropdown Action Button */}
                             <DropdownMenu>
                               <DropdownMenuTrigger
-                                disabled={!canPerformActions}
-                                title={!canPerformActions ? reason : undefined}
-                                className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs sm:text-sm font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary disabled:opacity-50 disabled:cursor-not-allowed"
+                                className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs sm:text-sm font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
                                 aria-label={`Print documents for encounter #${enc.id}`}
                               >
                                 <Printer className="size-4 text-primary" />

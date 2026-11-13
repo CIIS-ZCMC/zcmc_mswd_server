@@ -99,24 +99,44 @@ it('records a List of Expenses with the rent, sources, amounts and total', funct
         ->and($data['remarks'])->toBe('Stable');
 });
 
-it('keeps the rent amount only when the house is rented', function () {
-    $owned = $this->postJson(seStore($this->patient), sePayload(['house_tenure' => 'owned']))->assertCreated()->json('data');
+it('keeps the rent amount only when rented and light/water amounts when their source is selected', function () {
+    $owned = $this->postJson(seStore($this->patient), sePayload([
+        'house_tenure' => 'owned', 'house_rent_amount' => 3500,
+        'light_source' => ['electricity'], 'light_amount' => 1200,
+        'water_source' => ['public'], 'water_amount' => 450,
+    ]))->assertCreated()->json('data');
 
     expect($owned['house']['rent_amount'])->toBeNull()
-        ->and($owned['total'])->toEqual(6800); // the rent is not counted
+        ->and($owned['light_amount'])->toEqual(1200)
+        ->and($owned['water_amount'])->toEqual(450)
+        ->and($owned['total'])->toEqual(8450); // rent is not counted; 1200 + 450 + 6800 items
 
-    $none = $this->postJson(seStore($this->patient), sePayload(['house_tenure' => null]))->assertCreated()->json('data');
-    expect($none['house']['rent_amount'])->toBeNull()->and($none['total'])->toEqual(6800);
+    $none = $this->postJson(seStore($this->patient), sePayload([
+        'house_tenure' => null, 'house_rent_amount' => 3500,
+        'light_source' => [], 'light_amount' => 1200,
+        'water_source' => [], 'water_amount' => 450,
+    ]))->assertCreated()->json('data');
+    expect($none['house']['rent_amount'])->toBeNull()
+        ->and($none['light_amount'])->toBeNull()
+        ->and($none['water_amount'])->toBeNull()
+        ->and($none['total'])->toEqual(6800);
 
-    $id = $this->postJson(seStore($this->patient), sePayload())->assertCreated()->json('data.id');
+    $id = $this->postJson(seStore($this->patient), sePayload([
+        'light_amount' => 800, 'water_amount' => 300,
+    ]))->assertCreated()->json('data.id');
 
-    // Rented -> owned clears the stored amount; owned -> rented needs it sent again.
-    $flipped = $this->putJson("/api/socioeconomic-profiles/{$id}", ['house_tenure' => 'owned'])->assertOk()->json('data');
+    // Rented -> owned clears the stored rent amount, and clearing sources clears light/water amounts.
+    $flipped = $this->putJson("/api/socioeconomic-profiles/{$id}", [
+        'house_tenure' => 'owned', 'light_source' => [], 'water_source' => [],
+    ])->assertOk()->json('data');
     expect($flipped['house']['rent_amount'])->toBeNull()
+        ->and($flipped['light_amount'])->toBeNull()
+        ->and($flipped['water_amount'])->toBeNull()
         ->and(PatientSocioeconomicProfile::find($id)->house_rent_amount)->toBeNull();
 
-    $back = $this->putJson("/api/socioeconomic-profiles/{$id}", ['house_tenure' => 'rented', 'house_rent_amount' => 4000])
-        ->assertOk()->json('data');
+    $back = $this->putJson("/api/socioeconomic-profiles/{$id}", [
+        'house_tenure' => 'rented', 'house_rent_amount' => 4000,
+    ])->assertOk()->json('data');
     expect($back['house']['rent_amount'])->toEqual(4000)->and($back['total'])->toEqual(10800);
 });
 

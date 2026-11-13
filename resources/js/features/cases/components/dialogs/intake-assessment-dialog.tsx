@@ -26,6 +26,17 @@ import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@
 import { Checkbox } from "@/components/ui/checkbox"
 import { ApiError } from "@/lib/api-client"
 import {
+  extractSuffixFromNameParts,
+  NAME_SUFFIX_OPTIONS,
+  NONE_SUFFIX_VALUE,
+  normalizeNameSuffix,
+} from "@/lib/name-suffix"
+import {
+  extract10DigitPhPhone,
+  formatPhPhonePayload,
+  isValidPhPhone10,
+} from "@/lib/ph-phone"
+import {
   useCreateAssessment,
   useCreateIntakeAssessment,
   useUpdateAssessment,
@@ -76,41 +87,63 @@ interface IntakeAssessmentDialogProps {
   onSuccess?: () => void
 }
 
-function parseFullName(raw: string): { last: string; first: string; middle: string } {
-  if (!raw) return { last: "", first: "", middle: "" }
+function parseFullName(raw: string): {
+  last: string
+  first: string
+  middle: string
+  ext: string
+} {
+  if (!raw) return { last: "", first: "", middle: "", ext: "" }
   const trimmed = raw.trim()
   if (trimmed.includes(",")) {
     const [lastPart, restPart] = trimmed.split(",")
-    const rest = (restPart || "").trim().split(/\s+/)
+    const rawRest = (restPart || "").trim().split(/\s+/).filter(Boolean)
+    const { remaining: rest, extensionName } =
+      extractSuffixFromNameParts(rawRest)
     return {
       last: lastPart.trim(),
       first: rest[0] || "",
       middle: rest.slice(1).join(" "),
+      ext: extensionName,
     }
   }
-  const parts = trimmed.split(/\s+/)
+  const rawParts = trimmed.split(/\s+/).filter(Boolean)
+  const { remaining: parts, extensionName } =
+    extractSuffixFromNameParts(rawParts)
   if (parts.length === 1) {
-    return { last: "", first: parts[0], middle: "" }
+    return { last: "", first: parts[0], middle: "", ext: extensionName }
   }
   if (parts.length === 2) {
-    return { first: parts[0], middle: "", last: parts[1] }
+    return {
+      first: parts[0],
+      middle: "",
+      last: parts[1],
+      ext: extensionName,
+    }
   }
   return {
     first: parts[0],
     middle: parts.slice(1, -1).join(" "),
     last: parts[parts.length - 1],
+    ext: extensionName,
   }
 }
 
-function combineInformantName(last: string, first: string, middle: string): string | null {
+function combineInformantName(
+  last: string,
+  first: string,
+  middle: string,
+  ext: string
+): string | null {
   const l = last.trim()
   const f = first.trim()
   const m = middle.trim()
-  if (!l && !f && !m) return null
+  const e = normalizeNameSuffix(ext)
+  if (!l && !f && !m && !e) return null
   if (l && f) {
-    return `${l}, ${f}${m ? ` ${m}` : ""}`.trim()
+    return `${l}, ${f}${m ? ` ${m}` : ""}${e ? ` ${e}` : ""}`.trim()
   }
-  return [f, m, l].filter(Boolean).join(" ").trim() || null
+  return [f, m, l, e].filter(Boolean).join(" ").trim() || null
 }
 
 export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
@@ -154,6 +187,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
   const [informantLastName, setInformantLastName] = useState("")
   const [informantFirstName, setInformantFirstName] = useState("")
   const [informantMiddleName, setInformantMiddleName] = useState("")
+  const [informantExtensionName, setInformantExtensionName] = useState("")
   const [informantRelationship, setInformantRelationship] = useState("")
   const [customRelationship, setCustomRelationship] = useState("")
   const [informantAddress, setInformantAddress] = useState<PsgcAddressValue>(EMPTY_PSGC_ADDRESS)
@@ -203,15 +237,24 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
           setInformantLastName(existingAssessment.informantLastName ?? "")
           setInformantFirstName(existingAssessment.informantFirstName ?? "")
           setInformantMiddleName(existingAssessment.informantMiddleName ?? "")
+          setInformantExtensionName(
+            normalizeNameSuffix(existingAssessment.informantExtensionName)
+          )
         } else if (existingAssessment.informantName) {
           const parsed = parseFullName(existingAssessment.informantName)
           setInformantLastName(parsed.last)
           setInformantFirstName(parsed.first)
           setInformantMiddleName(parsed.middle)
+          setInformantExtensionName(
+            normalizeNameSuffix(
+              existingAssessment.informantExtensionName || parsed.ext
+            )
+          )
         } else {
           setInformantLastName("")
           setInformantFirstName("")
           setInformantMiddleName("")
+          setInformantExtensionName("")
         }
 
         const rawRel = existingAssessment.informantRelationship?.trim() || ""
@@ -232,7 +275,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         }
 
         setInformantAddress(existingAssessment.informantAddressPsgc ?? EMPTY_PSGC_ADDRESS)
-        setInformantContact(existingAssessment.informantContact ?? "")
+        setInformantContact(extract10DigitPhPhone(existingAssessment.informantContact))
         const isSelf =
           existingAssessment.informantRelationship?.toLowerCase() === "patient" ||
           existingAssessment.informantRelationship?.toLowerCase() === "self"
@@ -281,6 +324,7 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         setInformantLastName("")
         setInformantFirstName("")
         setInformantMiddleName("")
+        setInformantExtensionName("")
         setInformantRelationship("")
         setCustomRelationship("")
         setInformantAddress(EMPTY_PSGC_ADDRESS)
@@ -317,22 +361,26 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         setInformantLastName(patientLastName || "")
         setInformantFirstName(patientFirstName || "")
         setInformantMiddleName(patientMiddleName || "")
+        const parsed = patientName ? parseFullName(patientName) : null
+        setInformantExtensionName(parsed?.ext || "")
       } else if (patientName) {
         const parsed = parseFullName(patientName)
         setInformantLastName(parsed.last)
         setInformantFirstName(parsed.first)
         setInformantMiddleName(parsed.middle)
+        setInformantExtensionName(parsed.ext)
       }
       setInformantRelationship("Patient")
       setCustomRelationship("")
       if (patientAddressPsgc && isPsgcAddressComplete(patientAddressPsgc)) {
         setInformantAddress({ ...patientAddressPsgc })
       }
-      if (patientContact) setInformantContact(patientContact)
+      if (patientContact) setInformantContact(extract10DigitPhPhone(patientContact))
     } else {
       setInformantLastName("")
       setInformantFirstName("")
       setInformantMiddleName("")
+      setInformantExtensionName("")
       setInformantRelationship("")
       setCustomRelationship("")
       setInformantAddress(EMPTY_PSGC_ADDRESS)
@@ -352,6 +400,11 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
     e.preventDefault()
     setErrorMsg(null)
 
+    if (!isValidPhPhone10(informantContact, false)) {
+      setErrorMsg("Informant contact number must be a 10-digit PH mobile number starting with 9.")
+      return
+    }
+
     // A half-picked address cannot be saved: it needs the city and barangay.
     if (!isPsgcAddressComplete(informantAddress) && !isPsgcAddressEmpty(informantAddress)) {
       setErrorMsg("Pick both a city or municipality and a barangay for the informant address, or clear it.")
@@ -366,7 +419,13 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         ? toPsgcPayload("informant_address", informantAddress)
         : {}
 
-    const combinedName = combineInformantName(informantLastName, informantFirstName, informantMiddleName)
+    const normalizedExt = normalizeNameSuffix(informantExtensionName)
+    const combinedName = combineInformantName(
+      informantLastName,
+      informantFirstName,
+      informantMiddleName,
+      normalizedExt
+    )
 
     const effectiveRelationship =
       informantRelationship === "Other"
@@ -380,16 +439,21 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
           : "Others"
         : assistanceType.trim() || null
 
+    const formattedInformantContact = informantContact.trim()
+      ? formatPhPhonePayload(informantContact)
+      : null
+
     if (isEditMode) {
       const payload: UpdateAssessmentPayload = {
         informant_name: combinedName,
         informant_last_name: informantLastName.trim() || null,
         informant_first_name: informantFirstName.trim() || null,
         informant_middle_name: informantMiddleName.trim() || null,
+        informant_extension_name: normalizedExt || null,
         informant_relationship: effectiveRelationship,
         ...informantAddressPayload,
-        informant_contact_number: informantContact.trim() || null,
-        informant_contact: informantContact.trim() || null,
+        informant_contact_number: formattedInformantContact,
+        informant_contact: formattedInformantContact,
         presenting_problem: presentingProblem.trim() || null,
         problem_categories: problemCategories.length > 0 ? problemCategories : null,
         problem_specify: computedProblemSpecify,
@@ -418,10 +482,11 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
         informant_last_name: informantLastName.trim() || null,
         informant_first_name: informantFirstName.trim() || null,
         informant_middle_name: informantMiddleName.trim() || null,
+        informant_extension_name: normalizedExt || null,
         informant_relationship: effectiveRelationship,
         ...informantAddressPayload,
-        informant_contact_number: informantContact.trim() || null,
-        informant_contact: informantContact.trim() || null,
+        informant_contact_number: formattedInformantContact,
+        informant_contact: formattedInformantContact,
         presenting_problem: presentingProblem.trim() || null,
         problem_categories: problemCategories.length > 0 ? problemCategories : null,
         problem_specify: computedProblemSpecify,
@@ -508,8 +573,8 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
               </label>
             </div>
 
-            {/* Three Name Inputs: Last Name, First Name, Middle Name */}
-            <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
+            {/* Four Name Inputs: Last Name, First Name, Middle Name, Extension */}
+            <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-4">
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider">Informant Last Name</Label>
                 <Input
@@ -541,6 +606,35 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
                   disabled={isInformantPatient}
                   className="h-11 text-sm font-medium disabled:opacity-75 disabled:bg-muted/40 disabled:cursor-not-allowed"
                 />
+              </div>
+
+              <div className="space-y-1.5">
+                <Label className="text-xs font-bold uppercase tracking-wider">Extension / Suffix</Label>
+                <Select
+                  value={informantExtensionName || NONE_SUFFIX_VALUE}
+                  onValueChange={(val) =>
+                    setInformantExtensionName(
+                      !val || val === NONE_SUFFIX_VALUE ? "" : val
+                    )
+                  }
+                  disabled={isInformantPatient}
+                >
+                  <SelectTrigger className="h-11 w-full text-sm font-medium disabled:opacity-75 disabled:bg-muted/40 disabled:cursor-not-allowed">
+                    <SelectValue placeholder="None">
+                      {(val: string | null) =>
+                        !val || val === NONE_SUFFIX_VALUE ? "None" : val
+                      }
+                    </SelectValue>
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value={NONE_SUFFIX_VALUE}>None</SelectItem>
+                    {NAME_SUFFIX_OPTIONS.map((suffix) => (
+                      <SelectItem key={suffix} value={suffix}>
+                        {suffix}
+                      </SelectItem>
+                    ))}
+                  </SelectContent>
+                </Select>
               </div>
             </div>
 
@@ -574,13 +668,30 @@ export const IntakeAssessmentDialog: React.FC<IntakeAssessmentDialogProps> = ({
 
               <div className="space-y-1.5">
                 <Label className="text-xs font-bold uppercase tracking-wider">Informant Contact Number</Label>
-                <Input
-                  placeholder="e.g. 0917-123-4567"
-                  value={informantContact}
-                  onChange={(e) => setInformantContact(e.target.value)}
-                  disabled={isInformantPatient}
-                  className="h-11 text-sm font-medium disabled:opacity-75 disabled:bg-muted/40 disabled:cursor-not-allowed"
-                />
+                <div className="flex items-stretch">
+                  <div className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-3 text-xs font-bold text-muted-foreground select-none">
+                    +63 -
+                  </div>
+                  <Input
+                    type="tel"
+                    inputMode="numeric"
+                    placeholder="9XX XXX XXXX"
+                    maxLength={10}
+                    value={informantContact}
+                    onChange={(e) =>
+                      setInformantContact(extract10DigitPhPhone(e.target.value))
+                    }
+                    disabled={isInformantPatient}
+                    className="h-11 rounded-l-none font-mono text-sm font-medium tracking-wider disabled:opacity-75 disabled:bg-muted/40 disabled:cursor-not-allowed"
+                  />
+                </div>
+                {informantContact.length > 0 &&
+                  !isValidPhPhone10(informantContact, false) && (
+                    <p className="text-[11px] text-muted-foreground">
+                      10-digit PH mobile number starting with 9 required (
+                      {informantContact.length}/10)
+                    </p>
+                  )}
               </div>
             </div>
 

@@ -156,8 +156,8 @@ it('returns the household size and the section III expense slots per case', func
         // No assessment: no slots and no embedded assessment.
         ->and($data[0]['uis']['expense_slots'])->toBeNull()
         ->and($data[0]['uis']['assessment'])->toBeNull()
-        // House help is not housing; the two Others lines add up.
-        ->and($data[1]['uis']['expense_slots']['housing'])->toBe(1200)
+        // House rent has no slot; the two Others lines add up.
+        ->and($data[1]['uis']['expense_slots'])->not->toHaveKey('housing')
         ->and($data[1]['uis']['expense_slots']['house_help'])->toBe(777)
         ->and($data[1]['uis']['expense_slots']['others'])->toBe(150)
         ->and($data[1]['uis']['expense_slots']['food'])->toBeNull()

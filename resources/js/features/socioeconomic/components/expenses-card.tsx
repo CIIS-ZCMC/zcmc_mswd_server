@@ -47,7 +47,9 @@ import type {
 interface ExpensesCardProps {
   house: HouseLiving
   lightSource: string[]
+  lightAmount: number | null
   waterSource: string[]
+  waterAmount: number | null
   expenses: ExpenseItems
   total: number | null
 }
@@ -66,12 +68,17 @@ const EXPENSE_ICONS: Record<ExpenseItemKey, React.ComponentType<{ className?: st
 export const ExpensesCard: React.FC<ExpensesCardProps> = ({
   house,
   lightSource,
+  lightAmount,
   waterSource,
+  waterAmount,
   expenses,
   total,
 }) => {
   const [showAllCategories, setShowAllCategories] = useState(false)
   const isRented = house.tenure === "rented"
+  const hasHouseAmount = isRented && house.rentAmount !== null && house.rentAmount !== undefined && house.rentAmount > 0
+  const hasLightAmount = lightAmount !== null && lightAmount !== undefined && lightAmount > 0
+  const hasWaterAmount = waterAmount !== null && waterAmount !== undefined && waterAmount > 0
 
   // Filter declared (active) items with > 0 amount or specified text
   const declaredKeys = EXPENSE_ITEM_KEYS.filter((key) => {
@@ -126,7 +133,7 @@ export const ExpensesCard: React.FC<ExpensesCardProps> = ({
               <div className="text-sm font-bold text-foreground">
                 {labelFor(HOUSE_TENURE_OPTIONS, house.tenure) || "Not recorded"}
               </div>
-              {isRented && house.rentAmount !== null && (
+              {isRented && house.rentAmount !== null && house.rentAmount !== undefined && (
                 <Badge variant="outline" className="text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-500/30">
                   {formatCurrency(house.rentAmount)} / month
                 </Badge>
@@ -150,6 +157,11 @@ export const ExpensesCard: React.FC<ExpensesCardProps> = ({
                   <span className="text-xs text-muted-foreground italic">None recorded</span>
                 )}
               </div>
+              {lightAmount !== null && lightAmount !== undefined && (
+                <Badge variant="outline" className="text-xs font-semibold bg-amber-500/10 text-amber-800 dark:text-amber-200 border-amber-500/30">
+                  {formatCurrency(lightAmount)} / month
+                </Badge>
+              )}
             </div>
 
             {/* Water Source */}
@@ -169,6 +181,11 @@ export const ExpensesCard: React.FC<ExpensesCardProps> = ({
                   <span className="text-xs text-muted-foreground italic">None recorded</span>
                 )}
               </div>
+              {waterAmount !== null && waterAmount !== undefined && (
+                <Badge variant="outline" className="text-xs font-semibold bg-blue-500/10 text-blue-800 dark:text-blue-200 border-blue-500/30">
+                  {formatCurrency(waterAmount)} / month
+                </Badge>
+              )}
             </div>
           </div>
         </div>
@@ -196,16 +213,23 @@ export const ExpensesCard: React.FC<ExpensesCardProps> = ({
               </TableHeader>
 
               <TableBody>
-                {/* If Rented, show House Rent row */}
-                {isRented && house.rentAmount !== null && house.rentAmount > 0 && (
+                {/* House / Lot Amount row */}
+                {hasHouseAmount && (
                   <TableRow className="text-sm bg-amber-500/5">
                     <TableCell className="py-3 font-semibold flex items-center gap-2">
                       <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300">
                         <Home className="size-4" />
                       </div>
                       <div>
-                        <span>House / Lot Rent</span>
-                        <span className="text-xs text-muted-foreground block font-normal">Monthly dwelling rent</span>
+                        <span>
+                          House / Lot{" "}
+                          {house.tenure
+                            ? `(${labelFor(HOUSE_TENURE_OPTIONS, house.tenure) || house.tenure})`
+                            : ""}
+                        </span>
+                        <span className="text-xs text-muted-foreground block font-normal">
+                          Monthly dwelling cost
+                        </span>
                       </div>
                     </TableCell>
                     <TableCell className="py-3 text-right font-bold text-foreground">
@@ -214,8 +238,48 @@ export const ExpensesCard: React.FC<ExpensesCardProps> = ({
                   </TableRow>
                 )}
 
+                {/* Light Source Amount row */}
+                {hasLightAmount && (
+                  <TableRow className="text-sm bg-amber-500/5">
+                    <TableCell className="py-3 font-semibold flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-amber-500/10 text-amber-700 dark:text-amber-300">
+                        <Lightbulb className="size-4" />
+                      </div>
+                      <div>
+                        <span>Light Source</span>
+                        <span className="text-xs text-muted-foreground block font-normal">
+                          {lightSource.map((s) => labelFor(LIGHT_SOURCE_OPTIONS, s) || s).join(", ")}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3 text-right font-bold text-foreground">
+                      {formatCurrency(lightAmount)}
+                    </TableCell>
+                  </TableRow>
+                )}
+
+                {/* Water Source Amount row */}
+                {hasWaterAmount && (
+                  <TableRow className="text-sm bg-blue-500/5">
+                    <TableCell className="py-3 font-semibold flex items-center gap-2">
+                      <div className="p-1.5 rounded-md bg-blue-500/10 text-blue-700 dark:text-blue-300">
+                        <Droplets className="size-4" />
+                      </div>
+                      <div>
+                        <span>Water Source</span>
+                        <span className="text-xs text-muted-foreground block font-normal">
+                          {waterSource.map((s) => labelFor(WATER_SOURCE_OPTIONS, s) || s).join(", ")}
+                        </span>
+                      </div>
+                    </TableCell>
+                    <TableCell className="py-3 text-right font-bold text-foreground">
+                      {formatCurrency(waterAmount)}
+                    </TableCell>
+                  </TableRow>
+                )}
+
                 {/* Displayed Expense Items */}
-                {displayedKeys.length === 0 && !isRented ? (
+                {displayedKeys.length === 0 && !hasHouseAmount && !hasLightAmount && !hasWaterAmount ? (
                   <TableRow>
                     <TableCell colSpan={2} className="text-center py-6 text-sm text-muted-foreground italic">
                       No monthly household expenses recorded on this assessment.

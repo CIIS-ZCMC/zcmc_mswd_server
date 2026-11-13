@@ -178,11 +178,11 @@ it('stores the informant name parts, address and contact, accepting the legacy c
         ->assertJsonPath('data.informant_middle_name', 'M.')
         ->assertJsonPath('data.informant_address', 'Sta. Maria, Arena Blanco, City of Zamboanga')
         ->assertJsonPath('data.informant_address_city_code', PsgcFixtureSeeder::ZAMBOANGA_CITY)
-        ->assertJsonPath('data.informant_contact_number', '09171234567');
+        ->assertJsonPath('data.informant_contact_number', '+63-9171234567');
 
     $this->putJson('/api/assessments/'.$response->json('data.id'), [
-        'informant_contact_number' => '09999999999', 'informant_contact' => '09999999999',
-    ])->assertOk()->assertJsonPath('data.informant_contact_number', '09999999999');
+        'informant_contact_number' => '+63-9999999999', 'informant_contact' => '+63-9999999999',
+    ])->assertOk()->assertJsonPath('data.informant_contact_number', '+63-9999999999');
 });
 
 it('creates the nested expense lines with the assessment and classifies against them in one request', function () {
