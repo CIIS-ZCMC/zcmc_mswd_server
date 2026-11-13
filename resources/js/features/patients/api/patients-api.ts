@@ -68,6 +68,10 @@ export function getCaseAssessments(caseId: number) {
 
 export interface CreateFamilyMemberPayload {
   name: string
+  first_name?: string
+  middle_name?: string | null
+  last_name?: string
+  extension_name?: string | null
   relationship?: string
   birthdate?: string
   sex?: string
@@ -89,6 +93,10 @@ export function createFamilyMember(patientId: number, payload: CreateFamilyMembe
 
 export interface UpdateFamilyMemberPayload {
   name?: string
+  first_name?: string
+  middle_name?: string | null
+  last_name?: string
+  extension_name?: string | null
   relationship?: string
   birthdate?: string
   sex?: string
@@ -115,14 +123,20 @@ export function deleteFamilyMember(memberId: string | number) {
 
 export interface UpdatePatientBackgroundPayload {
   contact_number?: string
-  address?: string
-  barangay?: string
-  municipality?: string
   religion?: string
   nationality?: string
-  place_of_birth?: string
-  permanent_address?: string
-  present_address?: string
+  /**
+   * Addresses are picked from PSGC: `{base}_line`, `{base}_city_code`,
+   * `{base}_barangay_code` (present_address, permanent_address) and
+   * `place_of_birth_city_code`. The server writes the composed text.
+   */
+  present_address_line?: string | null
+  present_address_city_code?: string | null
+  present_address_barangay_code?: string | null
+  permanent_address_line?: string | null
+  permanent_address_city_code?: string | null
+  permanent_address_barangay_code?: string | null
+  place_of_birth_city_code?: string | null
   educational_attainment?: string
   occupation?: string
   employer?: string
@@ -142,9 +156,13 @@ export interface CreateWatcherPayload {
   first_name?: string | null
   middle_name?: string | null
   last_name?: string | null
+  extension_name?: string | null
   relationship_code: string
   contact_number: string
-  address: string
+  /** Picked from PSGC: the server writes the composed address. */
+  address_line?: string | null
+  address_city_code?: string | null
+  address_barangay_code?: string | null
   notes?: string | null
 }
 

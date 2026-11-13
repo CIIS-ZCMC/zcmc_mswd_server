@@ -1,3 +1,5 @@
+import type { PsgcAddressValue } from "@/features/reference/types/psgc.types"
+
 export type MswdClassificationCode = "A" | "B" | "C1" | "C2" | "C3" | "D"
 
 /**
@@ -120,8 +122,11 @@ export interface Assessment {
   informantFirstName?: string | null
   informantMiddleName?: string | null
   informantLastName?: string | null
+  informantExtensionName?: string | null
   informantRelationship: string | null
   informantAddress?: string | null
+  /** The informant address as picked from PSGC (empty cityCode: still free text). */
+  informantAddressPsgc?: PsgcAddressValue
   informantContact?: string | null
   otherIncomeSources: OtherIncomeSource[]
   referralSource: string | null
@@ -154,8 +159,12 @@ export interface CreateAssessmentPayload {
   informant_first_name?: string | null
   informant_middle_name?: string | null
   informant_last_name?: string | null
+  informant_extension_name?: string | null
   informant_relationship?: string | null
-  informant_address?: string | null
+  /** Picked from PSGC: the server writes the composed `informant_address`. */
+  informant_address_line?: string | null
+  informant_address_city_code?: string | null
+  informant_address_barangay_code?: string | null
   informant_contact_number?: string | null
   informant_contact?: string | null
   other_income_sources?: Array<{ source: string; amount: number | string | null }>
@@ -187,8 +196,12 @@ export interface UpdateAssessmentPayload {
   informant_first_name?: string | null
   informant_middle_name?: string | null
   informant_last_name?: string | null
+  informant_extension_name?: string | null
   informant_relationship?: string | null
-  informant_address?: string | null
+  /** Picked from PSGC: the server writes the composed `informant_address`. */
+  informant_address_line?: string | null
+  informant_address_city_code?: string | null
+  informant_address_barangay_code?: string | null
   informant_contact_number?: string | null
   informant_contact?: string | null
   other_income_sources?: Array<{ source: string; amount: number | string | null }>

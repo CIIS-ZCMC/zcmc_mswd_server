@@ -7,7 +7,6 @@ import type {
 
 /** A slot is null when no expense line matched it (shown blank, like the printed form). */
 export interface PatientUisExpenseSlots {
-  housing: number | null
   food: number | null
   education: number | null
   transport: number | null

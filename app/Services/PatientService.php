@@ -8,6 +8,7 @@ use App\Models\Patient;
 use App\Models\User;
 use App\Repositories\Contracts\PatientRepositoryInterface;
 use App\Support\ListQuery;
+use App\Support\PsgcAddress;
 use Illuminate\Contracts\Pagination\LengthAwarePaginator;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Validation\ValidationException;
@@ -45,17 +46,52 @@ class PatientService
         return $this->repository->findOrFail($id);
     }
 
-    public function create(PatientDto $dto): Patient
+    /**
+     * @param  array<string, mixed>  $input  validated request input, for the PSGC addresses
+     */
+    public function create(PatientDto $dto, array $input = []): Patient
     {
-        $attributes = $dto->toArray();
+        $attributes = [...$dto->toArray(), ...self::addressColumns($input)];
         $attributes['mswd_id'] ??= $this->generateMswdId();
 
         return $this->repository->create($attributes);
     }
 
-    public function update(Patient $patient, PatientDto $dto): Patient
+    /**
+     * @param  array<string, mixed>  $input  validated request input, for the PSGC addresses
+     */
+    public function update(Patient $patient, PatientDto $dto, array $input = []): Patient
     {
-        return $this->repository->update($patient, $dto->toArray());
+        return $this->repository->update($patient, [...$dto->toArray(), ...self::addressColumns($input)]);
+    }
+
+    /**
+     * The columns for the PSGC present and permanent addresses and the place
+     * of birth that the input sends (App\Support\PsgcAddress). The present
+     * address also fills the older loose residence columns (`address` =
+     * line, `barangay`, `municipality`, `province`), which PDFs and the
+     * registry search still read. Addresses the input leaves out are untouched.
+     *
+     * @param  array<string, mixed>  $input
+     * @return array<string, string|null>
+     */
+    public static function addressColumns(array $input): array
+    {
+        $columns = [];
+
+        if (PsgcAddress::touches($input, 'present_address')) {
+            $present = PsgcAddress::fromInput($input, 'present_address');
+
+            $columns += $present
+                ? [...$present->columns('present_address'), ...$present->residenceColumns()]
+                : [...PsgcAddress::emptyColumns('present_address'), 'address' => null, 'barangay' => null, 'municipality' => null, 'province' => null];
+        }
+
+        return [
+            ...$columns,
+            ...PsgcAddress::columnsFrom($input, 'permanent_address'),
+            ...PsgcAddress::cityColumnsFrom($input, 'place_of_birth'),
+        ];
     }
 
     /**
@@ -83,6 +119,16 @@ class PatientService
         }
 
         $patient = Patient::withTrashed()->firstOrNew(['hospital_id' => $attributes['hospital_id']]);
+
+        // An address picked from PSGC here wins over HIS free text.
+        if (filled($patient->permanent_address_city_code)) {
+            unset($attributes['permanent_address']);
+        }
+
+        if (filled($patient->place_of_birth_city_code)) {
+            unset($attributes['place_of_birth']);
+        }
+
         $patient->fill($attributes);
 
         if ($patient->trashed()) {

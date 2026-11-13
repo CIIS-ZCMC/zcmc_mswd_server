@@ -15,6 +15,12 @@ class Guarantor extends Model
     protected $fillable = [
         'name',
         'address',
+        // PSGC parts of the address (App\Support\PsgcAddress).
+        'address_line',
+        'address_region_code',
+        'address_province_code',
+        'address_city_code',
+        'address_barangay_code',
         'is_active',
     ];
 

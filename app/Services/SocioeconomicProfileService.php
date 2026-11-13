@@ -22,7 +22,12 @@ class SocioeconomicProfileService
      */
     public function create(Patient $patient, array $data, int $recordedBy): PatientSocioeconomicProfile
     {
-        $data = $this->withRentRule($data, $data['house_tenure'] ?? null);
+        $data = $this->withUtilityRules(
+            $data,
+            $data['house_tenure'] ?? null,
+            $data['light_source'] ?? [],
+            $data['water_source'] ?? [],
+        );
 
         $profile = $patient->socioeconomicProfiles()->make($data + ['recorded_by' => $recordedBy]);
         $this->takeIncomeSnapshot($profile, $patient);
@@ -41,10 +46,12 @@ class SocioeconomicProfileService
     public function update(PatientSocioeconomicProfile $profile, array $data): PatientSocioeconomicProfile
     {
         $tenure = array_key_exists('house_tenure', $data) ? $data['house_tenure'] : $profile->house_tenure;
+        $lightSource = array_key_exists('light_source', $data) ? ($data['light_source'] ?? []) : ($profile->light_source ?? []);
+        $waterSource = array_key_exists('water_source', $data) ? ($data['water_source'] ?? []) : ($profile->water_source ?? []);
         $refresh = (bool) ($data['refresh_income'] ?? false);
         unset($data['refresh_income']);
 
-        $profile->fill($this->withRentRule($data, $tenure));
+        $profile->fill($this->withUtilityRules($data, $tenure, $lightSource, $waterSource));
 
         if ($refresh) {
             $this->takeIncomeSnapshot($profile, $profile->patient()->withTrashed()->firstOrFail());
@@ -78,15 +85,24 @@ class SocioeconomicProfileService
     }
 
     /**
-     * The rent amount belongs to a rented house only: any other tenure clears it.
+     * Amounts for house, light, and water require a selected tenure/source; clearing
+     * the selection clears the stored amount.
      *
      * @param  array<string, mixed>  $data
+     * @param  list<string>  $lightSource
+     * @param  list<string>  $waterSource
      * @return array<string, mixed>
      */
-    private function withRentRule(array $data, ?string $tenure): array
+    private function withUtilityRules(array $data, ?string $tenure, array $lightSource, array $waterSource): array
     {
         if ($tenure !== 'rented') {
             $data['house_rent_amount'] = null;
+        }
+        if (empty($lightSource)) {
+            $data['light_amount'] = null;
+        }
+        if (empty($waterSource)) {
+            $data['water_amount'] = null;
         }
 
         return $data;

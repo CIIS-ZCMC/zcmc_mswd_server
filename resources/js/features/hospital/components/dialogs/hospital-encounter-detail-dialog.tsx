@@ -1,4 +1,5 @@
 import React, { useState } from "react"
+import type { DialogRootChangeEventDetails } from "@base-ui/react/dialog"
 import {
   Dialog,
   DialogContent,
@@ -218,7 +219,22 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
     }
   }
 
-  const handleDialogClose = (nextOpen: boolean) => {
+  const handleDialogClose = (
+    nextOpen: boolean,
+    eventDetails?: DialogRootChangeEventDetails
+  ) => {
+    // Escape on the guarantor form steps back to the encounter view (asking
+    // first if the form was edited) instead of closing the whole dialog.
+    if (
+      !nextOpen &&
+      viewMode === "guarantor-form" &&
+      eventDetails?.reason === "escape-key"
+    ) {
+      eventDetails.cancel()
+      handleRequestBack()
+      return
+    }
+
     if (!nextOpen) {
       if (viewMode === "guarantor-form") {
         if (isFormDirty) {
@@ -270,17 +286,6 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
       <Dialog open={open} onOpenChange={handleDialogClose}>
         <DialogContent
           className="sm:max-w-3xl max-h-[90vh] flex flex-col p-0 gap-0 overflow-hidden"
-          onPointerDownOutside={(e) => {
-            if (viewMode === "guarantor-form") {
-              e.preventDefault()
-            }
-          }}
-          onEscapeKeyDown={(e) => {
-            if (viewMode === "guarantor-form") {
-              e.preventDefault()
-              handleRequestBack()
-            }
-          }}
         >
           {viewMode === "guarantor-form" ? (
             <>
@@ -371,9 +376,7 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
               {/* Header Print Actions */}
               <DropdownMenu>
                 <DropdownMenuTrigger
-                  disabled={!canPerformActions}
-                  title={!canPerformActions ? reason : undefined}
-                  className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-sm font-bold gap-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0 disabled:opacity-50 disabled:cursor-not-allowed"
+                  className="inline-flex items-center justify-center h-10 px-4 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-sm font-bold gap-2 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary shrink-0"
                   aria-label="Print documents for encounter"
                 >
                   <Printer className="size-4.5 text-primary" />
@@ -889,7 +892,7 @@ const HospitalEncounterDetailDialogContent: React.FC<HospitalEncounterDetailDial
                   caseId={activeCase?.id}
                   caseCode={activeCase?.caseCode}
                   patientName={patient.fullName}
-                  patientAddress={patient.address}
+                  patientAddressPsgc={patient.presentAddressPsgc}
                   patientContact={patient.contactNo}
                   patientMonthlyIncome={patient.monthlyIncome}
                   transactionId={activeEncounter.id}

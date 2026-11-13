@@ -49,6 +49,10 @@ export interface ApiFamilyMember {
   id: number
   patient_id: number
   name: string
+  first_name?: string | null
+  middle_name?: string | null
+  last_name?: string | null
+  extension_name?: string | null
   relationship: string | null
   age: number | null
   birthdate: string | null
@@ -82,12 +86,17 @@ export interface ApiWatcher {
   first_name?: string | null
   middle_name?: string | null
   last_name?: string | null
+  extension_name?: string | null
   relationship_code: string | null
   relationship_label: string | null
   /** Same as relationship_label; the old free-text field name. */
   relationship?: string | null
   contact_number: string | null
   address: string | null
+  /** PSGC parts of the address; null while it is still free text. */
+  address_line?: string | null
+  address_city_code?: string | null
+  address_barangay_code?: string | null
   notes?: string | null
   /** Only present when the server loaded the watcher's case assignments. */
   assignments?: ApiWatcherAssignment[]
@@ -212,8 +221,13 @@ export interface ApiAssessment {
   informant_first_name?: string | null
   informant_middle_name?: string | null
   informant_last_name?: string | null
+  informant_extension_name?: string | null
   informant_relationship?: string | null
   informant_address?: string | null
+  /** PSGC parts of the informant address; null while it is still free text. */
+  informant_address_line?: string | null
+  informant_address_city_code?: string | null
+  informant_address_barangay_code?: string | null
   informant_contact_number?: string | null
   informant_contact?: string | null
   other_income_sources?: ApiOtherIncomeSource[] | null
@@ -351,6 +365,14 @@ export interface ApiPatient {
   place_of_birth: string | null
   permanent_address: string | null
   present_address: string | null
+  /** PSGC parts of the addresses; null while an address is still free text. */
+  present_address_line?: string | null
+  present_address_city_code?: string | null
+  present_address_barangay_code?: string | null
+  permanent_address_line?: string | null
+  permanent_address_city_code?: string | null
+  permanent_address_barangay_code?: string | null
+  place_of_birth_city_code?: string | null
   educational_attainment: string | null
   occupation: string | null
   employer: string | null

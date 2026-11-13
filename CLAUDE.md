@@ -55,21 +55,22 @@ Request flow: `routes/api.php` → thin `Http/Controllers` (mostly single-action
 Frontend lives in `resources/js/features/<feature>/{api,components,hooks,types}`. Each module below: purpose, key rules, main backend/frontend pieces.
 
 ### Auth & Users
-Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM is kept behind a switch. `services.auth_provider` (`AUTH_PROVIDER=umis|iam`) picks one; the other's routes answer 404 (`EnsureAuthProvider`, alias `auth.provider`). The cookie session stays; roles and permissions are shared as Inertia props (`auth.user`, `auth.roles`, `auth.permissions`, plus `auth.provider` and `auth.portalUrl` for the login page).
+Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and a password-only **local** mode are kept behind a switch. `services.auth_provider` (`AUTH_PROVIDER=umis|iam|local`, read through `App\Enums\AuthProvider::current()`, which throws on an unknown value) picks one; the others' routes answer 404 (`EnsureAuthProvider`, alias `auth.provider`). The cookie session stays; roles and permissions are shared as Inertia props (`auth.user`, `auth.roles`, `auth.permissions`, plus `auth.provider` and `auth.portalUrl` for the login page).
 - **UMIS flow:** staff sign in on the ZCMC Portal (repo `umis-landing-page`) and click MSWD → UMIS sends them to `GET /signing-in/{uuid}` → `UmisAuthService` swaps the id server to server (`POST {UMIS}/api/auth-with-session-id`, header `UMIS-Api-Key`) and creates or updates the user **keyed on `users.employee_id` (the UMIS employee profile id), never email**.
-  - Every UMIS API reply is AES-256-CBC encrypted; `Support/UmisPayload` decrypts it with `UMIS_PAYLOAD_KEY`.
+  - UMIS can AES-256-CBC encrypt its API replies (`"encrypted": true`); `Support/UmisPayload` then decrypts them with `UMIS_PAYLOAD_KEY` and reads plain replies as they are. UMIS encryption is currently off, so the key is left blank; set it only if UMIS turns encryption on (sign-ins then fail with a logged "UMIS_PAYLOAD_KEY is not set").
   - The reply must name system `UMIS_SYSTEM_CODE` (`MSWD`); anything else is "not admitted".
   - The route is not guest-only: whoever is signed in on a shared terminal is signed out first.
   - Settings: `services.umis` / `UMIS_*` env (see `.env.example`). Plan and UMIS setup: `docs/UMIS_AUTH_PLAN.md`.
 - **UMIS roles** are synced from `permissions.roles[*].name` on every sign-in and recheck, through `Support/ExternalRoleMatcher` (shared with IAM): match by system **code** first (`case_manager`), then by name; `role_map` can rename first. Values with no local role are dropped, never created, and `Super Admin` is never granted.
 - `EnsureUmisSessionIsLive` (web + api) asks UMIS again every `UMIS_RECHECK_MINUTES`: a 401 (signed out of UMIS), another system, or a different person ends the session; UMIS unreachable or a 5xx keeps it. Logout of a UMIS session returns `{redirect: portal_url}`; UMIS has no logout for other systems.
 - **IAM flow** (only with `AUTH_PROVIDER=iam`): `GET /auth/iam/redirect` (a plain link, never an Inertia visit) → IAM → `GET /callback`. `IamAuthService` swaps the code, reads `/api/v1/userinfo`, and keys the user on `users.iam_sub`. `org_roles` and `placement` are stored on the user. `EnsureIamSessionIsLive` renews the IAM token and ends the session if the refresh is refused; logout returns the IAM logout URL when `IAM_END_SESSION_ON_LOGOUT` is on.
-- `/login` sends guests to the provider (IAM, or the portal once `UMIS_PORTAL_URL` is set) unless it is showing a sign-in error (`auth_error` flash) or `?admin`.
+- **Local flow** (only with `AUTH_PROVIDER=local`): no outside service. Every role signs in with employee number + password at `/login`. Super Admin makes accounts in `/admin` › Users (Create, which is off under UMIS/IAM) and sets or resets passwords there; a reset deletes the user's API tokens and other database sessions. `password` is not mass assignable: `CreateUser`/`EditUser` write it with `forceFill`. Use `local` in development so seeded accounts can sign in.
+- `/login` sends guests to the provider (IAM, or the portal once `UMIS_PORTAL_URL` is set) unless it is showing a sign-in error (`auth_error` flash) or `?admin`. Under `local` it always shows the password form.
 - Default roles are **per module** (`RolesAndPermissionsSeeder::ROLES` is the source of truth). A role holds only its listed modules:
 
   | Role | Code | Modules |
   |---|---|---|
-  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge) |
+  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge); may also take an Intake Assessment (`intake.create`) without holding any Cases permission |
   | Case Manager | `case_manager` | Patients, Cases, Queue, DAR (full CRUD, no merge or sign-offs) |
   | Supervisor | `supervisor` | Patients, Queue, DAR, Reports |
   | Head (was `MSS Head`) | `head` | Reports |
@@ -83,7 +84,7 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM is k
   Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); users/roles and `/admin` (`panel.access`) are Super Admin only. `admin` can be granted from UMIS or IAM; `super_admin` never.
 - Web page routes carry the same `permission:` gates as the API. `/` sends a user without `patients.view` to their first module (cases, queue, DAR, reports). The sidebar tabs and the patient-list query follow `usePermission`.
 - `services.umis.role_map` / `services.iam.role_map` (config arrays) are only needed when the provider sends a value that is neither a role code nor a name.
-- Password login (`POST /login`, `POST /api/login`) exists for the local **Super Admin (`super_admin`) only**, under either provider; in the `local` environment any role may use it (`User::canSignInWithPassword()`), so seeded accounts can log in. The `users` rows that predate IAM are those accounts (migration `split_super_admin_from_admin` moved them from `Admin`). The login page links it as "Administrator sign-in" (`/login?admin`).
+- Password login (`POST /login`, `POST /api/login`) is for the local **Super Admin (`super_admin`)** under every provider, and for every role under `AUTH_PROVIDER=local` (`User::canSignInWithPassword()`). `APP_ENV` plays no part. The `users` rows that predate IAM are those accounts (migration `split_super_admin_from_admin` moved them from `Admin`). The login page links it as "Administrator sign-in" (`/login?admin`).
 - Not built: IAM back-channel logout and its revocation queue consumer.
 - Front: `features/auth` (`LoginForm`, `useAuth`, `usePermission`, `useHasRole`).
 - Back: `UmisAuthService`, `Web/UmisAuthController`, `IamAuthService`, `Web/IamAuthController`, `UserService`, `RoleService`, `PermissionService`; Filament Users/Roles/Permissions.
@@ -94,6 +95,16 @@ MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, soc
 - Patient merge and patient IDs are supported.
 - Documents tab: PDF/JPG/PNG uploads (max 10 MB) per patient, typed from the Library Document Types list, filed under a case optionally. Files are stored on the default disk (RustFS in dev, bucket `mss`; the disk is kept per row) and read **only through the server** (`GET /patients/{id}/documents/{doc}/file`, inline or `?download=1`), never a storage path. Delete is a soft delete and keeps the file. Finalized SCSR PDFs also appear here.
 - Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`, `DocumentService`.
+
+### Addresses (PSGC)
+Every address is a free-text line (house, street, purok) plus a Philippine Standard Geographic Code (PSGC) city or municipality and one of its barangays; region and province follow from the city.
+- Where: patient present and permanent address, patient place of birth (city or municipality only), watcher address, UIS informant address, guarantor address.
+- Data: `psgc_areas` (`PsgcArea`: region, province, city, barangay; a city is any city, municipality, Manila district `SubMun` or SGU). Loaded from `database/data/psgc.json.gz` by `php artisan psgc:load` (no internet; run after `migrate` on every deploy; `DatabaseSeeder` runs it). Codes PSA drops are retired, never deleted. `php artisan psgc:sync` re-crawls PSGC Cloud (`PSGC_API_URL`, 120 requests a minute, about 15 minutes) and rewrites the file; run it by hand when PSA publishes an update and commit the file. Tests use `PsgcFixtureSeeder` and the `psgcAddress()` helper in `tests/Pest.php`.
+- Lookup API (any signed-in user): `GET /psgc/cities?search=&code=` (30 results; home region `PSGC_HOME_REGION` first; only areas with barangays) and `GET /psgc/cities/{code}/barangays`.
+- Columns: each structured address has `{base}_line`, `_region_code`, `_province_code`, `_city_code`, `_barangay_code` beside its composed string (`present_address`, `permanent_address`, `address`, `informant_address`). Clients send `{base}_line`, `{base}_city_code`, `{base}_barangay_code`; `Support/PsgcAddress` resolves them, `Rules/PsgcBarangayInCity` validates the pair, and the server writes the composed string, so every PDF and screen keeps reading it. An address left out of an update is untouched; sent with no city and barangay it is cleared; once given, both are required.
+- The patient's present address also fills the older `address` (line), `barangay`, `municipality`, `province`, which PDFs and the registry search still read. HIS import never overwrites a permanent address or place of birth that has PSGC codes.
+- Old free-text addresses stay as they are until edited; the picker shows them as "Not matched to PSGC". Filament shows these fields read-only.
+- Front: `features/reference` (`PsgcAddressFields`, `PsgcCityPicker`, `usePsgc*`, `toPsgcPayload` / `fromPsgcFields`). Back: `PsgcCatalogService`, `CitySearchController`, `CityBarangaysController`.
 
 ### Hospital (HIS Encounters)
 Read-only view of HIS patients and their transactions (encounters), with guarantors and diagnosis. The encounter dialog hosts the printables and the Queue & TAT tab.
@@ -109,7 +120,7 @@ Socio-economic classification of a patient for an encounter.
 - Net Per Capita Income = (family income − household expenses) ÷ household size (patient + family members, min 1).
 - Brackets A, B, C1, C2, C3, D with a computed discount (`CalculateMswdClassificationAction`, `MswdClassificationMatrix`). A worker may override the bracket with a written reason.
 - Assessments are append-only snapshots; a re-assessment links to its parent (`parent_assessment_id`).
-- Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up).
+- Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up). Taking one needs `intake.create` (Processor, Case Manager, Admin), not `cases.create`; the sheet routes need `intake.view`.
 - The UIS is a **printable, not a stored record**; every print is logged (`uis_print_logs`).
 - But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. The on-screen sheet reads the same copy through `uisSheetData()` (`features/cases/lib/uis-sheet-data.ts`), which mirrors `UisSnapshotService::sheetData()`. See `docs/UIS_SNAPSHOT_PLAN.md`.
 - Family income, house tenure, light/water and the section III expense lines are imported from the patient's newest Socioeconomic record when an intake is taken (what the request supplies wins) and on Refresh (which overwrites; a patient with no record, or a record with no expense items, leaves the assessment's own alone). `assessments.socioeconomic_profile_id` records which record, so the sheet can tell a newer one exists.
@@ -143,9 +154,10 @@ In `hospital/components/dialogs/`:
 ### Queue & Turnaround Time (TAT)
 Time in → Start → Complete (or Cancel) per HIS encounter visit, stamped by the server clock.
 - One open visit per encounter. `served_by` = whoever clicks Start. Cancelled visits are excluded from TAT figures.
-- A visit in progress belongs to its `served_by`: only they can complete or cancel it (403 otherwise), and `useQueueActionGate` makes the patient's records view-only for everyone else except Admin and Super Admin. That records lock is UI only; the record APIs don't check it.
+- A visit in progress belongs to its `served_by`: only they can complete or cancel it (403 otherwise), and `useQueueActionGate` makes the patient's records view-only for everyone else except Admin and Super Admin. That records lock is UI only; the record APIs don't check it. It covers creating and editing, not printing: the print buttons (UIS, encounter printables, Acknowledgement Slip) work without a visit.
+- A worker serves one visit at a time: Start and Take Over answer 422 while they have another visit in progress. `ServingBar` (in `main-layout.tsx`, fed by `useMyActiveVisit`) shows that visit on every page with a timer and Complete.
 - `queue.override` (Supervisor, Admin, Super Admin) can Take Over a visit with a reason (`POST /service-visits/{id}/take-over`). The timer keeps running and `served_by` moves to them.
-- Completing a visit offers "Add to DAR?". A visit left unfiled shows Add to DAR on the worker's Served Today card.
+- Completing a visit offers what to print (UIS, MAIFIP slip, City Mayor slip, Indigency certificate: `VisitPrintPrompt`), then "Add to DAR?". A visit left unfiled shows Add to DAR on the worker's Served Today card.
 - Targets per stage (waiting / processing / total, minutes) are set in the Library.
 - Front: `features/queue` (`QueueBoard`, `ServiceVisitPanel`, `VisitDarPrompt`, `TakeOverVisitDialog`, `lib/visit-lock.ts`). Back: `ServiceVisitService`; permissions `queue.manage`, `queue.override`.
 

@@ -11,10 +11,13 @@ import {
 import type {
   CancelVisitInput,
   CompleteVisitInput,
+  ServiceVisit,
   TakeOverVisitInput,
   TimeInInput,
 } from "../types"
 import { PATIENTS_LIST_QUERY_KEY } from "@/features/patients/hooks/use-patients"
+import { useAuth } from "@/features/auth/hooks/use-auth"
+import { usePermission } from "@/features/auth/hooks/use-permission"
 
 /**
  * Every visit mutation changes a patient's queue status, which the registry
@@ -37,13 +40,33 @@ export const queueKeys = {
     ] as const,
 }
 
-export function useQueue(date?: string) {
+export function useQueue(date?: string, enabled = true) {
   return useQuery({
     queryKey: queueKeys.queue(date),
     queryFn: () => getQueue(date),
     refetchInterval: 30000,
     staleTime: 10000,
+    enabled,
   })
+}
+
+/**
+ * The visit the signed-in worker is serving right now, if any. A worker serves one
+ * visit at a time (ServiceVisitService refuses a second Start or Take Over), so this
+ * is at most one row. Reads today's queue board, which lists every open visit.
+ */
+export function useMyActiveVisit(): ServiceVisit | null {
+  const { user } = useAuth()
+  const canManage = usePermission("queue.manage")
+  const { data } = useQueue(undefined, canManage && Boolean(user))
+
+  if (!user || !data) return null
+
+  return (
+    data.inProgress.find(
+      (visit) => String(visit.servedBy?.id) === String(user.id)
+    ) ?? null
+  )
 }
 
 export function usePatientVisits(

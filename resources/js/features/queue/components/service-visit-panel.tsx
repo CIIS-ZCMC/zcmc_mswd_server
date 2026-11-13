@@ -41,12 +41,14 @@ import {
   useCompleteVisit,
   usePatientVisits,
   useStartVisit,
+  useMyActiveVisit,
   useTimeInVisit,
 } from "../hooks/use-queue"
 import { visitLockedBy } from "../lib/visit-lock"
 import type { ServiceVisit } from "../types"
 import { TakeOverVisitDialog } from "./take-over-visit-dialog"
 import { VisitDarPrompt } from "./visit-dar-prompt"
+import { VisitPrintPrompt } from "./visit-print-prompt"
 
 interface ServiceVisitPanelProps {
   patientId: number | string
@@ -109,6 +111,8 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
 
   const [takeOverOpen, setTakeOverOpen] = useState(false)
   const [darVisit, setDarVisit] = useState<ServiceVisit | null>(null)
+  // The completed visit being offered printables; the DAR question follows it.
+  const [printVisit, setPrintVisit] = useState<ServiceVisit | null>(null)
 
   // Find active open visit (waiting or in_progress)
   const openVisit = useMemo(
@@ -120,6 +124,13 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
   )
 
   const lockedBy = openVisit ? visitLockedBy(openVisit, user?.id) : null
+
+  // One visit at a time: the server refuses a second Start or Take Over.
+  const myActiveVisit = useMyActiveVisit()
+  const busyHint =
+    myActiveVisit && myActiveVisit.id !== openVisit?.id
+      ? `Complete ${myActiveVisit.patient?.name ?? "your current patient"} first`
+      : null
 
   const handleTimeInSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -168,7 +179,7 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
       })
       setCompleteOpen(false)
       setCompleteRemarks("")
-      if (canAddToDar) setDarVisit(completed)
+      setPrintVisit(completed)
     } catch (err) {
       setDialogError(
         err instanceof ApiError ? err.message : "Failed to complete visit."
@@ -374,7 +385,9 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
                     size="sm"
                     variant="outline"
                     onClick={() => setTakeOverOpen(true)}
-                    className="h-8 gap-1.5 text-xs font-bold"
+                    disabled={busyHint !== null}
+                    title={busyHint ?? undefined}
+                    className="h-8 gap-1.5 text-xs font-bold disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <UserCog className="size-3.5" />
                     Take Over
@@ -401,8 +414,9 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
                   <Button
                     size="sm"
                     onClick={handleStartSubmit}
-                    disabled={startMutation.isPending}
-                    className="h-8 gap-1.5 bg-blue-600 text-xs font-bold text-white hover:bg-blue-700"
+                    disabled={startMutation.isPending || busyHint !== null}
+                    title={busyHint ?? undefined}
+                    className="h-8 gap-1.5 bg-blue-600 text-xs font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     {startMutation.isPending ? (
                       <Loader2 className="size-3.5 animate-spin" />
@@ -798,6 +812,13 @@ export const ServiceVisitPanel: React.FC<ServiceVisitPanelProps> = ({
       <TakeOverVisitDialog
         visit={takeOverOpen ? openVisit : null}
         onClose={() => setTakeOverOpen(false)}
+      />
+      <VisitPrintPrompt
+        visit={printVisit}
+        onClose={() => {
+          if (canAddToDar && printVisit) setDarVisit(printVisit)
+          setPrintVisit(null)
+        }}
       />
       <VisitDarPrompt visit={darVisit} onClose={() => setDarVisit(null)} />
     </div>

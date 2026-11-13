@@ -21,6 +21,25 @@ import { Switch } from "@/components/ui/switch"
 import { Textarea } from "@/components/ui/textarea"
 import { useWatcherRelationshipTypes } from "@/features/cases/hooks/use-case-watchers"
 import type { CreateCaseWatcherPayload } from "@/features/cases/api/case-watchers-api"
+import { PsgcAddressFields } from "@/features/reference/components/psgc-address-fields"
+import {
+  isPsgcAddressComplete,
+  toPsgcPayload,
+} from "@/features/reference/lib/psgc-address"
+import {
+  EMPTY_PSGC_ADDRESS,
+  type PsgcAddressValue,
+} from "@/features/reference/types/psgc.types"
+import {
+  NAME_SUFFIX_OPTIONS,
+  NONE_SUFFIX_VALUE,
+  normalizeNameSuffix,
+} from "@/lib/name-suffix"
+import {
+  extract10DigitPhPhone,
+  formatPhPhonePayload,
+  isValidPhPhone10,
+} from "@/lib/ph-phone"
 import type { OpenCase, Watcher } from "../../types/watcher.types"
 
 const NEW_PERSON = "new"
@@ -38,18 +57,6 @@ interface AssignWatcherDialogProps {
   watchers?: Watcher[]
   onAssign: (caseId: number, payload: CreateCaseWatcherPayload) => Promise<void>
   isSubmitting?: boolean
-}
-
-function extract10DigitPhone(raw: string): string {
-  if (!raw) return ""
-  const digits = raw.replace(/\D/g, "")
-  if (digits.startsWith("63") && digits.length >= 12) {
-    return digits.slice(2, 12)
-  }
-  if (digits.startsWith("0") && digits.length >= 11) {
-    return digits.slice(1, 11)
-  }
-  return digits.slice(0, 10)
 }
 
 /**
@@ -97,9 +104,10 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
     lastName: "",
     firstName: "",
     middleName: "",
+    extensionName: "",
     relationshipCode: "",
     contactNumber: "",
-    address: "",
+    address: { ...EMPTY_PSGC_ADDRESS } as PsgcAddressValue,
   })
   const [flags, setFlags] = useState({ isPrimary: false, isInformant: false, presentFrom: "", presentUntil: "", notes: "" })
   const [error, setError] = useState<string | null>(null)
@@ -126,9 +134,10 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
       lastName: "",
       firstName: "",
       middleName: "",
+      extensionName: "",
       relationshipCode: relationshipTypes[0]?.code ?? "",
       contactNumber: "",
-      address: "",
+      address: { ...EMPTY_PSGC_ADDRESS },
     })
     setFlags({ isPrimary: false, isInformant: false, presentFrom: "", presentUntil: "", notes: "" })
   }
@@ -140,18 +149,24 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
       ? person.lastName.trim() !== "" &&
         person.firstName.trim() !== "" &&
         person.relationshipCode !== "" &&
-        person.contactNumber.trim().length === 10 &&
-        person.address.trim() !== ""
+        isValidPhPhone10(person.contactNumber, true) &&
+        isPsgcAddressComplete(person.address)
       : watcherId !== NEW_PERSON)
 
   const handleSave = async () => {
     if (!canSave || targetCaseId === undefined) return
 
-    const fullName = [person.firstName.trim(), person.middleName.trim(), person.lastName.trim()]
+    const ext = normalizeNameSuffix(person.extensionName)
+    const fullName = [
+      person.firstName.trim(),
+      person.middleName.trim(),
+      person.lastName.trim(),
+      ext,
+    ]
       .filter(Boolean)
       .join(" ")
 
-    const formattedContact = `+63-${person.contactNumber.trim()}`
+    const formattedContact = formatPhPhonePayload(person.contactNumber)
 
     const payload: CreateCaseWatcherPayload = {
       ...(isNewPerson
@@ -161,9 +176,10 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
               first_name: person.firstName.trim(),
               middle_name: person.middleName.trim() || null,
               last_name: person.lastName.trim(),
+              extension_name: ext || null,
               relationship_code: person.relationshipCode,
               contact_number: formattedContact,
-              address: person.address.trim(),
+              ...toPsgcPayload("address", person.address),
             },
           }
         : { patient_watcher_id: Number(watcher?.id ?? watcherId) }),
@@ -247,7 +263,7 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
 
               {isNewPerson && (
                 <div className="grid gap-3">
-                  <div className="grid grid-cols-1 sm:grid-cols-3 gap-2">
+                  <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-4 gap-2">
                     <Input
                       placeholder="Last name *"
                       value={person.lastName}
@@ -266,6 +282,31 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
                       onChange={(e) => setPerson({ ...person, middleName: e.target.value })}
                       className="h-10 bg-background"
                     />
+                    <Select
+                      value={person.extensionName || NONE_SUFFIX_VALUE}
+                      onValueChange={(val) =>
+                        setPerson({
+                          ...person,
+                          extensionName: !val || val === NONE_SUFFIX_VALUE ? "" : val,
+                        })
+                      }
+                    >
+                      <SelectTrigger className="h-10 bg-background">
+                        <SelectValue placeholder="Suffix">
+                          {(val: string | null) =>
+                            !val || val === NONE_SUFFIX_VALUE ? "Suffix: None" : val
+                          }
+                        </SelectValue>
+                      </SelectTrigger>
+                      <SelectContent>
+                        <SelectItem value={NONE_SUFFIX_VALUE}>None</SelectItem>
+                        {NAME_SUFFIX_OPTIONS.map((suffix) => (
+                          <SelectItem key={suffix} value={suffix}>
+                            {suffix}
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   </div>
                   <div className="grid grid-cols-2 gap-3">
                     <Select
@@ -298,23 +339,23 @@ export const AssignWatcherDialog: React.FC<AssignWatcherDialogProps> = ({
                         maxLength={10}
                         value={person.contactNumber}
                         onChange={(e) => {
-                          const cleaned = extract10DigitPhone(e.target.value)
+                          const cleaned = extract10DigitPhPhone(e.target.value)
                           setPerson({ ...person, contactNumber: cleaned })
                         }}
                         className="h-10 rounded-l-none bg-background font-mono tracking-wider"
                       />
                     </div>
                   </div>
-                  {person.contactNumber.length > 0 && person.contactNumber.length < 10 && (
+                  {person.contactNumber.length > 0 && !isValidPhPhone10(person.contactNumber, true) && (
                     <p className="-mt-1 text-[11px] text-muted-foreground">
-                      10-digit number required ({person.contactNumber.length}/10)
+                      10-digit PH mobile number starting with 9 required ({person.contactNumber.length}/10)
                     </p>
                   )}
-                  <Input
-                    placeholder="Address *"
+                  <PsgcAddressFields
+                    label="Address *"
                     value={person.address}
-                    onChange={(e) => setPerson({ ...person, address: e.target.value })}
-                    className="h-10 bg-background"
+                    onChange={(address) => setPerson({ ...person, address })}
+                    required
                   />
                 </div>
               )}

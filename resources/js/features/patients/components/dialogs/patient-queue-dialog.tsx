@@ -159,37 +159,37 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="w-full gap-5 p-6 sm:max-w-xl sm:p-7">
-        <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-xl font-bold">
-            <Clock className="size-5.5 text-primary" />
+      <DialogContent className="max-h-[90vh] w-full gap-3.5 overflow-y-auto p-4 sm:max-w-md sm:p-5">
+        <DialogHeader className="space-y-1">
+          <DialogTitle className="flex items-center gap-2 text-base font-bold sm:text-lg">
+            <Clock className="size-4.5 text-primary" />
             Queue Patient
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
+          <DialogDescription className="text-xs text-muted-foreground">
             Place patient on the MSWD Service Desk queue. Arrival timestamp is
             stamped by the server clock.
           </DialogDescription>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="space-y-4 pt-1 sm:space-y-5">
+        <form onSubmit={handleSubmit} className="space-y-3 pt-0.5">
           {error && (
-            <Alert variant="destructive" className="py-2.5 text-xs">
-              <AlertCircle className="size-4" />
+            <Alert variant="destructive" className="py-2 text-xs">
+              <AlertCircle className="size-3.5" />
               <AlertDescription>{error}</AlertDescription>
             </Alert>
           )}
 
           {/* Patient Summary Card */}
-          <div className="flex items-center justify-between gap-3 rounded-lg border border-primary/20 bg-primary/5 p-3">
-            <div className="flex items-center gap-3">
-              <div className="flex size-9 items-center justify-center rounded-full bg-primary/10 text-sm font-bold text-primary">
-                <UserCheck className="size-5" />
+          <div className="flex items-center justify-between gap-2.5 rounded-lg border border-primary/20 bg-primary/5 px-3 py-2">
+            <div className="flex items-center gap-2.5">
+              <div className="flex size-7 items-center justify-center rounded-full bg-primary/10 text-xs font-bold text-primary">
+                <UserCheck className="size-4" />
               </div>
               <div>
-                <div className="text-sm font-bold text-foreground">
+                <div className="text-xs font-bold text-foreground sm:text-sm">
                   {patient.fullName}
                 </div>
-                <div className="font-mono text-xs text-muted-foreground">
+                <div className="font-mono text-[11px] text-muted-foreground">
                   Hosp ID:{" "}
                   <strong className="text-foreground">
                     {patient.hospitalNo || "—"}
@@ -202,14 +202,17 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
               </div>
             </div>
             {patient.category && (
-              <Badge variant="outline" className="shrink-0 text-xs font-bold">
+              <Badge
+                variant="outline"
+                className="shrink-0 text-[10px] font-bold"
+              >
                 {patient.category}
               </Badge>
             )}
           </div>
 
           {/* Step 1: HIS Encounter Selection Dropdown */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <div className="flex items-center justify-between">
               <Label
                 htmlFor="encounter-select"
@@ -226,21 +229,21 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
             </div>
 
             {!hospitalId ? (
-              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-3 text-xs text-amber-700 dark:text-amber-400">
+              <div className="rounded-lg border border-amber-500/30 bg-amber-500/10 p-2.5 text-xs text-amber-700 dark:text-amber-400">
                 This patient does not have a linked hospital number, so there
                 are no HIS encounters to queue for.
               </div>
             ) : encountersLoading ? (
-              <div className="flex items-center gap-2 rounded-lg border bg-muted/20 p-3 text-xs text-muted-foreground">
-                <Loader2 className="size-4 animate-spin text-primary" />
+              <div className="flex items-center gap-2 rounded-lg border bg-muted/20 p-2.5 text-xs text-muted-foreground">
+                <Loader2 className="size-3.5 animate-spin text-primary" />
                 Loading encounters from HIS…
               </div>
             ) : encountersError ? (
-              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-3 text-xs text-destructive">
+              <div className="rounded-lg border border-destructive/30 bg-destructive/5 p-2.5 text-xs text-destructive">
                 Unable to load hospital encounters. Please retry in a moment.
               </div>
             ) : sortedEncounters.length === 0 ? (
-              <div className="rounded-lg border bg-muted/20 p-3 text-center text-xs text-muted-foreground">
+              <div className="rounded-lg border bg-muted/20 p-2.5 text-center text-xs text-muted-foreground">
                 No hospital encounters found for this patient in the HIS
                 database.
               </div>
@@ -253,7 +256,7 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
               >
                 <SelectTrigger
                   id="encounter-select"
-                  className="h-11 text-xs font-medium sm:text-sm"
+                  className="h-9 text-xs font-medium"
                 >
                   <SelectValue placeholder="Select an encounter">
                     {(value: string | null) => {
@@ -283,7 +286,7 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
                     }}
                   </SelectValue>
                 </SelectTrigger>
-                <SelectContent className="max-h-64">
+                <SelectContent className="max-h-56">
                   {sortedEncounters.map((enc) => {
                     const queued = openEncounterIds.has(enc.id)
                     const dateOnly = enc.registrationDate
@@ -296,7 +299,7 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
                         key={enc.id}
                         value={String(enc.id)}
                         disabled={queued}
-                        className="py-2 text-xs sm:text-sm"
+                        className="py-1.5 text-xs"
                       >
                         <div className="flex w-full items-center justify-between gap-2">
                           <div className="flex items-center gap-1.5 truncate">
@@ -350,7 +353,7 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
           </div>
 
           {/* Step 2: Purpose Dropdown */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label
               htmlFor="purpose-select"
               className="text-xs font-semibold text-foreground"
@@ -363,17 +366,13 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
             >
               <SelectTrigger
                 id="purpose-select"
-                className="h-11 text-xs font-medium sm:text-sm"
+                className="h-9 text-xs font-medium"
               >
                 <SelectValue placeholder="Select visit purpose" />
               </SelectTrigger>
               <SelectContent>
                 {PURPOSE_OPTIONS.map((item) => (
-                  <SelectItem
-                    key={item}
-                    value={item}
-                    className="py-2 text-xs sm:text-sm"
-                  >
+                  <SelectItem key={item} value={item} className="py-1.5 text-xs">
                     {item}
                   </SelectItem>
                 ))}
@@ -381,14 +380,14 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
             </Select>
 
             {selectedPurposePreset === OTHER_PURPOSE_VALUE && (
-              <div className="pt-1.5">
+              <div className="pt-1">
                 <Input
                   id="custom-purpose"
                   value={customPurpose}
                   maxLength={120}
                   onChange={(e) => setCustomPurpose(e.target.value)}
                   placeholder="Specify custom visit purpose…"
-                  className="h-10 text-xs sm:text-sm"
+                  className="h-8 text-xs"
                   autoFocus
                 />
               </div>
@@ -396,7 +395,7 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
           </div>
 
           {/* Step 3: Remarks (Optional) */}
-          <div className="space-y-1.5">
+          <div className="space-y-1">
             <Label
               htmlFor="queue-remarks"
               className="text-xs font-semibold text-foreground"
@@ -409,35 +408,36 @@ export const PatientQueueDialog: React.FC<PatientQueueDialogProps> = ({
               maxLength={500}
               onChange={(e) => setRemarks(e.target.value)}
               placeholder="Watcher information, special notes for desk..."
-              className="min-h-20 text-xs sm:text-sm"
+              rows={2}
+              className="min-h-14 text-xs"
             />
           </div>
 
-          <DialogFooter className="gap-2 pt-3 sm:gap-2">
+          <DialogFooter className="gap-2 pt-2 sm:gap-2">
             <Button
               type="button"
               variant="outline"
-              size="default"
+              size="sm"
               onClick={() => onOpenChange(false)}
               disabled={timeInMutation.isPending}
-              className="h-10 px-5 text-sm font-semibold"
+              className="h-8 px-4 text-xs font-semibold"
             >
               Cancel
             </Button>
             <Button
               type="submit"
-              size="default"
+              size="sm"
               disabled={!selectedEncounterId || timeInMutation.isPending}
-              className="h-10 gap-2 px-6 text-sm font-bold shadow-sm"
+              className="h-8 gap-1.5 px-4 text-xs font-bold shadow-xs"
             >
               {timeInMutation.isPending ? (
                 <>
-                  <Loader2 className="size-4 animate-spin" />
+                  <Loader2 className="size-3.5 animate-spin" />
                   Queuing…
                 </>
               ) : (
                 <>
-                  <Clock className="size-4" />
+                  <Clock className="size-3.5" />
                   Confirm Queue
                 </>
               )}

@@ -21,7 +21,10 @@ import { router } from "@inertiajs/react"
 interface LoginFormProps {
   /** Why the last sign-in through the provider (IAM or UMIS) failed. */
   authError?: string | null
-  /** The local super admin's password form, reached at /login?admin. */
+  /**
+   * Show the password form: the local super admin's, reached at /login?admin,
+   * or everyone's under the `local` provider.
+   */
   adminLogin?: boolean
 }
 
@@ -32,6 +35,9 @@ export const LoginForm: React.FC<LoginFormProps> = ({
   const { login, isLoggingIn, loginError, authProvider, portalUrl } = useAuth()
   const [employeeNumber, setEmployeeNumber] = useState("")
   const [password, setPassword] = useState("")
+  // Under `local` the password form is the only sign-in there is.
+  const passwordOnly = authProvider === "local"
+  const showPasswordForm = adminLogin || passwordOnly
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -70,7 +76,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </Alert>
           )}
 
-          {authProvider === "iam" ? (
+          {passwordOnly ? null : authProvider === "iam" ? (
             // A plain link, not an Inertia <Link>: leaving for IAM is a real
             // navigation, and an XHR would die on CORS following the redirect.
             <Button
@@ -102,7 +108,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </div>
           )}
 
-          {!adminLogin && (
+          {!showPasswordForm && (
             <a
               href="/login?admin"
               className="text-center text-xs text-muted-foreground underline-offset-4 hover:underline"
@@ -111,8 +117,15 @@ export const LoginForm: React.FC<LoginFormProps> = ({
             </a>
           )}
 
-          {adminLogin && (
-            <form onSubmit={handleSubmit} className="flex flex-col gap-5 border-t pt-5">
+          {showPasswordForm && (
+            <form
+              onSubmit={handleSubmit}
+              className={
+                passwordOnly
+                  ? "flex flex-col gap-5"
+                  : "flex flex-col gap-5 border-t pt-5"
+              }
+            >
               {loginError && (
                 <Alert variant="destructive" className="px-3 py-2.5">
                   <AlertCircle className="size-4" />
@@ -159,7 +172,7 @@ export const LoginForm: React.FC<LoginFormProps> = ({
 
               <Button
                 type="submit"
-                variant="outline"
+                variant={passwordOnly ? "default" : "outline"}
                 className="h-12 gap-2 text-base font-bold"
                 disabled={isLoggingIn}
               >

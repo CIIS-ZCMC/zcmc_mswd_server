@@ -4,6 +4,8 @@ namespace App\Http\Requests;
 
 use App\Models\Assessment;
 use App\Rules\SelectableLookupCode;
+use App\Support\PhPhoneNumber;
+use App\Support\PsgcAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -22,6 +24,10 @@ class StoreAssessmentRequest extends FormRequest
     {
         if ($this->has('informant_contact') && ! $this->has('informant_contact_number')) {
             $this->merge(['informant_contact_number' => $this->input('informant_contact')]);
+        }
+
+        if ($this->has('informant_contact_number')) {
+            $this->merge(['informant_contact_number' => PhPhoneNumber::normalize($this->input('informant_contact_number'))]);
         }
     }
 
@@ -53,9 +59,11 @@ class StoreAssessmentRequest extends FormRequest
             'informant_last_name' => ['nullable', 'string', 'max:255'],
             'informant_first_name' => ['nullable', 'string', 'max:255'],
             'informant_middle_name' => ['nullable', 'string', 'max:255'],
+            'informant_extension_name' => ['nullable', 'string', 'max:50'],
             'informant_relationship' => ['nullable', 'string', 'max:255'],
-            'informant_address' => ['nullable', 'string', 'max:500'],
-            'informant_contact_number' => ['nullable', 'string', 'max:50'],
+            // Picked from PSGC; the server writes the composed `informant_address`.
+            ...PsgcAddress::rules('informant_address'),
+            'informant_contact_number' => PhPhoneNumber::rules(['nullable']),
             'other_income_sources' => ['nullable', 'array'],
             'other_income_sources.*.source' => ['required', 'string', 'max:255'],
             'other_income_sources.*.amount' => ['nullable', 'numeric', 'min:0'],

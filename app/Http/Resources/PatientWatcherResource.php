@@ -2,6 +2,7 @@
 
 namespace App\Http\Resources;
 
+use App\Support\PsgcAddress;
 use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\JsonResource;
 
@@ -22,12 +23,15 @@ class PatientWatcherResource extends JsonResource
             'first_name' => $this->first_name,
             'middle_name' => $this->middle_name,
             'last_name' => $this->last_name,
+            'extension_name' => $this->extension_name,
             'relationship_code' => $this->relationship_code,
             'relationship_label' => $label,
             // Kept for clients that still read the old free-text field.
             'relationship' => $label,
             'contact_number' => $this->contact_number,
             'address' => $this->address,
+            // PSGC parts (null for an address still in free text).
+            ...PsgcAddress::resourceFields($this->resource, 'address'),
             'notes' => $this->notes,
             // The cases this watcher is assigned to, only when they were loaded.
             'assignments' => $this->whenLoaded('caseWatchers', fn () => $this->caseWatchers->map(fn ($assignment) => [

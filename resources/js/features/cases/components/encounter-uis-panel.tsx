@@ -9,6 +9,7 @@ import { useLatestAssessment } from "../hooks/use-assessment"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
 import { PrintUisDialog } from "./dialogs/print-uis-dialog"
 import { IntakeAssessmentDialog } from "./dialogs/intake-assessment-dialog"
+import type { PsgcAddressValue } from "@/features/reference/types/psgc.types"
 import { UisPrintHistoryTable } from "./uis-print-history-table"
 import { MISSING_SECTION_LABELS } from "../lib/uis-labels"
 import {
@@ -23,7 +24,7 @@ export interface EncounterUisPanelProps {
   caseId?: number | null
   caseCode?: string | null
   patientName?: string | null
-  patientAddress?: string | null
+  patientAddressPsgc?: PsgcAddressValue
   patientContact?: string | null
   patientMonthlyIncome?: number | null
   transactionId?: number | null
@@ -37,7 +38,7 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
   caseId,
   caseCode,
   patientName,
-  patientAddress,
+  patientAddressPsgc,
   patientContact,
   patientMonthlyIncome,
   transactionId,
@@ -140,10 +141,9 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
               type="button"
               variant="default"
               size="sm"
-              disabled={!canPerformActions}
               onClick={() => setIsPrintDialogOpen(true)}
-              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!canPerformActions ? reason : "Print options, copies, remarks and blank templates"}
+              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+              title="Print options, copies, remarks and blank templates"
             >
               <Printer className="size-4" />
               Print UIS
@@ -220,7 +220,7 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
         caseId={Number(caseId)}
         caseCode={caseCode ?? undefined}
         patientName={patientName ?? undefined}
-        patientAddress={patientAddress ?? undefined}
+        patientAddressPsgc={patientAddressPsgc}
         patientContact={patientContact ?? undefined}
         patientMonthlyIncome={patientMonthlyIncome}
         existingAssessment={latestAssessment}

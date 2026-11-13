@@ -47,7 +47,8 @@ class GuarantorResource extends Resource
                     ->required()
                     ->maxLength(255),
                 TextInput::make('address')
-                    ->maxLength(255),
+                    ->disabled()->dehydrated(false)
+                    ->helperText('Picked from PSGC in the MSWD app Library; shown here read-only.'),
                 Toggle::make('is_active')
                     ->label('Active')
                     ->default(true),

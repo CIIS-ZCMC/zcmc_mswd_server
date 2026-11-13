@@ -337,10 +337,9 @@ export const EncounterGuaranteesCard: React.FC<
                                 type="button"
                                 variant="ghost"
                                 size="icon"
-                                disabled={!canPerformActions}
                                 onClick={() => setSlipGuaranteeId(g.id)}
-                                className="size-7 text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed"
-                                title={!canPerformActions ? reason : "Print Acknowledgement Slip (DOH-MAIFIP)"}
+                                className="size-7 text-muted-foreground hover:text-foreground"
+                                title="Print Acknowledgement Slip (DOH-MAIFIP)"
                                 aria-label="Print Acknowledgement Slip"
                               >
                                 <Printer className="size-3.5" />

@@ -11,6 +11,10 @@ export type MedicalCategory = string
 export interface FamilyMember {
   id: string
   fullName: string
+  firstName?: string
+  middleName?: string
+  lastName?: string
+  extensionName?: string
   relationship: string
   /** Normalized to `YYYY-MM-DD`; the API emits a full ISO datetime. */
   birthdate: string

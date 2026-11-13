@@ -16,9 +16,11 @@ import type { PatientRecord } from "../../types"
 import {
   TakeOverVisitDialog,
   VisitDarPrompt,
+  VisitPrintPrompt,
   useCancelVisit,
   useCompleteVisit,
   useStartVisit,
+  useMyActiveVisit,
   visitLockedBy,
   type ServiceVisit,
 } from "@/features/queue"
@@ -96,9 +98,12 @@ export const PatientActiveQueueStatusDialog: React.FC<
   const [takeOverOpen, setTakeOverOpen] = useState(false)
   // Lives outside the Dialog below, which closes itself on completion.
   const [darVisit, setDarVisit] = useState<ServiceVisit | null>(null)
+  // The completed visit being offered printables; the DAR question follows it.
+  const [printVisit, setPrintVisit] = useState<ServiceVisit | null>(null)
 
   const startMutation = useStartVisit()
   const completeMutation = useCompleteVisit()
+  const myActiveVisit = useMyActiveVisit()
   const cancelMutation = useCancelVisit()
 
   const [mode, setMode] = useState<DialogMode>("status")
@@ -139,6 +144,11 @@ export const PatientActiveQueueStatusDialog: React.FC<
   const isWaiting = currentVisit.status === "waiting"
   const isServing = currentVisit.status === "in_progress"
   const lockedBy = visitLockedBy(currentVisit, user?.id)
+  // One visit at a time: the server refuses a second Start or Take Over.
+  const busyHint =
+    myActiveVisit && myActiveVisit.id !== currentVisit.id
+      ? `Complete ${myActiveVisit.patient?.name ?? "your current patient"} first`
+      : null
 
   const waitSeconds = isWaiting
     ? getElapsedSeconds(currentVisit.arrivedAt, now)
@@ -203,7 +213,7 @@ export const PatientActiveQueueStatusDialog: React.FC<
         type: "success",
       })
       onOpenChange(false)
-      if (canAddToDar) setDarVisit(completed)
+      setPrintVisit(completed)
     } catch (err) {
       const msg =
         err instanceof ApiError
@@ -419,7 +429,8 @@ export const PatientActiveQueueStatusDialog: React.FC<
                       size="sm"
                       className="h-8 gap-1.5 bg-blue-600 font-bold text-white shadow-xs hover:bg-blue-700"
                       onClick={handleStartService}
-                      disabled={isAnyPending}
+                      disabled={isAnyPending || busyHint !== null}
+                      title={busyHint ?? undefined}
                     >
                       {startMutation.isPending ? (
                         <Loader2 className="size-3.5 animate-spin" />
@@ -437,7 +448,8 @@ export const PatientActiveQueueStatusDialog: React.FC<
                       variant="outline"
                       className="h-8 gap-1.5 text-xs font-bold"
                       onClick={() => setTakeOverOpen(true)}
-                      disabled={isAnyPending}
+                      disabled={isAnyPending || busyHint !== null}
+                      title={busyHint ?? undefined}
                     >
                       <UserCog className="size-3.5" />
                       Take Over
@@ -653,6 +665,13 @@ export const PatientActiveQueueStatusDialog: React.FC<
       <TakeOverVisitDialog
         visit={takeOverOpen ? currentVisit : null}
         onClose={() => setTakeOverOpen(false)}
+      />
+      <VisitPrintPrompt
+        visit={printVisit}
+        onClose={() => {
+          if (canAddToDar && printVisit) setDarVisit(printVisit)
+          setPrintVisit(null)
+        }}
       />
       <VisitDarPrompt visit={darVisit} onClose={() => setDarVisit(null)} />
     </>

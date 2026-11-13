@@ -22,13 +22,13 @@ class UisSocioeconomicImporter
 {
     /**
      * Expense label per profile item. Each is chosen to land in the right slot of
-     * UisExpenseSlots::KEYWORDS (a test pins every one): "House help" must not read as
-     * housing, and an "Others: …" line belongs to the Others slot only.
+     * UisExpenseSlots::KEYWORDS (a test pins every one): an "Others: …" line belongs to
+     * the Others slot only. House rent, light and water amounts are not imported; the
+     * UIS does not show them.
      *
      * @var array<string, string>
      */
     public const LABELS = [
-        'house_rent_amount' => 'House rent',
         'food' => 'Food',
         'transport' => 'Transportation',
         'medical' => 'Medical',
@@ -72,8 +72,7 @@ class UisSocioeconomicImporter
 
     /**
      * One line per filled item. A blank item makes no line, so its slot stays blank on
-     * the form rather than printing 0. The rent counts only when the house is rented,
-     * as the record's own total does.
+     * the form rather than printing 0.
      *
      * @return list<array{expense_type: string, amount: float}>
      */
@@ -82,10 +81,6 @@ class UisSocioeconomicImporter
         $lines = [];
 
         foreach (self::LABELS as $item => $label) {
-            if ($item === 'house_rent_amount' && $profile->house_tenure !== 'rented') {
-                continue;
-            }
-
             if ($profile->{$item} === null) {
                 continue;
             }

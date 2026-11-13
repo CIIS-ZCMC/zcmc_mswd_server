@@ -2,6 +2,8 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PhPhoneNumber;
+use App\Support\PsgcAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
 
@@ -15,8 +17,12 @@ class UpdatePatientWatcherRequest extends FormRequest
     protected function prepareForValidation(): void
     {
         if ($this->filled('first_name') && $this->filled('last_name') && ! $this->filled('name')) {
-            $fullName = trim(preg_replace('/\s+/', ' ', "{$this->input('first_name')} {$this->input('middle_name')} {$this->input('last_name')}"));
+            $fullName = trim(preg_replace('/\s+/', ' ', "{$this->input('first_name')} {$this->input('middle_name')} {$this->input('last_name')} {$this->input('extension_name')}"));
             $this->merge(['name' => $fullName]);
+        }
+
+        if ($this->has('contact_number')) {
+            $this->merge(['contact_number' => PhPhoneNumber::normalize($this->input('contact_number'))]);
         }
     }
 
@@ -32,10 +38,12 @@ class UpdatePatientWatcherRequest extends FormRequest
             'first_name' => ['sometimes', 'required', 'string', 'max:255'],
             'middle_name' => ['nullable', 'string', 'max:255'],
             'last_name' => ['sometimes', 'required', 'string', 'max:255'],
+            'extension_name' => ['nullable', 'string', 'max:50'],
             'name' => ['sometimes', 'required', 'string', 'max:255'],
             'relationship_code' => ['sometimes', 'required', 'string', Rule::exists('watcher_relationship_types', 'code')],
-            'contact_number' => ['sometimes', 'nullable', 'string', 'max:255'],
-            'address' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'contact_number' => PhPhoneNumber::rules(['sometimes', 'nullable']),
+            // Picked from PSGC; left alone when not sent.
+            ...PsgcAddress::rules('address'),
             'notes' => ['nullable', 'string'],
         ];
     }

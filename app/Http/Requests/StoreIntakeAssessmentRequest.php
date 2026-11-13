@@ -9,6 +9,11 @@ namespace App\Http\Requests;
  */
 class StoreIntakeAssessmentRequest extends StoreAssessmentRequest
 {
+    public function authorize(): bool
+    {
+        return $this->user()?->can('intake.create') ?? false;
+    }
+
     /**
      * @return array<string, mixed>
      */

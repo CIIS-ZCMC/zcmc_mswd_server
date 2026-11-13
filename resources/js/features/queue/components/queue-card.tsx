@@ -23,6 +23,8 @@ interface QueueCardProps {
   currentUserId?: number | null
   canOverride?: boolean
   canAddToDar?: boolean
+  /** The visit the signed-in worker is serving; Start and Take Over wait for it to end. */
+  myActiveVisit?: ServiceVisit | null
   onStart?: (visit: ServiceVisit) => void
   onComplete?: (visit: ServiceVisit) => void
   onCancel?: (visit: ServiceVisit) => void
@@ -50,6 +52,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
   currentUserId,
   canOverride = false,
   canAddToDar = false,
+  myActiveVisit = null,
   onStart,
   onComplete,
   onCancel,
@@ -61,6 +64,11 @@ export const QueueCard: React.FC<QueueCardProps> = ({
   const isInProgress = visit.status === "in_progress"
   const isCompleted = visit.status === "completed"
   const lockedBy = visitLockedBy(visit, currentUserId)
+  // One visit at a time: the server refuses a second Start or Take Over.
+  const busyHint =
+    myActiveVisit && myActiveVisit.id !== visit.id
+      ? `Complete ${myActiveVisit.patient?.name ?? "your current patient"} first`
+      : null
   // A DAR is its owner's, so only the worker who finished the visit can file it.
   const canFileDar =
     canAddToDar && isCompleted && visit.completedBy?.id === currentUserId
@@ -89,7 +97,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
 
   return (
     <Card
-      className={`group relative overflow-hidden border shadow-2xs transition-all duration-200 hover:shadow-xs ${
+      className={`group relative gap-0 overflow-hidden border py-0 shadow-2xs transition-all duration-200 hover:shadow-xs ${
         isOverTarget
           ? "border-destructive/50 bg-destructive/5 dark:bg-destructive/10"
           : isWaiting
@@ -101,7 +109,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
     >
       {/* Top Accent Strip */}
       <div
-        className={`h-1 w-full ${
+        className={`h-0.5 w-full ${
           isOverTarget
             ? "animate-pulse bg-destructive"
             : isWaiting
@@ -112,30 +120,30 @@ export const QueueCard: React.FC<QueueCardProps> = ({
         }`}
       />
 
-      <CardContent className="space-y-3 p-3.5">
+      <CardContent className="space-y-2 p-2.5">
         {/* Header: Patient Info & Encounter No */}
         <div className="flex items-start justify-between gap-2">
-          <div className="space-y-0.5">
-            <h5 className="line-clamp-1 text-sm leading-snug font-bold text-foreground">
+          <div className="min-w-0 space-y-0.5">
+            <h5 className="line-clamp-1 text-xs leading-tight font-bold text-foreground sm:text-[13px]">
               {visit.patient?.name || `Patient #${visit.patientId}`}
             </h5>
-            <div className="flex flex-wrap items-center gap-2 text-[11px] text-muted-foreground">
+            <div className="flex flex-wrap items-center gap-1.5 text-[11px] leading-none text-muted-foreground">
               <span>
-                Hospital No:{" "}
+                Hosp:{" "}
                 <strong className="font-mono text-foreground">
                   {visit.patient?.hospital_id ?? "—"}
                 </strong>
               </span>
               <span>•</span>
               <span className="font-semibold text-primary">
-                Encounter #{visit.hisTransactionId}
+                #{visit.hisTransactionId}
               </span>
             </div>
           </div>
 
           <Badge
             variant="outline"
-            className={`shrink-0 text-[10px] font-bold tracking-wider uppercase ${
+            className={`h-4.5 shrink-0 px-1.5 py-0 text-[9px] font-bold tracking-wider uppercase ${
               isWaiting
                 ? "border-amber-500/30 bg-amber-500/10 text-amber-700 dark:text-amber-300"
                 : isInProgress
@@ -149,84 +157,66 @@ export const QueueCard: React.FC<QueueCardProps> = ({
 
         {/* Purpose / Remarks */}
         {visit.purpose && (
-          <p className="line-clamp-1 text-xs text-muted-foreground">
+          <p className="line-clamp-1 text-[11px] leading-tight text-muted-foreground">
             Purpose:{" "}
             <span className="font-medium text-foreground">{visit.purpose}</span>
           </p>
         )}
 
-        {/* Timers & Compliance Block */}
-        <div className="flex items-center justify-between rounded-lg border border-border/60 bg-muted/20 px-3 py-2">
-          <div className="space-y-0.5">
+        {/* Compact Single-Line Timers & Compliance Block */}
+        <div className="flex items-center justify-between gap-2 rounded-md border border-border/60 bg-muted/20 px-2.5 py-1.5">
+          <div className="flex flex-wrap items-center gap-1.5">
+            <Clock className="size-3 shrink-0 text-primary" />
             <span className="text-[10px] font-bold tracking-wider text-muted-foreground uppercase">
-              {isWaiting
-                ? "Waiting Elapsed"
-                : isInProgress
-                  ? "Serving Elapsed"
-                  : "Total Turnaround"}
+              {isWaiting ? "Wait:" : isInProgress ? "Serving:" : "Total:"}
             </span>
-
-            <div className="flex items-center gap-1.5 font-mono text-base font-black text-foreground">
-              <Clock className="size-3.5 text-primary" />
-              {isCompleted ? (
-                <span>
-                  {visit.totalMinutes !== null ? `${visit.totalMinutes}m` : "—"}
-                </span>
-              ) : (
-                <span>{formatElapsed(elapsedSeconds)}</span>
-              )}
-            </div>
+            <span className="font-mono text-xs font-black text-foreground sm:text-sm">
+              {isCompleted
+                ? visit.totalMinutes !== null
+                  ? `${visit.totalMinutes}m`
+                  : "—"
+                : formatElapsed(elapsedSeconds)}
+            </span>
+            {isCompleted && (
+              <span className="text-[10px] text-muted-foreground">
+                (W:{" "}
+                <strong className="font-mono text-foreground">
+                  {visit.waitingMinutes !== null
+                    ? `${visit.waitingMinutes}m`
+                    : "—"}
+                </strong>{" "}
+                · P:{" "}
+                <strong className="font-mono text-foreground">
+                  {visit.processingMinutes !== null
+                    ? `${visit.processingMinutes}m`
+                    : "—"}
+                </strong>
+                )
+              </span>
+            )}
           </div>
 
           {/* Target Compliance Chip */}
-          <div>
-            {isOverTarget ? (
-              <Badge
-                variant="destructive"
-                className="animate-pulse gap-1 text-[10px] font-bold"
-              >
-                Over Target
-              </Badge>
-            ) : isWithinTarget ? (
-              <Badge
-                variant="outline"
-                className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"
-              >
-                Within Target
-              </Badge>
-            ) : null}
-          </div>
+          {isOverTarget ? (
+            <Badge
+              variant="destructive"
+              className="h-4.5 shrink-0 animate-pulse px-1.5 py-0 text-[9px] font-bold"
+            >
+              Over Target
+            </Badge>
+          ) : isWithinTarget ? (
+            <Badge
+              variant="outline"
+              className="h-4.5 shrink-0 border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0 text-[9px] font-semibold text-emerald-700 dark:text-emerald-300"
+            >
+              Within Target
+            </Badge>
+          ) : null}
         </div>
 
-        {/* Additional Duration Stats for Completed */}
-        {isCompleted && (
-          <div className="grid grid-cols-2 gap-2 pt-0.5 text-[11px]">
-            <div className="rounded border border-border/60 bg-muted/10 p-1.5 text-center">
-              <span className="block text-[10px] text-muted-foreground">
-                Waiting
-              </span>
-              <span className="font-mono font-bold text-foreground">
-                {visit.waitingMinutes !== null
-                  ? `${visit.waitingMinutes}m`
-                  : "—"}
-              </span>
-            </div>
-            <div className="rounded border border-border/60 bg-muted/10 p-1.5 text-center">
-              <span className="block text-[10px] text-muted-foreground">
-                Processing
-              </span>
-              <span className="font-mono font-bold text-foreground">
-                {visit.processingMinutes !== null
-                  ? `${visit.processingMinutes}m`
-                  : "—"}
-              </span>
-            </div>
-          </div>
-        )}
-
         {/* Staff Attribution Footer */}
-        <div className="flex items-center justify-between border-t border-border/50 pt-2 text-[11px] text-muted-foreground">
-          <div className="flex items-center gap-1.5 truncate">
+        <div className="flex items-center justify-between pt-0.5 text-[10px] text-muted-foreground">
+          <div className="flex items-center gap-1 truncate">
             {isInProgress ? (
               <>
                 <UserCheck className="size-3 shrink-0 text-blue-500" />
@@ -277,13 +267,13 @@ export const QueueCard: React.FC<QueueCardProps> = ({
         </div>
 
         {/* Interactive Action Buttons */}
-        <div className="flex items-center justify-between gap-1.5 border-t border-border/40 pt-1">
+        <div className="flex items-center justify-between gap-1 border-t border-border/40 pt-1.5">
           {onViewEncounter && (
             <Button
               size="sm"
               variant="ghost"
               onClick={() => onViewEncounter(visit)}
-              className="h-7 gap-1 px-2 text-[11px] text-muted-foreground hover:text-foreground"
+              className="h-6 gap-1 px-1.5 text-[10px] text-muted-foreground hover:text-foreground"
             >
               <ExternalLink className="size-3" />
               Encounter
@@ -291,13 +281,13 @@ export const QueueCard: React.FC<QueueCardProps> = ({
           )}
 
           {canManage && (
-            <div className="ml-auto flex items-center gap-1.5">
+            <div className="ml-auto flex items-center gap-1">
               {(isWaiting || (isInProgress && !lockedBy)) && onCancel && (
                 <Button
                   size="sm"
                   variant="ghost"
                   onClick={() => onCancel(visit)}
-                  className="h-7 gap-1 px-2 text-[11px] text-destructive hover:bg-destructive/10"
+                  className="h-6 gap-1 px-1.5 text-[10px] text-destructive hover:bg-destructive/10"
                 >
                   <Ban className="size-3" />
                   Cancel
@@ -308,9 +298,11 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                 <Button
                   size="sm"
                   onClick={() => onStart(visit)}
-                  className="h-7 gap-1 bg-blue-600 px-2.5 text-[11px] font-bold text-white hover:bg-blue-700"
+                  disabled={busyHint !== null}
+                  title={busyHint ?? undefined}
+                  className="h-6 gap-1 bg-blue-600 px-2 text-[10px] font-bold text-white hover:bg-blue-700 disabled:cursor-not-allowed disabled:opacity-50"
                 >
-                  <Play className="size-3" />
+                  <Play className="size-2.5" />
                   Start
                 </Button>
               )}
@@ -319,7 +311,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                 <Button
                   size="sm"
                   onClick={() => onComplete(visit)}
-                  className="h-7 gap-1 bg-emerald-600 px-2.5 text-[11px] font-bold text-white hover:bg-emerald-700"
+                  className="h-6 gap-1 bg-emerald-600 px-2 text-[10px] font-bold text-white hover:bg-emerald-700"
                 >
                   <CheckCircle2 className="size-3" />
                   Complete
@@ -331,7 +323,9 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                   size="sm"
                   variant="outline"
                   onClick={() => onTakeOver(visit)}
-                  className="h-7 gap-1 px-2.5 text-[11px] font-bold"
+                  disabled={busyHint !== null}
+                  title={busyHint ?? undefined}
+                  className="h-6 gap-1 px-2 text-[10px] font-bold disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <UserCog className="size-3" />
                   Take Over
@@ -342,9 +336,9 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                 (visit.darEntryId !== null ? (
                   <Badge
                     variant="outline"
-                    className="gap-1 border-emerald-500/30 bg-emerald-500/10 text-[10px] font-semibold text-emerald-700 dark:text-emerald-300"
+                    className="h-5 gap-1 border-emerald-500/30 bg-emerald-500/10 px-1.5 py-0 text-[9px] font-semibold text-emerald-700 dark:text-emerald-300"
                   >
-                    <FileCheck className="size-3" />
+                    <FileCheck className="size-2.5" />
                     In DAR
                   </Badge>
                 ) : (
@@ -353,7 +347,7 @@ export const QueueCard: React.FC<QueueCardProps> = ({
                       size="sm"
                       variant="outline"
                       onClick={() => onAddToDar(visit)}
-                      className="h-7 gap-1 px-2.5 text-[11px] font-bold"
+                      className="h-6 gap-1 px-2 text-[10px] font-bold"
                     >
                       <FileCheck className="size-3" />
                       Add to DAR

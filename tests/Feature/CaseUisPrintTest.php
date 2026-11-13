@@ -409,7 +409,7 @@ it('prints the informant address and contact, falling back to the patient', func
     expect($html())->toContain('Informant Street 5')->toContain('09175550000');
 });
 
-it('keeps House help out of House/Lot and sums several Others lines', function () {
+it('leaves the rent off the sheet and sums several Others lines', function () {
     $assessment = uisIntakeAssessment($this->case, $this->worker); // food 3500
     $assessment->expenses()->createMany([
         ['expense_type' => 'House Rent', 'amount' => 1200],
@@ -422,8 +422,8 @@ it('keeps House help out of House/Lot and sums several Others lines', function (
     $html = app(UnifiedIntakeSheetPdfService::class)->renderForCase($this->case, $this->worker)
         ->getDomPDF()->outputHtml();
 
-    // House/Lot gets only the rent: not House help, and not Clothing ("clothing" contains "lot").
-    expect($html)->toContain('How much/Magkano: 1200')
+    // The rent amount is not printed; House help and Clothing keep their own slots.
+    expect($html)->not->toContain('1200')
         ->and($html)->toContain('HouseHelp<br>(Kasambahay):')
         ->and($html)->toContain('777')
         ->and($html)->toContain('Clothing(Kasuotan):')

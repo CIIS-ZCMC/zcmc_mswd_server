@@ -2,6 +2,8 @@
 
 namespace App\DTOs;
 
+use App\Support\PsgcAddress;
+
 class PatientWatcherDto
 {
     /**
@@ -18,12 +20,15 @@ class PatientWatcherDto
         public readonly ?string $first_name = null,
         public readonly ?string $middle_name = null,
         public readonly ?string $last_name = null,
+        public readonly ?string $extension_name = null,
         public readonly ?string $relationship_code = null,
         public readonly ?string $contact_number = null,
         public readonly ?string $address = null,
         public readonly ?string $notes = null,
         public readonly ?int $added_by = null,
         array $suppliedKeys = [],
+        /** PSGC address columns, composed `address` included (App\Support\PsgcAddress). */
+        public readonly array $addressColumns = [],
     ) {
         $this->suppliedKeys = $suppliedKeys;
     }
@@ -36,12 +41,14 @@ class PatientWatcherDto
             first_name: $data['first_name'] ?? null,
             middle_name: $data['middle_name'] ?? null,
             last_name: $data['last_name'] ?? null,
+            extension_name: $data['extension_name'] ?? null,
             relationship_code: $data['relationship_code'] ?? null,
             contact_number: $data['contact_number'] ?? null,
             address: $data['address'] ?? null,
             notes: $data['notes'] ?? null,
             added_by: $data['added_by'] ?? null,
             suppliedKeys: array_keys($data),
+            addressColumns: PsgcAddress::columnsFrom($data, 'address'),
         );
     }
 
@@ -53,6 +60,7 @@ class PatientWatcherDto
             'first_name' => $this->first_name,
             'middle_name' => $this->middle_name,
             'last_name' => $this->last_name,
+            'extension_name' => $this->extension_name,
             'relationship_code' => $this->relationship_code,
             'contact_number' => $this->contact_number,
             'address' => $this->address,
@@ -64,10 +72,13 @@ class PatientWatcherDto
 
         // The owning patient, the author and the required fields can never be
         // nulled by an update.
-        return array_filter(
-            $attributes,
-            fn ($value, $key) => ! in_array($key, ['patient_id', 'added_by', 'name', 'first_name', 'last_name', 'relationship_code'], true) || $value !== null,
-            ARRAY_FILTER_USE_BOTH,
-        );
+        return [
+            ...array_filter(
+                $attributes,
+                fn ($value, $key) => ! in_array($key, ['patient_id', 'added_by', 'name', 'first_name', 'last_name', 'relationship_code'], true) || $value !== null,
+                ARRAY_FILTER_USE_BOTH,
+            ),
+            ...$this->addressColumns,
+        ];
     }
 }

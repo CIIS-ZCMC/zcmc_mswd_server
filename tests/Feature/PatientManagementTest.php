@@ -8,6 +8,7 @@ use App\Models\Patient;
 use App\Models\PatientFamilyMember;
 use App\Models\Sector;
 use App\Models\User;
+use Database\Seeders\PsgcFixtureSeeder;
 use Database\Seeders\RolesAndPermissionsSeeder;
 use Database\Seeders\WatcherRelationshipTypeSeeder;
 use Illuminate\Foundation\Testing\RefreshDatabase;
@@ -22,6 +23,7 @@ beforeEach(function () {
     Storage::fake();
     $this->seed(RolesAndPermissionsSeeder::class);
     $this->seed(WatcherRelationshipTypeSeeder::class);
+    $this->seed(PsgcFixtureSeeder::class);
     $this->sector = Sector::create(['name' => 'Medical', 'code' => 'MED']);
 });
 
@@ -46,16 +48,22 @@ function makePatient(array $overrides = []): Patient
 function openCaseFor(Patient $patient, array $overrides = []): CaseModel
 {
     return CaseModel::create(array_merge([
-        'patient_id' => $patient->id, 'assigned_user_id' => auth()->id() ?? User::factory()->create()->id,
-        'case_code' => 'CASE-'.uniqid(), 'case_type' => 'medical', 'priority_level' => 'high',
-        'status' => 'open', 'admission_type' => 'ER', 'date_opened' => now(),
+        'patient_id' => $patient->id,
+        'assigned_user_id' => auth()->id() ?? User::factory()->create()->id,
+        'case_code' => 'CASE-'.uniqid(),
+        'case_type' => 'medical',
+        'priority_level' => 'high',
+        'status' => 'open',
+        'admission_type' => 'ER',
+        'date_opened' => now(),
     ], $overrides));
 }
 
 function assessmentFor(CaseModel $case, array $overrides = []): Assessment
 {
     return Assessment::create(array_merge([
-        'case_id' => $case->id, 'created_by' => User::factory()->create()->id,
+        'case_id' => $case->id,
+        'created_by' => User::factory()->create()->id,
         'classification' => 'indigent',
     ], $overrides));
 }
@@ -67,7 +75,9 @@ it('creates a patient and auto-generates an mswd_id', function () {
 
     $this->postJson('/api/patients', [
         'sector_id' => $this->sector->id,
-        'first_name' => 'Ana', 'last_name' => 'Reyes', 'sex' => 'female',
+        'first_name' => 'Ana',
+        'last_name' => 'Reyes',
+        'sex' => 'female',
     ])
         ->assertCreated()
         ->assertJsonPath('data.first_name', 'Ana')
@@ -80,8 +90,10 @@ it('lists, shows and updates a patient', function () {
 
     $this->getJson('/api/patients')->assertOk()->assertJsonCount(1, 'data');
     $this->getJson("/api/patients/{$patient->id}")->assertOk()->assertJsonPath('data.cases_count', 0);
+    $this->putJson("/api/patients/{$patient->id}", ['contact_number' => '+63-9171234567'])
+        ->assertOk()->assertJsonPath('data.contact_number', '+63-9171234567');
     $this->putJson("/api/patients/{$patient->id}", ['contact_number' => '0917'])
-        ->assertOk()->assertJsonPath('data.contact_number', '0917');
+        ->assertUnprocessable()->assertJsonValidationErrorFor('contact_number');
 });
 
 // --- Latest case / latest assessment (Phase 3) -----------------------------
@@ -188,24 +200,38 @@ it('manages patient records through nested endpoints', function () {
 
     // Family member
     $this->postJson("/api/patients/{$patient->id}/family-members", [
-        'name' => 'Maria',
+        'last_name' => 'San Juan',
+        'first_name' => 'Juan',
+        'middle_name' => 'Santos',
+        'extension_name' => 'Jr.',
         'relationship' => 'spouse',
         'birthdate' => '1985-03-02',
-        'sex' => 'female',
+        'sex' => 'male',
         'educational_attainment' => 'College graduate',
         'occupation' => 'Vendor',
         'monthly_income' => 5000,
     ])
         ->assertCreated()
-        ->assertJsonPath('data.name', 'Maria')
-        ->assertJsonPath('data.sex', 'female')
+        ->assertJsonPath('data.name', 'Juan Santos San Juan Jr.')
+        ->assertJsonPath('data.last_name', 'San Juan')
+        ->assertJsonPath('data.first_name', 'Juan')
+        ->assertJsonPath('data.middle_name', 'Santos')
+        ->assertJsonPath('data.extension_name', 'Jr.')
+        ->assertJsonPath('data.sex', 'male')
         ->assertJsonPath('data.educational_attainment', 'College graduate');
 
     // Watcher
     $this->postJson("/api/patients/{$patient->id}/watchers", [
-        'last_name' => 'Reyes', 'first_name' => 'Pedro', 'relationship_code' => 'parent', 'contact_number' => '0917', 'address' => 'Zone 1',
+        'last_name' => 'Reyes',
+        'first_name' => 'Pedro',
+        'extension_name' => 'III',
+        'relationship_code' => 'parent',
+        'contact_number' => '+63-9171234567',
+        ...psgcAddress(),
     ])
-        ->assertCreated();
+        ->assertCreated()
+        ->assertJsonPath('data.name', 'Pedro Reyes III')
+        ->assertJsonPath('data.extension_name', 'III');
 
     expect($patient->patientIds()->count())->toBe(1)
         ->and($patient->familyMembers()->count())->toBe(1)
@@ -219,8 +245,11 @@ it('keeps family member demographics on a partial update', function () {
     Sanctum::actingAs(patientUser());
     $patient = makePatient();
     $member = $patient->familyMembers()->create([
-        'name' => 'Maria', 'relationship' => 'spouse', 'sex' => 'female',
-        'birthdate' => '1985-03-02', 'educational_attainment' => 'College graduate',
+        'name' => 'Maria',
+        'relationship' => 'spouse',
+        'sex' => 'female',
+        'birthdate' => '1985-03-02',
+        'educational_attainment' => 'College graduate',
         'occupation' => 'Vendor',
     ]);
 
@@ -235,7 +264,9 @@ it('clears a family member field on an explicit null', function () {
     Sanctum::actingAs(patientUser());
     $patient = makePatient();
     $member = $patient->familyMembers()->create([
-        'name' => 'Maria', 'sex' => 'female', 'occupation' => 'Vendor',
+        'name' => 'Maria',
+        'sex' => 'female',
+        'occupation' => 'Vendor',
     ]);
 
     $this->putJson("/api/family-members/{$member->id}", ['occupation' => null])

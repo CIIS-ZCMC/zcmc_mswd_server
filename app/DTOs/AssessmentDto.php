@@ -2,6 +2,8 @@
 
 namespace App\DTOs;
 
+use App\Support\PsgcAddress;
+
 class AssessmentDto
 {
     /**
@@ -36,6 +38,7 @@ class AssessmentDto
         public readonly ?string $informant_last_name = null,
         public readonly ?string $informant_first_name = null,
         public readonly ?string $informant_middle_name = null,
+        public readonly ?string $informant_extension_name = null,
         public readonly ?string $informant_relationship = null,
         public readonly ?string $informant_address = null,
         public readonly ?string $informant_contact_number = null,
@@ -52,6 +55,8 @@ class AssessmentDto
         /** Expense lines created together with the assessment (not an assessment column). */
         public readonly ?array $expenses = null,
         array $suppliedKeys = [],
+        /** PSGC informant address columns, composed `informant_address` included. */
+        public readonly array $informantAddressColumns = [],
     ) {
         $this->suppliedKeys = $suppliedKeys;
     }
@@ -81,6 +86,7 @@ class AssessmentDto
             informant_last_name: $data['informant_last_name'] ?? null,
             informant_first_name: $data['informant_first_name'] ?? null,
             informant_middle_name: $data['informant_middle_name'] ?? null,
+            informant_extension_name: $data['informant_extension_name'] ?? null,
             informant_relationship: $data['informant_relationship'] ?? null,
             informant_address: $data['informant_address'] ?? null,
             informant_contact_number: $data['informant_contact_number'] ?? null,
@@ -96,6 +102,7 @@ class AssessmentDto
             intervention_plan: $data['intervention_plan'] ?? null,
             expenses: $data['expenses'] ?? null,
             suppliedKeys: array_keys($data),
+            informantAddressColumns: PsgcAddress::columnsFrom($data, 'informant_address'),
         );
     }
 
@@ -124,6 +131,7 @@ class AssessmentDto
             'informant_last_name' => $this->informant_last_name,
             'informant_first_name' => $this->informant_first_name,
             'informant_middle_name' => $this->informant_middle_name,
+            'informant_extension_name' => $this->informant_extension_name,
             'informant_relationship' => $this->informant_relationship,
             'informant_address' => $this->informant_address,
             'informant_contact_number' => $this->informant_contact_number,
@@ -141,10 +149,13 @@ class AssessmentDto
 
         $attributes = array_intersect_key($all, array_flip($this->suppliedKeys));
 
-        return array_filter(
-            $attributes,
-            fn ($value, $key) => ! in_array($key, ['case_id', 'created_by'], true) || $value !== null,
-            ARRAY_FILTER_USE_BOTH,
-        );
+        return [
+            ...array_filter(
+                $attributes,
+                fn ($value, $key) => ! in_array($key, ['case_id', 'created_by'], true) || $value !== null,
+                ARRAY_FILTER_USE_BOTH,
+            ),
+            ...$this->informantAddressColumns,
+        ];
     }
 }

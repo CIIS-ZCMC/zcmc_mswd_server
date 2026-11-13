@@ -16,6 +16,10 @@ class PatientFamilyMemberDto
     public function __construct(
         public readonly ?int $patient_id = null,
         public readonly ?string $name = null,
+        public readonly ?string $first_name = null,
+        public readonly ?string $middle_name = null,
+        public readonly ?string $last_name = null,
+        public readonly ?string $extension_name = null,
         public readonly ?string $relationship = null,
         // A string, not a Carbon: the validator has already proved it is a
         // date, and both callers (JSON API, Filament DatePicker) supply strings.
@@ -35,6 +39,10 @@ class PatientFamilyMemberDto
         $dto = new self(
             patient_id: $data['patient_id'] ?? null,
             name: $data['name'] ?? null,
+            first_name: $data['first_name'] ?? null,
+            middle_name: $data['middle_name'] ?? null,
+            last_name: $data['last_name'] ?? null,
+            extension_name: $data['extension_name'] ?? null,
             relationship: $data['relationship'] ?? null,
             birthdate: $data['birthdate'] ?? null,
             sex: $data['sex'] ?? null,
@@ -73,6 +81,10 @@ class PatientFamilyMemberDto
         return [
             'patient_id' => $this->patient_id,
             'name' => $this->name,
+            'first_name' => $this->first_name,
+            'middle_name' => $this->middle_name,
+            'last_name' => $this->last_name,
+            'extension_name' => $this->extension_name,
             'relationship' => $this->relationship,
             'birthdate' => $this->birthdate,
             'sex' => $this->sex,

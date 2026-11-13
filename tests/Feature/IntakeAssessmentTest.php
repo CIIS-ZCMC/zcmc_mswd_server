@@ -122,15 +122,31 @@ it('refuses an encounter of another patient', function () {
     expect(Assessment::count())->toBe(0);
 });
 
-it('requires the encounter and cases.create', function () {
+it('requires the encounter and intake.create', function () {
     Sanctum::actingAs($this->worker);
     $this->postJson("/api/patients/{$this->patient->id}/intake-assessments", intakePayload(['his_transaction_id' => null]))
         ->assertJsonValidationErrors('his_transaction_id');
 
-    $viewer = User::factory()->create(['role' => 'Processor']);
-    $viewer->assignRole('Processor');
-    Sanctum::actingAs($viewer);
+    $head = User::factory()->create(['role' => 'Head']);
+    $head->assignRole('Head');
+    Sanctum::actingAs($head);
     $this->postJson("/api/patients/{$this->patient->id}/intake-assessments", intakePayload())->assertForbidden();
+});
+
+it('lets a processor take an intake without cases.create', function () {
+    mockIntakeEncounter();
+    $processor = User::factory()->create(['role' => 'Processor']);
+    $processor->assignRole('Processor');
+    Sanctum::actingAs($processor);
+
+    expect($processor->can('cases.create'))->toBeFalse();
+
+    $this->postJson("/api/patients/{$this->patient->id}/intake-assessments", intakePayload())
+        ->assertCreated()
+        ->assertJsonPath('data.created_by', $processor->id);
+
+    // The intake form's bracket table is readable without cases.view.
+    $this->getJson('/api/mswd-classification-matrix')->assertOk();
 });
 
 it('links the encounter case straight away when one exists', function () {

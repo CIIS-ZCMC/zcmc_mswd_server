@@ -95,7 +95,9 @@ class AssessmentsRelationManager extends RelationManager
             TextInput::make('informant_middle_name'),
             TextInput::make('informant_relationship'),
             TextInput::make('informant_contact_number'),
-            TextInput::make('informant_address')->columnSpanFull(),
+            TextInput::make('informant_address')->columnSpanFull()
+                ->disabled()->dehydrated(false)
+                ->helperText('Picked from PSGC in the MSWD app; shown here read-only.'),
             TextInput::make('referral_source'),
             TextInput::make('total_family_income')->numeric()->prefix('₱'),
             Repeater::make('other_income_sources')

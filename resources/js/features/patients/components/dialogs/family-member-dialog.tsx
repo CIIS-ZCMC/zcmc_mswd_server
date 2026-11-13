@@ -17,6 +17,17 @@ import {
   SelectTrigger,
   SelectValue,
 } from "@/components/ui/select"
+import {
+  extractSuffixFromNameParts,
+  NAME_SUFFIX_OPTIONS,
+  NONE_SUFFIX_VALUE,
+  normalizeNameSuffix,
+} from "@/lib/name-suffix"
+import {
+  extract10DigitPhPhone,
+  formatPhPhonePayload,
+  isValidPhPhone10,
+} from "@/lib/ph-phone"
 import { cn } from "@/lib/utils"
 import {
   ArrowLeft,
@@ -32,7 +43,13 @@ import {
 } from "lucide-react"
 import type { FamilyMember } from "../../types"
 
-type MemberForm = Omit<FamilyMember, "id"> & { civilStatus: string }
+type MemberForm = Omit<FamilyMember, "id"> & {
+  lastName: string
+  firstName: string
+  middleName: string
+  extensionName: string
+  civilStatus: string
+}
 
 interface FamilyMemberDialogProps {
   isOpen: boolean
@@ -203,9 +220,77 @@ function inferSex(sex?: string | null, relationship?: string | null): string {
   return ""
 }
 
+function composeMemberFullName(
+  firstName: string,
+  middleName: string,
+  lastName: string,
+  extensionName: string
+): string {
+  return [
+    firstName.trim(),
+    middleName.trim(),
+    lastName.trim(),
+    extensionName.trim(),
+  ]
+    .filter(Boolean)
+    .join(" ")
+}
+
+function parseMemberFullName(fullName: string): {
+  lastName: string
+  firstName: string
+  middleName: string
+  extensionName: string
+} {
+  if (!fullName)
+    return { lastName: "", firstName: "", middleName: "", extensionName: "" }
+  const trimmed = fullName.trim()
+  if (trimmed.includes(",")) {
+    const [lastPart, restPart] = trimmed.split(",")
+    const rawRest = (restPart || "").trim().split(/\s+/).filter(Boolean)
+    const { remaining: rest, extensionName } =
+      extractSuffixFromNameParts(rawRest)
+    return {
+      lastName: lastPart.trim(),
+      firstName: rest[0] || "",
+      middleName: rest.slice(1).join(" "),
+      extensionName,
+    }
+  }
+  const rawParts = trimmed.split(/\s+/).filter(Boolean)
+  const { remaining: parts, extensionName } =
+    extractSuffixFromNameParts(rawParts)
+  if (parts.length === 1) {
+    return {
+      lastName: parts[0],
+      firstName: "",
+      middleName: "",
+      extensionName,
+    }
+  }
+  if (parts.length === 2) {
+    return {
+      firstName: parts[0],
+      middleName: "",
+      lastName: parts[1],
+      extensionName,
+    }
+  }
+  return {
+    firstName: parts[0],
+    middleName: parts.slice(1, -1).join(" "),
+    lastName: parts[parts.length - 1],
+    extensionName,
+  }
+}
+
 function emptyMember(relationship: string): MemberForm {
   return {
     fullName: "",
+    lastName: "",
+    firstName: "",
+    middleName: "",
+    extensionName: "",
     relationship,
     birthdate: "",
     sex: inferSex(null, relationship),
@@ -227,8 +312,23 @@ function memberFromInitial(initialMember: FamilyMember): MemberForm {
   const match = (options: string[], value?: string) =>
     options.find((opt) => opt.toLowerCase() === (value ?? "").toLowerCase())
 
+  const parsed = parseMemberFullName(initialMember.fullName ?? "")
+  const lastName = initialMember.lastName || parsed.lastName
+  const firstName = initialMember.firstName || parsed.firstName
+  const middleName = initialMember.middleName || parsed.middleName
+  const extensionName = normalizeNameSuffix(
+    initialMember.extensionName || parsed.extensionName
+  )
+  const composedFullName =
+    composeMemberFullName(firstName, middleName, lastName, extensionName) ||
+    (initialMember.fullName ?? "")
+
   return {
-    fullName: initialMember.fullName ?? "",
+    fullName: composedFullName,
+    lastName,
+    firstName,
+    middleName,
+    extensionName,
     relationship:
       match(RELATIONSHIP_OPTIONS, initialMember.relationship) ||
       initialMember.relationship ||
@@ -253,12 +353,37 @@ function memberFromInitial(initialMember: FamilyMember): MemberForm {
       ) ||
       initialMember.educationalAttainment ||
       "",
-    contactNumber: initialMember.contactNumber ?? "",
+    contactNumber: extract10DigitPhPhone(initialMember.contactNumber),
     isLivingWithPatient: initialMember.isLivingWithPatient ?? true,
   }
 }
 
-const isFilled = (member: MemberForm) => member.fullName.trim() !== ""
+const isFilled = (member: MemberForm) =>
+  member.lastName.trim() !== "" && member.firstName.trim() !== ""
+const isValidMemberContact = (member: MemberForm) =>
+  isValidPhPhone10(member.contactNumber, false)
+const withFormattedContact = (member: MemberForm): MemberForm => {
+  const lastName = member.lastName.trim()
+  const firstName = member.firstName.trim()
+  const middleName = member.middleName.trim()
+  const extensionName = normalizeNameSuffix(member.extensionName)
+  return {
+    ...member,
+    lastName,
+    firstName,
+    middleName,
+    extensionName,
+    fullName: composeMemberFullName(
+      firstName,
+      middleName,
+      lastName,
+      extensionName
+    ),
+    contactNumber: member.contactNumber
+      ? formatPhPhonePayload(member.contactNumber)
+      : "",
+  }
+}
 
 const labelClass = "mb-1.5 block text-sm font-bold text-foreground"
 const controlClass = "h-11 px-3 text-base font-medium"
@@ -277,6 +402,20 @@ const MemberFields: React.FC<MemberFieldsProps> = ({
 }) => {
   const set = <K extends keyof MemberForm>(key: K, val: MemberForm[K]) =>
     onChange({ ...value, [key]: val })
+
+  const setNamePart = (
+    part: "lastName" | "firstName" | "middleName" | "extensionName",
+    val: string
+  ) => {
+    const next = { ...value, [part]: val }
+    next.fullName = composeMemberFullName(
+      next.firstName,
+      next.middleName,
+      next.lastName,
+      next.extensionName
+    )
+    onChange(next)
+  }
 
   const civilStatusOptions = useMemo(() => {
     if (
@@ -301,129 +440,291 @@ const MemberFields: React.FC<MemberFieldsProps> = ({
 
   return (
     <div className="space-y-5">
-      <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
-        <div
-          className={relationshipOptions ? "sm:col-span-2" : "sm:col-span-3"}
-        >
-          <Label className={labelClass}>Full Name *</Label>
+      <div
+        className={cn(
+          "grid grid-cols-1 gap-4",
+          relationshipOptions
+            ? "sm:grid-cols-2 md:grid-cols-[1fr_1fr_1fr_8.25rem]"
+            : "sm:grid-cols-2 md:grid-cols-4"
+        )}
+      >
+        <div>
+          <Label className={labelClass}>Last Name *</Label>
           <Input
-            placeholder="e.g. Maria San Juan"
-            value={value.fullName}
-            onChange={(e) => set("fullName", e.target.value)}
+            placeholder="e.g. San Juan"
+            value={value.lastName}
+            onChange={(e) => setNamePart("lastName", e.target.value)}
             className={controlClass}
           />
         </div>
-        {relationshipOptions && (
-          <div>
-            <Label className={labelClass}>Relationship</Label>
-            <Select
-              value={value.relationship}
-              onValueChange={(val) =>
-                onChange({
-                  ...value,
-                  relationship: val ?? value.relationship,
-                  sex: value.sex || inferSex(null, val),
-                })
-              }
-            >
-              <SelectTrigger className={cn(controlClass, "w-full")}>
-                <SelectValue placeholder="Relationship" />
-              </SelectTrigger>
-              <SelectContent>
-                {relationshipOptions.map((rel) => (
-                  <SelectItem key={rel} value={rel} className="py-2 text-base">
-                    {rel}
-                  </SelectItem>
-                ))}
-              </SelectContent>
-            </Select>
-          </div>
-        )}
-      </div>
-
-      <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
         <div>
-          <Label className={labelClass}>Sex</Label>
+          <Label className={labelClass}>First Name *</Label>
+          <Input
+            placeholder="e.g. Maria"
+            value={value.firstName}
+            onChange={(e) => setNamePart("firstName", e.target.value)}
+            className={controlClass}
+          />
+        </div>
+        <div>
+          <Label className={labelClass}>Middle Name</Label>
+          <Input
+            placeholder="e.g. Santos"
+            value={value.middleName}
+            onChange={(e) => setNamePart("middleName", e.target.value)}
+            className={controlClass}
+          />
+        </div>
+        <div>
+          <Label className={cn(labelClass, "whitespace-nowrap")}>
+            Extension / Suffix
+          </Label>
           <Select
-            value={value.sex}
-            onValueChange={(val) => set("sex", val ?? "")}
+            value={value.extensionName || NONE_SUFFIX_VALUE}
+            onValueChange={(val) =>
+              setNamePart(
+                "extensionName",
+                !val || val === NONE_SUFFIX_VALUE ? "" : val
+              )
+            }
           >
             <SelectTrigger className={cn(controlClass, "w-full")}>
-              <SelectValue placeholder="Select">
+              <SelectValue placeholder="None">
                 {(val: string) =>
-                  val ? val.charAt(0).toUpperCase() + val.slice(1) : "Select"
+                  !val || val === NONE_SUFFIX_VALUE ? "None" : val
                 }
               </SelectValue>
             </SelectTrigger>
             <SelectContent>
-              <SelectItem value="male" className="py-2 text-base">
-                Male
+              <SelectItem value={NONE_SUFFIX_VALUE} className="py-2 text-base">
+                None
               </SelectItem>
-              <SelectItem value="female" className="py-2 text-base">
-                Female
-              </SelectItem>
-            </SelectContent>
-          </Select>
-        </div>
-        <div>
-          <Label className={labelClass}>Civil Status</Label>
-          <Select
-            value={value.civilStatus}
-            onValueChange={(val) => set("civilStatus", val ?? "")}
-          >
-            <SelectTrigger className={cn(controlClass, "w-full")}>
-              <SelectValue placeholder="Civil Status" />
-            </SelectTrigger>
-            <SelectContent>
-              {civilStatusOptions.map((status) => (
+              {NAME_SUFFIX_OPTIONS.map((suffix) => (
                 <SelectItem
-                  key={status}
-                  value={status}
+                  key={suffix}
+                  value={suffix}
                   className="py-2 text-base"
                 >
-                  {status}
+                  {suffix}
                 </SelectItem>
               ))}
             </SelectContent>
           </Select>
         </div>
-        <div>
-          <Label className={labelClass}>Birthdate</Label>
-          <Input
-            type="date"
-            value={value.birthdate}
-            onChange={(e) => handleBirthdateChange(e.target.value)}
-            className={controlClass}
-          />
-        </div>
-        <div>
-          <Label className={labelClass}>Age (Years)</Label>
-          <Input
-            type="number"
-            placeholder="Age"
-            value={value.age ?? ""}
-            onChange={(e) => set("age", parseInt(e.target.value) || 0)}
-            className={controlClass}
-          />
-          {value.birthdate && (
-            <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
-              ✓ From birthdate
-            </p>
-          )}
-        </div>
       </div>
+
+      {relationshipOptions ? (
+        <>
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-3">
+            <div>
+              <Label className={labelClass}>Relationship</Label>
+              <Select
+                value={value.relationship}
+                onValueChange={(val) =>
+                  onChange({
+                    ...value,
+                    relationship: val ?? value.relationship,
+                    sex: value.sex || inferSex(null, val),
+                  })
+                }
+              >
+                <SelectTrigger className={cn(controlClass, "w-full")}>
+                  <SelectValue placeholder="Relationship" />
+                </SelectTrigger>
+                <SelectContent>
+                  {relationshipOptions.map((rel) => (
+                    <SelectItem
+                      key={rel}
+                      value={rel}
+                      className="py-2 text-base"
+                    >
+                      {rel}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className={labelClass}>Sex</Label>
+              <Select
+                value={value.sex}
+                onValueChange={(val) => set("sex", val ?? "")}
+              >
+                <SelectTrigger className={cn(controlClass, "w-full")}>
+                  <SelectValue placeholder="Select">
+                    {(val: string) =>
+                      val
+                        ? val.charAt(0).toUpperCase() + val.slice(1)
+                        : "Select"
+                    }
+                  </SelectValue>
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="male" className="py-2 text-base">
+                    Male
+                  </SelectItem>
+                  <SelectItem value="female" className="py-2 text-base">
+                    Female
+                  </SelectItem>
+                </SelectContent>
+              </Select>
+            </div>
+            <div>
+              <Label className={labelClass}>Civil Status</Label>
+              <Select
+                value={value.civilStatus}
+                onValueChange={(val) => set("civilStatus", val ?? "")}
+              >
+                <SelectTrigger className={cn(controlClass, "w-full")}>
+                  <SelectValue placeholder="Civil Status" />
+                </SelectTrigger>
+                <SelectContent>
+                  {civilStatusOptions.map((status) => (
+                    <SelectItem
+                      key={status}
+                      value={status}
+                      className="py-2 text-base"
+                    >
+                      {status}
+                    </SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </div>
+
+          <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+            <div>
+              <Label className={labelClass}>Birthdate</Label>
+              <Input
+                type="date"
+                value={value.birthdate}
+                onChange={(e) => handleBirthdateChange(e.target.value)}
+                className={controlClass}
+              />
+            </div>
+            <div>
+              <Label className={labelClass}>Age (Years)</Label>
+              <Input
+                type="number"
+                placeholder="Age"
+                value={value.age ?? ""}
+                onChange={(e) => set("age", parseInt(e.target.value) || 0)}
+                className={controlClass}
+              />
+              {value.birthdate && (
+                <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                  ✓ From birthdate
+                </p>
+              )}
+            </div>
+          </div>
+        </>
+      ) : (
+        <div className="grid grid-cols-2 gap-4 md:grid-cols-4">
+          <div>
+            <Label className={labelClass}>Sex</Label>
+            <Select
+              value={value.sex}
+              onValueChange={(val) => set("sex", val ?? "")}
+            >
+              <SelectTrigger className={cn(controlClass, "w-full")}>
+                <SelectValue placeholder="Select">
+                  {(val: string) =>
+                    val ? val.charAt(0).toUpperCase() + val.slice(1) : "Select"
+                  }
+                </SelectValue>
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="male" className="py-2 text-base">
+                  Male
+                </SelectItem>
+                <SelectItem value="female" className="py-2 text-base">
+                  Female
+                </SelectItem>
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className={labelClass}>Civil Status</Label>
+            <Select
+              value={value.civilStatus}
+              onValueChange={(val) => set("civilStatus", val ?? "")}
+            >
+              <SelectTrigger className={cn(controlClass, "w-full")}>
+                <SelectValue placeholder="Civil Status" />
+              </SelectTrigger>
+              <SelectContent>
+                {civilStatusOptions.map((status) => (
+                  <SelectItem
+                    key={status}
+                    value={status}
+                    className="py-2 text-base"
+                  >
+                    {status}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          </div>
+          <div>
+            <Label className={labelClass}>Birthdate</Label>
+            <Input
+              type="date"
+              value={value.birthdate}
+              onChange={(e) => handleBirthdateChange(e.target.value)}
+              className={controlClass}
+            />
+          </div>
+          <div>
+            <Label className={labelClass}>Age (Years)</Label>
+            <Input
+              type="number"
+              placeholder="Age"
+              value={value.age ?? ""}
+              onChange={(e) => set("age", parseInt(e.target.value) || 0)}
+              className={controlClass}
+            />
+            {value.birthdate && (
+              <p className="mt-1 text-[11px] font-semibold text-emerald-600 dark:text-emerald-400">
+                ✓ From birthdate
+              </p>
+            )}
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <div>
           <Label className={cn(labelClass, "flex items-center gap-1.5")}>
             <Phone className="size-3.5 text-muted-foreground" /> Contact Number
           </Label>
-          <Input
-            placeholder="e.g. 09171234567"
-            value={value.contactNumber}
-            onChange={(e) => set("contactNumber", e.target.value)}
-            className={controlClass}
-          />
+          <div className="flex items-stretch">
+            <div className="inline-flex shrink-0 items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-3 text-xs font-bold whitespace-nowrap text-muted-foreground select-none">
+              +63 -
+            </div>
+            <Input
+              type="tel"
+              inputMode="numeric"
+              placeholder="9XX XXX XXXX"
+              maxLength={10}
+              value={value.contactNumber}
+              onChange={(e) =>
+                set("contactNumber", extract10DigitPhPhone(e.target.value))
+              }
+              className={cn(
+                controlClass,
+                "rounded-l-none font-mono tracking-wider"
+              )}
+            />
+          </div>
+          {value.contactNumber.length > 0 &&
+            !isValidPhPhone10(value.contactNumber, false) && (
+              <p className="mt-1 text-[11px] text-muted-foreground">
+                10-digit PH mobile number starting with 9 required (
+                {value.contactNumber.length}/10)
+              </p>
+            )}
         </div>
         <div>
           <Label className={labelClass}>Living With Patient</Label>
@@ -567,17 +868,38 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
 
   const handleSave = () => {
     if (isEditMode) {
-      if (!isFilled(editForm) || !initialMember || !onUpdateFamilyMember) return
-      onUpdateFamilyMember(initialMember.id, editForm)
+      if (
+        !isFilled(editForm) ||
+        !isValidMemberContact(editForm) ||
+        !initialMember ||
+        !onUpdateFamilyMember
+      )
+        return
+      onUpdateFamilyMember(initialMember.id, withFormattedContact(editForm))
     } else {
-      if (toSave.length === 0) return
-      toSave.forEach((member) => onAddFamilyMember(member))
+      if (toSave.length === 0 || !toSave.every(isValidMemberContact)) return
+      toSave.forEach((member) =>
+        onAddFamilyMember(withFormattedContact(member))
+      )
     }
     onClose()
   }
 
   const currentStep = steps[stepIndex] ?? "others"
   const isLastStep = stepIndex === steps.length - 1
+
+  // Why the save button is off, so the gate isn't invisible to the user.
+  const disabledReason = isEditMode
+    ? !isFilled(editForm)
+      ? "Last Name and First Name are required."
+      : !isValidMemberContact(editForm)
+        ? "Contact number is incomplete."
+        : null
+    : toSave.length === 0
+      ? "Fill in Last Name and First Name to save a member."
+      : !toSave.every(isValidMemberContact)
+        ? "A contact number is incomplete."
+        : null
 
   const renderStep = (step: StepKey) => {
     if (step === "others") {
@@ -754,14 +1076,21 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
 
         <DialogFooter className="m-0 flex-row items-center gap-2 border-t border-border/40 px-6 py-4 sm:justify-between">
           {isEditMode ? (
-            <Button
-              size="lg"
-              className="ml-auto h-11 cursor-pointer px-6 font-bold"
-              disabled={!isFilled(editForm)}
-              onClick={handleSave}
-            >
-              Update Family Member
-            </Button>
+            <div className="ml-auto flex items-center gap-3">
+              {disabledReason && (
+                <p className="text-xs font-semibold text-muted-foreground">
+                  {disabledReason}
+                </p>
+              )}
+              <Button
+                size="lg"
+                className="h-11 cursor-pointer px-6 font-bold"
+                disabled={Boolean(disabledReason)}
+                onClick={handleSave}
+              >
+                Update Family Member
+              </Button>
+            </div>
           ) : (
             <>
               <Button
@@ -773,6 +1102,11 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
                 <ArrowLeft className="size-4" /> Back
               </Button>
               <div className="flex items-center gap-2">
+                {disabledReason && (
+                  <p className="mr-1 hidden text-xs font-semibold text-muted-foreground sm:block">
+                    {disabledReason}
+                  </p>
+                )}
                 {!isLastStep && (
                   <Button
                     variant="outline"
@@ -789,7 +1123,7 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
                 )}
                 <Button
                   className="h-11 cursor-pointer px-6 font-bold"
-                  disabled={toSave.length === 0}
+                  disabled={Boolean(disabledReason)}
                   onClick={handleSave}
                 >
                   {toSave.length > 1

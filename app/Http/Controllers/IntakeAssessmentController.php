@@ -13,13 +13,13 @@ use Illuminate\Routing\Controllers\Middleware;
 
 /**
  * Take an Intake Assessment (UIS) for one of a patient's HIS encounters, with no
- * case needed. Written under the same permission as a case's assessment.
+ * case needed. Written under `intake.create`, which Processor holds.
  */
 class IntakeAssessmentController extends Controller implements HasMiddleware
 {
     public static function middleware(): array
     {
-        return [new Middleware('permission:cases.create')];
+        return [new Middleware('permission:intake.create')];
     }
 
     public function store(StoreIntakeAssessmentRequest $request, Patient $patient, IntakeAssessmentService $intakes): JsonResponse

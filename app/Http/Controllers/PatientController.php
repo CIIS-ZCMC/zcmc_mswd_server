@@ -37,7 +37,7 @@ class PatientController extends Controller implements HasMiddleware
 
     public function store(StorePatientRequest $request): JsonResponse
     {
-        $patient = $this->service->create(PatientDto::fromArray($request->validated()));
+        $patient = $this->service->create(PatientDto::fromArray($request->validated()), $request->validated());
 
         return PatientResource::make($patient)
             ->response()
@@ -57,7 +57,7 @@ class PatientController extends Controller implements HasMiddleware
     public function update(UpdatePatientRequest $request, Patient $patient): PatientResource
     {
         return PatientResource::make(
-            $this->service->update($patient, PatientDto::fromArray($request->validated())),
+            $this->service->update($patient, PatientDto::fromArray($request->validated()), $request->validated()),
         );
     }
 

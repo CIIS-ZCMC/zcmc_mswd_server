@@ -29,9 +29,13 @@ return [
     ],
 
     /*
-    | Which sign-in staff use: `umis` (the ZCMC Portal hands users over) or
-    | `iam` (ZCMC IAM). The other one's routes answer 404. The local super
-    | admin's password sign-in works under either.
+    | Which sign-in staff use (App\Enums\AuthProvider):
+    | - `umis`: the ZCMC Portal hands users over;
+    | - `iam`: ZCMC IAM;
+    | - `local`: every role signs in with employee number + password on this
+    |   server, and the Super Admin creates accounts in /admin.
+    | The routes of a provider not in use answer 404. The local super admin's
+    | password sign-in works under all three.
     */
     'auth_provider' => env('AUTH_PROVIDER', 'umis'),
 
@@ -45,7 +49,9 @@ return [
         'base_url' => env('UMIS_API_URL', 'https://umis.zcmc.online'),
         // MSWD's key exactly as the UMIS "Manage Systems" screen shows it.
         'api_key' => env('UMIS_API_KEY'),
-        // UMIS encrypts every API reply with its API_PAYLOAD_KEY.
+        // UMIS's API_PAYLOAD_KEY, used only to read replies UMIS encrypts
+        // (`"encrypted": true`). Leave blank while UMIS encryption is off; plain
+        // replies are read as they are.
         'payload_key' => env('UMIS_PAYLOAD_KEY'),
         // The code MSWD is registered under in UMIS; a reply for any other
         // system means the person has no MSWD access.
@@ -58,8 +64,15 @@ return [
         'recheck_minutes' => (int) env('UMIS_RECHECK_MINUTES', 5),
         'timeout' => (int) env('UMIS_TIMEOUT', 10),
         // UMIS role name => local role code or name. Names not listed are used
-        // as they arrive; names that match no local role are dropped.
-        'role_map' => [],
+        // as they arrive; names that match no local role are dropped. UMIS
+        // names MSWD's roles with an "MSS " prefix.
+        'role_map' => [
+            'MSS Processor' => 'processor',
+            'MSS Case Manager' => 'case_manager',
+            'MSS Supervisor' => 'supervisor',
+            'MSS Head' => 'head',
+            'MSS Admin' => 'admin',
+        ],
     ],
 
     /*
@@ -80,6 +93,19 @@ return [
         // IAM role name => local role name. Names not listed are used as they
         // arrive; names that match no local role are dropped, never created.
         'role_map' => [],
+    ],
+
+    /*
+    | PSGC Cloud — the Philippine Standard Geographic Code API that
+    | `php artisan psgc:sync` reads. The app never calls it at runtime: the
+    | areas live in `psgc_areas`, loaded from database/data/psgc.json.gz.
+    */
+    'psgc' => [
+        'base_url' => env('PSGC_API_URL', 'https://psgc.cloud/api'),
+        'timeout' => (int) env('PSGC_TIMEOUT', 30),
+        // Cities in this region come first in the address picker (Region IX,
+        // Zamboanga Peninsula, for ZCMC).
+        'home_region' => env('PSGC_HOME_REGION', '0900000000'),
     ],
 
     'slack' => [

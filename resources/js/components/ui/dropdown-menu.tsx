@@ -47,8 +47,14 @@ function DropdownMenuContent({
   )
 }
 
+const DropdownMenuGroupContext = React.createContext(false)
+
 function DropdownMenuGroup({ ...props }: MenuPrimitive.Group.Props) {
-  return <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
+  return (
+    <DropdownMenuGroupContext.Provider value={true}>
+      <MenuPrimitive.Group data-slot="dropdown-menu-group" {...props} />
+    </DropdownMenuGroupContext.Provider>
+  )
 }
 
 function DropdownMenuLabel({
@@ -58,7 +64,8 @@ function DropdownMenuLabel({
 }: MenuPrimitive.GroupLabel.Props & {
   inset?: boolean
 }) {
-  return (
+  const inGroup = React.useContext(DropdownMenuGroupContext)
+  const label = (
     <MenuPrimitive.GroupLabel
       data-slot="dropdown-menu-label"
       data-inset={inset}
@@ -69,6 +76,8 @@ function DropdownMenuLabel({
       {...props}
     />
   )
+
+  return inGroup ? label : <MenuPrimitive.Group>{label}</MenuPrimitive.Group>
 }
 
 function DropdownMenuItem({

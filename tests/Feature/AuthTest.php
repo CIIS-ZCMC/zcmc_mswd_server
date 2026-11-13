@@ -3,9 +3,12 @@
 use App\Models\Role;
 use App\Models\User;
 use Database\Seeders\RolesAndPermissionsSeeder;
+use Filament\Auth\Pages\Login;
 use Illuminate\Foundation\Http\Middleware\ValidateCsrfToken;
 use Illuminate\Foundation\Testing\RefreshDatabase;
+use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Hash;
+use Livewire\Livewire;
 
 uses(RefreshDatabase::class);
 
@@ -37,6 +40,36 @@ it('logs in via web session and authenticates the user', function () {
     $this->assertAuthenticatedAs($user);
 });
 
+it('remembers a web login when asked', function () {
+    $user = authUser();
+
+    $this->postJson('/login', [
+        'employee_number' => 100001,
+        'password' => 'secret-pass',
+        'remember' => true,
+    ])
+        ->assertOk()
+        ->assertCookie(Auth::guard('web')->getRecallerName());
+
+    expect($user->refresh()->remember_token)->not->toBeNull();
+});
+
+it('remembers a sign-in on the /admin login page when asked', function () {
+    $user = authUser(['email' => 'admin@zcmc.test']);
+
+    Livewire::test(Login::class)
+        ->fillForm([
+            'email' => 'admin@zcmc.test',
+            'password' => 'secret-pass',
+            'remember' => true,
+        ])
+        ->call('authenticate')
+        ->assertHasNoFormErrors();
+
+    $this->assertAuthenticatedAs($user);
+    expect($user->refresh()->remember_token)->not->toBeNull();
+});
+
 it('rejects invalid credentials on web login', function () {
     authUser();
 
@@ -63,7 +96,8 @@ it('refuses inactive account on web login', function () {
     $this->assertGuest();
 });
 
-it('refuses password login for anyone but the super admin', function () {
+it('refuses password login for anyone but the super admin under UMIS or IAM', function (string $provider) {
+    config(['services.auth_provider' => $provider]);
     authUser([], 'Case Manager');
 
     $this->postJson('/login', [
@@ -73,14 +107,45 @@ it('refuses password login for anyone but the super admin', function () {
         ->assertStatus(422)
         ->assertJsonValidationErrorFor('employee_number');
 
-    $this->assertGuest();
-});
+    $this->postJson('/api/login', [
+        'employee_number' => 100001,
+        'password' => 'secret-pass',
+        'device_name' => 'test',
+    ])->assertStatus(422);
 
-it('lets any role use password login in the local environment', function () {
-    $user = authUser([], 'Case Manager');
+    $this->assertGuest();
+})->with(['umis', 'iam']);
+
+it('lets the super admin use password login under every provider', function (string $provider) {
+    config(['services.auth_provider' => $provider]);
+    $user = authUser();
+
+    $this->postJson('/login', [
+        'employee_number' => 100001,
+        'password' => 'secret-pass',
+    ])->assertOk();
+
+    $this->assertAuthenticatedAs($user);
+})->with(['umis', 'iam', 'local']);
+
+it('no longer opens password login to every role just for the local environment', function () {
+    config(['services.auth_provider' => 'umis']);
+    authUser([], 'Case Manager');
     // Outside `testing` the CSRF check switches back on; it is not what this test is about.
     $this->app['env'] = 'local';
     $this->withoutMiddleware(ValidateCsrfToken::class);
+
+    $this->postJson('/login', [
+        'employee_number' => 100001,
+        'password' => 'secret-pass',
+    ])->assertStatus(422);
+
+    $this->assertGuest();
+});
+
+it('lets any role use password login under the local provider', function () {
+    config(['services.auth_provider' => 'local']);
+    $user = authUser([], 'Case Manager');
 
     $this->postJson('/login', [
         'employee_number' => 100001,
@@ -90,15 +155,15 @@ it('lets any role use password login in the local environment', function () {
     $this->assertAuthenticatedAs($user);
 });
 
-it('lets any role get an API token in the local environment only', function () {
+it('lets any role get an API token under the local provider', function () {
+    config(['services.auth_provider' => 'local']);
     authUser([], 'Case Manager');
-    $payload = ['employee_number' => 100001, 'password' => 'secret-pass', 'device_name' => 'test'];
 
-    $this->postJson('/api/login', $payload)->assertStatus(422);
-
-    $this->app['env'] = 'local';
-
-    $this->postJson('/api/login', $payload)->assertOk();
+    $this->postJson('/api/login', [
+        'employee_number' => 100001,
+        'password' => 'secret-pass',
+        'device_name' => 'test',
+    ])->assertOk()->assertJsonStructure(['token']);
 });
 
 it('logs out web session', function () {

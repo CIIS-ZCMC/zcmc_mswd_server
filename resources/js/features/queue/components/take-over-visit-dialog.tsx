@@ -61,7 +61,7 @@ export const TakeOverVisitDialog: React.FC<TakeOverVisitDialogProps> = ({
         if (!next) close()
       }}
     >
-      <DialogContent className="max-w-md">
+      <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
         <DialogHeader>
           <DialogTitle className="flex items-center gap-2 text-base font-bold">
             <UserCog className="size-5 text-primary" />

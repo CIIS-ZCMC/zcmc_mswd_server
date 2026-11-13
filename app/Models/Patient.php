@@ -44,6 +44,20 @@ class Patient extends Model
         'place_of_birth',
         'permanent_address',
         'present_address',
+        // PSGC parts of the two addresses and the place of birth
+        // (App\Support\PsgcAddress); the composed strings above are written
+        // from them.
+        'present_address_line',
+        'present_address_region_code',
+        'present_address_province_code',
+        'present_address_city_code',
+        'present_address_barangay_code',
+        'permanent_address_line',
+        'permanent_address_region_code',
+        'permanent_address_province_code',
+        'permanent_address_city_code',
+        'permanent_address_barangay_code',
+        'place_of_birth_city_code',
         'educational_attainment',
         'occupation',
         'employer',
@@ -148,5 +162,22 @@ class Patient extends Model
     public function activityOwner(): array
     {
         return ['patient_id' => $this->id, 'case_id' => null];
+    }
+
+    /**
+     * The address forms print: the permanent address, else the residence
+     * parts joined. The same rule as the indigency certificate and the slips.
+     */
+    public function printedAddress(): ?string
+    {
+        if (filled($this->permanent_address)) {
+            return $this->permanent_address;
+        }
+
+        $composed = collect([$this->address, $this->barangay, $this->municipality, $this->province])
+            ->filter()
+            ->join(', ');
+
+        return $composed === '' ? null : $composed;
     }
 }

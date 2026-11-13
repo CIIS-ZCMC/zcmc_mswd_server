@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PsgcAddress;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -24,7 +25,8 @@ class StoreGuarantorRequest extends FormRequest
     {
         return [
             'name' => ['required', 'string', 'max:255', Rule::unique('guarantors', 'name')->ignore($this->route('guarantor'))->whereNull('deleted_at')],
-            'address' => ['nullable', 'string', 'max:255'],
+            // Picked from PSGC; the controller writes the composed `address`.
+            ...PsgcAddress::rules('address'),
             'is_active' => ['sometimes', 'boolean'],
         ];
     }

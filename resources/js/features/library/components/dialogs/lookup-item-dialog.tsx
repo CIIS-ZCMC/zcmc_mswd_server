@@ -22,6 +22,16 @@ import {
 import { Alert, AlertDescription } from "@/components/ui/alert"
 import { AlertCircle, Check, Loader2, Lock } from "lucide-react"
 import { ApiError } from "@/lib/api-client"
+import { PsgcAddressFields } from "@/features/reference/components/psgc-address-fields"
+import {
+  isPsgcAddressComplete,
+  isPsgcAddressEmpty,
+  legacyAddressText,
+} from "@/features/reference/lib/psgc-address"
+import {
+  EMPTY_PSGC_ADDRESS,
+  type PsgcAddressValue,
+} from "@/features/reference/types/psgc.types"
 import {
   ASSISTANT_TYPE_CATEGORIES,
   getCategoryConfig,
@@ -33,6 +43,8 @@ export interface LookupFormItem {
   name: string
   code?: string | null
   address?: string | null
+  /** The guarantor's address as picked from PSGC. */
+  addressPsgc?: PsgcAddressValue
   category?: string | null
   description?: string | null
   sortOrder?: number | null
@@ -63,7 +75,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
   const [code, setCode] = useState("")
   const [category, setCategory] = useState("medical")
   const [description, setDescription] = useState("")
-  const [address, setAddress] = useState("")
+  const [addressPsgc, setAddressPsgc] = useState<PsgcAddressValue>(EMPTY_PSGC_ADDRESS)
   const [sortOrder, setSortOrder] = useState<number>(0)
   const [requiresSpecify, setRequiresSpecify] = useState(false)
   const [isActive, setIsActive] = useState(true)
@@ -79,7 +91,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
         setCode(editingItem.code || "")
         setCategory(editingItem.category || "medical")
         setDescription(editingItem.description || "")
-        setAddress(editingItem.address || "")
+        setAddressPsgc(editingItem.addressPsgc ?? EMPTY_PSGC_ADDRESS)
         setSortOrder(editingItem.sortOrder ?? 0)
         setRequiresSpecify(Boolean(editingItem.requiresSpecify))
         setIsActive(editingItem.isActive ?? true)
@@ -88,7 +100,7 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
         setCode("")
         setCategory("medical")
         setDescription("")
-        setAddress("")
+        setAddressPsgc(EMPTY_PSGC_ADDRESS)
         setSortOrder(0)
         setRequiresSpecify(false)
         setIsActive(true)
@@ -111,9 +123,27 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setIsSubmitting(true)
     setServerErrors({})
     setGeneralError(null)
+
+    // A half-picked address cannot be saved: it needs the city and barangay.
+    if (
+      tabConfig.showAddress &&
+      !isPsgcAddressComplete(addressPsgc) &&
+      !isPsgcAddressEmpty(addressPsgc)
+    ) {
+      setGeneralError(
+        "Pick both a city or municipality and a barangay for the address, or clear it."
+      )
+      return
+    }
+
+    // Saved when complete; clearing one that was picked from PSGC clears it;
+    // free text that nobody touched is left alone.
+    const keepsOldAddress =
+      isPsgcAddressEmpty(addressPsgc) && !editingItem?.addressPsgc?.cityCode
+
+    setIsSubmitting(true)
 
     try {
       await onSave({
@@ -122,7 +152,8 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
         code: tabConfig.showCode ? code : undefined,
         category: tabConfig.showCategory ? category : undefined,
         description: tabConfig.showCategory ? description : undefined,
-        address: tabConfig.showAddress ? address : undefined,
+        addressPsgc:
+          tabConfig.showAddress && !keepsOldAddress ? addressPsgc : undefined,
         sortOrder: tabConfig.showSortOrder ? Number(sortOrder) : undefined,
         requiresSpecify: tabConfig.showRequiresSpecify
           ? requiresSpecify
@@ -336,25 +367,22 @@ export const LookupItemDialog: React.FC<LookupItemDialogProps> = ({
             {/* Address Field (Guarantor) */}
             {tabConfig.showAddress && (
               <div className="space-y-2">
-                <Label
-                  htmlFor="address"
-                  className="text-sm font-bold text-foreground"
-                >
+                <Label className="text-sm font-bold text-foreground">
                   Office Address / Location (Optional)
                 </Label>
-                <Textarea
-                  id="address"
-                  value={address}
-                  onChange={(e) => setAddress(e.target.value)}
-                  placeholder="e.g. Regional Office IX, Zamboanga City"
-                  rows={2}
-                  className={`rounded-lg text-sm font-medium ${serverErrors.address ? "border-destructive" : ""}`}
+                <PsgcAddressFields
+                  value={addressPsgc}
+                  onChange={setAddressPsgc}
+                  legacyText={legacyAddressText(editingItem?.address, editingItem?.addressPsgc)}
+                  lineLabel="Building, street, office"
+                  linePlaceholder="e.g. Regional Office IX, Pettit Barracks"
+                  errors={{
+                    line: serverErrors.address_line?.[0],
+                    city: serverErrors.address_city_code?.[0],
+                    barangay: serverErrors.address_barangay_code?.[0],
+                  }}
+                  disabled={isSubmitting}
                 />
-                {serverErrors.address && (
-                  <p className="text-xs font-semibold text-destructive">
-                    {serverErrors.address[0]}
-                  </p>
-                )}
               </div>
             )}
 
