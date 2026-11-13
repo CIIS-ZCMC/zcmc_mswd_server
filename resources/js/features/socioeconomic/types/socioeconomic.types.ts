@@ -69,7 +69,9 @@ export interface SocioeconomicCurrent {
   remarks: string | null
   house: HouseLiving
   lightSource: string[]
+  lightAmount: number | null
   waterSource: string[]
+  waterAmount: number | null
   expenses: ExpenseItems
   total: number | null
   income: ProfileIncome
@@ -97,7 +99,9 @@ export interface SaveSocioeconomicInput {
   houseTenure: string | null
   houseRentAmount: number | null
   lightSource: string[]
+  lightAmount: number | null
   waterSource: string[]
+  waterAmount: number | null
   food: number | null
   transport: number | null
   medical: number | null

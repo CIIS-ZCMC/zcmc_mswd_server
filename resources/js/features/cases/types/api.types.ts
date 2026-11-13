@@ -101,7 +101,6 @@ export interface ApiUisReadiness {
  * matching line is null (the printed form leaves it blank), not 0.
  */
 export interface ApiPatientUisExpenseSlots {
-  housing: number | null
   food: number | null
   education: number | null
   transport: number | null

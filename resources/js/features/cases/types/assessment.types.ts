@@ -122,6 +122,7 @@ export interface Assessment {
   informantFirstName?: string | null
   informantMiddleName?: string | null
   informantLastName?: string | null
+  informantExtensionName?: string | null
   informantRelationship: string | null
   informantAddress?: string | null
   /** The informant address as picked from PSGC (empty cityCode: still free text). */
@@ -158,6 +159,7 @@ export interface CreateAssessmentPayload {
   informant_first_name?: string | null
   informant_middle_name?: string | null
   informant_last_name?: string | null
+  informant_extension_name?: string | null
   informant_relationship?: string | null
   /** Picked from PSGC: the server writes the composed `informant_address`. */
   informant_address_line?: string | null
@@ -194,6 +196,7 @@ export interface UpdateAssessmentPayload {
   informant_first_name?: string | null
   informant_middle_name?: string | null
   informant_last_name?: string | null
+  informant_extension_name?: string | null
   informant_relationship?: string | null
   /** Picked from PSGC: the server writes the composed `informant_address`. */
   informant_address_line?: string | null

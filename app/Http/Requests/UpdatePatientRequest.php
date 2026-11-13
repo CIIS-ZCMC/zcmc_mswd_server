@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PhPhoneNumber;
 use App\Support\PsgcAddress;
 use Illuminate\Contracts\Validation\ValidationRule;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +15,13 @@ class UpdatePatientRequest extends FormRequest
     public function authorize(): bool
     {
         return $this->user()?->can('patients.update') ?? false;
+    }
+
+    protected function prepareForValidation(): void
+    {
+        if ($this->has('contact_number')) {
+            $this->merge(['contact_number' => PhPhoneNumber::normalize($this->input('contact_number'))]);
+        }
     }
 
     /**
@@ -44,7 +52,7 @@ class UpdatePatientRequest extends FormRequest
             ...PsgcAddress::rules('present_address'),
             ...PsgcAddress::rules('permanent_address'),
             ...PsgcAddress::cityRules('place_of_birth'),
-            'contact_number' => ['nullable', 'string', 'max:255'],
+            'contact_number' => PhPhoneNumber::rules(['nullable']),
             'religion' => ['nullable', 'string', 'max:255'],
             'nationality' => ['nullable', 'string', 'max:255'],
             'educational_attainment' => ['nullable', 'string', 'max:255'],

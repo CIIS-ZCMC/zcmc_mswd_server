@@ -35,11 +35,13 @@ import {
   useCompleteVisit,
   useQueue,
   useStartVisit,
+  useMyActiveVisit,
 } from "../hooks/use-queue"
 import { QueueCard } from "./queue-card"
 import { TakeOverVisitDialog } from "./take-over-visit-dialog"
 import { TimeInDialog } from "./time-in-dialog"
 import { VisitDarPrompt } from "./visit-dar-prompt"
+import { VisitPrintPrompt } from "./visit-print-prompt"
 import type { ServiceVisit } from "../types"
 
 function getTodayString(): string {
@@ -69,6 +71,7 @@ export const QueueBoard: React.FC = () => {
   } = useQueue(selectedDate)
 
   const startMutation = useStartVisit()
+  const myActiveVisit = useMyActiveVisit()
   const completeMutation = useCompleteVisit()
   const cancelMutation = useCancelVisit()
 
@@ -94,6 +97,8 @@ export const QueueBoard: React.FC = () => {
 
   const [takeOverVisit, setTakeOverVisit] = useState<ServiceVisit | null>(null)
   const [darVisit, setDarVisit] = useState<ServiceVisit | null>(null)
+  // The completed visit being offered printables; the DAR question follows it.
+  const [printVisit, setPrintVisit] = useState<ServiceVisit | null>(null)
   // True when the card's Add to DAR opened it, so the "Add to DAR?" question is skipped.
   const [darDirect, setDarDirect] = useState(false)
 
@@ -124,10 +129,7 @@ export const QueueBoard: React.FC = () => {
       })
       setCompleteOpen(false)
       setActiveVisit(null)
-      if (canAddToDar) {
-        setDarDirect(false)
-        setDarVisit(completed)
-      }
+      setPrintVisit(completed)
     } catch (err) {
       setActionError(
         err instanceof ApiError ? err.message : "Failed to complete visit."
@@ -189,19 +191,19 @@ export const QueueBoard: React.FC = () => {
   const completedList = filterVisits(queueData?.completed || [])
 
   return (
-    <div className="flex h-full flex-col overflow-hidden bg-background">
+    <div className="flex h-full flex-col overflow-y-auto bg-background xl:overflow-hidden">
       {/* Top Header Bar */}
-      <div className="border-b border-border/80 bg-card/70 px-6 py-4">
-        <div className="flex flex-wrap items-center justify-between gap-4">
-          <div className="flex items-center gap-3">
-            <div className="flex size-11 items-center justify-center rounded-xl border border-primary/20 bg-primary/10 text-primary shadow-xs">
-              <Timer className="size-6" />
+      <div className="shrink-0 border-b border-border/80 bg-card/70 px-4 py-2.5 sm:px-5">
+        <div className="flex flex-wrap items-center justify-between gap-3">
+          <div className="flex items-center gap-2.5">
+            <div className="flex size-9 items-center justify-center rounded-lg border border-primary/20 bg-primary/10 text-primary shadow-2xs">
+              <Timer className="size-4.5" />
             </div>
             <div>
-              <h1 className="flex items-center gap-2 text-2xl font-bold tracking-tight text-foreground">
+              <h1 className="flex items-center gap-2 text-lg font-bold tracking-tight text-foreground sm:text-xl">
                 Service Desk Queue Board
               </h1>
-              <p className="text-xs text-muted-foreground">
+              <p className="text-[11px] text-muted-foreground">
                 Real-time queue monitoring, patient tracking, and turnaround
                 time benchmarks.
               </p>
@@ -209,18 +211,18 @@ export const QueueBoard: React.FC = () => {
           </div>
 
           {/* Controls: Date Picker, Search & Refresh */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="relative w-48">
+          <div className="flex flex-wrap items-center gap-2">
+            <div className="relative w-44">
               <Search className="absolute top-1/2 left-2.5 size-3.5 -translate-y-1/2 text-muted-foreground" />
               <Input
                 placeholder="Search patient, encounter..."
                 value={searchQuery}
                 onChange={(e) => setSearchQuery(e.target.value)}
-                className="h-9 bg-background pl-8 text-xs"
+                className="h-8 bg-background pl-8 text-xs"
               />
             </div>
 
-            <div className="flex items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5 py-1">
+            <div className="flex h-8 items-center gap-1.5 rounded-lg border border-border/80 bg-background px-2.5">
               <Calendar className="size-3.5 text-muted-foreground" />
               <input
                 type="date"
@@ -236,7 +238,7 @@ export const QueueBoard: React.FC = () => {
               <Button
                 size="sm"
                 onClick={() => setTimeInOpen(true)}
-                className="h-9 gap-1.5 text-xs font-semibold"
+                className="h-8 gap-1.5 text-xs font-semibold"
               >
                 <LogIn className="size-3.5" />
                 Time In
@@ -248,7 +250,7 @@ export const QueueBoard: React.FC = () => {
               variant="outline"
               onClick={() => refetch()}
               disabled={isFetching}
-              className="h-9 gap-1.5 text-xs font-semibold"
+              className="h-8 gap-1.5 text-xs font-semibold"
             >
               <RefreshCw
                 className={`size-3.5 ${isFetching ? "animate-spin text-primary" : ""}`}
@@ -259,39 +261,39 @@ export const QueueBoard: React.FC = () => {
         </div>
 
         {/* Summary Metric Counters */}
-        <div className="grid grid-cols-3 gap-3 pt-4">
-          <div className="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-2.5">
+        <div className="grid grid-cols-1 gap-2.5 pt-2.5 sm:grid-cols-3">
+          <div className="flex items-center justify-between rounded-lg border border-amber-500/20 bg-amber-500/5 px-3 py-1.5">
             <div className="flex items-center gap-2">
-              <Hourglass className="size-4 text-amber-600 dark:text-amber-400" />
+              <Hourglass className="size-3.5 text-amber-600 dark:text-amber-400" />
               <span className="text-xs font-bold text-amber-700 dark:text-amber-300">
                 Waiting in Queue
               </span>
             </div>
-            <span className="font-mono text-xl font-black text-amber-700 dark:text-amber-300">
+            <span className="font-mono text-base font-black text-amber-700 dark:text-amber-300">
               {queueData?.summary.waiting ?? 0}
             </span>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-blue-500/20 bg-blue-500/5 px-4 py-2.5">
+          <div className="flex items-center justify-between rounded-lg border border-blue-500/20 bg-blue-500/5 px-3 py-1.5">
             <div className="flex items-center gap-2">
-              <Play className="size-4 text-blue-600 dark:text-blue-400" />
+              <Play className="size-3.5 text-blue-600 dark:text-blue-400" />
               <span className="text-xs font-bold text-blue-700 dark:text-blue-300">
                 In Progress
               </span>
             </div>
-            <span className="font-mono text-xl font-black text-blue-700 dark:text-blue-300">
+            <span className="font-mono text-base font-black text-blue-700 dark:text-blue-300">
               {queueData?.summary.inProgress ?? 0}
             </span>
           </div>
 
-          <div className="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-2.5">
+          <div className="flex items-center justify-between rounded-lg border border-emerald-500/20 bg-emerald-500/5 px-3 py-1.5">
             <div className="flex items-center gap-2">
-              <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+              <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
               <span className="text-xs font-bold text-emerald-700 dark:text-emerald-300">
                 Served Today
               </span>
             </div>
-            <span className="font-mono text-xl font-black text-emerald-700 dark:text-emerald-300">
+            <span className="font-mono text-base font-black text-emerald-700 dark:text-emerald-300">
               {queueData?.summary.completed ?? 0}
             </span>
           </div>
@@ -300,31 +302,31 @@ export const QueueBoard: React.FC = () => {
 
       {/* 3 Columns Queue Grid */}
       {/* Stacks below xl: beside the sidebar, three columns don't fit a laptop screen. */}
-      <div className="flex-1 p-6">
-        <div className="grid h-full grid-cols-1 gap-5 xl:grid-cols-3">
+      <div className="flex-1 p-3 sm:p-4 xl:min-h-0 xl:overflow-y-auto">
+        <div className="grid grid-cols-1 gap-3.5 xl:h-full xl:min-h-[20rem] xl:grid-cols-3">
           {/* Column 1: Waiting */}
-          <div className="flex flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/20 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-border/80 bg-amber-500/10 px-4 py-3">
-              <div className="flex items-center gap-2 text-sm font-bold text-amber-800 dark:text-amber-200">
-                <Hourglass className="size-4 text-amber-600 dark:text-amber-400" />
+          <div className="flex flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/20 shadow-2xs xl:min-h-0">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/80 bg-amber-500/10 px-3.5 py-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-amber-800 dark:text-amber-200">
+                <Hourglass className="size-3.5 text-amber-600 dark:text-amber-400" />
                 <span>Waiting</span>
               </div>
               <Badge
                 variant="secondary"
-                className="font-mono text-xs font-bold"
+                className="h-5 px-1.5 font-mono text-[11px] font-bold"
               >
                 {waitingList.length}
               </Badge>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-3.5">
+            <div className="max-h-96 flex-1 space-y-2 overflow-y-auto p-2.5 xl:max-h-none xl:min-h-0">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32 rounded-xl" />
+                  <Skeleton key={i} className="h-24 rounded-lg" />
                 ))
               ) : waitingList.length === 0 ? (
-                <div className="flex h-48 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
-                  <Hourglass className="mb-2 size-8 text-muted-foreground/40" />
+                <div className="flex h-36 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
+                  <Hourglass className="mb-1.5 size-6 text-muted-foreground/40" />
                   <p className="font-medium">No patients waiting in queue.</p>
                 </div>
               ) : (
@@ -334,6 +336,7 @@ export const QueueBoard: React.FC = () => {
                     visit={visit}
                     now={now}
                     canManage={canManage}
+                    myActiveVisit={myActiveVisit}
                     onStart={handleStart}
                     onCancel={handleOpenCancel}
                     onViewEncounter={handleViewEncounter}
@@ -344,28 +347,28 @@ export const QueueBoard: React.FC = () => {
           </div>
 
           {/* Column 2: In Progress */}
-          <div className="flex flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/20 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-border/80 bg-blue-500/10 px-4 py-3">
-              <div className="flex items-center gap-2 text-sm font-bold text-blue-800 dark:text-blue-200">
-                <Play className="size-4 text-blue-600 dark:text-blue-400" />
+          <div className="flex flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/20 shadow-2xs xl:min-h-0">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/80 bg-blue-500/10 px-3.5 py-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-blue-800 dark:text-blue-200">
+                <Play className="size-3.5 text-blue-600 dark:text-blue-400" />
                 <span>In Progress</span>
               </div>
               <Badge
                 variant="secondary"
-                className="font-mono text-xs font-bold"
+                className="h-5 px-1.5 font-mono text-[11px] font-bold"
               >
                 {inProgressList.length}
               </Badge>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-3.5">
+            <div className="max-h-96 flex-1 space-y-2 overflow-y-auto p-2.5 xl:max-h-none xl:min-h-0">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32 rounded-xl" />
+                  <Skeleton key={i} className="h-24 rounded-lg" />
                 ))
               ) : inProgressList.length === 0 ? (
-                <div className="flex h-48 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
-                  <Play className="mb-2 size-8 text-muted-foreground/40" />
+                <div className="flex h-36 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
+                  <Play className="mb-1.5 size-6 text-muted-foreground/40" />
                   <p className="font-medium">
                     No service visits currently in progress.
                   </p>
@@ -379,6 +382,7 @@ export const QueueBoard: React.FC = () => {
                     canManage={canManage}
                     currentUserId={user?.id}
                     canOverride={canOverride}
+                    myActiveVisit={myActiveVisit}
                     onComplete={handleOpenComplete}
                     onCancel={handleOpenCancel}
                     onTakeOver={setTakeOverVisit}
@@ -390,28 +394,28 @@ export const QueueBoard: React.FC = () => {
           </div>
 
           {/* Column 3: Served Today */}
-          <div className="flex flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/20 shadow-2xs">
-            <div className="flex items-center justify-between border-b border-border/80 bg-emerald-500/10 px-4 py-3">
-              <div className="flex items-center gap-2 text-sm font-bold text-emerald-800 dark:text-emerald-200">
-                <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+          <div className="flex flex-col overflow-hidden rounded-xl border border-border/80 bg-muted/20 shadow-2xs xl:min-h-0">
+            <div className="flex shrink-0 items-center justify-between border-b border-border/80 bg-emerald-500/10 px-3.5 py-2">
+              <div className="flex items-center gap-1.5 text-xs font-bold text-emerald-800 dark:text-emerald-200">
+                <CheckCircle2 className="size-3.5 text-emerald-600 dark:text-emerald-400" />
                 <span>Served Today</span>
               </div>
               <Badge
                 variant="secondary"
-                className="font-mono text-xs font-bold"
+                className="h-5 px-1.5 font-mono text-[11px] font-bold"
               >
                 {completedList.length}
               </Badge>
             </div>
 
-            <div className="flex-1 space-y-3 overflow-y-auto p-3.5">
+            <div className="max-h-96 flex-1 space-y-2 overflow-y-auto p-2.5 xl:max-h-none xl:min-h-0">
               {isLoading ? (
                 Array.from({ length: 3 }).map((_, i) => (
-                  <Skeleton key={i} className="h-32 rounded-xl" />
+                  <Skeleton key={i} className="h-24 rounded-lg" />
                 ))
               ) : completedList.length === 0 ? (
-                <div className="flex h-48 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
-                  <CheckCircle2 className="mb-2 size-8 text-muted-foreground/40" />
+                <div className="flex h-36 flex-col items-center justify-center p-4 text-center text-xs text-muted-foreground">
+                  <CheckCircle2 className="mb-1.5 size-6 text-muted-foreground/40" />
                   <p className="font-medium">
                     No completed visits recorded for {selectedDate}.
                   </p>
@@ -440,7 +444,7 @@ export const QueueBoard: React.FC = () => {
 
       {/* Modal: Complete Service */}
       <Dialog open={completeOpen} onOpenChange={setCompleteOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-emerald-600">
               <CheckCircle2 className="size-5" />
@@ -500,7 +504,7 @@ export const QueueBoard: React.FC = () => {
 
       {/* Modal: Cancel Visit */}
       <Dialog open={cancelOpen} onOpenChange={setCancelOpen}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-h-[90vh] max-w-md overflow-y-auto">
           <DialogHeader>
             <DialogTitle className="flex items-center gap-2 text-base font-bold text-destructive">
               <Ban className="size-5" />
@@ -566,6 +570,16 @@ export const QueueBoard: React.FC = () => {
       <TakeOverVisitDialog
         visit={takeOverVisit}
         onClose={() => setTakeOverVisit(null)}
+      />
+      <VisitPrintPrompt
+        visit={printVisit}
+        onClose={() => {
+          if (canAddToDar && printVisit) {
+            setDarDirect(false)
+            setDarVisit(printVisit)
+          }
+          setPrintVisit(null)
+        }}
       />
       <VisitDarPrompt
         visit={darVisit}

@@ -3,6 +3,7 @@ import { router } from "@inertiajs/react"
 import { Header } from "./header"
 import { Sidebar } from "./sidebar"
 import { usePatients } from "@/features/patients/hooks/use-patients"
+import { ServingBar } from "@/features/queue/components/serving-bar"
 
 interface MainLayoutProps {
   children: React.ReactNode
@@ -29,6 +30,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
   return (
     <div className="flex h-screen flex-col bg-background text-foreground transition-colors duration-200 overflow-hidden font-sans">
       <Header />
+      <ServingBar />
       <div className="flex flex-1 overflow-hidden">
         <Sidebar
           patients={patientsState.patients}

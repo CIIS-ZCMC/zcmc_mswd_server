@@ -108,23 +108,33 @@ it('classifies the new intake against the imported income and expenses', functio
     expect((float) $intake->net_per_capita_income)->toBe(3000.0);
 });
 
-it('makes a line only for a filled item, and the rent only when rented', function () {
+it('makes a line only for a filled item, and never for the rent, light or water amounts', function () {
     $owned = importRecord($this->patient, [
-        'house_tenure' => 'owned', 'house_rent_amount' => 3500, 'food' => 100, 'transport' => null,
+        'house_tenure' => 'owned', 'house_rent_amount' => 3500,
+        'light_source' => [], 'light_amount' => 900,
+        'water_source' => [], 'water_amount' => 350,
+        'food' => 100, 'transport' => null,
     ]);
     $rented = importRecord($this->patient, [
-        'recorded_on' => '2026-10-22', 'house_tenure' => 'rented', 'house_rent_amount' => 3500, 'food' => 100, 'transport' => null,
+        'recorded_on' => '2026-10-22',
+        'house_tenure' => 'rented', 'house_rent_amount' => 3500,
+        'light_source' => ['electricity'], 'light_amount' => 900,
+        'water_source' => ['public'], 'water_amount' => 350,
+        'food' => 100, 'transport' => null,
     ]);
 
     $importer = app(UisSocioeconomicImporter::class);
 
     expect(collect($importer->expenseLines($owned))->pluck('expense_type')->all())->toBe(['Food'])
-        ->and(collect($importer->expenseLines($rented))->pluck('expense_type')->all())->toBe(['House rent', 'Food']);
+        ->and(collect($importer->expenseLines($rented))->pluck('expense_type')->all())->toBe(['Food']);
 });
 
 it('lands every imported line in its own slot of the form', function () {
     $record = importRecord($this->patient, [
-        'house_tenure' => 'rented', 'house_rent_amount' => 1200, 'food' => 2, 'transport' => 3, 'medical' => 4,
+        'house_tenure' => 'rented', 'house_rent_amount' => 1200,
+        'light_source' => ['electricity'], 'light_amount' => 800,
+        'water_source' => ['public'], 'water_amount' => 350,
+        'food' => 2, 'transport' => 3, 'medical' => 4,
         'insurance' => 5, 'education' => 6, 'clothing' => 7, 'house_help' => 8, 'others' => 9,
         'others_specify' => 'School fees',
     ]);
@@ -133,9 +143,9 @@ it('lands every imported line in its own slot of the form', function () {
         collect(app(UisSocioeconomicImporter::class)->expenseLines($record))->map(fn ($line) => (object) $line)
     );
 
-    // House help is not housing, and "Others: …" is Others only.
+    // "Others: …" is Others only; rent, light and water have no slot.
     expect($slots)->toBe([
-        'housing' => 1200.0, 'food' => 2.0, 'education' => 6.0, 'transport' => 3.0, 'clothing' => 7.0,
+        'food' => 2.0, 'education' => 6.0, 'transport' => 3.0, 'clothing' => 7.0,
         'medical' => 4.0, 'house_help' => 8.0, 'insurance' => 5.0, 'others' => 9.0,
     ]);
 });

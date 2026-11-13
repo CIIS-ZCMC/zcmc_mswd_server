@@ -54,7 +54,7 @@ export const EncounterPrintableDialog: React.FC<
   // The case has no intake assessment yet (409): offer that case's blank form.
   const [offerBlank, setOfferBlank] = useState(false)
   const [isNewIntakeOpen, setIsNewIntakeOpen] = useState(false)
-  const canAssess = usePermission("cases.create")
+  const canAssess = usePermission("intake.create")
   // The encounter's own intake, with or without a case (docs/INTAKE_ASSESSMENT_PLAN.md).
   const { data: uisRows = [] } = usePatientUis(
     open && type === "uis" ? patient.id : null

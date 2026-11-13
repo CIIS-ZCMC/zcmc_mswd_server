@@ -40,7 +40,7 @@ function patientWatcherCase(array $overrides = []): CaseModel
 
 it('adds a watcher to a patient who has no case', function () {
     $this->postJson("/api/patients/{$this->patient->id}/watchers", [
-        'name' => 'Maria Reyes', 'relationship_code' => 'spouse', 'contact_number' => '0917', ...psgcAddress(),
+        'name' => 'Maria Reyes', 'relationship_code' => 'spouse', 'contact_number' => '+63-9171234567', ...psgcAddress(),
     ])->assertCreated()
         ->assertJsonPath('data.name', 'Maria Reyes')
         ->assertJsonPath('data.first_name', 'Maria')
@@ -65,7 +65,7 @@ it('adds a watcher using separate last, first, and middle names', function () {
         ->assertJsonPath('data.first_name', 'Juan')
         ->assertJsonPath('data.middle_name', 'Dela Cruz')
         ->assertJsonPath('data.last_name', 'San Juan')
-        ->assertJsonPath('data.contact_number', '+63 912 345 6789')
+        ->assertJsonPath('data.contact_number', '+63-9123456789')
         ->assertJsonPath('data.address', 'Purok 2, Ayala, City of Zamboanga')
         ->assertJsonPath('data.address_city_code', PsgcFixtureSeeder::ZAMBOANGA_CITY)
         ->assertJsonPath('data.address_barangay_code', PsgcFixtureSeeder::AYALA);
@@ -83,13 +83,22 @@ it('requires contact number and address when creating a watcher', function () {
         'relationship_code' => 'spouse',
     ])->assertUnprocessable()
         ->assertJsonValidationErrors(['contact_number', 'address_city_code', 'address_barangay_code']);
+
+    $this->postJson("/api/patients/{$this->patient->id}/watchers", [
+        'first_name' => 'Juan',
+        'last_name' => 'San Juan',
+        'relationship_code' => 'spouse',
+        'contact_number' => '0917',
+        ...psgcAddress(),
+    ])->assertUnprocessable()
+        ->assertJsonValidationErrorFor('contact_number');
 });
 
 it('requires a known relationship code', function () {
-    $this->postJson("/api/patients/{$this->patient->id}/watchers", ['name' => 'Maria', 'contact_number' => '0917', 'address' => 'City'])
+    $this->postJson("/api/patients/{$this->patient->id}/watchers", ['name' => 'Maria', 'contact_number' => '+63-9171234567', 'address' => 'City'])
         ->assertUnprocessable()->assertJsonValidationErrorFor('relationship_code');
 
-    $this->postJson("/api/patients/{$this->patient->id}/watchers", ['name' => 'Maria', 'relationship_code' => 'best_friend', 'contact_number' => '0917', 'address' => 'City'])
+    $this->postJson("/api/patients/{$this->patient->id}/watchers", ['name' => 'Maria', 'relationship_code' => 'best_friend', 'contact_number' => '+63-9171234567', 'address' => 'City'])
         ->assertUnprocessable()->assertJsonValidationErrorFor('relationship_code');
 });
 

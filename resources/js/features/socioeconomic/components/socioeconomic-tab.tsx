@@ -242,7 +242,9 @@ export const SocioeconomicTab: React.FC<SocioeconomicTabProps> = ({ patient }) =
             <ExpensesCard
               house={current.house}
               lightSource={current.lightSource}
+              lightAmount={current.lightAmount}
               waterSource={current.waterSource}
+              waterAmount={current.waterAmount}
               expenses={current.expenses}
               total={current.total}
             />

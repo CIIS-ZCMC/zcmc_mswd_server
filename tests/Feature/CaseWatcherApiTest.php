@@ -62,7 +62,7 @@ it('creates an inline watcher and its directory entry together', function () {
     $case = watcherApiCase(watcherApiPatient(), $worker);
 
     $response = $this->postJson("/api/cases/{$case->id}/watchers", [
-        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'spouse', 'contact_number' => '0917', ...psgcAddress()],
+        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'spouse', 'contact_number' => '+63-9171234567', ...psgcAddress()],
         'is_primary' => true,
     ])->assertCreated();
 
@@ -79,14 +79,14 @@ it('creates a watcher by linking an existing directory entry, snapshotting its f
     $patient = watcherApiPatient();
     $case = watcherApiCase($patient, $worker);
     $directoryEntry = PatientWatcher::create([
-        'patient_id' => $patient->id, 'name' => 'Pedro Reyes', 'relationship_code' => 'parent', 'contact_number' => '0917',
+        'patient_id' => $patient->id, 'name' => 'Pedro Reyes', 'relationship_code' => 'parent', 'contact_number' => '+63-9171234567',
     ]);
 
     $this->postJson("/api/cases/{$case->id}/watchers", ['patient_watcher_id' => $directoryEntry->id])
         ->assertCreated()
         ->assertJsonPath('data.name', 'Pedro Reyes')
         ->assertJsonPath('data.relationship', 'parent')
-        ->assertJsonPath('data.contact_number', '0917')
+        ->assertJsonPath('data.contact_number', '+63-9171234567')
         ->assertJsonPath('data.patient_watcher_id', $directoryEntry->id);
 
     expect(PatientWatcher::where('patient_id', $patient->id)->count())->toBe(1);
@@ -97,7 +97,7 @@ it('rejects a relationship not in the master list', function () {
     Sanctum::actingAs($worker);
     $case = watcherApiCase(watcherApiPatient(), $worker);
 
-    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'best_friend', 'contact_number' => '0917', ...psgcAddress()]])
+    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'Maria', 'relationship_code' => 'best_friend', 'contact_number' => '+63-9171234567', ...psgcAddress()]])
         ->assertUnprocessable()
         ->assertJsonValidationErrorFor('watcher.relationship_code');
 });
@@ -112,7 +112,7 @@ it('demotes the existing primary when a new one is created as primary', function
     ]);
 
     $this->postJson("/api/cases/{$case->id}/watchers", [
-        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Second', 'relationship_code' => 'parent', 'contact_number' => '0917', ...psgcAddress()],
+        'watcher' => ['last_name' => 'Reyes', 'first_name' => 'Second', 'relationship_code' => 'parent', 'contact_number' => '+63-9171234567', ...psgcAddress()],
         'is_primary' => true,
     ])->assertCreated();
 
@@ -125,19 +125,19 @@ it('updates a watcher and clears a field on an explicit null', function () {
     $case = watcherApiCase(watcherApiPatient(), $worker);
     $watcher = assignWatcher([
         'case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse',
-        'contact_number' => '0917', 'added_by' => $worker->id,
+        'contact_number' => '+63-9171234567', 'added_by' => $worker->id,
     ]);
 
     // The person's own details are edited on the patient watcher...
-    $this->putJson("/api/watchers/{$watcher->patient_watcher_id}", ['contact_number' => '0999', 'notes' => null])
+    $this->putJson("/api/watchers/{$watcher->patient_watcher_id}", ['contact_number' => '+63-9991234567', 'notes' => null])
         ->assertOk()
-        ->assertJsonPath('data.contact_number', '0999')
+        ->assertJsonPath('data.contact_number', '+63-9991234567')
         ->assertJsonPath('data.name', 'Maria');
 
     // ...and show up on the case assignment, which is the same record.
     $this->getJson("/api/cases/{$case->id}/watchers")
         ->assertOk()
-        ->assertJsonPath('data.0.watcher.contact_number', '0999')
+        ->assertJsonPath('data.0.watcher.contact_number', '+63-9991234567')
         ->assertJsonPath('data.0.name', 'Maria');
 
     // The assignment itself only takes its own fields.
@@ -315,7 +315,7 @@ it('creates and assigns a new person from a nested watcher', function () {
     $case = watcherApiCase($patient, $worker);
 
     $this->postJson("/api/cases/{$case->id}/watchers", [
-        'watcher' => ['last_name' => 'Cruz', 'first_name' => 'Lola', 'middle_name' => 'Santos', 'relationship_code' => 'grandparent', 'contact_number' => '0917', ...psgcAddress()],
+        'watcher' => ['last_name' => 'Cruz', 'first_name' => 'Lola', 'middle_name' => 'Santos', 'relationship_code' => 'grandparent', 'contact_number' => '+63-9171234567', ...psgcAddress()],
         'is_informant' => true,
     ])->assertCreated()->assertJsonPath('data.watcher.relationship_code', 'grandparent');
 
@@ -370,7 +370,7 @@ it('treats assignments on a closed case as read-only history', function () {
     $person = PatientWatcher::create(['patient_id' => $patient->id, 'name' => 'Pedro', 'relationship_code' => 'parent']);
     $assignment = assignWatcher(['case_id' => $case->id, 'patient_watcher_id' => $person->id, 'added_by' => $worker->id]);
 
-    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'New', 'relationship_code' => 'friend', 'contact_number' => '0917', ...psgcAddress()]])
+    $this->postJson("/api/cases/{$case->id}/watchers", ['watcher' => ['last_name' => 'Reyes', 'first_name' => 'New', 'relationship_code' => 'friend', 'contact_number' => '+63-9171234567', ...psgcAddress()]])
         ->assertUnprocessable()->assertJsonValidationErrorFor('case');
     $this->postJson("/api/case-watchers/{$assignment->id}/promote")->assertUnprocessable();
     $this->postJson("/api/case-watchers/{$assignment->id}/issue-pass", [])->assertUnprocessable();

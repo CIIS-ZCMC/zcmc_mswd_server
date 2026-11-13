@@ -105,6 +105,10 @@ function toFamilyMember(raw: ApiFamilyMember): FamilyMember {
   return {
     id: String(raw.id),
     fullName: raw.name,
+    firstName: raw.first_name ?? undefined,
+    middleName: raw.middle_name ?? undefined,
+    lastName: raw.last_name ?? undefined,
+    extensionName: raw.extension_name ?? undefined,
     relationship: raw.relationship ?? "",
     // The resource casts this to a date, so it arrives as a full ISO datetime;
     // trim it to what <input type="date"> accepts.
@@ -126,6 +130,8 @@ export function toWatcher(raw: ApiWatcher): Watcher {
     fullName: raw.name,
     firstName: raw.first_name ?? undefined,
     middleName: raw.middle_name ?? undefined,
+    lastName: raw.last_name ?? undefined,
+    extensionName: raw.extension_name ?? undefined,
     relationship: (raw.relationship_label ?? raw.relationship ?? raw.relationship_code ?? "")
       .replace(/_/g, " ")
       .replace(/\b\w/g, (c) => c.toUpperCase())

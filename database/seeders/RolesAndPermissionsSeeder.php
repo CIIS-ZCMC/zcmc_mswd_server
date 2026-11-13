@@ -80,6 +80,8 @@ class RolesAndPermissionsSeeder extends Seeder
         // Unified Intake Sheet (ANNEX B) — a printable, not a record: this one
         // permission guards printing it and reading its print history.
         'intake.view',
+        // Taking an Intake Assessment (UIS) for an encounter, without opening a case
+        'intake.create',
         // Socio-Economic profile (patient-level; independent of cases and the UIS)
         'socioeconomic.view',
         'socioeconomic.create',
@@ -130,7 +132,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'patients.import', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
-            'intake.view',
+            'intake.view', 'intake.create',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             'audit.view', 'audit.view_protective',
@@ -164,7 +166,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Case Manager' => [
             // Patients
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
-            'intake.view',
+            'intake.view', 'intake.create',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             // Cases
@@ -177,7 +179,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Processor' => [
             // Patients
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
-            'intake.view',
+            'intake.view', 'intake.create',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             // Queue, DAR

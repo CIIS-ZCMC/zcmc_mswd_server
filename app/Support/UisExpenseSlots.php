@@ -17,13 +17,12 @@ class UisExpenseSlots
 {
     /**
      * Slot => lower-case keywords matched with str_contains against the line label.
-     * Housing deliberately has no bare "house" (it would swallow "House help") and no
-     * "lot" (it is inside "clothing").
+     * House rent, light and water have no slot: their amounts are not shown on the UIS
+     * (the sheet only records the tenure and the light and water sources).
      *
      * @var array<string, list<string>>
      */
     public const KEYWORDS = [
-        'housing' => ['house rent', 'house tenure', 'rent', 'inuupahan'],
         'food' => ['food', 'pagkain'],
         'education' => ['educ', 'edukasyon', 'school', 'tuition'],
         'transport' => ['transport', 'pamasahe', 'fare'],

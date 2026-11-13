@@ -45,6 +45,7 @@ class CaseWatcherService
                     'first_name' => $newWatcher['first_name'] ?? null,
                     'middle_name' => $newWatcher['middle_name'] ?? null,
                     'last_name' => $newWatcher['last_name'] ?? null,
+                    'extension_name' => $newWatcher['extension_name'] ?? null,
                     'relationship_code' => $newWatcher['relationship_code'],
                     'contact_number' => $newWatcher['contact_number'] ?? null,
                     ...PsgcAddress::columnsFrom($newWatcher, 'address'),

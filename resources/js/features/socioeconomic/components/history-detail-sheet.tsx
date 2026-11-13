@@ -142,29 +142,49 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
                     <span className="font-semibold text-foreground">
                       {labelFor(HOUSE_TENURE_OPTIONS, profile.house.tenure) || "—"}
                     </span>
-                    {isRented && profile.house.rentAmount !== null && (
+                    {isRented && profile.house.rentAmount !== null && profile.house.rentAmount !== undefined && (
                       <span className="text-[11px] text-muted-foreground block mt-0.5">
                         {formatCurrency(profile.house.rentAmount)}/mo
                       </span>
                     )}
                   </div>
-                  <div className="p-2.5 rounded-lg border bg-muted/10 sm:col-span-2">
-                    <span className="text-[11px] text-muted-foreground block">Light / Water</span>
+                  <div className="p-2.5 rounded-lg border bg-muted/10">
+                    <span className="text-[11px] text-muted-foreground block">Light Source</span>
                     <div className="flex flex-wrap gap-1 mt-0.5">
-                      {profile.lightSource.map((s) => (
-                        <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">
-                          {labelFor(LIGHT_SOURCE_OPTIONS, s) || s}
-                        </Badge>
-                      ))}
-                      {profile.waterSource.map((s) => (
-                        <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">
-                          {labelFor(WATER_SOURCE_OPTIONS, s) || s}
-                        </Badge>
-                      ))}
-                      {profile.lightSource.length === 0 && profile.waterSource.length === 0 && (
+                      {profile.lightSource.length > 0 ? (
+                        profile.lightSource.map((s) => (
+                          <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">
+                            {labelFor(LIGHT_SOURCE_OPTIONS, s) || s}
+                          </Badge>
+                        ))
+                      ) : (
                         <span className="text-muted-foreground">—</span>
                       )}
                     </div>
+                    {profile.lightAmount !== null && profile.lightAmount !== undefined && (
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(profile.lightAmount)}/mo
+                      </span>
+                    )}
+                  </div>
+                  <div className="p-2.5 rounded-lg border bg-muted/10">
+                    <span className="text-[11px] text-muted-foreground block">Water Source</span>
+                    <div className="flex flex-wrap gap-1 mt-0.5">
+                      {profile.waterSource.length > 0 ? (
+                        profile.waterSource.map((s) => (
+                          <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">
+                            {labelFor(WATER_SOURCE_OPTIONS, s) || s}
+                          </Badge>
+                        ))
+                      ) : (
+                        <span className="text-muted-foreground">—</span>
+                      )}
+                    </div>
+                    {profile.waterAmount !== null && profile.waterAmount !== undefined && (
+                      <span className="text-[11px] text-muted-foreground block mt-0.5">
+                        {formatCurrency(profile.waterAmount)}/mo
+                      </span>
+                    )}
                   </div>
                 </div>
               </div>
@@ -195,6 +215,22 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
                           <TableCell className="py-1.5 font-medium">House / Lot Rent</TableCell>
                           <TableCell className="py-1.5 text-right font-medium">
                             {formatCurrency(profile.house.rentAmount)}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {profile.lightAmount !== null && profile.lightAmount > 0 && (
+                        <TableRow className="text-xs">
+                          <TableCell className="py-1.5 font-medium">Light Source</TableCell>
+                          <TableCell className="py-1.5 text-right font-medium">
+                            {formatCurrency(profile.lightAmount)}
+                          </TableCell>
+                        </TableRow>
+                      )}
+                      {profile.waterAmount !== null && profile.waterAmount > 0 && (
+                        <TableRow className="text-xs">
+                          <TableCell className="py-1.5 font-medium">Water Source</TableCell>
+                          <TableCell className="py-1.5 text-right font-medium">
+                            {formatCurrency(profile.waterAmount)}
                           </TableCell>
                         </TableRow>
                       )}

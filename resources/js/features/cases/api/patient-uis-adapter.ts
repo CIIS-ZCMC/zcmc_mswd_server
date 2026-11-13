@@ -68,7 +68,6 @@ export function adaptPatientUisRow(api: ApiPatientUisRow): PatientUisRow {
       householdSize: Number(api.uis.household_size || 1),
       expenseSlots: api.uis.expense_slots
         ? {
-            housing: slotAmount(api.uis.expense_slots.housing),
             food: slotAmount(api.uis.expense_slots.food),
             education: slotAmount(api.uis.expense_slots.education),
             transport: slotAmount(api.uis.expense_slots.transport),

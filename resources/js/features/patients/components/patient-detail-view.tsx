@@ -126,6 +126,10 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
   const handleAddFamilyMember = (newFamily: Omit<FamilyMember, "id">) => {
     addFamilyMember.mutate({
       name: newFamily.fullName,
+      first_name: newFamily.firstName || undefined,
+      middle_name: newFamily.middleName || null,
+      last_name: newFamily.lastName || undefined,
+      extension_name: newFamily.extensionName || null,
       relationship: newFamily.relationship,
       birthdate: newFamily.birthdate || undefined,
       sex: newFamily.sex || undefined,
@@ -147,6 +151,10 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
       memberId,
       payload: {
         name: updatedFamily.fullName,
+        first_name: updatedFamily.firstName || undefined,
+        middle_name: updatedFamily.middleName || null,
+        last_name: updatedFamily.lastName || undefined,
+        extension_name: updatedFamily.extensionName || null,
         relationship: updatedFamily.relationship,
         birthdate: updatedFamily.birthdate || undefined,
         sex: updatedFamily.sex || undefined,

@@ -295,6 +295,57 @@ it('refuses a take over of your own visit or one not in progress', function () {
     }
 });
 
+// ── One visit at a time ──────────────────────────────────────────────────────
+
+it('refuses to start a second patient while the worker is serving one', function () {
+    $other = queuePatient('Jose', 'Rizal');
+    queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->worker->id]);
+    $next = queueVisit($other, $this->desk, ['his_transaction_id' => 556]);
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson("/api/service-visits/{$next->id}/start")
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors(['status' => 'Complete or cancel Maria Dela Cruz before serving another patient.']);
+
+    expect($next->fresh()->status)->toBe(ServiceVisit::STATUS_WAITING);
+});
+
+it('lets the worker start the next patient once the current one is completed or cancelled', function (string $end) {
+    $other = queuePatient('Jose', 'Rizal');
+    $current = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->worker->id]);
+    $next = queueVisit($other, $this->desk, ['his_transaction_id' => 556]);
+    Sanctum::actingAs($this->worker);
+
+    $end === 'complete'
+        ? $this->postJson("/api/service-visits/{$current->id}/complete")->assertOk()
+        : $this->postJson("/api/service-visits/{$current->id}/cancel", ['cancel_reason' => 'Left'])->assertOk();
+
+    $this->postJson("/api/service-visits/{$next->id}/start")->assertOk();
+})->with(['complete', 'cancel']);
+
+it('lets another worker start a patient while someone else is serving', function () {
+    $other = queuePatient('Jose', 'Rizal');
+    queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->worker->id]);
+    $next = queueVisit($other, $this->desk, ['his_transaction_id' => 556]);
+    Sanctum::actingAs($this->desk);
+
+    $this->postJson("/api/service-visits/{$next->id}/start")->assertOk();
+});
+
+it('refuses a take over while the caller is serving another patient', function () {
+    $boss = queueWorker('Supervisor');
+    $other = queuePatient('Jose', 'Rizal');
+    queueVisit($other, $this->desk, ['his_transaction_id' => 556, 'status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $boss->id]);
+    $visit = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->desk->id]);
+    Sanctum::actingAs($boss);
+
+    $this->postJson("/api/service-visits/{$visit->id}/take-over", ['takeover_reason' => 'Ana went home'])
+        ->assertUnprocessable()
+        ->assertJsonValidationErrors('status');
+
+    expect($visit->fresh()->served_by)->toBe($this->desk->id);
+});
+
 // ── Reads ────────────────────────────────────────────────────────────────────
 
 it('lists the queue: open visits from any day, and the day\'s completions', function () {

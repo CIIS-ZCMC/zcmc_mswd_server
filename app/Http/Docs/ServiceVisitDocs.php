@@ -140,7 +140,7 @@ final class ServiceVisitDocs
         operationId: 'service-visits.start',
         tags: ['Queue'],
         summary: 'Start serving a waiting patient',
-        description: 'waiting → in_progress; the caller becomes `served_by` and holds the visit. 422 from any other status. Requires the `queue.manage` permission.',
+        description: 'waiting → in_progress; the caller becomes `served_by` and holds the visit. 422 from any other status, or while the caller is serving another visit (one at a time). Requires the `queue.manage` permission.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'visit', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         responses: [
@@ -207,7 +207,7 @@ final class ServiceVisitDocs
         operationId: 'service-visits.take-over',
         tags: ['Queue'],
         summary: "Take over another worker's visit in progress",
-        description: 'The caller becomes `served_by`, with a reason; the turnaround clock keeps running. 422 unless in progress, or when it is already the caller\'s. Requires the `queue.manage` and `queue.override` permissions.',
+        description: 'The caller becomes `served_by`, with a reason; the turnaround clock keeps running. 422 unless in progress, when it is already the caller\'s, or while the caller is serving another visit. Requires the `queue.manage` and `queue.override` permissions.',
         security: [['sanctum' => []]],
         parameters: [new OA\Parameter(name: 'visit', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
         requestBody: new OA\RequestBody(required: true, content: new OA\JsonContent(

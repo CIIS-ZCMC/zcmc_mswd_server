@@ -2,6 +2,7 @@
 
 namespace App\Http\Requests;
 
+use App\Support\PhPhoneNumber;
 use App\Support\PsgcAddress;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Validation\Rule;
@@ -44,8 +45,13 @@ class StoreCaseWatcherRequest extends FormRequest
 
         if ($this->has('watcher')) {
             $w = $this->input('watcher');
-            if (is_array($w) && ! empty($w['first_name']) && ! empty($w['last_name']) && empty($w['name'])) {
-                $w['name'] = trim(preg_replace('/\s+/', ' ', "{$w['first_name']} ".($w['middle_name'] ?? '')." {$w['last_name']}"));
+            if (is_array($w)) {
+                if (! empty($w['first_name']) && ! empty($w['last_name']) && empty($w['name'])) {
+                    $w['name'] = trim(preg_replace('/\s+/', ' ', "{$w['first_name']} ".($w['middle_name'] ?? '')." {$w['last_name']} ".($w['extension_name'] ?? '')));
+                }
+                if (array_key_exists('contact_number', $w)) {
+                    $w['contact_number'] = PhPhoneNumber::normalize($w['contact_number']);
+                }
                 $this->merge(['watcher' => $w]);
             }
         }
@@ -66,8 +72,9 @@ class StoreCaseWatcherRequest extends FormRequest
             'watcher.first_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'watcher.middle_name' => ['sometimes', 'nullable', 'string', 'max:255'],
             'watcher.last_name' => ['sometimes', 'nullable', 'string', 'max:255'],
+            'watcher.extension_name' => ['sometimes', 'nullable', 'string', 'max:50'],
             'watcher.relationship_code' => ['required_with:watcher', 'string', Rule::exists('watcher_relationship_types', 'code')],
-            'watcher.contact_number' => ['nullable', 'string', 'max:255'],
+            'watcher.contact_number' => PhPhoneNumber::rules(['nullable']),
             // A new watcher's address is picked from PSGC, like on the
             // patient's Watchers tab; the server writes the composed `address`.
             ...PsgcAddress::rules('address', required: 'required_with:watcher', prefix: 'watcher.'),

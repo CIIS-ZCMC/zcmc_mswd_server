@@ -141,10 +141,9 @@ export const EncounterUisPanel: React.FC<EncounterUisPanelProps> = ({
               type="button"
               variant="default"
               size="sm"
-              disabled={!canPerformActions}
               onClick={() => setIsPrintDialogOpen(true)}
-              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs shrink-0 cursor-pointer disabled:opacity-50 disabled:cursor-not-allowed"
-              title={!canPerformActions ? reason : "Print options, copies, remarks and blank templates"}
+              className="h-9 px-3.5 text-xs font-bold gap-1.5 shadow-2xs shrink-0 cursor-pointer"
+              title="Print options, copies, remarks and blank templates"
             >
               <Printer className="size-4" />
               Print UIS

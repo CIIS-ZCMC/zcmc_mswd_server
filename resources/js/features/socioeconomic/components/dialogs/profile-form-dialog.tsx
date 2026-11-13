@@ -81,7 +81,9 @@ interface FormState {
   houseTenure: "owned" | "rented" | ""
   houseRentAmount: string
   lightSource: string[]
+  lightAmount: string
   waterSource: string[]
+  waterAmount: string
   activeExpenseKeys: ExpenseItemKey[]
   expenseAmounts: Record<ExpenseItemKey, string>
   othersSpecify: string
@@ -107,7 +109,9 @@ function buildInitialState(initialProfile?: SocioeconomicCurrent | null): FormSt
       houseTenure: "owned",
       houseRentAmount: "",
       lightSource: [],
+      lightAmount: "",
       waterSource: [],
+      waterAmount: "",
       activeExpenseKeys: [],
       expenseAmounts: emptyAmounts(),
       othersSpecify: "",
@@ -139,7 +143,15 @@ function buildInitialState(initialProfile?: SocioeconomicCurrent | null): FormSt
         ? String(initialProfile.house.rentAmount)
         : "",
     lightSource: initialProfile.lightSource || [],
+    lightAmount:
+      initialProfile.lightAmount !== null && initialProfile.lightAmount !== undefined
+        ? String(initialProfile.lightAmount)
+        : "",
     waterSource: initialProfile.waterSource || [],
+    waterAmount:
+      initialProfile.waterAmount !== null && initialProfile.waterAmount !== undefined
+        ? String(initialProfile.waterAmount)
+        : "",
     activeExpenseKeys,
     expenseAmounts,
     othersSpecify: initialProfile.expenses.othersSpecify || "",
@@ -184,7 +196,9 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
   const [houseTenure, setHouseTenure] = useState<"owned" | "rented" | "">(init.houseTenure)
   const [houseRentAmount, setHouseRentAmount] = useState(init.houseRentAmount)
   const [lightSource, setLightSource] = useState<string[]>(init.lightSource)
+  const [lightAmount, setLightAmount] = useState(init.lightAmount)
   const [waterSource, setWaterSource] = useState<string[]>(init.waterSource)
+  const [waterAmount, setWaterAmount] = useState(init.waterAmount)
 
   // Appendable 8 Itemized Expenses
   const [activeExpenseKeys, setActiveExpenseKeys] = useState<ExpenseItemKey[]>(init.activeExpenseKeys)
@@ -211,15 +225,19 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
   }
 
   const handleToggleLightSource = (value: string) => {
-    setLightSource((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    )
+    setLightSource((prev) => {
+      const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+      if (next.length === 0) setLightAmount("")
+      return next
+    })
   }
 
   const handleToggleWaterSource = (value: string) => {
-    setWaterSource((prev) =>
-      prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
-    )
+    setWaterSource((prev) => {
+      const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+      if (next.length === 0) setWaterAmount("")
+      return next
+    })
   }
 
   // --- Appendable Expenses Handlers ---
@@ -272,11 +290,13 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
 
   // --- Live Calculations ---
   const rentNumber = houseTenure === "rented" ? parseFloat(houseRentAmount) || 0 : 0
+  const lightNumber = lightSource.length > 0 ? parseFloat(lightAmount) || 0 : 0
+  const waterNumber = waterSource.length > 0 ? parseFloat(waterAmount) || 0 : 0
   const eightExpensesSum = activeExpenseKeys.reduce((sum, key) => {
     const val = parseFloat(expenseAmounts[key])
     return !isNaN(val) && val > 0 ? sum + val : sum
   }, 0)
-  const computedTotalExpenses = rentNumber + eightExpensesSum
+  const computedTotalExpenses = rentNumber + lightNumber + waterNumber + eightExpensesSum
 
   const patientIncomeVal = liveIncome?.patientIncome ?? initialProfile?.income.patientIncome ?? 0
   const familyMembersTotalVal =
@@ -328,7 +348,9 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
       houseTenure: houseTenure || null,
       houseRentAmount: houseTenure === "rented" ? parseNumOrNull(houseRentAmount) : null,
       lightSource,
+      lightAmount: lightSource.length > 0 ? parseNumOrNull(lightAmount) : null,
       waterSource,
+      waterAmount: waterSource.length > 0 ? parseNumOrNull(waterAmount) : null,
       food: activeExpenseKeys.includes("food") ? parseNumOrNull(expenseAmounts.food) : null,
       transport: activeExpenseKeys.includes("transport") ? parseNumOrNull(expenseAmounts.transport) : null,
       medical: activeExpenseKeys.includes("medical") ? parseNumOrNull(expenseAmounts.medical) : null,
@@ -683,10 +705,10 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                 )}
               </div>
 
-              {/* Light & Water Sources Multi-select Badges */}
+              {/* Light & Water Sources Multi-select Badges + Monthly Amounts */}
               <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
                 {/* Light Source */}
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                     <Lightbulb className="size-4 text-amber-500" />
                     <span>Light Source</span>
@@ -711,10 +733,35 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                       )
                     })}
                   </div>
+                  {lightSource.length > 0 && (
+                    <div className="p-3 rounded-lg border bg-amber-500/5 border-amber-500/20 space-y-1.5 animate-in fade-in-50 duration-150">
+                      <Label htmlFor="lightAmount" className="text-xs font-semibold text-foreground">
+                        Monthly Light / Power Amount (₱)
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                          ₱
+                        </span>
+                        <Input
+                          id="lightAmount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={lightAmount}
+                          onChange={(e) => setLightAmount(e.target.value)}
+                          className="h-9 text-sm pl-7 text-right font-semibold bg-background"
+                        />
+                      </div>
+                      {fieldErrors.light_amount && (
+                        <p className="text-xs text-destructive font-medium">{fieldErrors.light_amount}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
 
                 {/* Water Source */}
-                <div className="space-y-2">
+                <div className="space-y-2.5">
                   <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
                     <Droplets className="size-4 text-blue-500" />
                     <span>Water Source</span>
@@ -739,6 +786,31 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                       )
                     })}
                   </div>
+                  {waterSource.length > 0 && (
+                    <div className="p-3 rounded-lg border bg-blue-500/5 border-blue-500/20 space-y-1.5 animate-in fade-in-50 duration-150">
+                      <Label htmlFor="waterAmount" className="text-xs font-semibold text-foreground">
+                        Monthly Water Amount (₱)
+                      </Label>
+                      <div className="relative">
+                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                          ₱
+                        </span>
+                        <Input
+                          id="waterAmount"
+                          type="number"
+                          step="0.01"
+                          min="0"
+                          placeholder="0.00"
+                          value={waterAmount}
+                          onChange={(e) => setWaterAmount(e.target.value)}
+                          className="h-9 text-sm pl-7 text-right font-semibold bg-background"
+                        />
+                      </div>
+                      {fieldErrors.water_amount && (
+                        <p className="text-xs text-destructive font-medium">{fieldErrors.water_amount}</p>
+                      )}
+                    </div>
+                  )}
                 </div>
               </div>
             </CardContent>

@@ -34,7 +34,9 @@ class PatientSocioeconomicProfile extends Model
         'house_tenure',
         'house_rent_amount',
         'light_source',
+        'light_amount',
         'water_source',
+        'water_amount',
         'food',
         'transport',
         'medical',
@@ -56,6 +58,8 @@ class PatientSocioeconomicProfile extends Model
         return [
             'recorded_on' => 'date',
             'house_rent_amount' => 'decimal:2',
+            'light_amount' => 'decimal:2',
+            'water_amount' => 'decimal:2',
             'food' => 'decimal:2',
             'transport' => 'decimal:2',
             'medical' => 'decimal:2',
@@ -84,12 +88,14 @@ class PatientSocioeconomicProfile extends Model
     }
 
     /**
-     * Total monthly expenses: the rent (only when the house is rented) plus the eight
-     * amount items. Blank items count as zero.
+     * Total monthly expenses: the rent (only when the house is rented), light and
+     * water amounts (when sources are selected), plus the eight amount items.
      */
     public function total(): float
     {
         $total = $this->house_tenure === 'rented' ? (float) $this->house_rent_amount : 0.0;
+        $total += ! empty($this->light_source) ? (float) $this->light_amount : 0.0;
+        $total += ! empty($this->water_source) ? (float) $this->water_amount : 0.0;
 
         foreach (self::EXPENSE_ITEMS as $item) {
             $total += (float) $this->{$item};

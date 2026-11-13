@@ -46,7 +46,7 @@ it('seeds every default role with the expected permission counts', function () {
     expect(Role::findByName('Processor')->permissions->pluck('name')->all())
         ->toEqualCanonicalizing([
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
-            'intake.view',
+            'intake.view', 'intake.create',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             'queue.manage', 'dar.manage',
@@ -122,6 +122,8 @@ test('role permission matrix', function (string $role, string $permission, bool 
     'processor times the queue' => ['Processor', 'queue.manage', true],
     'processor keeps a DAR' => ['Processor', 'dar.manage', true],
     'processor has no cases' => ['Processor', 'cases.view', false],
+    'processor takes intakes' => ['Processor', 'intake.create', true],
+    'supervisor cannot take intakes' => ['Supervisor', 'intake.create', false],
     'processor has no reports' => ['Processor', 'reports.view', false],
     'processor creates patients' => ['Processor', 'patients.create', true],
     'processor deletes patients' => ['Processor', 'patients.delete', true],

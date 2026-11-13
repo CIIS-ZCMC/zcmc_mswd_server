@@ -63,6 +63,7 @@ class ServiceVisitService
             }
 
             $this->ensureStatus($visit, [ServiceVisit::STATUS_WAITING], 'Only a waiting patient can be started.');
+            $this->ensureNotServingAnother($visit, $user);
 
             $visit->update([
                 'status' => ServiceVisit::STATUS_IN_PROGRESS,
@@ -114,6 +115,8 @@ class ServiceVisitService
             if ((int) $visit->served_by === (int) $user->id) {
                 throw ValidationException::withMessages(['status' => 'You are already serving this patient.']);
             }
+
+            $this->ensureNotServingAnother($visit, $user);
 
             $visit->update([
                 'served_by' => $user->id,
@@ -193,6 +196,33 @@ class ServiceVisitService
         }
 
         abort(Response::HTTP_FORBIDDEN, 'Being served by '.self::userName($visit->servedBy).'.');
+    }
+
+    /**
+     * A worker serves one patient at a time, so a visit can't be left in progress
+     * while they move on to the next one. Run inside transition()'s transaction.
+     */
+    private function ensureNotServingAnother(ServiceVisit $visit, User $user): void
+    {
+        $other = ServiceVisit::query()
+            ->where('status', ServiceVisit::STATUS_IN_PROGRESS)
+            ->where('served_by', $user->id)
+            ->whereKeyNot($visit->getKey())
+            ->lockForUpdate()
+            ->with('patient')
+            ->first();
+
+        if ($other === null) {
+            return;
+        }
+
+        $name = $other->patient === null
+            ? 'your current patient'
+            : trim("{$other->patient->first_name} {$other->patient->last_name}");
+
+        throw ValidationException::withMessages([
+            'status' => "Complete or cancel {$name} before serving another patient.",
+        ]);
     }
 
     private static function userName(?User $user): string

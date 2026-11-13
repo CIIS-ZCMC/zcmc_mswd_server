@@ -70,7 +70,7 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and 
 
   | Role | Code | Modules |
   |---|---|---|
-  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge) |
+  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge); may also take an Intake Assessment (`intake.create`) without holding any Cases permission |
   | Case Manager | `case_manager` | Patients, Cases, Queue, DAR (full CRUD, no merge or sign-offs) |
   | Supervisor | `supervisor` | Patients, Queue, DAR, Reports |
   | Head (was `MSS Head`) | `head` | Reports |
@@ -120,7 +120,7 @@ Socio-economic classification of a patient for an encounter.
 - Net Per Capita Income = (family income − household expenses) ÷ household size (patient + family members, min 1).
 - Brackets A, B, C1, C2, C3, D with a computed discount (`CalculateMswdClassificationAction`, `MswdClassificationMatrix`). A worker may override the bracket with a written reason.
 - Assessments are append-only snapshots; a re-assessment links to its parent (`parent_assessment_id`).
-- Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up).
+- Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up). Taking one needs `intake.create` (Processor, Case Manager, Admin), not `cases.create`; the sheet routes need `intake.view`.
 - The UIS is a **printable, not a stored record**; every print is logged (`uis_print_logs`).
 - But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. The on-screen sheet reads the same copy through `uisSheetData()` (`features/cases/lib/uis-sheet-data.ts`), which mirrors `UisSnapshotService::sheetData()`. See `docs/UIS_SNAPSHOT_PLAN.md`.
 - Family income, house tenure, light/water and the section III expense lines are imported from the patient's newest Socioeconomic record when an intake is taken (what the request supplies wins) and on Refresh (which overwrites; a patient with no record, or a record with no expense items, leaves the assessment's own alone). `assessments.socioeconomic_profile_id` records which record, so the sheet can tell a newer one exists.
@@ -154,9 +154,10 @@ In `hospital/components/dialogs/`:
 ### Queue & Turnaround Time (TAT)
 Time in → Start → Complete (or Cancel) per HIS encounter visit, stamped by the server clock.
 - One open visit per encounter. `served_by` = whoever clicks Start. Cancelled visits are excluded from TAT figures.
-- A visit in progress belongs to its `served_by`: only they can complete or cancel it (403 otherwise), and `useQueueActionGate` makes the patient's records view-only for everyone else except Admin and Super Admin. That records lock is UI only; the record APIs don't check it.
+- A visit in progress belongs to its `served_by`: only they can complete or cancel it (403 otherwise), and `useQueueActionGate` makes the patient's records view-only for everyone else except Admin and Super Admin. That records lock is UI only; the record APIs don't check it. It covers creating and editing, not printing: the print buttons (UIS, encounter printables, Acknowledgement Slip) work without a visit.
+- A worker serves one visit at a time: Start and Take Over answer 422 while they have another visit in progress. `ServingBar` (in `main-layout.tsx`, fed by `useMyActiveVisit`) shows that visit on every page with a timer and Complete.
 - `queue.override` (Supervisor, Admin, Super Admin) can Take Over a visit with a reason (`POST /service-visits/{id}/take-over`). The timer keeps running and `served_by` moves to them.
-- Completing a visit offers "Add to DAR?". A visit left unfiled shows Add to DAR on the worker's Served Today card.
+- Completing a visit offers what to print (UIS, MAIFIP slip, City Mayor slip, Indigency certificate: `VisitPrintPrompt`), then "Add to DAR?". A visit left unfiled shows Add to DAR on the worker's Served Today card.
 - Targets per stage (waiting / processing / total, minutes) are set in the Library.
 - Front: `features/queue` (`QueueBoard`, `ServiceVisitPanel`, `VisitDarPrompt`, `TakeOverVisitDialog`, `lib/visit-lock.ts`). Back: `ServiceVisitService`; permissions `queue.manage`, `queue.override`.
 

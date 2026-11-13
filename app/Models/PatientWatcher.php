@@ -19,6 +19,7 @@ class PatientWatcher extends Model
         'first_name',
         'middle_name',
         'last_name',
+        'extension_name',
         'relationship_code',
         'contact_number',
         'address',
@@ -36,8 +37,8 @@ class PatientWatcher extends Model
     {
         static::saving(function (self $model) {
             if ($model->first_name && $model->last_name) {
-                if (empty($model->name) || $model->isDirty('first_name') || $model->isDirty('middle_name') || $model->isDirty('last_name')) {
-                    $model->name = trim(preg_replace('/\s+/', ' ', "{$model->first_name} {$model->middle_name} {$model->last_name}"));
+                if (empty($model->name) || $model->isDirty('first_name') || $model->isDirty('middle_name') || $model->isDirty('last_name') || $model->isDirty('extension_name')) {
+                    $model->name = trim(preg_replace('/\s+/', ' ', "{$model->first_name} {$model->middle_name} {$model->last_name} {$model->extension_name}"));
                 }
             } elseif (! empty($model->name) && empty($model->first_name) && empty($model->last_name)) {
                 $trimmed = trim($model->name);
