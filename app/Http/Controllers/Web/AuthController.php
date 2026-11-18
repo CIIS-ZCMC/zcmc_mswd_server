@@ -46,7 +46,9 @@ class AuthController extends Controller
             $portal = config('services.umis.portal_url');
 
             if ($provider === AuthProvider::Iam) {
-                return redirect()->route('iam.redirect');
+                // Another origin after /auth/iam/redirect: Inertia::location
+                // makes an Inertia visit leave for real instead of an XHR dying on CORS.
+                return Inertia::location(route('iam.redirect'));
             }
 
             if ($provider === AuthProvider::Umis && is_string($portal) && $portal !== '') {

@@ -1,0 +1,69 @@
+# FrankenPHP Caddyfile for running behind a TLS-terminating reverse proxy.
+#
+# Based on Laravel Octane's stub (vendor/laravel/octane/src/Commands/stubs/
+# Caddyfile), pinned in-repo so an Octane upgrade can't silently change the
+# server behavior. The {$CADDY_*} placeholders are populated by
+# `octane:start` from its CLI flags — do not replace them with literals.
+#
+# Because octane:start runs WITHOUT --https:
+#   CADDY_GLOBAL_OPTIONS   = "auto_https disable_redirects"  (no TLS, no
+#                             http→https redirect on the internal hop)
+#   CADDY_SERVER_SERVER_NAME = "http://:80"                  (plain HTTP)
+#
+# The proxy terminates TLS and forwards plain http with
+# X-Forwarded-Proto: https.
+{
+	{$CADDY_GLOBAL_OPTIONS}
+
+	admin {$CADDY_SERVER_ADMIN_HOST}:{$CADDY_SERVER_ADMIN_PORT}
+
+	# Trust X-Forwarded-* headers from the reverse proxy so Caddy's own
+	# {scheme}/client_ip (logs, placeholders) reflect the original request.
+	# The app container is only reachable from the internal network, so
+	# private ranges cover the proxy. Laravel additionally handles
+	# X-Forwarded-Proto itself via trustProxies() in bootstrap/app.php.
+	servers {
+		trusted_proxies static private_ranges
+	}
+
+	frankenphp {
+		worker {
+			file "{$APP_PUBLIC_PATH}/frankenphp-worker.php"
+			{$CADDY_SERVER_WORKER_DIRECTIVE}
+			{$CADDY_SERVER_WATCH_DIRECTIVES}
+		}
+	}
+}
+
+{$CADDY_EXTRA_CONFIG}
+
+{$CADDY_SERVER_SERVER_NAME} {
+	log {
+		level {$CADDY_SERVER_LOG_LEVEL}
+
+		# Redact the authorization query parameter that can be set by Mercure...
+		format filter {
+			wrap {$CADDY_SERVER_LOGGER}
+			fields {
+				uri query {
+					replace authorization REDACTED
+				}
+			}
+		}
+	}
+
+	route {
+		root * "{$APP_PUBLIC_PATH}"
+		encode zstd br gzip
+
+		# Mercure configuration is injected here...
+		{$CADDY_SERVER_EXTRA_DIRECTIVES}
+
+		php_server {
+			index frankenphp-worker.php
+			try_files {path} frankenphp-worker.php
+			# Required for the public/storage/ directory...
+			resolve_root_symlink
+		}
+	}
+}
