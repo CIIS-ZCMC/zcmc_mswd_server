@@ -39,7 +39,9 @@ function mockIntakeEncounter(int $patid = 777): void
     $encounter = (new PatientTransaction)->forceFill([
         'PK_psPatRegisters' => 42, 'registrydate' => '2026-09-14 08:30:00', 'pattrantype' => 'O',
     ]);
-    $encounter->setRelation('patient', (new HospitalPatient)->forceFill(['PK_emdPatients' => 5, 'patid' => $patid]));
+    $hp = (new HospitalPatient)->forceFill(['PK_emdPatients' => 5, 'patid' => $patid]);
+    $hp->setRelation('personalData', null);
+    $encounter->setRelation('patient', $hp);
     $encounter->setRelation('transactionType', (new TransactionType)->forceFill(['PK_mscHospTranTypes' => 8, 'description' => 'Outpatient Consultation']));
 
     test()->mock(PatientTransactionRepositoryInterface::class, function ($mock) use ($encounter) {

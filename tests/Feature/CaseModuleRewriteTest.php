@@ -47,6 +47,7 @@ function cmrHisTransaction(
     ?string $transactionLabel = 'New Admission',
 ): PatientTransaction {
     $hp = (new HospitalPatient)->forceFill(['PK_emdPatients' => 5, 'patid' => $patid]);
+    $hp->setRelation('personalData', null);
 
     $transaction = (new PatientTransaction)->forceFill([
         'PK_psPatRegisters' => $key,

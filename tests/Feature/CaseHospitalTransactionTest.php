@@ -66,6 +66,7 @@ function caseForPatient(Patient $patient, User $worker): CaseModel
 function chtHisTransaction(int $key = 9, int $patid = 777, ?string $finalDiagnosis = 'Pneumonia'): PatientTransaction
 {
     $hp = (new HospitalPatient)->forceFill(['PK_emdPatients' => 5, 'patid' => $patid]);
+    $hp->setRelation('personalData', null);
 
     $transaction = (new PatientTransaction)->forceFill([
         'PK_psPatRegisters' => $key,
