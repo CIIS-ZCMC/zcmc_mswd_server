@@ -10,6 +10,7 @@ export interface WatcherAssignment {
   isInformant: boolean
   passNumber: string | null
   passStatus: string
+  passValidUntil: string | null
 }
 
 /**

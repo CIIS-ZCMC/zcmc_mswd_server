@@ -811,14 +811,14 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
         </Card>
 
         {/* Action Buttons */}
-        <div className="flex flex-col-reverse items-center justify-end gap-2 pt-2 sm:flex-row sm:gap-2">
+        <div className="flex flex-col-reverse items-center justify-end gap-2 pt-2 sm:flex-row sm:gap-[8px]">
           {onCancel && (
             <Button
               type="button"
               variant="outline"
               onClick={onCancel}
               disabled={isPending}
-              className="w-full text-xs font-semibold sm:w-auto sm:text-sm"
+              className="h-[36px] w-full rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] sm:w-auto dark:border-border dark:text-foreground dark:hover:bg-muted"
             >
               {cancelLabel}
             </Button>
@@ -826,7 +826,7 @@ export const GuaranteeForm: React.FC<GuaranteeFormProps> = ({
           <Button
             type="submit"
             disabled={isPending}
-            className="w-full min-w-[100px] text-xs font-bold sm:w-auto sm:text-sm"
+            className="h-[36px] w-full min-w-[110px] rounded-full bg-[#1f5fd6] px-[18px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98] sm:w-auto"
           >
             {isPending ? (
               <>

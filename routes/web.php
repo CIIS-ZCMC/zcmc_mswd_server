@@ -40,6 +40,9 @@ Route::middleware('auth')->group(function () {
 
     // Patients
     Route::get('/', [PatientsPageController::class, 'index'])->name('patients.index');
+    Route::get('/patients', [PatientsPageController::class, 'registry'])
+        ->middleware('permission:patients.view')
+        ->name('patients.registry');
     Route::get('/patients/{patient}', [PatientsPageController::class, 'show'])
         ->middleware('permission:patients.view')
         ->name('patients.show');

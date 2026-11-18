@@ -981,13 +981,13 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl">
-        <DialogHeader className="border-b border-border/40 px-6 pt-6 pb-4">
-          <DialogTitle className="flex items-center gap-2.5 text-xl font-extrabold">
-            <Users className="size-5 text-primary" />
+      <DialogContent className="flex max-h-[90vh] w-full flex-col gap-0 overflow-hidden p-0 sm:max-w-4xl rounded-[20px]">
+        <DialogHeader className="border-b border-[#e4e9f2] px-6 pt-6 pb-4 dark:border-border">
+          <DialogTitle className="flex items-center gap-2.5 text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">
+            <Users className="size-5 text-[#1f5fd6]" />
             {isEditMode ? "Edit Family Member" : "Add Family Members"}
           </DialogTitle>
-          <DialogDescription className="mt-1 text-sm text-muted-foreground">
+          <DialogDescription className="mt-1 text-[12px] font-normal text-[#5b6678] dark:text-muted-foreground">
             {isEditMode
               ? `Update details for ${initialMember?.fullName}.`
               : isMarried(patientCivilStatus)
@@ -1074,7 +1074,7 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
           </div>
         )}
 
-        <DialogFooter className="m-0 flex-row items-center gap-2 border-t border-border/40 px-6 py-4 sm:justify-between">
+        <DialogFooter className="m-0 flex-row items-center gap-2 border-t border-[#e4e9f2] px-6 py-4 dark:border-border sm:justify-between">
           {isEditMode ? (
             <div className="ml-auto flex items-center gap-3">
               {disabledReason && (
@@ -1084,7 +1084,7 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
               )}
               <Button
                 size="lg"
-                className="h-11 cursor-pointer px-6 font-bold"
+                className="h-[36px] cursor-pointer rounded-full bg-[#1f5fd6] px-[20px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
                 disabled={Boolean(disabledReason)}
                 onClick={handleSave}
               >
@@ -1095,7 +1095,7 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
             <>
               <Button
                 variant="ghost"
-                className="h-11 cursor-pointer gap-1.5 font-bold"
+                className="h-[36px] cursor-pointer gap-1.5 rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
                 disabled={stepIndex === 0}
                 onClick={() => setStepIndex((i) => Math.max(0, i - 1))}
               >
@@ -1110,7 +1110,7 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
                 {!isLastStep && (
                   <Button
                     variant="outline"
-                    className="h-11 cursor-pointer gap-1.5 font-bold"
+                    className="h-[36px] cursor-pointer gap-1.5 rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
                     onClick={() => setStepIndex((i) => i + 1)}
                   >
                     {currentStep !== "others" &&
@@ -1122,7 +1122,7 @@ export const FamilyMemberDialog: React.FC<FamilyMemberDialogProps> = ({
                   </Button>
                 )}
                 <Button
-                  className="h-11 cursor-pointer px-6 font-bold"
+                  className="h-[36px] cursor-pointer rounded-full bg-[#1f5fd6] px-[20px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
                   disabled={Boolean(disabledReason)}
                   onClick={handleSave}
                 >

@@ -30,6 +30,7 @@ import {
   AlertDialogTitle,
 } from "@/components/ui/alert-dialog"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { useQueueActionGate } from "@/features/queue"
 import { useQueryClient } from "@tanstack/react-query"
 import {
   useDeleteAssessment,
@@ -108,6 +109,10 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
 }) => {
   const canCreate = usePermission("intake.create")
   const canUpdate = usePermission("cases.update")
+  // Assessing and refreshing are edits, locked until this worker is serving
+  // the patient; previewing and printing stay open.
+  const { getActionProps } = useQueueActionGate()
+  const lockProps = getActionProps()
 
   const [activeSubTab, setActiveSubTab] = useState("identifying-family")
   const [isIntakeDialogOpen, setIsIntakeDialogOpen] =
@@ -414,6 +419,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
               </div>
               {canCreate && (
                 <Button
+                  {...lockProps}
                   size="sm"
                   onClick={() => setIsIntakeDialogOpen(true)}
                   className="h-7 shrink-0 cursor-pointer gap-1.5 self-start px-3 text-xs font-bold sm:self-auto"
@@ -437,6 +443,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
               </span>
               {canUpdate && (
                 <Button
+                  {...lockProps}
                   variant="ghost"
                   size="sm"
                   onClick={() => setIsIntakeDialogOpen(true)}
@@ -595,6 +602,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                   </span>
                   {canUpdate && uis.assessmentId && !uis.hasSocialCase && (
                     <Button
+                      {...lockProps}
                       variant="outline"
                       size="sm"
                       className="h-7 shrink-0 gap-1.5 text-xs font-semibold"
@@ -803,7 +811,9 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                                 {member.relationship || "—"}
                               </TableCell>
                               <TableCell>
-                                {member.age !== null ? `${member.age} yrs` : "—"}
+                                {member.age !== null
+                                  ? `${member.age} yrs`
+                                  : "—"}
                                 {member.sex ? ` · ${member.sex}` : ""}
                               </TableCell>
                               <TableCell>{member.civilStatus || "—"}</TableCell>
@@ -1054,6 +1064,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                   </div>
                   {canCreate && (
                     <Button
+                      {...lockProps}
                       size="sm"
                       onClick={() => setIsIntakeDialogOpen(true)}
                       className="cursor-pointer gap-1.5 text-xs font-semibold"
@@ -1286,6 +1297,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                 <>
                   {canUpdate && (
                     <Button
+                      {...lockProps}
                       variant="outline"
                       size="sm"
                       onClick={() => setIsIntakeDialogOpen(true)}
@@ -1323,6 +1335,7 @@ export const UisSheet: React.FC<UisSheetDialogProps> = ({
                 <>
                   {canCreate && (
                     <Button
+                      {...lockProps}
                       variant="default"
                       size="sm"
                       onClick={() => setIsIntakeDialogOpen(true)}

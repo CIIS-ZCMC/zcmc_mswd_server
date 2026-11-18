@@ -97,19 +97,19 @@ export const PatientContactDialog: React.FC<PatientContactDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full max-w-3xl p-7 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-3xl rounded-[20px] p-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Edit Contact &amp; Residence Information</DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogTitle className="text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">Edit Contact &amp; Residence Information</DialogTitle>
+          <DialogDescription className="text-[12px] text-[#5b6678] dark:text-muted-foreground">
             Update contact numbers and addresses recorded for {patient.fullName}.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-6 py-4 text-base">
+        <div className="grid gap-4 py-3 text-[13px]">
           <div>
-            <Label className="text-sm font-bold">Contact Number</Label>
+            <Label className="text-[12px] font-semibold text-[#5b6678] dark:text-muted-foreground">Contact Number</Label>
             <div className="mt-1 flex items-stretch">
-              <div className="inline-flex items-center rounded-l-md border border-r-0 border-input bg-muted/40 px-3 text-sm font-bold text-muted-foreground select-none">
+              <div className="inline-flex items-center rounded-l-[10px] border border-r-0 border-[#c6e8ee] bg-muted/40 px-3 text-[12px] font-semibold text-[#5b6678] select-none">
                 +63 -
               </div>
               <Input
@@ -121,11 +121,11 @@ export const PatientContactDialog: React.FC<PatientContactDialogProps> = ({
                 onChange={(e) =>
                   setContactNumber(extract10DigitPhPhone(e.target.value))
                 }
-                className="h-11 rounded-l-none font-mono text-base tracking-wider"
+                className="h-[40px] rounded-l-none rounded-r-[10px] border-[#c6e8ee] font-mono text-[13px] font-medium tracking-wider text-[#1b2433] dark:text-foreground"
               />
             </div>
             {contactNumber.length > 0 && !contactOk && (
-              <p className="mt-1 text-xs text-muted-foreground">
+              <p className="mt-1 text-[11px] text-destructive">
                 10-digit PH mobile number starting with 9 required ({contactNumber.length}/10)
               </p>
             )}
@@ -139,13 +139,14 @@ export const PatientContactDialog: React.FC<PatientContactDialogProps> = ({
             disabled={isSaving}
           />
 
-          <div className="flex flex-col gap-2.5 border-t pt-5">
+          <div className="flex flex-col gap-2.5 border-t border-[#e4e9f2] pt-4 dark:border-border">
             <div className="flex items-center justify-between">
-              <p className="text-xs font-medium">Permanent Address</p>
+              <p className="text-[12px] font-semibold text-[#5b6678] dark:text-muted-foreground">Permanent Address</p>
               <Button
                 type="button"
                 variant="ghost"
                 size="sm"
+                className="h-[28px] text-[12px] font-medium text-[#1f5fd6] hover:bg-[#edf3fe] dark:text-primary dark:hover:bg-muted"
                 disabled={isSaving || isPsgcAddressEmpty(present)}
                 onClick={() => setPermanent({ ...present })}
               >
@@ -161,7 +162,7 @@ export const PatientContactDialog: React.FC<PatientContactDialogProps> = ({
           </div>
 
           {!canSave && (
-            <p className="text-xs text-destructive">
+            <p className="text-[11px] text-destructive">
               Pick both a city or municipality and a barangay for each address, or
               clear it.
             </p>
@@ -170,12 +171,21 @@ export const PatientContactDialog: React.FC<PatientContactDialogProps> = ({
 
         <DialogFooter>
           <Button
-            size="lg"
-            className="h-11 text-base font-bold px-8"
+            type="button"
+            variant="outline"
+            className="h-[36px] rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
+            onClick={onClose}
+            disabled={isSaving}
+          >
+            Cancel
+          </Button>
+          <Button
+            type="button"
+            className="h-[36px] rounded-full bg-[#1f5fd6] px-[20px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
             disabled={isSaving || !canSave}
             onClick={handleSave}
           >
-            {isSaving ? <Spinner className="size-5" /> : "Save Contact Info"}
+            {isSaving ? <Spinner className="size-4" /> : "Save Contact Info"}
           </Button>
         </DialogFooter>
       </DialogContent>

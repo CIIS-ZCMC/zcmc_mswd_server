@@ -104,7 +104,7 @@ it('requires a known relationship code', function () {
 
 it("lists a patient's watchers with the cases they are assigned to", function () {
     $case = patientWatcherCase(['case_code' => 'CASE-1', 'admission_type' => 'inpatient']);
-    $assigned = assignWatcher(['case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse', 'is_primary' => true, 'added_by' => $this->worker->id]);
+    $assigned = assignWatcher(['case_id' => $case->id, 'name' => 'Maria', 'relationship' => 'spouse', 'is_primary' => true, 'pass_valid_until' => '2026-12-01', 'added_by' => $this->worker->id]);
     PatientWatcher::create(['patient_id' => $this->patient->id, 'name' => 'Unassigned', 'relationship_code' => 'friend']);
 
     $response = $this->getJson("/api/patients/{$this->patient->id}/watchers")->assertOk()->assertJsonCount(2, 'data');
@@ -113,6 +113,7 @@ it("lists a patient's watchers with the cases they are assigned to", function ()
     expect($maria['assignments'])->toHaveCount(1)
         ->and($maria['assignments'][0]['case_code'])->toBe('CASE-1')
         ->and($maria['assignments'][0]['is_primary'])->toBeTrue()
+        ->and($maria['assignments'][0]['pass_valid_until'])->toStartWith('2026-12-01')
         ->and($assigned->patient_watcher_id)->toBe($maria['id']);
 });
 

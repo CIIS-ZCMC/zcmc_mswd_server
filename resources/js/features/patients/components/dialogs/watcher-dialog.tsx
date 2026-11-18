@@ -243,12 +243,12 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="max-h-[90vh] w-full max-w-lg overflow-y-auto">
+      <DialogContent className="max-h-[90vh] w-full max-w-lg rounded-[20px] p-6 overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold">
+          <DialogTitle className="text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">
             {editingWatcher ? "Edit Watcher" : "Add Watcher"}
           </DialogTitle>
-          <DialogDescription className="text-xs">
+          <DialogDescription className="text-[12px] text-[#5b6678] dark:text-muted-foreground">
             {editingWatcher
               ? "Changes show on every case this watcher is assigned to."
               : "Register someone who watches over this patient. Assign them to an open case afterwards."}
@@ -396,11 +396,22 @@ export const WatcherDialog: React.FC<WatcherDialogProps> = ({
           </div>
         </div>
 
-        <DialogFooter className="gap-2">
-          <Button variant="outline" onClick={onClose} disabled={isSubmitting}>
+        <DialogFooter className="gap-2 pt-2">
+          <Button
+            type="button"
+            variant="outline"
+            className="h-[36px] rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
+            onClick={onClose}
+            disabled={isSubmitting}
+          >
             Cancel
           </Button>
-          <Button className="px-6 font-bold" onClick={handleSave} disabled={isSubmitting || !canSave}>
+          <Button
+            type="button"
+            className="h-[36px] rounded-full bg-[#1f5fd6] px-[20px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
+            onClick={handleSave}
+            disabled={isSubmitting || !canSave}
+          >
             {isSubmitting ? "Saving..." : editingWatcher ? "Update Watcher" : "Save Watcher"}
           </Button>
         </DialogFooter>

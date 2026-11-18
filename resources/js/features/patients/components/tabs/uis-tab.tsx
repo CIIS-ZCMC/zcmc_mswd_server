@@ -6,43 +6,9 @@ import {
   uisPrintKeys,
   patientUisKeys,
 } from "@/features/cases/hooks/use-uis-prints"
-import { printUisDirectly } from "@/features/cases/api/uis-print-api"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { useQueueActionGate } from "@/features/queue"
-import { Button } from "@/components/ui/button"
-import {
-  Card,
-  CardContent,
-  CardDescription,
-  CardHeader,
-  CardTitle,
-} from "@/components/ui/card"
-import { Badge } from "@/components/ui/badge"
-import { Input } from "@/components/ui/input"
-import {
-  Table,
-  TableBody,
-  TableCell,
-  TableHead,
-  TableHeader,
-  TableRow,
-} from "@/components/ui/table"
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuGroup,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu"
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select"
+import { Card, CardContent } from "@/components/ui/card"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
 import { Skeleton } from "@/components/ui/skeleton"
 import { UisSheet } from "../uis-sheet"
@@ -51,32 +17,11 @@ import { NewIntakeAssessmentDialog } from "@/features/cases/components/dialogs/n
 import { IntakeAssessmentDialog } from "@/features/cases/components/dialogs/intake-assessment-dialog"
 import { formatCurrency } from "@/lib/format-currency"
 import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
-import {
-  getBracketColor,
-  getClassificationBadgeText,
-} from "@/features/cases/lib/classification"
+import { getClassificationBadgeText } from "@/features/cases/lib/classification"
 import type { PatientRecord } from "../../types/patient.types"
 import type { PatientUisRow } from "@/features/cases/types/uis.types"
-import {
-  AlertCircle,
-  AlertTriangle,
-  CheckCircle2,
-  ClipboardPlus,
-  ChevronLeft,
-  ChevronRight,
-  Eye,
-  FileCheck2,
-  FileEdit,
-  FileText,
-  FolderPlus,
-  Loader2,
-  Lock,
-  MoreHorizontal,
-  Plus,
-  Printer,
-  Search,
-  X,
-} from "lucide-react"
+import { AlertCircle, Lock } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 interface UisTabProps {
   patient: PatientRecord
@@ -87,21 +32,24 @@ interface UisTabProps {
 /** How a row is named: its case, else its encounter. */
 const rowLabel = (row: PatientUisRow) =>
   row.case?.caseCode ??
-  (row.encounter.transactionId
-    ? `Encounter #${row.encounter.transactionId}`
-    : "Intake")
+  (row.encounter.transactionId ? `#${row.encounter.transactionId}` : "Intake")
 
-type StatusFilter = "all" | "ready" | "missing" | "unassessed"
+function isSameDayAsToday(dateStr?: string | null): boolean {
+  if (!dateStr) return false
+  const d = new Date(dateStr)
+  if (Number.isNaN(d.getTime())) return false
+  const now = new Date()
+  return (
+    d.getFullYear() === now.getFullYear() &&
+    d.getMonth() === now.getMonth() &&
+    d.getDate() === now.getDate()
+  )
+}
 
-export const UisTab: React.FC<UisTabProps> = ({
-  patient,
-  onOpenCaseNeeded,
-}) => {
+export const UisTab: React.FC<UisTabProps> = ({ patient }) => {
   const canView = usePermission("intake.view")
-  const canCreateCase = usePermission("cases.create")
   const canCreateAssessment = usePermission("intake.create")
-  const canUpdateAssessment = usePermission("cases.update")
-  const { canPerformActions, reason } = useQueueActionGate()
+  const { canPerformActions, reason, activeVisit } = useQueueActionGate()
   const [searchParams, setSearchParams] = useSearchParams()
 
   const { data: rows = [], isLoading, error } = usePatientUis(patient.id)
@@ -116,7 +64,7 @@ export const UisTab: React.FC<UisTabProps> = ({
   const [initialAssessOpen, setInitialAssessOpen] = useState<boolean>(false)
   const [initialPrintOpen, setInitialPrintOpen] = useState<boolean>(false)
 
-  // Direct assess / re-assess dialog state (opens IntakeAssessmentDialog directly without UisSheet)
+  // Direct assess / re-assess dialog state
   const [directAssessRow, setDirectAssessRow] = useState<PatientUisRow | null>(
     null
   )
@@ -126,47 +74,12 @@ export const UisTab: React.FC<UisTabProps> = ({
   }
 
   // Direct print preview state
-  const [previewTargetRow, setPreviewTargetRow] =
-    useState<PatientUisRow | null>(null)
+  const [previewTargetRow] = useState<PatientUisRow | null>(null)
   const [isPreviewOpen, setIsPreviewOpen] = useState<boolean>(false)
 
-  const handleOpenPrintPreview = (row: PatientUisRow) => {
-    setPreviewTargetRow(row)
-    setIsPreviewOpen(true)
-  }
-
-  // Direct native print state
-  const [printingRowKey, setPrintingRowKey] = useState<string | null>(null)
   const queryClient = useQueryClient()
 
-  const handleDirectPrint = async (row: PatientUisRow) => {
-    setPrintingRowKey(row.key)
-    const target = row.uis.assessmentId
-      ? { assessmentId: row.uis.assessmentId }
-      : { caseId: row.case?.id ?? 0 }
-
-    try {
-      await printUisDirectly(target, {
-        blank: !row.uis.hasAssessment,
-      })
-      queryClient.invalidateQueries({ queryKey: uisPrintKeys.all })
-      queryClient.invalidateQueries({ queryKey: patientUisKeys.all })
-    } catch (err) {
-      console.error("Failed to print UIS:", err)
-    } finally {
-      setPrintingRowKey(null)
-    }
-  }
-
-  // Search, Filter & Pagination state
-  const [searchTerm, setSearchTerm] = useState("")
-  const [statusFilter, setStatusFilter] = useState<StatusFilter>("all")
-  const [currentPage, setCurrentPage] = useState(1)
-  const [pageSize, setPageSize] = useState(10)
-
-  // Keep modal open/close synchronized if searchParams change externally. Closing
-  // matters for a link out of the sheet (to the Socio-economic tab) that takes
-  // `uis` out of the URL: the dialog must not stay open over the other tab.
+  // Keep modal open/close synchronized if searchParams change externally.
   useEffect(() => {
     if (uisParam) {
       setSelectedKey(uisParam)
@@ -175,26 +88,6 @@ export const UisTab: React.FC<UisTabProps> = ({
       setIsModalOpen(false)
     }
   }, [uisParam])
-
-  // Reset pagination when search or status filters change
-  useEffect(() => {
-    setCurrentPage(1)
-  }, [searchTerm, statusFilter, pageSize])
-
-  // Quick stats summary
-  const stats = useMemo(() => {
-    const totalEpisodes = rows.length
-    const readyToPrint = rows.filter((r) => r.uis.ready).length
-    const incomplete = rows.filter(
-      (r) => !r.uis.ready && r.uis.hasAssessment
-    ).length
-    const unassessed = rows.filter((r) => !r.uis.hasAssessment).length
-    const totalPrints = rows.reduce(
-      (sum, r) => sum + (r.uis.printCount || 0),
-      0
-    )
-    return { totalEpisodes, readyToPrint, incomplete, unassessed, totalPrints }
-  }, [rows])
 
   // Selected row for sheet view modal
   const selectedRow = useMemo<PatientUisRow | null>(() => {
@@ -216,48 +109,6 @@ export const UisTab: React.FC<UisTabProps> = ({
         .map((r) => r.encounter.transactionId as number),
     [rows]
   )
-
-  // Filtered rows for table view
-  const filteredRows = useMemo(() => {
-    return rows.filter((row) => {
-      // 1. Search filter (case code, transaction type, classification)
-      if (searchTerm.trim()) {
-        const query = searchTerm.toLowerCase().trim()
-        const codeMatch = rowLabel(row).toLowerCase().includes(query)
-        const typeMatch = formatTransactionType(row.encounter.transactionType)
-          .toLowerCase()
-          .includes(query)
-        const classMatch = (
-          row.uis.classification?.classification ||
-          row.uis.classification?.calculatedClassification ||
-          row.uis.assessment?.classification ||
-          ""
-        )
-          .toLowerCase()
-          .includes(query)
-
-        if (!codeMatch && !typeMatch && !classMatch) return false
-      }
-
-      // 2. Status filter
-      if (statusFilter === "ready") {
-        if (!row.uis.ready) return false
-      } else if (statusFilter === "missing") {
-        if (row.uis.ready || !row.uis.hasAssessment) return false
-      } else if (statusFilter === "unassessed") {
-        if (row.uis.hasAssessment) return false
-      }
-
-      return true
-    })
-  }, [rows, searchTerm, statusFilter])
-
-  // Paginated rows
-  const totalPages = Math.max(1, Math.ceil(filteredRows.length / pageSize))
-  const paginatedRows = useMemo(() => {
-    const start = (currentPage - 1) * pageSize
-    return filteredRows.slice(start, start + pageSize)
-  }, [filteredRows, currentPage, pageSize])
 
   const handleOpenSheetModal = (
     row: PatientUisRow,
@@ -318,14 +169,7 @@ export const UisTab: React.FC<UisTabProps> = ({
   if (isLoading) {
     return (
       <div className="space-y-4">
-        <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-          <Skeleton className="h-20 rounded-xl" />
-        </div>
-        <Skeleton className="h-10 w-64 rounded-lg" />
-        <Skeleton className="h-64 w-full rounded-xl" />
+        <Skeleton className="h-[260px] w-full rounded-[16px]" />
       </div>
     )
   }
@@ -353,688 +197,255 @@ export const UisTab: React.FC<UisTabProps> = ({
     />
   )
 
-  if (rows.length === 0) {
-    return (
-      <Card className="space-y-4 border border-dashed border-border/80 p-8 text-center shadow-none sm:p-12">
-        <div className="mx-auto flex size-14 items-center justify-center rounded-2xl bg-muted text-muted-foreground">
-          <ClipboardPlus className="size-7 opacity-70" />
-        </div>
-        <div className="mx-auto max-w-md space-y-1.5">
-          <h3 className="text-base font-bold text-foreground sm:text-lg">
-            No Intake Assessments Yet
-          </h3>
-          <p className="text-xs text-muted-foreground sm:text-sm">
-            A Unified Intake Sheet (ANNEX B) is the intake assessment of one
-            hospital encounter. Take one for this patient&apos;s encounter; no
-            case is needed.
-          </p>
-        </div>
-        {canCreateAssessment && (
-          <div className="pt-2">
-            <Button
+  return (
+    <div className="w-full">
+      {/* Figma Node 202:1803 — Intake sheets (ANNEX B) Card */}
+      <div
+        data-node-id="202:1803"
+        className="flex w-full flex-col overflow-hidden rounded-[16px] border border-[#e4e9f2] bg-white shadow-[0px_1px_1px_rgba(12,42,91,0.04),0px_2px_3px_rgba(12,42,91,0.05)] dark:border-border dark:bg-card"
+      >
+        {/* Card Header (202:1804) */}
+        <div
+          data-node-id="202:1804"
+          className="flex flex-wrap items-center justify-between gap-[12px] border-b border-[#e4e9f2] px-[22px] pt-[18px] pb-[15px] dark:border-border"
+        >
+          <div className="flex min-w-0 flex-1 items-center gap-[12px]">
+            <span className="flex size-[34px] shrink-0 items-center justify-center rounded-[17px] bg-[#edf3fe]">
+              <img
+                alt=""
+                className="block size-[20px] max-w-none"
+                src="/images/patient-registry/intake-sheets-header.svg"
+              />
+            </span>
+            <div className="flex min-w-0 flex-1 flex-col">
+              <h2 className="truncate text-[16px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground">
+                Intake sheets (ANNEX B)
+              </h2>
+              <p className="truncate text-[13px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
+                One per hospital encounter · classification, guarantors and
+                prints
+              </p>
+            </div>
+          </div>
+
+          {canCreateAssessment && (
+            <button
+              type="button"
+              data-node-id="202:1815"
               disabled={!canPerformActions}
               title={!canPerformActions ? reason : undefined}
               onClick={() => setIsNewIntakeOpen(true)}
-              className="cursor-pointer gap-2 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+              className="flex h-[38px] shrink-0 cursor-pointer items-center gap-[6px] rounded-full border border-[#cfd7e4] bg-white px-[16px] text-[13px] leading-normal font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] disabled:cursor-not-allowed disabled:opacity-50 dark:border-border dark:bg-card dark:text-foreground"
             >
-              <ClipboardPlus className="size-4" />
-              New Intake Assessment
-            </Button>
-          </div>
-        )}
-        {newIntakeDialog}
-      </Card>
-    )
-  }
-
-  return (
-    <div className="space-y-4">
-      {/* Metric KPI Summary Cards with Quick Filter functionality */}
-      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-        {/* Total Episodes */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() => setStatusFilter("all")}
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              setStatusFilter("all")
-            }
-          }}
-          className={`cursor-pointer rounded-xl border p-3.5 transition-all duration-150 ${
-            statusFilter === "all"
-              ? "border-primary/60 bg-card shadow-xs ring-1 ring-primary/30"
-              : "border-border/80 bg-card/70 hover:border-border hover:bg-card"
-          }`}
-        >
-          <div className="mb-1 flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-bold tracking-wider uppercase">
-              All Intakes
-            </span>
-            <FileText className="size-4 text-primary" />
-          </div>
-          <div className="font-mono text-xl font-bold text-foreground">
-            {stats.totalEpisodes}
-          </div>
-          <div className="mt-0.5 text-[11px] text-muted-foreground">
-            {stats.totalEpisodes === 1
-              ? "Hospital encounter"
-              : "Hospital encounters"}
-          </div>
+              <img
+                alt=""
+                className="block size-[18px] max-w-none"
+                src="/images/patient-registry/intake-plus.svg"
+              />
+              <span>New intake</span>
+            </button>
+          )}
         </div>
 
-        {/* Ready to Print */}
+        {/* Card Body (202:1820) */}
         <div
-          role="button"
-          tabIndex={0}
-          onClick={() =>
-            setStatusFilter(statusFilter === "ready" ? "all" : "ready")
-          }
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              setStatusFilter(statusFilter === "ready" ? "all" : "ready")
-            }
-          }}
-          className={`cursor-pointer rounded-xl border p-3.5 transition-all duration-150 ${
-            statusFilter === "ready"
-              ? "border-emerald-500/60 bg-emerald-500/10 shadow-xs ring-1 ring-emerald-500/30"
-              : "border-border/80 bg-card/70 hover:border-border hover:bg-card"
-          }`}
+          data-node-id="202:1820"
+          className="flex flex-col gap-[8px] px-[22px] pt-[14px] pb-[20px]"
         >
-          <div className="mb-1 flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-bold tracking-wider text-emerald-600 uppercase dark:text-emerald-400">
-              Ready to Print
-            </span>
-            <CheckCircle2 className="size-4 text-emerald-600 dark:text-emerald-400" />
+          {/* Column Header Bar (202:1821) */}
+          <div
+            data-node-id="202:1821"
+            className="grid grid-cols-[1.6fr_0.8fr_1.1fr_1.5fr_0.7fr_86px] items-center gap-[12px] rounded-[10px] bg-[#f4f7fc] px-[14px] py-[10px] text-[12px] leading-[15px] font-bold text-[#5b6678] dark:bg-muted/50 dark:text-muted-foreground"
+          >
+            <div>Encounter</div>
+            <div>Class</div>
+            <div>ANNEX B</div>
+            <div>Guarantors</div>
+            <div>Prints</div>
+            <div />
           </div>
-          <div className="font-mono text-xl font-bold text-emerald-600 dark:text-emerald-400">
-            {stats.readyToPrint}
-          </div>
-          <div className="mt-0.5 text-[11px] text-muted-foreground">
-            ANNEX B complete
-          </div>
-        </div>
 
-        {/* Incomplete / Missing Info */}
-        <div
-          role="button"
-          tabIndex={0}
-          onClick={() =>
-            setStatusFilter(statusFilter === "missing" ? "all" : "missing")
-          }
-          onKeyDown={(e) => {
-            if (e.key === "Enter" || e.key === " ") {
-              e.preventDefault()
-              setStatusFilter(statusFilter === "missing" ? "all" : "missing")
-            }
-          }}
-          className={`cursor-pointer rounded-xl border p-3.5 transition-all duration-150 ${
-            statusFilter === "missing"
-              ? "border-amber-500/60 bg-amber-500/10 shadow-xs ring-1 ring-amber-500/30"
-              : "border-border/80 bg-card/70 hover:border-border hover:bg-card"
-          }`}
-        >
-          <div className="mb-1 flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-bold tracking-wider text-amber-600 uppercase dark:text-amber-400">
-              Needs Attention
-            </span>
-            <AlertTriangle className="size-4 text-amber-600 dark:text-amber-400" />
-          </div>
-          <div className="font-mono text-xl font-bold text-amber-600 dark:text-amber-400">
-            {stats.incomplete + stats.unassessed}
-          </div>
-          <div className="mt-0.5 text-[11px] text-muted-foreground">
-            {stats.incomplete} missing · {stats.unassessed} unassessed
-          </div>
-        </div>
+          {/* Rows Container (202:1833) */}
+          <div data-node-id="202:1833" className="flex flex-col gap-[4px]">
+            {rows.length === 0 ? (
+              <div className="flex flex-col items-center justify-center gap-2 rounded-[12px] border border-dashed border-[#e4e9f2] py-10 text-center dark:border-border">
+                <p className="text-[14px] font-semibold text-[#0c2a5b] dark:text-foreground">
+                  No intake sheets recorded yet
+                </p>
+                <p className="max-w-md text-[12px] text-[#5b6678] dark:text-muted-foreground">
+                  Click &ldquo;New intake&rdquo; above to record an intake
+                  assessment (ANNEX B) for a hospital encounter.
+                </p>
+              </div>
+            ) : (
+              rows.map((row, idx) => {
+                const encounterDate =
+                  row.encounter.date ?? row.case?.dateOpened ?? null
+                const dateStr = encounterDate
+                  ? new Date(encounterDate).toLocaleDateString("en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })
+                  : "—"
+                const typeStr = formatTransactionType(
+                  row.encounter.transactionType ?? row.case?.transactionType
+                )
+                const classCode =
+                  row.uis.classification?.classification ||
+                  row.uis.classification?.calculatedClassification ||
+                  row.uis.assessment?.classification ||
+                  null
 
-        {/* Total Printed */}
-        <div className="rounded-xl border border-border/80 bg-card/70 p-3.5">
-          <div className="mb-1 flex items-center justify-between text-muted-foreground">
-            <span className="text-[11px] font-bold tracking-wider uppercase">
-              Total Prints
-            </span>
-            <Printer className="size-4 text-blue-600 dark:text-blue-400" />
-          </div>
-          <div className="font-mono text-xl font-bold text-foreground">
-            {stats.totalPrints}
-          </div>
-          <div className="mt-0.5 text-[11px] text-muted-foreground">
-            ANNEX B copies printed
+                const isTodayEncounter =
+                  (activeVisit != null &&
+                    row.encounter.transactionId != null &&
+                    Number(row.encounter.transactionId) ===
+                      Number(activeVisit.hisTransactionId)) ||
+                  isSameDayAsToday(encounterDate) ||
+                  (idx === 0 && !row.uis.hasAssessment)
+
+                const encounterDisplay = row.encounter.transactionId
+                  ? `#${row.encounter.transactionId}`
+                  : rowLabel(row)
+
+                return (
+                  <div
+                    key={row.key}
+                    data-node-id={isTodayEncounter ? "202:1834" : "202:1866"}
+                    className={cn(
+                      "grid grid-cols-[1.6fr_0.8fr_1.1fr_1.5fr_0.7fr_86px] items-center gap-[12px] rounded-[12px] px-[14px] py-[12px] transition-colors",
+                      isTodayEncounter
+                        ? "border border-[#d9e6fc] bg-[#edf3fe] dark:border-primary/30 dark:bg-primary/10"
+                        : "border border-transparent bg-white hover:bg-[#f4f7fc]/60 dark:bg-card dark:hover:bg-muted/40"
+                    )}
+                  >
+                    {/* 1. Encounter */}
+                    <div className="flex min-w-0 flex-col gap-[2px]">
+                      <div className="flex flex-wrap items-center gap-[8px]">
+                        <span className="font-mono text-[13px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground">
+                          {encounterDisplay}
+                        </span>
+                        {isTodayEncounter && (
+                          <span className="inline-flex h-[18px] items-center rounded-full bg-[#1f5fd6] px-[6px] text-[10px] leading-normal font-bold text-white">
+                            Today
+                          </span>
+                        )}
+                      </div>
+                      <span className="truncate text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
+                        {dateStr} · {typeStr}
+                      </span>
+                    </div>
+
+                    {/* 2. Class */}
+                    <div className="flex items-center">
+                      {row.uis.hasAssessment && classCode ? (
+                        <span className="inline-flex h-[22px] items-center rounded-full bg-[#e8f6ef] px-[9px] text-[11px] leading-[22px] font-bold text-[#146b43]">
+                          {getClassificationBadgeText(classCode)}
+                        </span>
+                      ) : (
+                        <span className="inline-flex h-[22px] items-center rounded-full bg-[#eef1f6] px-[9px] text-[11px] leading-[22px] font-bold text-[#4a5568]">
+                          —
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 3. ANNEX B */}
+                    <div className="flex items-center">
+                      {row.uis.ready ? (
+                        <span className="inline-flex items-center gap-[6px] text-[13px] leading-normal font-semibold text-[#146b43]">
+                          <img
+                            alt=""
+                            className="block size-[14px] max-w-none shrink-0"
+                            src="/images/patient-registry/intake-complete.svg"
+                          />
+                          <span>Complete</span>
+                        </span>
+                      ) : row.uis.hasAssessment ? (
+                        <span className="inline-flex items-center gap-[6px] text-[13px] leading-normal font-semibold text-[#8a5300]">
+                          <img
+                            alt=""
+                            className="block size-[14px] max-w-none shrink-0"
+                            src="/images/patient-registry/intake-not-started.svg"
+                          />
+                          <span>{row.uis.missing.length} missing</span>
+                        </span>
+                      ) : (
+                        <span className="inline-flex items-center gap-[6px] text-[13px] leading-normal font-semibold text-[#5b6678] dark:text-muted-foreground">
+                          <img
+                            alt=""
+                            className="block size-[14px] max-w-none shrink-0"
+                            src="/images/patient-registry/intake-not-started.svg"
+                          />
+                          <span>Not started</span>
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 4. Guarantors */}
+                    <div className="flex flex-wrap items-center gap-[6px]">
+                      {row.guarantees.count > 0 ? (
+                        <>
+                          <span className="text-[13px] leading-[19.5px] text-[#0c2a5b] dark:text-foreground">
+                            <strong className="font-bold">
+                              {row.guarantees.count === 1
+                                ? "MAIFIP"
+                                : `${row.guarantees.count} Guarantors`}
+                            </strong>{" "}
+                            <span className="font-normal">
+                              {formatCurrency(row.guarantees.total)}
+                            </span>
+                          </span>
+                          {row.uis.printCount > 0 && (
+                            <span className="inline-flex h-[22px] items-center gap-[4px] rounded-full bg-[#e8f6ef] px-[9px] text-[11px] leading-[22px] font-bold text-[#146b43]">
+                              <img
+                                alt=""
+                                className="block size-[12px] max-w-none shrink-0"
+                                src="/images/patient-registry/intake-printed-badge.svg"
+                              />
+                              <span>Printed</span>
+                            </span>
+                          )}
+                        </>
+                      ) : (
+                        <span className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
+                          None yet
+                        </span>
+                      )}
+                    </div>
+
+                    {/* 5. Prints */}
+                    <div className="flex items-center gap-[4px] text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
+                      <img
+                        alt=""
+                        className="block size-[13px] max-w-none shrink-0"
+                        src="/images/patient-registry/intake-print.svg"
+                      />
+                      <span>{row.uis.printCount || 0}</span>
+                    </div>
+
+                    {/* 6. Open Button */}
+                    <div className="flex items-center justify-end">
+                      <button
+                        type="button"
+                        onClick={() => handleOpenSheetModal(row)}
+                        className="inline-flex h-[34px] w-[86px] cursor-pointer items-center justify-center gap-[6px] rounded-full border border-[#cfd7e4] bg-white px-[14px] text-[13px] leading-normal font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] dark:border-border dark:bg-card dark:text-foreground"
+                      >
+                        <span>Open</span>
+                        <img
+                          alt=""
+                          className="block size-[16px] max-w-none shrink-0"
+                          src="/images/patient-registry/intake-open-chevron.svg"
+                        />
+                      </button>
+                    </div>
+                  </div>
+                )
+              })
+            )}
           </div>
         </div>
       </div>
-
-      {/* Table Card View */}
-      <Card className="border border-border/80 shadow-xs">
-        <CardHeader className="flex flex-col justify-between gap-4 border-b border-border/50 p-4 sm:p-5 md:flex-row md:items-center">
-          <div>
-            <CardTitle className="flex items-center gap-2 text-base font-bold sm:text-lg">
-              <FileCheck2 className="size-5 text-primary" />
-              Unified Intake Sheets (ANNEX B)
-              <Badge
-                variant="secondary"
-                className="ml-1 px-2 py-0.5 font-mono text-xs font-bold"
-              >
-                {rows.length} {rows.length === 1 ? "encounter" : "encounters"}
-              </Badge>
-            </CardTitle>
-            <CardDescription className="mt-1 text-xs text-muted-foreground">
-              Intake assessments of each hospital encounter, with or without a
-              case: MSWD classification, guarantors and printable ANNEX B forms.
-            </CardDescription>
-          </div>
-
-          {/* Search, Filter and Actions Toolbar */}
-          <div className="flex flex-wrap items-center gap-2.5">
-            <div className="relative w-full sm:w-60">
-              <Search className="absolute top-1/2 left-3 size-3.5 -translate-y-1/2 text-muted-foreground" />
-              <Input
-                placeholder="Search case, encounter, type..."
-                value={searchTerm}
-                onChange={(e) => setSearchTerm(e.target.value)}
-                className="h-9 w-full pl-8 text-xs"
-              />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => setSearchTerm("")}
-                  className="absolute top-1/2 right-2.5 -translate-y-1/2 cursor-pointer text-muted-foreground hover:text-foreground"
-                  title="Clear search"
-                >
-                  <X className="size-3" />
-                </button>
-              )}
-            </div>
-
-            <div className="w-36">
-              <Select
-                value={statusFilter}
-                onValueChange={(val) => setStatusFilter(val as StatusFilter)}
-              >
-                <SelectTrigger className="h-9 text-xs">
-                  <SelectValue placeholder="All Status" />
-                </SelectTrigger>
-                <SelectContent>
-                  <SelectItem value="all" className="text-xs">
-                    All Status ({rows.length})
-                  </SelectItem>
-                  <SelectItem value="ready" className="text-xs">
-                    Ready to Print ({stats.readyToPrint})
-                  </SelectItem>
-                  <SelectItem value="missing" className="text-xs">
-                    Missing Info ({stats.incomplete})
-                  </SelectItem>
-                  <SelectItem value="unassessed" className="text-xs">
-                    Unassessed ({stats.unassessed})
-                  </SelectItem>
-                </SelectContent>
-              </Select>
-            </div>
-
-            {canCreateAssessment && (
-              <Button
-                size="sm"
-                disabled={!canPerformActions}
-                title={!canPerformActions ? reason : undefined}
-                onClick={() => setIsNewIntakeOpen(true)}
-                className="h-9 cursor-pointer gap-1.5 text-xs font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
-              >
-                <ClipboardPlus className="size-3.5" />
-                New Intake Assessment
-              </Button>
-            )}
-          </div>
-        </CardHeader>
-
-        <CardContent className="p-0">
-          <div className="overflow-x-auto">
-            <Table className="text-xs">
-              <TableHeader>
-                <TableRow className="border-b border-border/60 bg-muted/40 hover:bg-muted/40">
-                  <TableHead className="py-3.5 pl-4 font-bold text-foreground">
-                    Encounter
-                  </TableHead>
-                  <TableHead className="py-3.5 font-bold text-foreground">
-                    Case
-                  </TableHead>
-                  <TableHead className="py-3.5 font-bold text-foreground">
-                    MSWD Classification
-                  </TableHead>
-                  <TableHead className="py-3.5 font-bold text-foreground">
-                    Assessment &amp; Status
-                  </TableHead>
-                  <TableHead className="py-3.5 text-right font-bold text-foreground">
-                    Guarantors
-                  </TableHead>
-                  <TableHead className="py-3.5 text-center font-bold text-foreground">
-                    Prints
-                  </TableHead>
-                  <TableHead className="py-3.5 pr-4 text-right font-bold text-foreground">
-                    Actions
-                  </TableHead>
-                </TableRow>
-              </TableHeader>
-              <TableBody>
-                {filteredRows.length === 0 ? (
-                  <TableRow>
-                    <TableCell
-                      colSpan={8}
-                      className="space-y-2 py-12 text-center text-muted-foreground"
-                    >
-                      <p className="text-sm font-medium">
-                        No intake sheets match your criteria.
-                      </p>
-                      {searchTerm || statusFilter !== "all" ? (
-                        <Button
-                          variant="outline"
-                          size="sm"
-                          onClick={() => {
-                            setSearchTerm("")
-                            setStatusFilter("all")
-                          }}
-                          className="h-8 cursor-pointer text-xs"
-                        >
-                          Clear filters
-                        </Button>
-                      ) : null}
-                    </TableCell>
-                  </TableRow>
-                ) : (
-                  paginatedRows.map((row) => {
-                    const encounterDate =
-                      row.encounter.date ?? row.case?.dateOpened ?? null
-                    const dateStr = encounterDate
-                      ? new Date(encounterDate).toLocaleDateString(undefined, {
-                          month: "short",
-                          day: "numeric",
-                          year: "numeric",
-                        })
-                      : "—"
-                    const typeStr = formatTransactionType(
-                      row.encounter.transactionType ?? row.case?.transactionType
-                    )
-                    const classCode =
-                      row.uis.classification?.classification ||
-                      row.uis.classification?.calculatedClassification ||
-                      row.uis.assessment?.classification ||
-                      null
-
-                    return (
-                      <TableRow
-                        key={row.key}
-                        className="transition-colors hover:bg-muted/40"
-                      >
-                        {/* Encounter: type and date */}
-                        <TableCell className="py-3.5 pl-4">
-                          <div className="font-medium text-foreground">
-                            {typeStr}
-                          </div>
-                          <div className="font-mono text-[11px] text-muted-foreground">
-                            {dateStr}
-                            {row.encounter.transactionId
-                              ? ` · #${row.encounter.transactionId}`
-                              : ""}
-                          </div>
-                        </TableCell>
-
-                        {/* Case, if one was opened on the encounter */}
-                        <TableCell className="py-3.5 font-mono text-xs font-bold">
-                          {row.case ? (
-                            <div className="flex items-center gap-2">
-                              <span className="text-primary">
-                                {row.case.caseCode}
-                              </span>
-                              {row.uis.hasSocialCase && (
-                                <Badge
-                                  variant="outline"
-                                  className="gap-0.5 bg-muted px-1 py-0 text-[10px] text-muted-foreground"
-                                >
-                                  <Lock className="size-2.5" /> SCSR
-                                </Badge>
-                              )}
-                            </div>
-                          ) : onOpenCaseNeeded && canCreateCase ? (
-                            <Button
-                              variant="ghost"
-                              size="sm"
-                              onClick={() =>
-                                onOpenCaseNeeded(row.encounter.transactionId)
-                              }
-                              className="h-7 cursor-pointer gap-1 px-2 font-sans text-xs font-medium text-muted-foreground hover:text-foreground"
-                            >
-                              <FolderPlus className="size-3.5 text-primary" />
-                              Open Case
-                            </Button>
-                          ) : (
-                            <span className="font-sans font-normal text-muted-foreground">
-                              No case
-                            </span>
-                          )}
-                        </TableCell>
-
-                        {/* MSWD Classification */}
-                        <TableCell className="py-3.5">
-                          {row.uis.hasAssessment ? (
-                            <Badge
-                              className={`px-2 py-0.5 text-[11px] font-bold uppercase ${getBracketColor(
-                                classCode
-                              )}`}
-                            >
-                              {getClassificationBadgeText(classCode)}
-                            </Badge>
-                          ) : (
-                            <Badge
-                              variant="outline"
-                              className="px-2 py-0.5 text-[11px] text-muted-foreground"
-                            >
-                              Unassessed
-                            </Badge>
-                          )}
-                        </TableCell>
-
-                        {/* Assessment & Readiness Status */}
-                        <TableCell className="py-3.5">
-                          {row.uis.ready ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-semibold text-emerald-600 dark:text-emerald-400">
-                              <CheckCircle2 className="size-3.5 shrink-0" />
-                              Ready to print (ANNEX B complete)
-                            </span>
-                          ) : row.uis.hasAssessment ? (
-                            <span className="inline-flex items-center gap-1.5 text-xs font-medium text-amber-600 dark:text-amber-400">
-                              <AlertTriangle className="size-3.5 shrink-0" />
-                              {row.uis.missing.length} missing section(s)
-                            </span>
-                          ) : (
-                            <span className="text-xs text-muted-foreground">
-                              No assessment conducted
-                            </span>
-                          )}
-                        </TableCell>
-
-                        {/* Guarantors on the encounter */}
-                        <TableCell className="py-3.5 text-right font-mono">
-                          {row.guarantees.count > 0 ? (
-                            <span className="font-semibold text-foreground">
-                              {formatCurrency(row.guarantees.total)}
-                              <span className="ml-1 font-sans text-[11px] font-normal text-muted-foreground">
-                                ({row.guarantees.count})
-                              </span>
-                            </span>
-                          ) : (
-                            <span className="text-muted-foreground/60">—</span>
-                          )}
-                        </TableCell>
-
-                        {/* Print Count */}
-                        <TableCell className="py-3.5 text-center font-mono">
-                          {row.uis.printCount > 0 ? (
-                            <Badge
-                              variant="secondary"
-                              className="gap-1 font-mono text-xs font-bold"
-                            >
-                              <Printer className="size-3" />
-                              {row.uis.printCount}
-                            </Badge>
-                          ) : (
-                            <span className="text-muted-foreground/60">—</span>
-                          )}
-                        </TableCell>
-
-                        {/* Actions */}
-                        <TableCell className="py-3.5 pr-4 text-right whitespace-nowrap">
-                          <div className="flex items-center justify-end gap-1.5">
-                            {/* Primary View Sheet Button (Opens Sub-Tabs Modal) */}
-                            <Button
-                              variant="outline"
-                              size="sm"
-                              onClick={() => handleOpenSheetModal(row)}
-                              className="h-8 cursor-pointer gap-1.5 px-2.5 text-xs font-semibold"
-                            >
-                              <Eye className="size-3.5 text-primary" />
-                              View Details
-                            </Button>
-
-                            {/* Quick Action Button */}
-                            {row.uis.hasAssessment ? (
-                              <>
-                                {canUpdateAssessment && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={!canPerformActions}
-                                    title={!canPerformActions ? reason : "Assess / Re-Assess"}
-                                    onClick={() => handleOpenAssessDialog(row)}
-                                    className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
-                                  >
-                                    <FileEdit className="size-3.5 text-primary" />
-                                    <span className="hidden md:inline">
-                                      Assess / Re-Assess
-                                    </span>
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={printingRowKey === row.key}
-                                  onClick={() => handleDirectPrint(row)}
-                                  className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
-                                  title="Print Unified Intake Sheet"
-                                >
-                                  {printingRowKey === row.key ? (
-                                    <Loader2 className="size-3.5 animate-spin text-primary" />
-                                  ) : (
-                                    <Printer className="size-3.5" />
-                                  )}
-                                  <span className="hidden md:inline">
-                                    {printingRowKey === row.key
-                                      ? "Printing…"
-                                      : "Print"}
-                                  </span>
-                                </Button>
-                              </>
-                            ) : (
-                              <>
-                                {canCreateAssessment && (
-                                  <Button
-                                    variant="ghost"
-                                    size="sm"
-                                    disabled={!canPerformActions}
-                                    title={!canPerformActions ? reason : "Conduct Assessment"}
-                                    onClick={() => handleOpenAssessDialog(row)}
-                                    className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
-                                  >
-                                    <Plus className="size-3.5 text-primary" />
-                                    <span className="hidden md:inline">
-                                      Assess
-                                    </span>
-                                  </Button>
-                                )}
-                                <Button
-                                  variant="ghost"
-                                  size="sm"
-                                  disabled={printingRowKey === row.key}
-                                  onClick={() => handleDirectPrint(row)}
-                                  className="hidden h-8 cursor-pointer gap-1 px-2 text-xs font-medium text-muted-foreground hover:text-foreground disabled:opacity-50 disabled:cursor-not-allowed sm:inline-flex"
-                                  title="Print Blank UIS Form"
-                                >
-                                  {printingRowKey === row.key ? (
-                                    <Loader2 className="size-3.5 animate-spin text-primary" />
-                                  ) : (
-                                    <Printer className="size-3.5" />
-                                  )}
-                                  <span className="hidden md:inline">
-                                    {printingRowKey === row.key
-                                      ? "Printing…"
-                                      : "Print Blank"}
-                                  </span>
-                                </Button>
-                              </>
-                            )}
-
-                            {/* Overflow Menu */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                className="inline-flex size-8 cursor-pointer items-center justify-center rounded-md p-0 text-muted-foreground hover:bg-muted hover:text-foreground focus:ring-1 focus:ring-primary focus:outline-none"
-                                aria-label={`Actions for ${rowLabel(row)}`}
-                              >
-                                <MoreHorizontal className="size-4" />
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent
-                                align="end"
-                                className="w-52 text-xs"
-                              >
-                                <DropdownMenuGroup>
-                                  <DropdownMenuLabel className="text-[11px] font-bold text-muted-foreground">
-                                    Actions for {rowLabel(row)}
-                                  </DropdownMenuLabel>
-                                </DropdownMenuGroup>
-                                <DropdownMenuSeparator />
-
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenSheetModal(row)}
-                                  className="cursor-pointer gap-2 font-medium"
-                                >
-                                  <Eye className="size-3.5 text-primary" />
-                                  View Details (Modal)
-                                </DropdownMenuItem>
-
-                                {(row.uis.hasAssessment
-                                  ? canUpdateAssessment
-                                  : canCreateAssessment) && (
-                                  <DropdownMenuItem
-                                    onClick={() => handleOpenAssessDialog(row)}
-                                    disabled={!canPerformActions}
-                                    className="cursor-pointer gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    {row.uis.hasAssessment ? (
-                                      <>
-                                        <FileEdit className="size-3.5 text-primary" />
-                                        Assess / Re-Assess
-                                      </>
-                                    ) : (
-                                      <>
-                                        <Plus className="size-3.5 text-primary" />
-                                        Conduct Assessment
-                                      </>
-                                    )}
-                                  </DropdownMenuItem>
-                                )}
-
-                                <DropdownMenuItem
-                                  onClick={() => handleDirectPrint(row)}
-                                  disabled={printingRowKey === row.key}
-                                  className="cursor-pointer gap-2 disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  {printingRowKey === row.key ? (
-                                    <Loader2 className="size-3.5 animate-spin text-primary" />
-                                  ) : (
-                                    <Printer className="size-3.5" />
-                                  )}
-                                  {row.uis.hasAssessment
-                                    ? "Print (System Dialog)"
-                                    : "Print Blank Form"}
-                                </DropdownMenuItem>
-
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenPrintPreview(row)}
-                                  className="cursor-pointer gap-2"
-                                >
-                                  <FileText className="size-3.5 text-muted-foreground" />
-                                  Preview on Screen
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })
-                )}
-              </TableBody>
-            </Table>
-          </div>
-
-          {/* Pagination Controls */}
-          {filteredRows.length > 0 && (
-            <div className="flex flex-col items-center justify-between gap-3 border-t border-border/60 bg-muted/15 p-3.5 text-xs text-muted-foreground sm:flex-row sm:px-5">
-              <div>
-                Showing{" "}
-                <strong className="text-foreground">
-                  {(currentPage - 1) * pageSize + 1}
-                </strong>{" "}
-                to{" "}
-                <strong className="text-foreground">
-                  {Math.min(currentPage * pageSize, filteredRows.length)}
-                </strong>{" "}
-                of{" "}
-                <strong className="text-foreground">
-                  {filteredRows.length}
-                </strong>{" "}
-                encounters
-              </div>
-
-              <div className="flex items-center gap-3">
-                <div className="flex items-center gap-1.5">
-                  <span className="text-[11px]">Rows per page:</span>
-                  <Select
-                    value={String(pageSize)}
-                    onValueChange={(val) => {
-                      setPageSize(Number(val))
-                      setCurrentPage(1)
-                    }}
-                  >
-                    <SelectTrigger className="h-7 w-16 text-xs">
-                      <SelectValue />
-                    </SelectTrigger>
-                    <SelectContent>
-                      <SelectItem value="5" className="text-xs">
-                        5
-                      </SelectItem>
-                      <SelectItem value="10" className="text-xs">
-                        10
-                      </SelectItem>
-                      <SelectItem value="20" className="text-xs">
-                        20
-                      </SelectItem>
-                    </SelectContent>
-                  </Select>
-                </div>
-
-                <div className="flex items-center gap-1">
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
-                    disabled={currentPage <= 1}
-                    className="size-7 cursor-pointer p-0 disabled:cursor-not-allowed"
-                    title="Previous page"
-                  >
-                    <ChevronLeft className="size-3.5" />
-                  </Button>
-                  <span className="px-1 font-mono text-xs">
-                    {currentPage} / {totalPages}
-                  </span>
-                  <Button
-                    variant="outline"
-                    size="sm"
-                    onClick={() =>
-                      setCurrentPage((p) => Math.min(totalPages, p + 1))
-                    }
-                    disabled={currentPage >= totalPages}
-                    className="size-7 cursor-pointer p-0 disabled:cursor-not-allowed"
-                    title="Next page"
-                  >
-                    <ChevronRight className="size-3.5" />
-                  </Button>
-                </div>
-              </div>
-            </div>
-          )}
-        </CardContent>
-      </Card>
 
       {newIntakeDialog}
 
@@ -1067,7 +478,7 @@ export const UisTab: React.FC<UisTabProps> = ({
         />
       )}
 
-      {/* Direct Intake Assessment Dialog (Without opening UisSheet) */}
+      {/* Direct Intake Assessment Dialog */}
       {directAssessRow && (
         <IntakeAssessmentDialog
           open={Boolean(directAssessRow)}

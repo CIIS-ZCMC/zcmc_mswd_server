@@ -3,6 +3,7 @@
 namespace App\Http\Controllers\Web;
 
 use App\Http\Controllers\Controller;
+use App\Models\Patient;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
 use Inertia\Inertia;
@@ -10,6 +11,16 @@ use Inertia\Response;
 
 class PatientsPageController extends Controller
 {
+    /**
+     * Render the patients registry view with no patient preselected.
+     */
+    public function registry(Request $request): Response
+    {
+        return Inertia::render('Patients/Show', [
+            'patientId' => '',
+        ]);
+    }
+
     /**
      * Render the patients index view.
      */

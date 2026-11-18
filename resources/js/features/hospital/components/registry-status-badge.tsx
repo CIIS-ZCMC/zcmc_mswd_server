@@ -1,42 +1,43 @@
 import React from "react"
-import { Badge } from "@/components/ui/badge"
 import type { RegistryStatus } from "../types/hospital-transaction.types"
 import { Building2, Home, LogOut, XCircle, HelpCircle } from "lucide-react"
+import { cn } from "@/lib/utils"
 
 const STATUS_CONFIG: Record<string, { className: string; icon: React.ElementType }> = {
   A: {
-    className: "bg-emerald-500/15 text-emerald-700 dark:text-emerald-300 border-emerald-500/40",
+    className: "bg-[#e8f6ef] text-[#146b43] dark:bg-emerald-950/40 dark:text-emerald-300",
     icon: Building2,
   },
   D: {
-    className: "bg-blue-500/15 text-blue-700 dark:text-blue-300 border-blue-500/40",
+    className: "bg-[#eef1f6] text-[#4a5568] dark:bg-muted dark:text-muted-foreground",
     icon: LogOut,
   },
   X: {
-    className: "bg-red-500/15 text-red-700 dark:text-red-300 border-red-500/40",
+    className: "bg-[#fde8e8] text-[#9b1c1c] dark:bg-red-950/40 dark:text-red-300",
     icon: XCircle,
   },
   M: {
-    className: "bg-amber-500/15 text-amber-800 dark:text-amber-300 border-amber-500/40",
+    className: "bg-[#fff5e0] text-[#8a5300] dark:bg-amber-950/40 dark:text-amber-300",
     icon: Home,
   },
   U: {
-    className: "bg-muted text-muted-foreground border-border",
+    className: "bg-[#f4f7fc] text-[#5b6678] dark:bg-muted dark:text-muted-foreground",
     icon: HelpCircle,
   },
 }
 
 interface RegistryStatusBadgeProps {
   status: RegistryStatus | null
+  className?: string
 }
 
-export const RegistryStatusBadge: React.FC<RegistryStatusBadgeProps> = ({ status }) => {
+export const RegistryStatusBadge: React.FC<RegistryStatusBadgeProps> = ({ status, className }) => {
   if (!status) {
     return (
-      <Badge variant="outline" className="font-semibold text-xs px-2.5 py-0.5 gap-1.5">
-        <HelpCircle className="w-3.5 h-3.5 shrink-0" />
+      <span className={cn("inline-flex items-center gap-[4px] px-[10px] py-[4px] rounded-full text-[12px] font-semibold bg-[#f4f7fc] text-[#5b6678] dark:bg-muted dark:text-muted-foreground", className)}>
+        <HelpCircle className="size-3.5 shrink-0" />
         Unknown
-      </Badge>
+      </span>
     )
   }
 
@@ -44,10 +45,10 @@ export const RegistryStatusBadge: React.FC<RegistryStatusBadgeProps> = ({ status
   const Icon = config.icon
 
   return (
-    <Badge variant="outline" className={`font-semibold text-xs px-2.5 py-0.5 gap-1.5 border ${config.className}`}>
-      <Icon className="w-3.5 h-3.5 shrink-0" />
+    <span className={cn("inline-flex items-center gap-[4px] px-[10px] py-[4px] rounded-full text-[12px] font-semibold", config.className, className)}>
+      <Icon className="size-3.5 shrink-0" />
       {status.label}
-    </Badge>
+    </span>
   )
 }
 

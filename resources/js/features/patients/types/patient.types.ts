@@ -90,5 +90,6 @@ export interface PatientRecord {
     status: "waiting" | "in_progress"
     hisTransactionId: number
     arrivedAt: string | null
+    purpose: string | null
   } | null
 }

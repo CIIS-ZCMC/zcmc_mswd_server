@@ -111,12 +111,12 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
       open={isOpen}
       onOpenChange={(open) => !open && !isUploading && onClose()}
     >
-      <DialogContent className="w-full max-w-lg">
+      <DialogContent className="w-full max-w-lg rounded-[20px] p-6">
         <DialogHeader>
-          <DialogTitle className="text-lg font-bold">
+          <DialogTitle className="text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">
             Upload Document
           </DialogTitle>
-          <DialogDescription className="text-xs">
+          <DialogDescription className="text-[12px] text-[#5b6678] dark:text-muted-foreground">
             PDF, JPG or PNG, up to 10 MB. Filing it under a case is optional.
           </DialogDescription>
         </DialogHeader>
@@ -190,10 +190,21 @@ export const UploadDocumentDialog: React.FC<UploadDocumentDialogProps> = ({
         </div>
 
         <DialogFooter>
-          <Button variant="outline" onClick={onClose} disabled={isUploading}>
+          <Button
+            type="button"
+            variant="outline"
+            onClick={onClose}
+            disabled={isUploading}
+            className="h-[36px] rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
+          >
             Cancel
           </Button>
-          <Button onClick={handleSave} disabled={!canSave} className="gap-2">
+          <Button
+            type="button"
+            onClick={handleSave}
+            disabled={!canSave}
+            className="h-[36px] gap-2 rounded-full bg-[#1f5fd6] px-[20px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
+          >
             {isUploading && <Spinner className="size-4" />}
             {isUploading ? "Uploading…" : "Upload"}
           </Button>

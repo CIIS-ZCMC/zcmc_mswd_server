@@ -150,6 +150,7 @@ export function toWatcher(raw: ApiWatcher): Watcher {
       isInformant: a.is_informant,
       passNumber: a.pass_number,
       passStatus: a.pass_status,
+      passValidUntil: a.pass_valid_until ?? null,
     })),
   }
 }
@@ -299,6 +300,7 @@ export function toPatientListRecord(raw: ApiPatient): PatientRecord {
           status: raw.active_visit.status,
           hisTransactionId: raw.active_visit.his_transaction_id,
           arrivedAt: raw.active_visit.arrived_at,
+          purpose: raw.active_visit.purpose,
         }
       : null,
     hospitalNo: raw.hospital_id != null ? String(raw.hospital_id) : "—",

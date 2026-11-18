@@ -87,38 +87,38 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="w-full max-w-2xl p-7 max-h-[90vh] overflow-y-auto">
+      <DialogContent className="w-full max-w-2xl rounded-[20px] p-6 max-h-[90vh] overflow-y-auto">
         <DialogHeader>
-          <DialogTitle className="text-xl font-bold">Edit Personal Demographics</DialogTitle>
-          <DialogDescription className="text-sm">
+          <DialogTitle className="text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">Edit Personal Demographics</DialogTitle>
+          <DialogDescription className="text-[12px] text-[#5b6678] dark:text-muted-foreground">
             Update personal demographics for {patient.fullName}. Core identity information (name, birth date, sex) is managed via hospital records.
           </DialogDescription>
         </DialogHeader>
 
-        <div className="grid gap-5 py-4 text-base">
+        <div className="grid gap-4 py-3 text-[13px]">
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm font-bold">Religion</Label>
+              <Label className="text-[12px] font-semibold text-[#5b6678] dark:text-muted-foreground">Religion</Label>
               <Input
                 value={form.religion}
                 onChange={(e) => setForm({ ...form, religion: e.target.value })}
-                className="h-11 text-base mt-1"
+                className="h-[40px] text-[13px] font-medium text-[#1b2433] rounded-[10px] border-[#c6e8ee] mt-1 dark:text-foreground"
                 placeholder="e.g. Roman Catholic, Islam"
               />
             </div>
             <div>
-              <Label className="text-sm font-bold">Nationality</Label>
+              <Label className="text-[12px] font-semibold text-[#5b6678] dark:text-muted-foreground">Nationality</Label>
               <Input
                 value={form.nationality}
                 onChange={(e) => setForm({ ...form, nationality: e.target.value })}
-                className="h-11 text-base mt-1"
+                className="h-[40px] text-[13px] font-medium text-[#1b2433] rounded-[10px] border-[#c6e8ee] mt-1 dark:text-foreground"
                 placeholder="e.g. Filipino"
               />
             </div>
           </div>
 
           <div>
-            <Label className="text-sm font-bold">Place of Birth</Label>
+            <Label className="text-[12px] font-semibold text-[#5b6678] dark:text-muted-foreground">Place of Birth</Label>
             <div className="mt-1">
               <PsgcCityPicker
                 value={form.place_of_birth_city_code}
@@ -131,17 +131,17 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
 
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <Label className="text-sm font-bold">Civil Status</Label>
+              <Label className="text-[12px] font-semibold text-[#5b6678] dark:text-muted-foreground">Civil Status</Label>
               <Select
                 value={form.civil_status}
                 onValueChange={(val) => setForm({ ...form, civil_status: val ?? "" })}
               >
-                <SelectTrigger className="w-full h-11 text-base mt-1">
+                <SelectTrigger className="w-full h-[40px] text-[13px] font-medium text-[#1b2433] rounded-[10px] border-[#c6e8ee] mt-1 dark:text-foreground">
                   <SelectValue placeholder="Select Civil Status" />
                 </SelectTrigger>
                 <SelectContent>
                   {CIVIL_STATUS_OPTIONS.map((status) => (
-                    <SelectItem key={status} value={status} className="text-base py-2 font-medium">
+                    <SelectItem key={status} value={status} className="text-[13px] py-1.5 font-medium">
                       {status}
                     </SelectItem>
                   ))}
@@ -150,17 +150,17 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
             </div>
 
             <div>
-              <Label className="text-sm font-bold">Educational Attainment</Label>
+              <Label className="text-[12px] font-semibold text-[#5b6678] dark:text-muted-foreground">Educational Attainment</Label>
               <Select
                 value={form.educational_attainment}
                 onValueChange={(val) => setForm({ ...form, educational_attainment: val ?? "" })}
               >
-                <SelectTrigger className="w-full h-11 text-base mt-1">
+                <SelectTrigger className="w-full h-[40px] text-[13px] font-medium text-[#1b2433] rounded-[10px] border-[#c6e8ee] mt-1 dark:text-foreground">
                   <SelectValue placeholder="Select Educational Attainment" />
                 </SelectTrigger>
                 <SelectContent>
                   {EDUCATIONAL_ATTAINMENT_OPTIONS.map((edu) => (
-                    <SelectItem key={edu} value={edu} className="text-base py-2 font-medium">
+                    <SelectItem key={edu} value={edu} className="text-[13px] py-1.5 font-medium">
                       {edu}
                     </SelectItem>
                   ))}
@@ -172,21 +172,21 @@ export const PatientDemographicsDialog: React.FC<PatientDemographicsDialogProps>
 
         <DialogFooter>
           <Button
+            type="button"
             variant="outline"
-            size="lg"
-            className="h-11 text-base font-bold px-6"
+            className="h-[36px] rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
             onClick={onClose}
             disabled={isSaving}
           >
             Cancel
           </Button>
           <Button
-            size="lg"
-            className="h-11 text-base font-bold px-8"
+            type="button"
+            className="h-[36px] rounded-full bg-[#1f5fd6] px-[20px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
             disabled={isSaving}
             onClick={handleSave}
           >
-            {isSaving ? <Spinner className="size-5" /> : "Save Demographics"}
+            {isSaving ? <Spinner className="size-4" /> : "Save Demographics"}
           </Button>
         </DialogFooter>
       </DialogContent>

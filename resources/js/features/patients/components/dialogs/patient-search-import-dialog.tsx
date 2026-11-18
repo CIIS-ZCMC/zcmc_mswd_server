@@ -150,7 +150,7 @@ export const PatientSearchImportDialog: React.FC<
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <DialogContent
-        className="w-full max-w-3xl gap-0 overflow-hidden rounded-2xl border border-border bg-card p-0 text-card-foreground shadow-2xl sm:rounded-2xl"
+        className="w-full max-w-3xl gap-0 overflow-hidden rounded-[20px] border border-[#e4e9f2] bg-white p-0 font-sans font-[Plus_Jakarta_Sans,sans-serif] text-card-foreground shadow-2xl dark:border-border dark:bg-card"
         showCloseButton={false}
       >
         <DialogHeader className="sr-only">

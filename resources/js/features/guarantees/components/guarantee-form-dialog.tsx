@@ -35,13 +35,13 @@ export const GuaranteeFormDialog: React.FC<GuaranteeFormDialogProps> = ({
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="max-h-[90vh] max-w-2xl overflow-y-auto p-4 sm:p-6">
+      <DialogContent className="max-h-[90vh] max-w-[672px] overflow-y-auto p-5 sm:p-6 rounded-[20px]">
         <DialogHeader>
-          <DialogTitle className="flex items-center gap-2 text-lg font-bold text-primary sm:text-xl">
-            <CreditCard className="size-5 shrink-0 text-primary" />
+          <DialogTitle className="flex items-center gap-2 text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">
+            <CreditCard className="size-5 shrink-0 text-[#1f5fd6]" />
             {isEditing ? "Edit Patient Guarantor" : "Add Patient Guarantor"}
           </DialogTitle>
-          <DialogDescription className="text-xs text-muted-foreground sm:text-sm">
+          <DialogDescription className="text-[12px] font-normal text-[#5b6678] dark:text-muted-foreground">
             Record the guarantor for this hospital encounter and break it down
             by type of assistance, mode of assistance and fund source.
           </DialogDescription>

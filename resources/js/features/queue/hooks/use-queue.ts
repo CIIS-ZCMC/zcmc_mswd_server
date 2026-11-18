@@ -26,6 +26,7 @@ import { usePermission } from "@/features/auth/hooks/use-permission"
 function invalidateVisitQueries(queryClient: ReturnType<typeof useQueryClient>) {
   queryClient.invalidateQueries({ queryKey: queueKeys.all })
   queryClient.invalidateQueries({ queryKey: PATIENTS_LIST_QUERY_KEY })
+  queryClient.invalidateQueries({ queryKey: ["patients"] })
 }
 
 export const queueKeys = {
@@ -139,6 +140,15 @@ export function useStartVisit() {
   const queryClient = useQueryClient()
   return useMutation({
     mutationFn: (visitId: number) => startVisit(visitId),
+    onSuccess: (updatedVisit) => {
+      queryClient.setQueriesData<ServiceVisit[]>(
+        { queryKey: [...queueKeys.all, "patient"] },
+        (old) => {
+          if (!old) return old
+          return old.map((v) => (v.id === updatedVisit.id ? updatedVisit : v))
+        }
+      )
+    },
     onSettled: () => invalidateVisitQueries(queryClient),
   })
 }
