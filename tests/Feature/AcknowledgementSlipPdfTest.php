@@ -83,9 +83,11 @@ function mockEncounter(?string $finalDiagnosis = 'Cataract senile mature', ?stri
 
 function slipHtml(PatientGuarantee $guarantee, ?User $by = null, ?string $start = null, ?string $end = null): string
 {
-    return app(AcknowledgementSlipPdfService::class)
+    $html = app(AcknowledgementSlipPdfService::class)
         ->render($guarantee, $by, $start, $end)
         ->getDomPDF()->outputHtml();
+
+    return str_replace(["\u{2713}", "\u{00A0}"], ['&#10003;', '&nbsp;'], $html);
 }
 
 it('streams the slip as a PDF and logs the print', function () {
@@ -346,7 +348,11 @@ it('prints an encounter slip with the picked fund and blank lines for handwritin
         ->toMatchArray(['amount' => '500.00', 'fund' => 'opav_socio_civid_fund', 'fundOther' => null])
         ->and($slips->filenameFromEncounter($encounter))->toBe('ACK-SLIP-1687271-ENC-9.pdf');
 
-    $html = $slips->renderFromEncounter($encounter, fund: 'opav_socio_civid_fund')->getDomPDF()->outputHtml();
+    $html = str_replace(
+        ["\u{2713}", "\u{00A0}"],
+        ['&#10003;', '&nbsp;'],
+        $slips->renderFromEncounter($encounter, fund: 'opav_socio_civid_fund')->getDomPDF()->outputHtml(),
+    );
     expect($html)
         ->toContain('&nbsp;</span> <b>DOH-MAIFIP')
         ->toContain('&#10003;</span> <b>OPAV-SOCIO CIVID FUND');

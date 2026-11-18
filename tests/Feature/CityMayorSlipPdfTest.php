@@ -63,8 +63,9 @@ function mockCityMayorEncounter(?string $diagnosis = 'Multiple myoma', int $pati
 function cityMayorHtml(array $options = [], ?User $by = null): string
 {
     $slips = app(CityMayorSlipPdfService::class);
+    $html = $slips->render($slips->hisEncounter(9), $options, $by)->getDomPDF()->outputHtml();
 
-    return $slips->render($slips->hisEncounter(9), $options, $by)->getDomPDF()->outputHtml();
+    return str_replace(["\u{2713}", "\u{00A0}"], ['&#10003;', '&nbsp;'], $html);
 }
 
 it('streams the slip as a PDF and logs it as the city mayor form', function () {
