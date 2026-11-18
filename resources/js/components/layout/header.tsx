@@ -1,30 +1,28 @@
 import React, { useState, useEffect } from "react"
 import { router, usePage } from "@inertiajs/react"
-import { Button } from "@/components/ui/button"
-import { Badge } from "@/components/ui/badge"
-import { Kbd } from "@/components/ui/kbd"
 import {
   Tooltip,
   TooltipContent,
   TooltipTrigger,
 } from "@/components/ui/tooltip"
 import { useTheme } from "@/providers/theme-provider"
-import { useAuth } from "@/features/auth/hooks/use-auth"
 import { usePermission } from "@/features/auth/hooks/use-permission"
 import { PatientSearchImportDialog } from "@/features/patients/components/dialogs/patient-search-import-dialog"
-import {
-  Activity,
-  BookOpen,
-  LogOut,
-  Moon,
-  Sun,
-  UserCheck,
-  UserSearch,
-} from "lucide-react"
+import { Sun } from "lucide-react"
+import { cn } from "@/lib/utils"
+
+function formatCurrentHeaderDate(): string {
+  const now = new Date()
+  return now.toLocaleDateString("en-US", {
+    weekday: "short",
+    month: "short",
+    day: "numeric",
+    year: "numeric",
+  })
+}
 
 export const Header: React.FC = () => {
   const { theme, setTheme } = useTheme()
-  const { user, logout, isLoggingOut } = useAuth()
   const canManageLibrary = usePermission("library.manage")
   const canViewPatients = usePermission("patients.view")
   const [isSearchDialogOpen, setIsSearchDialogOpen] = useState(false)
@@ -50,58 +48,35 @@ export const Header: React.FC = () => {
     setTheme(theme === "dark" ? "light" : "dark")
   }
 
-  const displayName = user?.employee_name || user?.email || "—"
-
   return (
-    <header className="flex h-15 shrink-0 items-center justify-between border-b border-border bg-card px-5 py-2.5 shadow-2xs">
-      <div className="flex items-center gap-3">
-        <div className="flex items-center gap-3">
-          <div className="flex size-9 items-center justify-center rounded-xl bg-primary font-heading text-lg font-extrabold text-primary-foreground shadow-xs">
-            Z
-          </div>
-          <div>
-            <h1 className="font-heading text-base leading-none font-bold tracking-tight text-foreground">
-              ZCMC Medical Social Services
-            </h1>
-            <p className="mt-0.5 text-xs text-muted-foreground">
-              Zamboanga City Medical Center • Patient Safety Net Portal
-            </p>
-          </div>
-        </div>
-        <Badge
-          variant="outline"
-          className="hidden gap-1.5 px-2.5 py-1 text-xs sm:flex"
-        >
-          <Activity className="size-3.5 text-emerald-500" /> Live Database
-        </Badge>
-      </div>
-
-      <div className="flex items-center gap-3">
+    <header
+      data-node-id="144:694"
+      className="flex shrink-0 items-center justify-between bg-[#f4f7fc] px-[28px] py-[15px] dark:bg-background"
+    >
+      {/* Left: Search or Import Patient + Live database pill */}
+      <div className="flex items-center gap-[10px]">
         {canViewPatients && (
           <>
-            <Tooltip>
-              {/* render= so the trigger IS the Button (no <button> in <button>). */}
-              <TooltipTrigger
-                render={
-                  <Button
-                    size="default"
-                    className="h-10 gap-2 px-3.5 font-bold shadow-xs sm:px-4"
-                    onClick={() => setIsSearchDialogOpen(true)}
-                  />
-                }
-              >
-                <UserSearch className="size-4" />
-                <span className="hidden sm:inline">
-                  Search or Import Patient
-                </span>
-                <Kbd className="ml-1 hidden border-transparent bg-primary-foreground/20 text-[10px] text-primary-foreground md:inline-flex">
-                  Ctrl K
-                </Kbd>
-              </TooltipTrigger>
-              <TooltipContent className="sm:hidden">
-                Search or Import Patient (Ctrl+K)
-              </TooltipContent>
-            </Tooltip>
+            <button
+              type="button"
+              onClick={() => setIsSearchDialogOpen(true)}
+              data-node-id="144:695"
+              className="flex h-[44px] w-[260px] shrink-0 cursor-pointer items-center gap-[10px] rounded-full border border-[#e4e9f2] bg-white pr-[8px] pl-[16px] transition-colors hover:border-[#1f5fd6]/40 sm:w-[330px] dark:border-border dark:bg-card"
+            >
+              <span className="relative flex size-[20px] shrink-0 items-center justify-center">
+                <img
+                  alt=""
+                  className="block size-[20px] max-w-none"
+                  src="/images/patient-registry/user-search.svg"
+                />
+              </span>
+              <span className="min-w-0 flex-1 truncate text-left text-[14px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
+                Search or import patient
+              </span>
+              <span className="flex h-[26px] shrink-0 items-center rounded-[8px] border border-[#e4e9f2] bg-[#f4f7fc] px-[9px] text-[11px] leading-[22px] font-semibold text-[#5b6678] dark:border-border dark:bg-muted dark:text-muted-foreground">
+                Ctrl K
+              </span>
+            </button>
 
             <PatientSearchImportDialog
               isOpen={isSearchDialogOpen}
@@ -109,60 +84,87 @@ export const Header: React.FC = () => {
             />
           </>
         )}
-        <div className="mx-1 h-5 w-px bg-border" />
-        <div className="mr-2 hidden items-center gap-2 text-xs text-muted-foreground sm:flex">
-          <UserCheck className="size-4 text-primary" />
-          <span className="text-sm font-semibold text-foreground">
-            {displayName}
+
+        <div
+          data-node-id="144:703"
+          className="hidden h-[30px] shrink-0 items-center gap-[6px] rounded-full bg-[#e8f6ef] px-[12px] sm:flex dark:bg-emerald-950/60"
+        >
+          <span className="size-[7px] shrink-0 rounded-full bg-[#146b43] dark:bg-emerald-400" />
+          <span className="text-[12px] leading-normal font-bold text-[#146b43] whitespace-nowrap dark:text-emerald-300">
+            Live database
           </span>
         </div>
+      </div>
+
+      {/* Right: Date pill + Theme toggle + User guide / Library */}
+      <div className="flex items-center gap-[10px]">
+        <div
+          data-node-id="144:706"
+          className="hidden h-[46px] shrink-0 items-center gap-[8px] rounded-full border border-[#e4e9f2] bg-white px-[17px] py-px md:flex dark:border-border dark:bg-card"
+        >
+          <span className="relative flex size-[20px] shrink-0 items-center justify-center">
+            <img
+              alt=""
+              className="block size-[20px] max-w-none"
+              src="/images/patient-registry/calendar.svg"
+            />
+          </span>
+          <span className="text-[13px] leading-normal font-semibold text-[#0c2a5b] whitespace-nowrap dark:text-foreground">
+            {formatCurrentHeaderDate()}
+          </span>
+        </div>
+
         <Tooltip>
-          <TooltipTrigger>
-            <Button
-              variant="outline"
-              size="default"
-              className="h-10 w-10 p-0"
-              onClick={toggleTheme}
-            >
-              {theme === "dark" ? (
-                <Sun className="size-4" />
-              ) : (
-                <Moon className="size-4 text-primary" />
-              )}
-            </Button>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={toggleTheme}
+                data-node-id="144:711"
+                className="flex size-[44px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#e4e9f2] bg-white px-[6px] py-px transition-colors hover:bg-white/80 dark:border-border dark:bg-card"
+              />
+            }
+          >
+            {theme === "dark" ? (
+              <Sun className="size-[21px] text-amber-400" />
+            ) : (
+              <img
+                alt="Switch to dark theme"
+                className="block size-[21px] max-w-none"
+                src="/images/patient-registry/theme-moon.svg"
+              />
+            )}
           </TooltipTrigger>
-          <TooltipContent>Toggle Theme (Press &apos;d&apos;)</TooltipContent>
+          <TooltipContent>Toggle Theme</TooltipContent>
         </Tooltip>
 
-        {canManageLibrary && (
-          <Tooltip>
-            <TooltipTrigger>
-              <Button
-                variant={isLibraryRoute ? "default" : "outline"}
-                size="default"
-                className={`h-10 w-10 p-0 ${isLibraryRoute ? "shadow-xs" : ""}`}
-                onClick={() => router.visit("/library")}
-              >
-                <BookOpen className="size-4" />
-              </Button>
-            </TooltipTrigger>
-            <TooltipContent>Library Settings</TooltipContent>
-          </Tooltip>
-        )}
-
         <Tooltip>
-          <TooltipTrigger>
-            <Button
-              variant="outline"
-              size="default"
-              className="h-10 w-10 p-0"
-              onClick={() => logout()}
-              disabled={isLoggingOut}
-            >
-              <LogOut className="size-4" />
-            </Button>
+          <TooltipTrigger
+            render={
+              <button
+                type="button"
+                onClick={() => {
+                  if (canManageLibrary) {
+                    router.visit("/library")
+                  }
+                }}
+                data-node-id="144:714"
+                className={cn(
+                  "flex size-[44px] shrink-0 cursor-pointer items-center justify-center rounded-full border border-[#e4e9f2] bg-white px-[6px] py-px transition-colors hover:bg-white/80 dark:border-border dark:bg-card",
+                  isLibraryRoute && "ring-2 ring-[#1f5fd6]"
+                )}
+              />
+            }
+          >
+            <img
+              alt="User guide & Library"
+              className="block size-[21px] max-w-none"
+              src="/images/patient-registry/user-guide.svg"
+            />
           </TooltipTrigger>
-          <TooltipContent>Sign Out</TooltipContent>
+          <TooltipContent>
+            {canManageLibrary ? "Library Settings" : "User Guide"}
+          </TooltipContent>
         </Tooltip>
       </div>
     </header>

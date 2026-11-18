@@ -1,54 +1,40 @@
 import React, { useState, useMemo } from "react"
+import { cn } from "@/lib/utils"
 import { Alert, AlertDescription, AlertTitle } from "@/components/ui/alert"
-import { Button } from "@/components/ui/button"
-import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card"
-import { Input } from "@/components/ui/input"
 import { Skeleton } from "@/components/ui/skeleton"
-import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
 import {
   DropdownMenu,
   DropdownMenuContent,
   DropdownMenuGroup,
   DropdownMenuItem,
   DropdownMenuLabel,
-  DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import { usePermission } from "@/features/auth/hooks/use-permission"
-import { useQueueActionGate } from "@/features/queue"
 import { useHospitalEncounters } from "@/features/hospital/hooks/use-hospital-encounters"
 import { RegistryStatusBadge } from "@/features/hospital/components/registry-status-badge"
 import { HospitalEncounterDetailDialog } from "@/features/hospital/components/dialogs/hospital-encounter-detail-dialog"
 import { AssessEncounterDialog } from "@/features/hospital/components/dialogs/assess-encounter-dialog"
 import { OpenCaseDialog } from "@/features/cases/components/dialogs/open-case-dialog"
-import { formatTransactionType } from "@/features/hospital/lib/transaction-type"
-import type { HospitalEncounter } from "@/features/hospital/types"
-import {
-  AlertCircle,
-  BadgeCheck,
-  Building2,
-  Calendar,
-  ChevronDown,
-  ChevronLeft,
-  ChevronRight,
-  ClipboardCheck,
-  CreditCard,
-  Eye,
-  FileCheck2,
-  FileText,
-  Filter,
-  FolderPlus,
-  MoreHorizontal,
-  Printer,
-  Search,
-  Stethoscope,
-  X,
-} from "lucide-react"
 import {
   EncounterPrintableDialog,
   type PrintableType,
 } from "@/features/hospital/components/dialogs/encounter-printable-dialog"
+import type { HospitalEncounter } from "@/features/hospital/types"
 import type { PatientRecord } from "../../types"
+import {
+  AlertCircle,
+  BadgeCheck,
+  Building2,
+  ChevronDown,
+  Eye,
+  FileCheck2,
+  FileText,
+  Filter,
+  Printer,
+  Search,
+  X,
+} from "lucide-react"
 
 interface HospitalEncountersTabProps {
   patient: PatientRecord
@@ -56,11 +42,52 @@ interface HospitalEncountersTabProps {
 
 type StatusFilter = "all" | "active" | "discharged"
 
+function formatEncounterDateTime(dateStr?: string | null): string {
+  if (!dateStr) return "—"
+  try {
+    const d = new Date(dateStr)
+    if (isNaN(d.getTime())) return dateStr
+    const monthNames = [
+      "Jan",
+      "Feb",
+      "Mar",
+      "Apr",
+      "May",
+      "Jun",
+      "Jul",
+      "Aug",
+      "Sep",
+      "Oct",
+      "Nov",
+      "Dec",
+    ]
+    const month = monthNames[d.getMonth()]
+    const day = d.getDate()
+    const year = d.getFullYear()
+    let hours = d.getHours()
+    const minutes = d.getMinutes().toString().padStart(2, "0")
+    const ampm = hours >= 12 ? "PM" : "AM"
+    hours = hours % 12 || 12
+    return `${month} ${day}, ${year} · ${hours}:${minutes} ${ampm}`
+  } catch {
+    return dateStr
+  }
+}
+
+function formatShortTransactionType(type?: string | null): string {
+  if (!type || type.trim() === "") return "Outpatient"
+  const upper = type.trim().toUpperCase()
+  if (upper.includes("IN") || upper.includes("ADM") || upper === "I" || upper === "IPD") return "Inpatient"
+  if (upper.includes("ER") || upper.includes("EMERG") || upper === "E") return "Emergency"
+  if (upper.includes("OUT") || upper === "O" || upper === "OPD") return "Outpatient"
+  if (upper.includes("DIAL") || upper === "HD") return "Hemodialysis"
+  return type
+}
+
 export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ patient }) => {
   const hospitalNumber = patient.hospitalId
   const canAssess = usePermission("cases.update")
   const canCreateCase = usePermission("cases.create")
-  const { canPerformActions } = useQueueActionGate()
 
   // Data fetching
   const { data: encounters = [], isLoading, error } = useHospitalEncounters(hospitalNumber)
@@ -95,7 +122,10 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
     [encounters]
   )
   const dischargedCount = useMemo(
-    () => encounters.filter((e) => e.registrationStatus?.code === "D" || e.registrationStatus?.code === "M").length,
+    () =>
+      encounters.filter(
+        (e) => e.registrationStatus?.code === "D" || e.registrationStatus?.code === "M"
+      ).length,
     [encounters]
   )
 
@@ -125,7 +155,15 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
         const impressionMatch = (enc.impression ?? "").toLowerCase().includes(query)
         const dateMatch = (enc.registrationDate ?? "").toLowerCase().includes(query)
 
-        return idMatch || typeMatch || statusMatch || diagMatch || diagCodeMatch || impressionMatch || dateMatch
+        return (
+          idMatch ||
+          typeMatch ||
+          statusMatch ||
+          diagMatch ||
+          diagCodeMatch ||
+          impressionMatch ||
+          dateMatch
+        )
       }
 
       return true
@@ -158,393 +196,342 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
 
   if (!hospitalNumber) {
     return (
-      <Alert className="border p-4">
-        <Building2 className="w-5 h-5 text-primary shrink-0" />
-        <AlertTitle className="text-base font-bold">Not linked to a hospital record</AlertTitle>
-        <AlertDescription className="text-xs sm:text-sm font-medium leading-relaxed mt-1">
-          This patient has no hospital number on file, so no HIS encounters can be shown. Link the patient to a hospital record to view their hospital history here.
-        </AlertDescription>
-      </Alert>
+      <div className="rounded-[16px] border border-[#e4e9f2] bg-white p-6 shadow-xs dark:border-border dark:bg-card">
+        <div className="flex items-start gap-4">
+          <div className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#edf3fe] dark:bg-muted">
+            <Building2 className="size-[20px] text-[#1f5fd6]" />
+          </div>
+          <div>
+            <h3 className="text-[16px] font-bold text-[#0c2a5b] dark:text-foreground">
+              Not linked to a hospital record
+            </h3>
+            <p className="mt-1 text-[13px] font-medium leading-relaxed text-[#5b6678] dark:text-muted-foreground">
+              This patient has no hospital number on file, so no HIS encounters can be shown. Link the patient to a hospital record to view their hospital history here.
+            </p>
+          </div>
+        </div>
+      </div>
     )
   }
 
   return (
-    <div className="space-y-4">
-      {/* Main Table Card */}
-      <Card className="border shadow-2xs">
-        <CardHeader className="p-5 pb-4 border-b">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
-            <div className="space-y-1">
-              <CardTitle className="text-lg sm:text-xl font-extrabold text-foreground flex items-center gap-2">
-                <Building2 className="w-5 h-5 text-primary shrink-0" />
-                Hospital Encounters (HIS)
-              </CardTitle>
-              <CardDescription className="text-xs sm:text-sm font-medium">
-                Hospital transactions and admissions for Hospital No.{" "}
-                <span className="font-bold text-foreground">{String(hospitalNumber)}</span>
-              </CardDescription>
-            </div>
-
-            {/* Filter Chips */}
-            <div className="flex items-center gap-1.5 p-1 bg-muted/60 rounded-lg border shrink-0">
-              <Button
-                variant={statusFilter === "all" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => handleFilterChange("all")}
-                className="h-8 px-3 text-xs font-bold"
-              >
-                All ({encounters.length})
-              </Button>
-              <Button
-                variant={statusFilter === "active" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => handleFilterChange("active")}
-                className="h-8 px-3 text-xs font-bold"
-              >
-                Active ({activeCount})
-              </Button>
-              <Button
-                variant={statusFilter === "discharged" ? "default" : "ghost"}
-                size="sm"
-                onClick={() => handleFilterChange("discharged")}
-                className="h-8 px-3 text-xs font-bold"
-              >
-                Discharged ({dischargedCount})
-              </Button>
-            </div>
-          </div>
-
-          {/* Search Bar & Page Size */}
-          <div className="flex flex-col sm:flex-row items-center justify-between gap-3 pt-3">
-            <div className="relative w-full sm:max-w-md">
-              <Search className="absolute left-3 top-1/2 -translate-y-1/2 size-4 text-muted-foreground" />
-              <Input
-                type="text"
-                placeholder="Search by encounter #, type, diagnosis..."
-                value={searchTerm}
-                onChange={(e) => handleSearchChange(e.target.value)}
-                className="pl-9 pr-9 h-9 text-xs sm:text-sm"
+    <div className="space-y-4 font-[Plus_Jakarta_Sans,sans-serif]">
+      {/* Main Section Card */}
+      <div className="relative flex w-full flex-col items-center overflow-hidden rounded-[16px] border border-[#e4e9f2] bg-white shadow-[0px_1px_2px_0px_rgba(12,42,91,0.04),0px_2px_6px_0px_rgba(12,42,91,0.05)] dark:border-border dark:bg-card">
+        {/* Top Header Row */}
+        <div className="flex w-full items-center justify-between gap-[12px] px-[24px] pt-[18px] pb-[14px]">
+          <div className="flex items-center gap-[12px]">
+            <div className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#edf3fe] dark:bg-muted">
+              <img
+                src="/images/patient-registry/tab-encounters.svg"
+                alt=""
+                className="size-[20px]"
               />
-              {searchTerm && (
-                <button
-                  type="button"
-                  onClick={() => handleSearchChange("")}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-muted-foreground hover:text-foreground"
-                >
-                  <X className="size-3.5" />
-                </button>
-              )}
             </div>
-
-            <div className="flex items-center gap-2 self-end sm:self-auto text-xs text-muted-foreground">
-              <span>Show</span>
-              <select
-                aria-label="Encounters per page"
-                value={pageSize}
-                onChange={(e) => {
-                  setPageSize(Number(e.target.value))
-                  setCurrentPage(1)
-                }}
-                className="h-8 rounded-md border border-input bg-background px-2 py-1 text-xs font-semibold focus:outline-none focus:ring-1 focus:ring-primary"
-              >
-                <option value={5}>5</option>
-                <option value={10}>10</option>
-                <option value={20}>20</option>
-                <option value={50}>50</option>
-              </select>
-              <span>per page</span>
+            <div className="flex flex-col items-start min-w-0">
+              <h2 className="text-[16px] font-bold leading-tight text-[#0c2a5b] dark:text-foreground">
+                Hospital encounters
+              </h2>
+              <div className="mt-0.5 flex items-center text-[13px] whitespace-nowrap">
+                <span className="font-normal text-[#5b6678] dark:text-muted-foreground">
+                  From HIS · Hospital No.&nbsp;
+                </span>
+                <span className="font-mono font-semibold text-[#1b2433] dark:text-foreground">
+                  {String(hospitalNumber)}
+                </span>
+              </div>
             </div>
           </div>
-        </CardHeader>
 
-        <CardContent className="p-0">
-          {isLoading ? (
-            <div className="p-6 space-y-3">
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-              <Skeleton className="h-12 w-full rounded-lg" />
-            </div>
-          ) : error ? (
-            <div className="p-6">
-              <Alert variant="destructive" className="border">
-                <AlertCircle className="w-5 h-5" />
-                <AlertTitle className="text-base font-bold">Hospital System Unavailable</AlertTitle>
-                <AlertDescription className="text-xs sm:text-sm font-medium mt-1">
-                  The hospital encounters could not be loaded at this time. Please try again later.
-                </AlertDescription>
-              </Alert>
-            </div>
-          ) : filteredEncounters.length === 0 ? (
-            <div className="py-12 px-4 text-center space-y-2">
-              <Filter className="size-8 text-muted-foreground/40 mx-auto" />
-              <h4 className="text-sm font-bold text-foreground">No Hospital Encounters Found</h4>
-              <p className="text-xs text-muted-foreground max-w-sm mx-auto">
-                {searchTerm || statusFilter !== "all"
-                  ? "No encounters matched your search query or filter criteria. Try clearing filters."
-                  : "No hospital transactions or admission records on file for this patient."}
-              </p>
-              {(searchTerm || statusFilter !== "all") && (
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => {
-                    setSearchTerm("")
-                    setStatusFilter("all")
-                  }}
-                  className="mt-2 text-xs font-bold"
-                >
-                  Clear Filters
-                </Button>
+          {/* Encounter filter tabs */}
+          <div className="flex shrink-0 items-center gap-[4px] rounded-full border border-[#e4e9f2] bg-[#f4f7fc] p-[4px] dark:border-border dark:bg-muted/60">
+            <button
+              type="button"
+              onClick={() => handleFilterChange("all")}
+              className={cn(
+                "flex h-[30px] cursor-pointer items-center justify-center rounded-full px-[12px] text-[12px] font-semibold transition-all whitespace-nowrap",
+                statusFilter === "all"
+                  ? "bg-[#0c2a5b] text-white shadow-xs"
+                  : "text-[#5b6678] hover:text-[#0c2a5b] dark:text-muted-foreground dark:hover:text-foreground"
               )}
-            </div>
-          ) : (
-            <div className="overflow-x-auto">
-              <Table>
-                <TableHeader className="bg-muted/40">
-                  <TableRow>
-                    <TableHead className="w-[180px] text-xs font-bold text-foreground">Date & Encounter</TableHead>
-                    <TableHead className="w-[150px] text-xs font-bold text-foreground">Transaction Type</TableHead>
-                    <TableHead className="w-[140px] text-xs font-bold text-foreground">Registry Status</TableHead>
-                    <TableHead className="min-w-[200px] text-xs font-bold text-foreground">Diagnosis / Impression</TableHead>
-                    <TableHead className="w-[160px] text-xs font-bold text-foreground text-right pr-5">Actions</TableHead>
-                  </TableRow>
-                </TableHeader>
-                <TableBody>
-                  {paginatedEncounters.map((enc) => {
-                    const diagnosisText =
-                      enc.finalDiagnosis || enc.impression || enc.dischargeDiagnosis || "No diagnosis logged in HIS"
+            >
+              All · {encounters.length}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFilterChange("active")}
+              className={cn(
+                "flex h-[30px] cursor-pointer items-center justify-center rounded-full px-[12px] text-[12px] font-semibold transition-all whitespace-nowrap",
+                statusFilter === "active"
+                  ? "bg-[#0c2a5b] text-white shadow-xs"
+                  : "text-[#5b6678] hover:text-[#0c2a5b] dark:text-muted-foreground dark:hover:text-foreground"
+              )}
+            >
+              Active · {activeCount}
+            </button>
+            <button
+              type="button"
+              onClick={() => handleFilterChange("discharged")}
+              className={cn(
+                "flex h-[30px] cursor-pointer items-center justify-center rounded-full px-[12px] text-[12px] font-semibold transition-all whitespace-nowrap",
+                statusFilter === "discharged"
+                  ? "bg-[#0c2a5b] text-white shadow-xs"
+                  : "text-[#5b6678] hover:text-[#0c2a5b] dark:text-muted-foreground dark:hover:text-foreground"
+              )}
+            >
+              Discharged · {dischargedCount}
+            </button>
+          </div>
+        </div>
 
-                    return (
-                      <TableRow
-                        key={enc.id}
-                        className="hover:bg-muted/30 transition-colors group cursor-pointer"
-                        onClick={() => openEncounterDetail(enc)}
+        {/* Search bar & Show per page */}
+        <div className="flex w-full items-center justify-between gap-[12px] px-[24px] pb-[14px]">
+          <div className="relative min-w-0 flex-1">
+            <Search className="absolute top-1/2 left-[14px] size-[18px] -translate-y-1/2 text-[#5b6678] dark:text-muted-foreground" />
+            <input
+              type="text"
+              placeholder="Search by encounter no., type or diagnosis"
+              value={searchTerm}
+              onChange={(e) => handleSearchChange(e.target.value)}
+              className="h-[40px] w-full rounded-[12px] border border-[#c6e8ee] bg-[#f1fafb] pr-[36px] pl-[42px] text-[13px] text-[#1b2433] transition-all placeholder:text-[#757575] focus:border-[#1f5fd6] focus:outline-none dark:border-border dark:bg-muted/30 dark:text-foreground dark:placeholder:text-muted-foreground"
+            />
+            {searchTerm && (
+              <button
+                type="button"
+                onClick={() => handleSearchChange("")}
+                className="absolute top-1/2 right-[12px] -translate-y-1/2 cursor-pointer text-[#5b6678] hover:text-[#1b2433] dark:text-muted-foreground dark:hover:text-foreground"
+              >
+                <X className="size-[16px]" />
+              </button>
+            )}
+          </div>
+
+          <div className="flex shrink-0 items-center gap-[8px] text-[13px] text-[#5b6678] whitespace-nowrap dark:text-muted-foreground">
+            <span>Show</span>
+            <select
+              aria-label="Encounters per page"
+              value={pageSize}
+              onChange={(e) => {
+                setPageSize(Number(e.target.value))
+                setCurrentPage(1)
+              }}
+              className="h-[36px] cursor-pointer rounded-[10px] border border-[#c6e8ee] bg-[#f1fafb] px-[12px] text-[13px] font-medium text-[#1b2433] focus:border-[#1f5fd6] focus:outline-none dark:border-border dark:bg-muted/30 dark:text-foreground"
+            >
+              <option value={5}>5</option>
+              <option value={10}>10</option>
+              <option value={20}>20</option>
+              <option value={50}>50</option>
+            </select>
+            <span>per page</span>
+          </div>
+        </div>
+
+        {/* Table Header Row */}
+        <div className="w-full px-[24px]">
+          <div className="flex w-full items-center gap-[14px] rounded-[10px] bg-[#f4f7fc] px-[14px] py-[10px] text-[12px] font-semibold text-[#5b6678] dark:bg-muted/60 dark:text-muted-foreground">
+            <div className="w-[150px] shrink-0">Date & encounter</div>
+            <div className="w-[130px] shrink-0">Type</div>
+            <div className="w-[128px] shrink-0">Status</div>
+            <div className="min-w-0 flex-1">Diagnosis</div>
+            <div className="w-[150px] shrink-0 text-right">Actions</div>
+          </div>
+        </div>
+
+        {/* Table Content */}
+        {isLoading ? (
+          <div className="w-full space-y-3 p-6">
+            <Skeleton className="h-[52px] w-full rounded-[10px]" />
+            <Skeleton className="h-[52px] w-full rounded-[10px]" />
+            <Skeleton className="h-[52px] w-full rounded-[10px]" />
+          </div>
+        ) : error ? (
+          <div className="w-full p-6">
+            <Alert variant="destructive" className="rounded-[12px] border">
+              <AlertCircle className="size-5" />
+              <AlertTitle className="text-[14px] font-bold">Hospital System Unavailable</AlertTitle>
+              <AlertDescription className="mt-1 text-[12px] font-medium">
+                The hospital encounters could not be loaded at this time. Please try again later.
+              </AlertDescription>
+            </Alert>
+          </div>
+        ) : filteredEncounters.length === 0 ? (
+          <div className="w-full space-y-2 px-4 py-12 text-center">
+            <Filter className="mx-auto size-8 text-muted-foreground/40" />
+            <h4 className="text-[14px] font-bold text-foreground">No Hospital Encounters Found</h4>
+            <p className="mx-auto max-w-sm text-[12px] text-muted-foreground">
+              {searchTerm || statusFilter !== "all"
+                ? "No encounters matched your search query or filter criteria. Try clearing filters."
+                : "No hospital transactions or admission records on file for this patient."}
+            </p>
+            {(searchTerm || statusFilter !== "all") && (
+              <button
+                type="button"
+                onClick={() => {
+                  setSearchTerm("")
+                  setStatusFilter("all")
+                }}
+                className="mt-2 inline-flex h-[32px] cursor-pointer items-center justify-center rounded-full border border-[#cfd7e4] px-[14px] text-[12px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] dark:border-border dark:text-foreground dark:hover:bg-muted"
+              >
+                Clear Filters
+              </button>
+            )}
+          </div>
+        ) : (
+          <div className="flex w-full flex-col px-[24px]">
+            {paginatedEncounters.map((enc) => {
+              const diagnosisText =
+                enc.finalDiagnosis ||
+                enc.impression ||
+                enc.dischargeDiagnosis ||
+                "No diagnosis logged in HIS"
+              const displayDate = formatEncounterDateTime(enc.registrationDate)
+
+              return (
+                <div
+                  key={enc.id}
+                  onClick={() => openEncounterDetail(enc)}
+                  className="group flex w-full cursor-pointer items-center gap-[14px] border-b border-[#e4e9f2] px-[14px] py-[14px] transition-colors hover:bg-[#f4f7fc]/50 dark:border-border dark:hover:bg-muted/40"
+                >
+                  {/* Date & encounter */}
+                  <div className="flex w-[150px] shrink-0 flex-col gap-[2px]">
+                    <p className="truncate text-[13px] font-semibold text-[#1b2433] transition-colors group-hover:text-[#1f5fd6] dark:text-foreground">
+                      {displayDate}
+                    </p>
+                    <p className="truncate font-mono text-[12px] text-[#5b6678] dark:text-muted-foreground">
+                      #{enc.id}
+                    </p>
+                  </div>
+
+                  {/* Type */}
+                  <div className="w-[130px] shrink-0">
+                    <span className="inline-block rounded-full bg-[#edf3fe] px-[10px] py-[4.5px] text-[12px] font-semibold text-[#1f5fd6] whitespace-nowrap dark:bg-primary/15 dark:text-primary">
+                      {formatShortTransactionType(enc.patientTransactionType)}
+                    </span>
+                  </div>
+
+                  {/* Status */}
+                  <div className="w-[128px] shrink-0">
+                    <RegistryStatusBadge status={enc.registrationStatus} />
+                  </div>
+
+                  {/* Diagnosis */}
+                  <div className="min-w-0 flex-1">
+                    <p
+                      className="line-clamp-2 text-[13px] font-normal leading-[19.5px] text-[#1b2433] dark:text-foreground/90"
+                      title={diagnosisText}
+                    >
+                      {diagnosisText}
+                    </p>
+                  </div>
+
+                  {/* Actions */}
+                  <div
+                    className="flex w-[150px] shrink-0 items-center justify-end gap-[6px]"
+                    onClick={(e) => e.stopPropagation()}
+                  >
+                    <button
+                      type="button"
+                      onClick={() => openEncounterDetail(enc)}
+                      className="inline-flex h-[34px] cursor-pointer items-center gap-[4px] rounded-full px-[12px] text-[13px] font-semibold text-[#1f5fd6] transition-colors hover:bg-[#edf3fe] active:scale-[0.98] dark:hover:bg-muted"
+                    >
+                      <Eye className="size-[16px] text-[#1f5fd6]" />
+                      <span>View</span>
+                    </button>
+
+                    <DropdownMenu>
+                      <DropdownMenuTrigger
+                        className="inline-flex h-[34px] cursor-pointer items-center gap-[3px] rounded-full px-[12px] text-[13px] font-semibold text-[#1f5fd6] transition-colors hover:bg-[#edf3fe] focus:outline-none active:scale-[0.98] dark:hover:bg-muted"
+                        aria-label={`Print documents for encounter #${enc.id}`}
                       >
-                        <TableCell className="py-3.5">
-                          <div className="space-y-0.5">
-                            <span className="font-extrabold text-sm text-foreground group-hover:text-primary transition-colors flex items-center gap-1.5">
-                              <Calendar className="size-3.5 text-primary/80 shrink-0" />
-                              {enc.registrationDate ?? "—"}
-                            </span>
-                            <span className="text-xs text-muted-foreground font-medium">
-                              #{enc.id}
-                            </span>
-                          </div>
-                        </TableCell>
-
-                        <TableCell className="py-3.5">
-                          <span className="bg-primary/10 text-primary border border-primary/20 px-2.5 py-0.5 rounded-full text-xs font-semibold inline-block">
-                            {formatTransactionType(enc.patientTransactionType)}
-                          </span>
-                        </TableCell>
-
-                        <TableCell className="py-3.5">
-                          <RegistryStatusBadge status={enc.registrationStatus} />
-                        </TableCell>
-
-                        <TableCell className="py-3.5">
-                          <p
-                            className="text-xs sm:text-sm font-medium text-muted-foreground line-clamp-2 leading-relaxed"
-                            title={diagnosisText}
-                          >
-                            {diagnosisText}
-                          </p>
-                        </TableCell>
-
-                        <TableCell
-                          className="py-3.5 text-right pr-5"
-                          onClick={(e) => e.stopPropagation()}
+                        <Printer className="size-[16px] text-[#1f5fd6]" />
+                        <span>Print</span>
+                        <ChevronDown className="size-[14px] text-[#1f5fd6]" />
+                      </DropdownMenuTrigger>
+                      <DropdownMenuContent
+                        align="end"
+                        className="w-72 space-y-1 rounded-[16px] border border-[#e4e9f2] bg-white p-2 shadow-xl dark:border-border dark:bg-card"
+                      >
+                        <DropdownMenuGroup>
+                          <DropdownMenuLabel className="px-3 py-1.5 text-[11px] font-bold uppercase tracking-wider text-[#5b6678] dark:text-muted-foreground">
+                            Encounter #{enc.id} Printables
+                          </DropdownMenuLabel>
+                        </DropdownMenuGroup>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenPrint(enc, "uis")}
+                          className="cursor-pointer gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#1b2433] transition-colors hover:bg-[#edf3fe] hover:text-[#1f5fd6] dark:text-foreground dark:hover:bg-muted"
                         >
-                          <div className="flex items-center justify-end gap-1.5">
-                            <Button
-                              type="button"
-                              variant="outline"
-                              size="sm"
-                              onClick={() => openEncounterDetail(enc)}
-                              className="h-9 px-3 text-xs sm:text-sm font-bold gap-1.5 shadow-2xs border hover:bg-primary hover:text-primary-foreground transition-colors cursor-pointer"
-                            >
-                              <Eye className="size-4" />
-                              View
-                            </Button>
-
-                            {/* Print Dropdown Action Button */}
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                className="inline-flex items-center justify-center h-9 px-3 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-xs sm:text-sm font-bold gap-1.5 cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
-                                aria-label={`Print documents for encounter #${enc.id}`}
-                              >
-                                <Printer className="size-4 text-primary" />
-                                <span>Print</span>
-                                <ChevronDown className="size-3.5 text-muted-foreground" />
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-80 p-2 space-y-1">
-                                <DropdownMenuGroup>
-                                  <DropdownMenuLabel className="px-3 py-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
-                                    Encounter #{enc.id} Printables
-                                  </DropdownMenuLabel>
-                                </DropdownMenuGroup>
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenPrint(enc, "uis")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
-                                >
-                                  <FileText className="size-5 text-primary shrink-0" />
-                                  <span>Unified Intake Sheet (UIS)</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenPrint(enc, "maifip")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
-                                >
-                                  <FileCheck2 className="size-5 text-primary shrink-0" />
-                                  <span>Acknowledgement Slip (MAIFIP)</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenPrint(enc, "cga")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
-                                >
-                                  <Building2 className="size-5 text-primary shrink-0" />
-                                  <span>City Mayor Acknowledgement Slip</span>
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => handleOpenPrint(enc, "indigency")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-foreground min-h-11 rounded-lg"
-                                >
-                                  <BadgeCheck className="size-5 text-primary shrink-0" />
-                                  <span>Certificate of Eligibility (Indigency)</span>
-                                </DropdownMenuItem>
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-
-                            <DropdownMenu>
-                              <DropdownMenuTrigger
-                                className="inline-flex items-center justify-center size-9 p-0 rounded-md border border-input bg-background shadow-2xs hover:bg-muted text-muted-foreground hover:text-foreground cursor-pointer focus:outline-none focus:ring-1 focus:ring-primary"
-                                aria-label={`Actions for encounter #${enc.id}`}
-                              >
-                                <MoreHorizontal className="size-4.5" />
-                              </DropdownMenuTrigger>
-                              <DropdownMenuContent align="end" className="w-72 p-2 space-y-1">
-                                <DropdownMenuGroup>
-                                  <DropdownMenuLabel className="px-3 py-2 text-xs font-extrabold uppercase tracking-wider text-muted-foreground">
-                                    Encounter #{enc.id}
-                                  </DropdownMenuLabel>
-                                </DropdownMenuGroup>
-                                <DropdownMenuItem
-                                  onClick={() => openEncounterDetail(enc, "overview")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
-                                >
-                                  <Stethoscope className="size-4.5 text-primary shrink-0" />
-                                  Clinical Overview
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => openEncounterDetail(enc, "clinical")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
-                                >
-                                  <FileText className="size-4.5 text-primary shrink-0" />
-                                  Diagnosis & Discharge
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => openEncounterDetail(enc, "financial")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
-                                >
-                                  <CreditCard className="size-4.5 text-primary shrink-0" />
-                                  Guarantors & Billing
-                                </DropdownMenuItem>
-                                <DropdownMenuItem
-                                  onClick={() => openEncounterDetail(enc, "mswd")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg"
-                                >
-                                  <FileCheck2 className="size-4.5 text-primary shrink-0" />
-                                  MSWD & UIS Intake
-                                </DropdownMenuItem>
-
-                                <DropdownMenuSeparator className="my-1.5" />
-
-                                <DropdownMenuItem
-                                  disabled={!canPerformActions}
-                                  onClick={() => handleOpenPrint(enc, "uis")}
-                                  className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-semibold min-h-10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                >
-                                  <Printer className="size-4.5 text-primary shrink-0" />
-                                  Print Documents…
-                                </DropdownMenuItem>
-
-                                {(canAssess || canCreateCase) && <DropdownMenuSeparator className="my-1.5" />}
-
-                                {canAssess && (
-                                  <DropdownMenuItem
-                                    disabled={!canPerformActions}
-                                    onClick={() => setDirectAssessEncounterId(enc.id)}
-                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold text-primary focus:text-primary min-h-10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    <ClipboardCheck className="size-4.5 shrink-0" />
-                                    Assess Encounter
-                                  </DropdownMenuItem>
-                                )}
-
-                                {canCreateCase && (
-                                  <DropdownMenuItem
-                                    disabled={!canPerformActions}
-                                    onClick={() => setDirectOpenCaseEncounter(enc)}
-                                    className="cursor-pointer gap-3 px-3 py-2.5 text-sm font-bold min-h-10 rounded-lg disabled:opacity-50 disabled:cursor-not-allowed"
-                                  >
-                                    <FolderPlus className="size-4.5 text-primary shrink-0" />
-                                    Open Case for Encounter
-                                  </DropdownMenuItem>
-                                )}
-                              </DropdownMenuContent>
-                            </DropdownMenu>
-                          </div>
-                        </TableCell>
-                      </TableRow>
-                    )
-                  })}
-                </TableBody>
-              </Table>
-            </div>
-          )}
-        </CardContent>
+                          <FileText className="size-[16px] shrink-0 text-[#1f5fd6]" />
+                          <span>Unified Intake Sheet (UIS)</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenPrint(enc, "maifip")}
+                          className="cursor-pointer gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#1b2433] transition-colors hover:bg-[#edf3fe] hover:text-[#1f5fd6] dark:text-foreground dark:hover:bg-muted"
+                        >
+                          <FileCheck2 className="size-[16px] shrink-0 text-[#1f5fd6]" />
+                          <span>Acknowledgement Slip (MAIFIP)</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenPrint(enc, "cga")}
+                          className="cursor-pointer gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#1b2433] transition-colors hover:bg-[#edf3fe] hover:text-[#1f5fd6] dark:text-foreground dark:hover:bg-muted"
+                        >
+                          <Building2 className="size-[16px] shrink-0 text-[#1f5fd6]" />
+                          <span>City Mayor Acknowledgement Slip</span>
+                        </DropdownMenuItem>
+                        <DropdownMenuItem
+                          onClick={() => handleOpenPrint(enc, "indigency")}
+                          className="cursor-pointer gap-2.5 rounded-[10px] px-3 py-2 text-[13px] font-medium text-[#1b2433] transition-colors hover:bg-[#edf3fe] hover:text-[#1f5fd6] dark:text-foreground dark:hover:bg-muted"
+                        >
+                          <BadgeCheck className="size-[16px] shrink-0 text-[#1f5fd6]" />
+                          <span>Certificate of Eligibility (Indigency)</span>
+                        </DropdownMenuItem>
+                      </DropdownMenuContent>
+                    </DropdownMenu>
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        )}
 
         {/* Pagination Footer */}
         {!isLoading && !error && filteredEncounters.length > 0 && (
-          <div className="p-4 border-t flex flex-col sm:flex-row items-center justify-between gap-3 bg-muted/20">
-            <div className="text-xs text-muted-foreground font-medium">
-              Showing <strong className="text-foreground">{(currentPage - 1) * pageSize + 1}</strong> to{" "}
-              <strong className="text-foreground">
+          <div className="flex w-full items-center justify-between px-[24px] pt-[14px] pb-[18px] text-[13px] text-[#5b6678] dark:text-muted-foreground">
+            <div>
+              Showing{" "}
+              <span className="font-bold text-[#1b2433] dark:text-foreground">
+                {(currentPage - 1) * pageSize + 1}–
                 {Math.min(currentPage * pageSize, filteredEncounters.length)}
-              </strong>{" "}
-              of <strong className="text-foreground">{filteredEncounters.length}</strong> encounters
+              </span>{" "}
+              of {filteredEncounters.length}{" "}
+              {filteredEncounters.length === 1 ? "encounter" : "encounters"}
             </div>
 
-            <div className="flex items-center gap-1.5">
-              <Button
-                variant="outline"
-                size="sm"
+            <div className="flex items-center gap-[8px]">
+              <button
+                type="button"
                 onClick={() => setCurrentPage((p) => Math.max(1, p - 1))}
                 disabled={currentPage <= 1}
-                className="h-8 px-2.5 text-xs font-bold gap-1"
+                className="h-[32px] cursor-pointer rounded-full border border-[#e4e9f2] bg-white px-[12px] text-[12px] font-semibold text-[#5b6678] transition-colors hover:bg-[#f4f7fc] disabled:cursor-not-allowed disabled:opacity-40 dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-muted"
               >
-                <ChevronLeft className="size-3.5" />
                 Previous
-              </Button>
+              </button>
 
-              <span className="text-xs font-semibold px-2 text-muted-foreground">
+              <span className="px-1 text-[13px] text-[#5b6678] dark:text-muted-foreground">
                 Page {currentPage} of {totalPages}
               </span>
 
-              <Button
-                variant="outline"
-                size="sm"
+              <button
+                type="button"
                 onClick={() => setCurrentPage((p) => Math.min(totalPages, p + 1))}
                 disabled={currentPage >= totalPages}
-                className="h-8 px-2.5 text-xs font-bold gap-1"
+                className="h-[32px] cursor-pointer rounded-full border border-[#e4e9f2] bg-white px-[12px] text-[12px] font-semibold text-[#5b6678] transition-colors hover:bg-[#f4f7fc] disabled:cursor-not-allowed disabled:opacity-40 dark:border-border dark:bg-card dark:text-muted-foreground dark:hover:bg-muted"
               >
                 Next
-                <ChevronRight className="size-3.5" />
-              </Button>
+              </button>
             </div>
           </div>
         )}
-      </Card>
+      </div>
 
       {/* Encounter Detail Modal */}
       <HospitalEncounterDetailDialog
@@ -581,7 +568,7 @@ export const HospitalEncountersTab: React.FC<HospitalEncountersTabProps> = ({ pa
         />
       )}
 
-      {/* Printable Dialog (UIS, MAIFIP, City Mayor) */}
+      {/* Printable Dialog (UIS, MAIFIP, City Mayor, Indigency) */}
       <EncounterPrintableDialog
         open={isPrintableOpen}
         onOpenChange={setIsPrintableOpen}

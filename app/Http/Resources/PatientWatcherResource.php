@@ -43,6 +43,7 @@ class PatientWatcherResource extends JsonResource
                 'is_informant' => $assignment->is_informant,
                 'pass_number' => $assignment->pass_number,
                 'pass_status' => $assignment->pass_status,
+                'pass_valid_until' => $assignment->pass_valid_until,
             ])->values()),
             'is_primary' => $this->whenLoaded('caseWatchers', fn () => $this->caseWatchers->contains('is_primary', true)),
             'created_at' => $this->created_at,

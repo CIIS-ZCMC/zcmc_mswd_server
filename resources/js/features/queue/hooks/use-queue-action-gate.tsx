@@ -9,7 +9,9 @@ export type QueueActionState = "waiting" | "in_progress" | "completed" | "none"
 
 export interface QueueActionGateContextValue {
   /**
-   * Whether the user can perform write/edit/print actions right now.
+   * Whether the user can add, edit or delete records right now. Viewing and
+   * printing are never gated: a queued patient not yet being served is view
+   * and print only.
    * True if user is exempt (Admin) OR the active visit is "in_progress" and
    * not held by another worker.
    */
@@ -98,18 +100,18 @@ export const QueueActionGateProvider: React.FC<
       return "Administrator override: Actions allowed without active queue session."
     }
     if (lockedByName) {
-      return `${lockedByName} is serving this patient. Only they can edit or print until the service ends.`
+      return `${lockedByName} is serving this patient. Only they can edit until the service ends; you can still view and print.`
     }
     switch (queueStatus) {
       case "in_progress":
         return "Service in progress. Actions and printing are enabled."
       case "waiting":
-        return "Patient is waiting in queue. Start service in Queue & TAT to enable editing and printing."
+        return "Patient is queued but service has not started. You can view and print; start serving to edit."
       case "completed":
-        return "Service completed for this visit. Records are in view-only mode."
+        return "Service completed for this visit. Records are view and print only."
       case "none":
       default:
-        return "Service must be in progress to perform this action. Queue the patient to begin."
+        return "Service must be in progress to edit. Queue the patient to begin; you can still view and print."
     }
   }, [isExempt, queueStatus, lockedByName])
 
@@ -185,7 +187,7 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
           <strong className="font-bold">
             Being served by {lockedBy.name}:
           </strong>{" "}
-          Records are view-only for you until they finish.
+          Records are view and print only for you until they finish.
         </div>
       </div>
     )
@@ -228,8 +230,8 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
           </span>
           <div>
             <strong className="font-bold">Patient In Queue (Waiting):</strong>{" "}
-            Action buttons (Add, Edit, Delete, Print) are disabled until service
-            begins.
+            View and print only. Add, Edit and Delete are disabled until service
+            starts.
           </div>
         </div>
         <div className="flex items-center gap-2">
@@ -266,8 +268,8 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
             <strong className="font-semibold text-foreground">
               Service Completed:
             </strong>{" "}
-            Turnaround session for this visit has ended. Records are in
-            view-only mode.
+            Turnaround session for this visit has ended. Records are view and
+            print only.
           </div>
         </div>
         {isExempt && (
@@ -288,8 +290,8 @@ export const QueueStatusBanner: React.FC<QueueStatusBannerProps> = ({
         <Clock className="size-3.5 text-sky-600 dark:text-sky-400" />
         <div>
           <strong className="font-semibold text-foreground">View Only:</strong>{" "}
-          Patient is not currently in service. Actions are disabled until a
-          service visit is started.
+          Patient is not currently in service. You can view and print; editing
+          is disabled until a service visit is started.
         </div>
       </div>
       <div className="flex items-center gap-2">

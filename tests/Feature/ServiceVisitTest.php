@@ -431,7 +431,7 @@ it('exposes the open visit on the patient list as active_visit', function () {
     $other = queuePatient('Juan', 'Santos');
 
     queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_COMPLETED, 'his_transaction_id' => 111]);
-    $open = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS]);
+    $open = queueVisit($this->patient, $this->desk, ['status' => ServiceVisit::STATUS_IN_PROGRESS, 'purpose' => 'Guarantee only']);
     queueVisit($other, $this->desk, ['status' => ServiceVisit::STATUS_CANCELLED]);
 
     $rows = collect($this->getJson('/api/patients')->assertOk()->json('data'))->keyBy('id');
@@ -440,6 +440,7 @@ it('exposes the open visit on the patient list as active_visit', function () {
         'id' => $open->id,
         'status' => 'in_progress',
         'his_transaction_id' => 555,
+        'purpose' => 'Guarantee only',
     ])
         ->and($rows[$other->id]['active_visit'])->toBeNull();
 });

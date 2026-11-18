@@ -87,6 +87,7 @@ class PatientResource extends JsonResource
                 'status' => $this->activeVisit->status,
                 'his_transaction_id' => $this->activeVisit->his_transaction_id,
                 'arrived_at' => $this->activeVisit->arrived_at,
+                'purpose' => $this->activeVisit->purpose,
             ]),
 
             'created_at' => $this->created_at,

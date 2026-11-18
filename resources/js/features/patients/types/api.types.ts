@@ -77,6 +77,7 @@ export interface ApiWatcherAssignment {
   is_informant: boolean
   pass_number: string | null
   pass_status: string
+  pass_valid_until: string | null
 }
 
 export interface ApiWatcher {
@@ -340,6 +341,7 @@ export interface ApiPatientActiveVisit {
   status: "waiting" | "in_progress"
   his_transaction_id: number
   arrived_at: string | null
+  purpose: string | null
 }
 
 export interface ApiPatient {

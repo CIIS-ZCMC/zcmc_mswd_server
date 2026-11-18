@@ -204,15 +204,15 @@ export const AcknowledgementSlipDialog: React.FC<
 
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
-      <DialogContent className="sm:max-w-[540px]">
-        <DialogHeader className="space-y-1.5 border-b border-border/40 pb-3">
+      <DialogContent className="rounded-[20px] sm:max-w-[560px]">
+        <DialogHeader className="space-y-1.5 border-b border-[#e4e9f2] pb-3 dark:border-border">
           <div className="flex items-center gap-2">
-            <FileCheck2 className="size-5.5 shrink-0 text-primary" />
-            <DialogTitle className="text-xl font-extrabold text-foreground">
+            <FileCheck2 className="size-5 shrink-0 text-[#1f5fd6]" />
+            <DialogTitle className="text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">
               Acknowledgement Slip (ZCMC-F-MSWD-46)
             </DialogTitle>
           </div>
-          <DialogDescription className="text-xs font-medium text-muted-foreground sm:text-sm">
+          <DialogDescription className="text-[12px] font-normal text-[#5b6678] dark:text-muted-foreground">
             ZCMC-F-MSWD-46 · printed from this encounter&apos;s guarantee or
             manual fund selection.
           </DialogDescription>
@@ -495,16 +495,16 @@ export const AcknowledgementSlipDialog: React.FC<
           )}
         </div>
 
-        <DialogFooter className="flex-col gap-2 border-t border-border/40 pt-3 sm:flex-row">
+        <DialogFooter className="flex-col gap-2 border-t border-[#e4e9f2] pt-3 sm:flex-row dark:border-border">
           <Button
             type="button"
             variant="outline"
             size="sm"
             onClick={() => openSlip(true)}
             disabled={isGenerating || isLoading || hisLoading}
-            className="h-10 cursor-pointer gap-1.5 px-4 text-sm font-bold shadow-2xs"
+            className="h-[36px] cursor-pointer gap-1.5 rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
           >
-            <ExternalLink className="size-4 text-primary" />
+            <ExternalLink className="size-4 text-[#1f5fd6]" />
             Preview in New Tab
           </Button>
           <Button
@@ -512,7 +512,7 @@ export const AcknowledgementSlipDialog: React.FC<
             size="sm"
             onClick={() => openSlip(false)}
             disabled={isGenerating || isLoading || hisLoading}
-            className="h-10 cursor-pointer gap-1.5 px-4 text-sm font-bold shadow-2xs"
+            className="h-[36px] cursor-pointer gap-1.5 rounded-full bg-[#1f5fd6] px-[18px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
           >
             <Printer className="size-4" />
             Print Slip
