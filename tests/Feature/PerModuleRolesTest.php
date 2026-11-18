@@ -58,33 +58,8 @@ it('lands each role on its first module', function (string $role, string $landin
     'head' => ['Head', '/reports/social-cases'],
 ]);
 
-it('gives existing Processor and Case Manager roles CRUD on their modules', function () {
-    Role::findByName('Processor')->revokePermissionTo(['patients.update', 'guarantee.delete']);
-    Role::findByName('Case Manager')->revokePermissionTo(['patients.update', 'cases.delete']);
-    $processor = perModuleRoleUser('Processor');
-    $caseManager = perModuleRoleUser('Case Manager');
-
-    (require database_path('migrations/2026_10_29_000200_grant_module_crud_to_processor_and_case_manager.php'))->up();
-
-    expect($processor->fresh()->can('patients.update'))->toBeTrue()
-        ->and($processor->fresh()->can('guarantee.delete'))->toBeTrue()
-        ->and($processor->fresh()->can('cases.view'))->toBeFalse()
-        ->and($caseManager->fresh()->can('patients.update'))->toBeTrue()
-        ->and($caseManager->fresh()->can('cases.delete'))->toBeTrue()
-        ->and($caseManager->fresh()->can('assistance.approve'))->toBeFalse();
-});
-
-it('moves the old Admin users to a new Super Admin and trims Admin to the client', function () {
-    $user = perModuleRoleUser('Admin');
-    DB::table('roles')->where('code', 'super_admin')->delete();
-    Role::findByName('Admin')->syncPermissions(Permission::all());
-
-    (require database_path('migrations/2026_10_28_000300_split_super_admin_from_admin.php'))->up();
-
-    expect($user->fresh()->hasRole('Super Admin'))->toBeTrue()
-        ->and($user->fresh()->hasRole('Admin'))->toBeFalse()
-        ->and($user->fresh()->role)->toBe('Super Admin')
-        ->and(Role::findByName('Super Admin')->code)->toBe('super_admin')
+it('seeds Super Admin with every permission and Admin without the panel ones', function () {
+    expect(Role::findByName('Super Admin')->code)->toBe('super_admin')
         ->and(Role::findByName('Super Admin')->permissions)->toHaveCount(Permission::count())
         ->and(Role::findByName('Admin')->hasPermissionTo('panel.access'))->toBeFalse()
         ->and(Role::findByName('Admin')->hasPermissionTo('reports.generate'))->toBeTrue();

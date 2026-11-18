@@ -74,8 +74,15 @@ return new class extends Migration
             $table->string('informant_last_name')->nullable();
             $table->string('informant_first_name')->nullable();
             $table->string('informant_middle_name')->nullable();
+            $table->string('informant_extension_name', 50)->nullable();
             $table->string('informant_relationship')->nullable(); // UIS: informant's relation to the patient
+            // Composed address, plus its PSGC parts (App\Support\PsgcAddress).
             $table->string('informant_address', 500)->nullable();
+            $table->string('informant_address_line')->nullable();
+            $table->string('informant_address_region_code', 10)->nullable();
+            $table->string('informant_address_province_code', 10)->nullable();
+            $table->string('informant_address_city_code', 10)->nullable()->index();
+            $table->string('informant_address_barangay_code', 10)->nullable()->index();
             $table->string('informant_contact_number', 50)->nullable();
             $table->json('other_income_sources')->nullable();     // UIS II: [{source, amount}]
             $table->string('referral_source')->nullable();

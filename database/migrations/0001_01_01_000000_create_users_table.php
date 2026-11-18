@@ -18,7 +18,10 @@ return new class extends Migration
             // no UMIS identity and no local password, so those columns accept null; the
             // local super admins are the only rows with a password.
             $table->string('iam_sub')->nullable()->unique();
-            $table->unsignedBigInteger('employee_id')->nullable();   // UMIS user id, not auto-increment
+            // UMIS user id (employee profile id), not auto-increment: the key UMIS
+            // sign-in finds a person by, as iam_sub is for IAM. Unique but nullable,
+            // so the local super admins and IAM-only rows are unaffected.
+            $table->unsignedBigInteger('employee_id')->nullable()->unique();
             $table->integer('employee_number')->nullable();          // UMIS employee_id
             $table->string('employee_name');             // UMIS full_name
             $table->string('license_no')->nullable();
@@ -27,6 +30,8 @@ return new class extends Migration
             $table->json('iam_org_roles')->nullable();
             $table->string('email');                     // UMIS email
             $table->string('password')->nullable();
+            // "Remember me" (the /admin login checkbox, `remember` on POST /login).
+            $table->rememberToken();
             $table->string('role')->nullable();            // display/filter cache only
             $table->boolean('is_active')->default(true);
             $table->dateTime('synced_at')->nullable();

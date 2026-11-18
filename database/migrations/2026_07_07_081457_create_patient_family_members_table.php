@@ -11,7 +11,11 @@ return new class extends Migration
         Schema::create('patient_family_members', function (Blueprint $table) {
             $table->id();
             $table->foreignId('patient_id')->constrained('patients');
-            $table->string('name');
+            $table->string('last_name')->nullable();
+            $table->string('first_name')->nullable();
+            $table->string('middle_name')->nullable();
+            $table->string('extension_name', 50)->nullable();
+            $table->string('name'); // the composed full name
             $table->string('relationship')->nullable();
             $table->date('birthdate')->nullable();   // exact date when known; `age` is the fallback
             $table->string('sex')->nullable();

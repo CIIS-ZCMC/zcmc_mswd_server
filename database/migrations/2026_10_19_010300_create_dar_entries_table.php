@@ -14,6 +14,10 @@ return new class extends Migration
             $table->foreignId('user_id')->constrained('users')->restrictOnDelete();
             // Picked from the MSWD registry; a DAR never names a patient by free text.
             $table->foreignId('patient_id')->constrained('patients');
+            // The queue visit this line was filed from. Not unique: a soft-deleted line
+            // must not stop the visit being filed again. StoreDarEntryRequest allows one
+            // live line per worker.
+            $table->foreignId('service_visit_id')->nullable()->constrained('service_visits')->nullOnDelete();
             $table->date('entry_date');
             $table->time('served_time')->nullable();
             $table->string('activity', 40); // DarEntry::ACTIVITIES key
