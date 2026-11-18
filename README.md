@@ -1,59 +1,70 @@
-<p align="center"><a href="https://laravel.com" target="_blank"><img src="https://raw.githubusercontent.com/laravel/art/master/logo-lockup/5%20SVG/2%20CMYK/1%20Full%20Color/laravel-logolockup-cmyk-red.svg" width="400" alt="Laravel Logo"></a></p>
+# ZCMC MSWD Patient Safety Net Portal
 
-<p align="center">
-<a href="https://github.com/laravel/framework/actions"><img src="https://github.com/laravel/framework/workflows/tests/badge.svg" alt="Build Status"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/dt/laravel/framework" alt="Total Downloads"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/v/laravel/framework" alt="Latest Stable Version"></a>
-<a href="https://packagist.org/packages/laravel/framework"><img src="https://img.shields.io/packagist/l/laravel/framework" alt="License"></a>
-</p>
+The system the Zamboanga City Medical Center Medical Social Work Department (MSWD) runs on. It covers:
+- the patient registry, imported from the hospital information system (HIS, Bizbox)
+- socio-economic classification and the Unified Intake Sheet (UIS)
+- cases and the Social Case Study Report (SCSR)
+- watchers, guarantees and assistance
+- the visit queue with turnaround time
+- the Daily Accomplishment Report (DAR)
+- reports and the audit log
 
-## About Laravel
+## Stack
 
-Laravel is a web application framework with expressive, elegant syntax. We believe development must be an enjoyable and creative experience to be truly fulfilling. Laravel takes the pain out of development by easing common tasks used in many web projects, such as:
+- **Laravel 12** (PHP 8.5+): REST API, Sanctum cookie sessions, Spatie permissions and activity log, DomPDF printables.
+- **Inertia.js + React** (TypeScript), server-side rendered: shadcn/ui on `@base-ui/react`, Tailwind CSS v4, TanStack Query.
+- **Filament**: the `/admin` panel (Super Admin).
+- **Databases:** MySQL for MSWD data. A read-only `sqlsrv` connection reads the HIS live.
 
-- [Simple, fast routing engine](https://laravel.com/docs/routing).
-- [Powerful dependency injection container](https://laravel.com/docs/container).
-- Multiple back-ends for [session](https://laravel.com/docs/session) and [cache](https://laravel.com/docs/cache) storage.
-- Expressive, intuitive [database ORM](https://laravel.com/docs/eloquent).
-- Database agnostic [schema migrations](https://laravel.com/docs/migrations).
-- [Robust background job processing](https://laravel.com/docs/queues).
-- [Real-time event broadcasting](https://laravel.com/docs/broadcasting).
+## Setup
 
-Laravel is accessible, powerful, and provides tools required for large, robust applications.
+```bash
+composer setup
+```
 
-## Learning Laravel
+This installs the PHP and Node dependencies, creates `.env` from `.env.example`, generates the app key, migrates and builds the client.
 
-Laravel has the most extensive and thorough [documentation](https://laravel.com/docs) and video tutorial library of all modern web application frameworks, making it a breeze to get started with the framework. You can also check out [Laravel Learn](https://laravel.com/learn), where you will be guided through building a modern Laravel application.
+Then, in `.env`:
 
-If you don't feel like reading, [Laracasts](https://laracasts.com) can help. Laracasts contains thousands of video tutorials on a range of topics including Laravel, modern PHP, unit testing, and JavaScript. Boost your skills by digging into our comprehensive video library.
+- **`AUTH_PROVIDER=local` for development.** Every role then signs in with employee number and password at `/login`. Production uses `umis`, where staff sign in through the ZCMC Portal; see the `UMIS_*` block in `.env.example`.
+- **Database:** set the `DB_*` values.
+- **HIS:** fill in the `SQLSRV_*` values to read the HIS. Leave `SQLSRV_DATABASE` blank if you have no HIS access.
+- **File storage:** documents go to the default filesystem disk. Development uses an S3-compatible bucket (`mss`).
 
-## Laravel Sponsors
+Seed roles, Library lists, the PSGC address catalog and the first Super Admin:
 
-We would like to extend our thanks to the following sponsors for funding Laravel development. If you are interested in becoming a sponsor, please visit the [Laravel Partners program](https://partners.laravel.com).
+```bash
+php artisan db:seed
+```
 
-### Premium Partners
+The migrations are one create-table file per table, so a pull that changes them needs a rebuild: `php artisan migrate:fresh --seed`. On every deploy, run `php artisan psgc:load` after `php artisan migrate`.
 
-- **[Vehikl](https://vehikl.com)**
-- **[Tighten Co.](https://tighten.co)**
-- **[Kirschbaum Development Group](https://kirschbaumdevelopment.com)**
-- **[64 Robots](https://64robots.com)**
-- **[Curotec](https://www.curotec.com/services/technologies/laravel)**
-- **[DevSquad](https://devsquad.com/hire-laravel-developers)**
-- **[Redberry](https://redberry.international/laravel-development)**
-- **[Active Logic](https://activelogic.com)**
+## Running
 
-## Contributing
+```bash
+composer dev
+```
 
-Thank you for considering contributing to the Laravel framework! The contribution guide can be found in the [Laravel documentation](https://laravel.com/docs/contributions).
+This starts the web server, queue worker, Vite and the SSR server together. To run scheduled jobs (the daily watcher pass expiry) locally, use `php artisan schedule:work`.
 
-## Code of Conduct
+## Checks
 
-In order to ensure that the Laravel community is welcoming to all, please review and abide by the [Code of Conduct](https://laravel.com/docs/contributions#code-of-conduct).
+Run these before opening a pull request:
 
-## Security Vulnerabilities
+```bash
+npx tsc -p tsconfig.app.json --noEmit && npm run lint && composer test
+```
 
-If you discover a security vulnerability within Laravel, please send an e-mail to Taylor Otwell via [taylor@laravel.com](mailto:taylor@laravel.com). All security vulnerabilities will be promptly addressed.
+```bash
+vendor/bin/pint
+```
 
-## License
+Tests run on in-memory SQLite and never touch the HIS connection.
 
-The Laravel framework is open-sourced software licensed under the [MIT license](https://opensource.org/licenses/MIT).
+CI (`.github/workflows/deploy.yml`) runs the same checks on every pull request and push to `master`, after copying `.env.example` to `.env`, so that file must always work for the tests. Pushing a `vX.Y.Z` tag also builds the Docker image and pushes it to GitHub Container Registry.
+
+## Further reading
+
+- [`CLAUDE.md`](CLAUDE.md): architecture, every module's rules, roles and permissions, conventions.
+- [`docs/`](docs/): plans for work in progress. Finished plans are in git history.
+- OpenAPI docs are generated by L5-Swagger from `app/Http/Docs/`.

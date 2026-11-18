@@ -14,7 +14,9 @@ Unified full-stack repository for the ZCMC Medical Social Work Department (MSWD)
 - Single test: `php artisan test tests/Feature/PatientWatcherApiTest.php` or `php artisan test --filter="part of test name"`.
 - `vendor/bin/pint` — PHP formatter (Laravel Pint).
 - `npx tsc -p tsconfig.app.json --noEmit` — the real frontend typecheck. `npm run typecheck` uses the root `tsconfig.json` and does not cover `resources/js`.
-- `php artisan schedule:work` — runs the scheduler locally (daily `mss:expire-watcher-passes`, defined in `routes/console.php`).
+- `php artisan schedule:work` — runs the scheduler locally (daily `mss:expire-watcher-passes` at 00:05, the only scheduled entry, defined in `routes/console.php`).
+- `php artisan psgc:load` — loads the PSGC address catalog from `database/data/psgc.json.gz` (run after `migrate` on every deploy). `php artisan psgc:sync` re-crawls PSGC Cloud and rewrites that file (see Addresses).
+- `php artisan mss:promote-social-cases` — opt-in backfill that promotes existing assessments to draft SCSRs.
 - `php artisan inertia:start-ssr` / `php artisan inertia:stop-ssr` — manages Node SSR server process.
 
 ## Architecture
@@ -40,7 +42,8 @@ Request flow: `routes/api.php` → thin `Http/Controllers` (mostly single-action
 
 - **Inertia Layer (`resources/js/pages/`)**:
   - Owns routing, auth session state, shared user props (`auth.user`, `auth.roles`, `auth.permissions`), and initial page renders.
-  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /dar`, `GET /queue`, `GET /reports`, `GET /reports/social-cases`, `GET /reports/turnaround`, `GET /audit`, `GET /library`.
+  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /dar`, `GET /queue`, `GET /reports`, `GET /reports/social-cases`, `GET /reports/turnaround`, `GET /audit`, `GET /library`. Each carries its module's `permission:` gate except `/`, which redirects a user without `patients.view` to their first module (Reports lands on `/reports/social-cases`) or answers 403.
+  - Sign-in routes: `GET /signing-in/{uuid}` (UMIS), `GET /auth/iam/redirect` and `GET /callback` (IAM), `POST /login`, `POST /logout` (see Auth & Users).
   - Main persistent layout is `resources/js/components/layout/main-layout.tsx`.
 - **API & TanStack Query Layer**:
   - `resources/js/lib/api-client.ts` uses Sanctum cookie sessions (`credentials: "same-origin"`, `X-XSRF-TOKEN`).
@@ -60,7 +63,7 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and 
   - UMIS can AES-256-CBC encrypt its API replies (`"encrypted": true`); `Support/UmisPayload` then decrypts them with `UMIS_PAYLOAD_KEY` and reads plain replies as they are. UMIS encryption is currently off, so the key is left blank; set it only if UMIS turns encryption on (sign-ins then fail with a logged "UMIS_PAYLOAD_KEY is not set").
   - The reply must name system `UMIS_SYSTEM_CODE` (`MSWD`); anything else is "not admitted".
   - The route is not guest-only: whoever is signed in on a shared terminal is signed out first.
-  - Settings: `services.umis` / `UMIS_*` env (see `.env.example`). Plan and UMIS setup: `docs/UMIS_AUTH_PLAN.md`.
+  - Settings: `services.umis` / `UMIS_*` env (see `.env.example`). Plan and UMIS setup (the UMIS registration and landing-page tile live outside this repo): `docs/UMIS_AUTH_PLAN.md`.
 - **UMIS roles** are synced from `permissions.roles[*].name` on every sign-in and recheck, through `Support/ExternalRoleMatcher` (shared with IAM): match by system **code** first (`case_manager`), then by name; `role_map` can rename first. Values with no local role are dropped, never created, and `Super Admin` is never granted.
 - `EnsureUmisSessionIsLive` (web + api) asks UMIS again every `UMIS_RECHECK_MINUTES`: a 401 (signed out of UMIS), another system, or a different person ends the session; UMIS unreachable or a 5xx keeps it. Logout of a UMIS session returns `{redirect: portal_url}`; UMIS has no logout for other systems.
 - **IAM flow** (only with `AUTH_PROVIDER=iam`): `GET /auth/iam/redirect` (a plain link, never an Inertia visit) → IAM → `GET /callback`. `IamAuthService` swaps the code, reads `/api/v1/userinfo`, and keys the user on `users.iam_sub`. `org_roles` and `placement` are stored on the user. `EnsureIamSessionIsLive` renews the IAM token and ends the session if the refresh is refused; logout returns the IAM logout URL when `IAM_END_SESSION_ON_LOGOUT` is on.
@@ -81,7 +84,11 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and 
 
   Supervisor and Admin hold `queue.override` (taking over another worker's visit); Processor and Case Manager don't.
 
-  Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); users/roles and `/admin` (`panel.access`) are Super Admin only. `admin` can be granted from UMIS or IAM; `super_admin` never.
+  Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); managing users/roles (`users.manage`, `roles.manage`) and `/admin` (`panel.access`) are Super Admin only, though Admin holds `users.view`. `admin` can be granted from UMIS or IAM; `super_admin` never.
+
+  Finer points of the seeder: Supervisor holds `patients.merge` but no `*.delete` and no `intake.create`; Case Manager holds `assistance.view|create|update` but not approve; Processor holds no `cases.*` or `assistance.*`; Head holds only `reports.view`, `reports.generate` and the three sign-offs (no `patients.view`, no `intake.view`).
+
+  Permission groups besides the module CRUD ones: `hospital-patients.view` (the Filament HIS patients screen only; the API's HIS lookups sit under `patients.view`), `socioeconomic.*`, `guarantee.*`, `assistance.*` (plus `assistance.approve`), `intake.view|create`, `queue.manage|override`, `dar.manage`, `library.manage`, `audit.view` and `audit.view_protective`, `reports.view` (screens) and `reports.generate` (CSV/PDF exports).
 - Web page routes carry the same `permission:` gates as the API. `/` sends a user without `patients.view` to their first module (cases, queue, DAR, reports). The sidebar tabs and the patient-list query follow `usePermission`.
 - `services.umis.role_map` / `services.iam.role_map` (config arrays) are only needed when the provider sends a value that is neither a role code nor a name.
 - Password login (`POST /login`, `POST /api/login`) is for the local **Super Admin (`super_admin`)** under every provider, and for every role under `AUTH_PROVIDER=local` (`User::canSignInWithPassword()`). `APP_ENV` plays no part. `RolesAndPermissionsSeeder` creates the Super Admin role and `DatabaseSeeder` the first account. The login page links it as "Administrator sign-in" (`/login?admin`).
@@ -92,7 +99,8 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and 
 ### Patients (Registry)
 MSWD patient registry with a 10-tab profile (profile, family, IDs, watchers, socioeconomic, hospital encounters, UIS, social case, documents, history).
 - Patients are created by importing from HIS, keyed on `hospital_id` (`POST /hospital-patients/{id}/import`: 201 created, 200 refreshed). Import is its own permission, `patients.import`, held by every role but Head, so a role can import without `patients.create`; the header's Search or Import Patient shows for `patients.view`.
-- Patient merge and patient IDs are supported.
+- Bulk import: `POST /hospital-patients/import-batch` queues many HIS patients (`ImportHospitalPatientsChunkJob`); `GET /hospital-patients/import-batches/{id}` reports per-row outcomes.
+- Patient IDs, duplicate detection (`/patients/{id}/duplicates`), merge and unmerge (`patients.merge`, with `/merges` history), soft delete and restore are supported.
 - Documents tab: PDF/JPG/PNG uploads (max 10 MB) per patient, typed from the Library Document Types list, filed under a case optionally. Files are stored on the default disk (RustFS in dev, bucket `mss`; the disk is kept per row) and read **only through the server** (`GET /patients/{id}/documents/{doc}/file`, inline or `?download=1`), never a storage path. Delete is a soft delete and keeps the file. Finalized SCSR PDFs also appear here.
 - Front: `features/patients`. Back: `PatientService`, `HospitalPatientImportService`, `PatientFamilyMemberService`, `PatientIdService`, `PatientMergeService`, `DocumentService`.
 
@@ -108,11 +116,12 @@ Every address is a free-text line (house, street, purok) plus a Philippine Stand
 
 ### Hospital (HIS Encounters)
 Read-only view of HIS patients and their transactions (encounters), with guarantors and diagnosis. The encounter dialog hosts the printables and the Queue & TAT tab.
-- Front: `features/hospital`. Back: `HospitalPatientService`, `PatientTransactionService`.
+- Lookups (under `patients.view`): `hospital-patients/find`, `patient-transactions/find` and the HIS code lists (admission results, discounts, case types, plans, memberships, service and transaction types).
+- Front: `features/hospital`. Back: `HospitalPatientService`, `PatientTransactionService`, `PatientGuarantorService` (the HIS guarantor ledger), and the lookup services `AdmissionResultService`, `DiscountService`, `HospitalCaseTypeService`, `HospitalPlanService`, `MembershipService`, `ServiceTypeService`, `TransactionTypeService`.
 
 ### Socioeconomic
 Itemized living expenses and family income per patient, with history and trend.
-- The UIS reads the newest record (`UisSocioeconomicImporter`) for its family income and section III, at intake and on Refresh; this module never reads the UIS. See `docs/UIS_SOCIOECONOMIC_IMPORT_PLAN.md`.
+- The UIS reads the newest record (`UisSocioeconomicImporter`) for its family income and section III, at intake and on Refresh; this module never reads the UIS. (Plan: `UIS_SOCIOECONOMIC_IMPORT_PLAN.md` in git history.)
 - Front: `features/socioeconomic`. Back: `PatientSocioeconomicService`, `SocioeconomicProfileService`, `Support/FamilyIncome`.
 
 ### Assessment & Intake (UIS)
@@ -122,7 +131,7 @@ Socio-economic classification of a patient for an encounter.
 - Assessments are append-only snapshots; a re-assessment links to its parent (`parent_assessment_id`).
 - Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up). Taking one needs `intake.create` (Processor, Case Manager, Admin), not `cases.create`; the sheet routes need `intake.view`.
 - The UIS is a **printable, not a stored record**; every print is logged (`uis_print_logs`).
-- But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. The on-screen sheet reads the same copy through `uisSheetData()` (`features/cases/lib/uis-sheet-data.ts`), which mirrors `UisSnapshotService::sheetData()`. See `docs/UIS_SNAPSHOT_PLAN.md`.
+- But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. The on-screen sheet reads the same copy through `uisSheetData()` (`features/cases/lib/uis-sheet-data.ts`), which mirrors `UisSnapshotService::sheetData()`. (Plan: `UIS_SNAPSHOT_PLAN.md` in git history.)
 - Family income, house tenure, light/water and the section III expense lines are imported from the patient's newest Socioeconomic record when an intake is taken (what the request supplies wins) and on Refresh (which overwrites; a patient with no record, or a record with no expense items, leaves the assessment's own alone). `assessments.socioeconomic_profile_id` records which record, so the sheet can tell a newer one exists.
 - Front: `features/cases` (`NewIntakeAssessmentDialog`, UIS tab). Back: `AssessmentService`, `IntakeAssessmentService`, `UisReadinessService`, `UisSnapshotService`, `UisSocioeconomicImporter`, `UnifiedIntakeSheetPdfService`, `UisPrintLogService`.
 
@@ -130,20 +139,29 @@ Socio-economic classification of a patient for an encounter.
 A case is opened per HIS encounter (`cases.transaction_id`), with `created_by`, `assigned_user_id` and a manual card colour. Extra encounters link through `case_hospital_transactions` with a decision-time snapshot.
 - Actions: assign, refer, close, reopen, restore, reassess. Each records the worker's reason.
 - Social Case Study Report: `draft → for_review → finalized`, numbered `SCSR-{year}-{6}`, signed off, amendable, printable as PDF.
-- Caseload (`/caseload`), progress notes, case summary PDF. Only a note's author may edit or delete it; holders of the `cases.finalize_social_case` sign-off can override.
-- Front: `features/cases`. Back: `CaseModelService`, `SocialCaseService`, `SocialCaseNumberService`, `CaseProgressNoteService`, `CaseHospitalTransactionService`, `CaseSummaryPdfService`, `SocialCaseStudyPdfService`.
+- An assessment becomes the case's SCSR through `POST /assessments/{id}/promote-to-social-case`; `mss:promote-social-cases` backfills older ones.
+- Caseload (`/caseload`, API `my-caseload`), follow-ups (`my-follow-ups`; a progress note's follow-up is closed with `POST /progress-notes/{id}/complete-follow-up`), progress notes, case summary PDF. Only a note's author may edit or delete it; holders of the `cases.finalize_social_case` sign-off can override.
+- Clinical records per case: diagnostics and their reports, interventions, case documents, and assessment expense lines (the SCSR's economic section).
+- An encounter can be assessed from the HIS side: `GET /patient-transactions/{id}/cases`, `POST /patient-transactions/{id}/assess`.
+- Front: `features/cases`. Back: `CaseModelService`, `SocialCaseService`, `SocialCaseNumberService`, `CaseProgressNoteService`, `CaseHospitalTransactionService`, `CaseActivityService`, `DiagnosticService`, `DiagnosticReportService`, `InterventionService`, `InterventionTypeService`, `AssessmentExpenseService`, `CaseSummaryPdfService`, `SocialCaseStudyPdfService`.
+
+### Assistance
+Financial aid given under a case: `cases/{case}/assistances` CRUD, `history` and `logs`.
+- Lifecycle: `approve` and `release` (`assistance.approve`, the Supervisor/Head sign-off), `cancel` (`assistance.update`). Each transition writes a log entry.
+- A release can produce report snapshots: `GET /assistances/{id}/reports`, `GET /assistance-reports`, `GET /assistance-reports/{id}`, `POST /assistance-reports/{id}/void`.
+- Back: `PatientAssistanceService`, `PatientAssistanceLogService`, `PatientAssistanceReportService`.
 
 ### Watchers
-Patient watchers (people staying with the patient) assigned to open cases. **In active development — see `docs/WATCHER_MODULE_PLAN.md`.**
+Patient watchers (people staying with the patient) assigned to open cases. Plan: `docs/WATCHER_MODULE_PLAN.md` (every phase is marked done; remove it once the module is confirmed shipped).
 - `patient_watchers` holds the person's details; `case_watchers` is only the assignment (primary, informant, pass, presence, notes).
-- Assign only to `open`/`ongoing` cases; once per case. Passes live on the assignment and expire daily (`mss:expire-watcher-passes`). Waivers cover the watcher requirement.
+- Assign only to `open`/`ongoing` cases; once per case. Passes live on the assignment and expire daily (`mss:expire-watcher-passes`). Assignment actions: `case-watchers/{id}/promote` (make primary), `issue-pass`, `revoke-pass`. Waivers cover the watcher requirement.
 - Front: `features/patients` (Watchers tab, `watcher-dialog`, `assign-watcher-dialog`) and `features/cases` (`case-watchers-api.ts`, `case-watchers-panel`).
 - Back: `PatientWatcherService`, `CaseWatcherService`, `WatcherPassNumberService`, `WatcherRequirementService`, `WatcherWaiverService`.
 
 ### Guarantees
 Who guarantees a patient's bill for one HIS encounter, and the breakdown of where the money comes from.
 - Breakdown line order: Type of Assistance → Amount → Mode of Assistance → Fund Source, all from the Library.
-- Prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`, print-logged).
+- Prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`, or per encounter `GET /patient-transactions/{id}/acknowledgement-slip/pdf`; print-logged).
 - Front: `features/guarantees`. Back: `PatientGuaranteeService`, `GuarantorService`, `AcknowledgementSlipPdfService`.
 
 ### Encounter Printables
@@ -153,20 +171,21 @@ In `hospital/components/dialogs/`:
 
 ### Queue & Turnaround Time (TAT)
 Time in → Start → Complete (or Cancel) per HIS encounter visit, stamped by the server clock.
-- One open visit per encounter. `served_by` = whoever clicks Start. Cancelled visits are excluded from TAT figures.
+- One open visit per encounter. `served_by` = whoever clicks Start. Cancelled visits are excluded from TAT figures. A visit may carry a free-text `purpose` (nullable).
 - A visit in progress belongs to its `served_by`: only they can complete or cancel it (403 otherwise), and `useQueueActionGate` makes the patient's records view-only for everyone else except Admin and Super Admin. That records lock is UI only; the record APIs don't check it. It covers creating and editing, not printing: the print buttons (UIS, encounter printables, Acknowledgement Slip) work without a visit.
 - A worker serves one visit at a time: Start and Take Over answer 422 while they have another visit in progress. `ServingBar` (in `main-layout.tsx`, fed by `useMyActiveVisit`) shows that visit on every page with a timer and Complete.
 - `queue.override` (Supervisor, Admin, Super Admin) can Take Over a visit with a reason (`POST /service-visits/{id}/take-over`). The timer keeps running and `served_by` moves to them.
 - Completing a visit offers what to print (UIS, MAIFIP slip, City Mayor slip, Indigency certificate: `VisitPrintPrompt`), then "Add to DAR?". A visit left unfiled shows Add to DAR on the worker's Served Today card.
 - Targets per stage (waiting / processing / total, minutes) are set in the Library.
-- Front: `features/queue` (`QueueBoard`, `ServiceVisitPanel`, `VisitDarPrompt`, `TakeOverVisitDialog`, `lib/visit-lock.ts`). Back: `ServiceVisitService`; permissions `queue.manage`, `queue.override`.
+- Visits are completed from three places, each with the print and DAR prompts: `QueueBoard`, the encounter dialog's Queue & TAT tab (`ServiceVisitPanel`) and the patient header's `PatientActiveQueueStatusDialog`.
+- Front: `features/queue` (`QueueBoard`, `ServiceVisitPanel`, `VisitPrintPrompt`, `VisitDarPrompt`, `TakeOverVisitDialog`, `lib/visit-lock.ts`). Back: `ServiceVisitService`; permissions `queue.manage`, `queue.override`.
 
 ### DAR (Daily Accomplishment Report)
 Entries by each worker: patient (registry only), activity, time served, remarks. Own entries only, one day per report; PDF (Prepared by) and CSV. A line can be filed from a queue visit the worker completed (`dar_entries.service_visit_id`), once per worker; a deleted line can be filed again.
 - Front: `features/dar`. Back: `DarReportService`; permission `dar.manage`.
 
 ### Reports
-Social case reports and the TAT report (CSV/PDF), plus patient assistance reports.
+Social case reports and the TAT report (CSV/PDF), plus patient assistance reports. Screens need `reports.view`; the exports need `reports.generate`.
 - Front: `features/reports`. Back: `SocialCaseReportService`, `TurnaroundReportService`, `PatientAssistanceReportService`.
 
 ### Library
@@ -181,7 +200,7 @@ System-wide activity log viewer (`/audit`) and per-record history popovers.
 
 - shadcn/ui with `@base-ui/react` primitives (not Radix).
 - Tailwind CSS v4 in `resources/css/app.css` with OKLCH theme variables.
-- Fonts: `font-sans` (Roboto Variable), `font-heading` (Raleway Variable).
+- Fonts: `font-sans` (Roboto Variable), `font-heading` (Raleway Variable). The UI redesign in progress (`docs/UI_REDESIGN_PLAN.md`) moves both to Plus Jakarta Sans and adds a dashboard at `/` and a split-view registry at `/patients`; update this file when it ships.
 - Icons: `lucide-react`.
 
 ## Conventions
@@ -189,10 +208,11 @@ System-wide activity log viewer (`/audit`) and per-record history popovers.
 - Import alias: `@/` resolves to `resources/js/`.
 - Prettier: no semicolons, double quotes, 2 spaces, 80 width.
 - Always run `npx tsc -p tsconfig.app.json --noEmit && npm run lint && composer test` before completing tasks (plus `vendor/bin/pint` for PHP changes).
+- CI (`.github/workflows/deploy.yml`, PHP 8.5) runs Pint, lint, `tsc`, `composer audit` and the tests on every PR and push to `master`; Prettier and `npm audit` there are advisory. It copies `.env.example` to `.env` first, so keep that file working for tests. A `vX.Y.Z` tag builds and pushes the Docker image.
 - Feature tests use `uses(RefreshDatabase::class)` per file (not global in `tests/Pest.php`) and seed what they need, e.g. `RolesAndPermissionsSeeder`, then `Sanctum::actingAs($user)`.
 
 ## Plans
 
-- `docs/` holds only plans for work in active development. Current: `WATCHER_MODULE_PLAN.md`, `UMIS_AUTH_PLAN.md`, `QUEUE_LOCK_PLAN.md`.
+- `docs/` holds only plans for work in active development. Current: `UI_REDESIGN_PLAN.md`, `UMIS_AUTH_PLAN.md` (UMIS setup and the landing-page tile, outside this repo), `WATCHER_MODULE_PLAN.md`.
 - Write a plan in `docs/<FEATURE>_PLAN.md` for multi-session or multi-layer work. Remove it when the feature ships, and update the module's entry above.
-- Finished plans are in git history (`git log -- docs/`). The code and migrations are the source of truth.
+- Finished plans are in git history (`git log --all -- docs/<NAME>_PLAN.md`, then `git show <commit>^:docs/<NAME>_PLAN.md`). Code comments that cite `docs/<NAME>_PLAN.md` point there. The code and migrations are the source of truth.
