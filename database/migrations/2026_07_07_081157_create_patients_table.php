@@ -33,12 +33,28 @@ return new class extends Migration
             $table->string('nationality')->nullable();
             $table->string('citizenship')->nullable();
             $table->string('place_of_birth')->nullable();
+            $table->string('place_of_birth_city_code', 10)->nullable(); // PSGC city or municipality
+            // Older present-address parts, still read by the PDFs and the registry
+            // search; the server fills them from present_address.
             $table->string('address')->nullable();
             $table->string('barangay')->nullable();
             $table->string('municipality')->nullable();
             $table->string('province')->nullable();
+            // Each address is a composed string the PDFs and screens read, plus its PSGC
+            // parts (App\Support\PsgcAddress). A free-text address keeps its text and has
+            // no codes until someone edits it. docs/PSGC_ADDRESS_PLAN.md.
             $table->string('permanent_address')->nullable();
+            $table->string('permanent_address_line')->nullable();
+            $table->string('permanent_address_region_code', 10)->nullable();
+            $table->string('permanent_address_province_code', 10)->nullable();
+            $table->string('permanent_address_city_code', 10)->nullable()->index();
+            $table->string('permanent_address_barangay_code', 10)->nullable()->index();
             $table->string('present_address')->nullable();
+            $table->string('present_address_line')->nullable();
+            $table->string('present_address_region_code', 10)->nullable();
+            $table->string('present_address_province_code', 10)->nullable();
+            $table->string('present_address_city_code', 10)->nullable()->index();
+            $table->string('present_address_barangay_code', 10)->nullable()->index();
             $table->string('educational_attainment')->nullable();
             $table->string('occupation')->nullable();
             $table->string('employer')->nullable();

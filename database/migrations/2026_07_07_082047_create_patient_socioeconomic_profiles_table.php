@@ -27,7 +27,9 @@ return new class extends Migration
             $table->decimal('total_family_income', 12, 2)->nullable();
             $table->string('house_tenure')->nullable();          // owned | rented
             $table->json('light_source')->nullable();            // electricity | kerosene | candle
+            $table->decimal('light_amount', 12, 2)->nullable();
             $table->json('water_source')->nullable();            // owned | public | artesian_well
+            $table->decimal('water_amount', 12, 2)->nullable();
             // ANNEX B section III "List of Expenses": one column per fixed item.
             foreach ([
                 'house_rent_amount', 'food', 'transport', 'medical', 'insurance',

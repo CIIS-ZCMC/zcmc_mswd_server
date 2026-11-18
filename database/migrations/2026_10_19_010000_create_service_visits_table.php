@@ -26,6 +26,10 @@ return new class extends Migration
             $table->foreignId('served_by')->nullable()->constrained('users')->restrictOnDelete();
             $table->foreignId('completed_by')->nullable()->constrained('users')->restrictOnDelete();
             $table->foreignId('cancelled_by')->nullable()->constrained('users')->restrictOnDelete();
+            // The latest take-over; earlier ones stay in the audit trail.
+            $table->foreignId('taken_over_by')->nullable()->constrained('users')->restrictOnDelete();
+            $table->dateTime('taken_over_at')->nullable();
+            $table->string('takeover_reason')->nullable();
             $table->timestamps();
 
             $table->index(['status', 'arrived_at']);

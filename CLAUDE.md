@@ -28,7 +28,7 @@ Request flow: `routes/api.php` → thin `Http/Controllers` (mostly single-action
 - Auditing: `spatie/laravel-activitylog` via `ActivityLogService`. `AuditCoverageTest` guards coverage, so new mutating models/actions need logging.
 - PDFs are DomPDF, one `*PdfService` per printable.
 - `app/Filament/` is the `/admin` panel (resources and relation managers).
-- The schema is defined by `database/migrations/` only.
+- The schema is defined by `database/migrations/` only: one create-table migration per table, with the later changes folded in. While the app is in development, a schema change edits that table's create migration and databases are rebuilt with `php artisan migrate:fresh --seed`. A permission or role change goes in `RolesAndPermissionsSeeder` (re-run it with `php artisan db:seed --class=RolesAndPermissionsSeeder`), not in a migration.
 
 ### HIS (Bizbox) Integration
 
@@ -84,7 +84,7 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and 
   Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); users/roles and `/admin` (`panel.access`) are Super Admin only. `admin` can be granted from UMIS or IAM; `super_admin` never.
 - Web page routes carry the same `permission:` gates as the API. `/` sends a user without `patients.view` to their first module (cases, queue, DAR, reports). The sidebar tabs and the patient-list query follow `usePermission`.
 - `services.umis.role_map` / `services.iam.role_map` (config arrays) are only needed when the provider sends a value that is neither a role code nor a name.
-- Password login (`POST /login`, `POST /api/login`) is for the local **Super Admin (`super_admin`)** under every provider, and for every role under `AUTH_PROVIDER=local` (`User::canSignInWithPassword()`). `APP_ENV` plays no part. The `users` rows that predate IAM are those accounts (migration `split_super_admin_from_admin` moved them from `Admin`). The login page links it as "Administrator sign-in" (`/login?admin`).
+- Password login (`POST /login`, `POST /api/login`) is for the local **Super Admin (`super_admin`)** under every provider, and for every role under `AUTH_PROVIDER=local` (`User::canSignInWithPassword()`). `APP_ENV` plays no part. `RolesAndPermissionsSeeder` creates the Super Admin role and `DatabaseSeeder` the first account. The login page links it as "Administrator sign-in" (`/login?admin`).
 - Not built: IAM back-channel logout and its revocation queue consumer.
 - Front: `features/auth` (`LoginForm`, `useAuth`, `usePermission`, `useHasRole`).
 - Back: `UmisAuthService`, `Web/UmisAuthController`, `IamAuthService`, `Web/IamAuthController`, `UserService`, `RoleService`, `PermissionService`; Filament Users/Roles/Permissions.

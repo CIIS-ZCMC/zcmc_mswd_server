@@ -11,7 +11,13 @@ return new class extends Migration
         Schema::create('guarantors', function (Blueprint $table) {
             $table->id();
             $table->string('name');
+            // Composed address, plus its PSGC parts (App\Support\PsgcAddress).
             $table->string('address')->nullable();
+            $table->string('address_line')->nullable();
+            $table->string('address_region_code', 10)->nullable();
+            $table->string('address_province_code', 10)->nullable();
+            $table->string('address_city_code', 10)->nullable()->index();
+            $table->string('address_barangay_code', 10)->nullable()->index();
             $table->boolean('is_active')->default(true);
             $table->timestamps();
             $table->softDeletes();
