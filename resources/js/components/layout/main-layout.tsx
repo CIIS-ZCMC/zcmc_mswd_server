@@ -36,7 +36,7 @@ export const MainLayout: React.FC<MainLayoutProps> = ({ children }) => {
       className="flex h-screen w-full overflow-hidden bg-[#f4f7fc] font-sans text-[#0c2a5b] transition-colors duration-200 dark:bg-background dark:text-foreground"
     >
       {/* Far-Left Navigation Rail (Collapsed by default on Registry/Workspace views) */}
-      <DashboardSidebar defaultCollapsed={true} pendingApprovalsCount={3} />
+      <DashboardSidebar defaultCollapsed={true} />
 
       {/* Patient Registry Column */}
       <Sidebar

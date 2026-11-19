@@ -2,13 +2,18 @@
 
 namespace App\Http\Requests;
 
+use App\Models\Assessment;
 use Illuminate\Foundation\Http\FormRequest;
 
 class StoreAssessmentExpenseRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('cases.create') ?? false;
+        $assessment = $this->route('assessment');
+
+        return $assessment instanceof Assessment
+            ? $assessment->canBeChangedBy($this->user(), 'cases.create')
+            : ($this->user()?->can('cases.create') ?? false);
     }
 
     /**

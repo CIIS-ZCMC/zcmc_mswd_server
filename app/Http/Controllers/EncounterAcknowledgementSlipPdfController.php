@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Requests\PrintAcknowledgementSlipRequest;
+use App\Models\PatientGuarantee;
 use App\Services\AcknowledgementSlipPdfService;
 use Illuminate\Database\QueryException;
 use Illuminate\Http\JsonResponse;
@@ -39,6 +40,13 @@ class EncounterAcknowledgementSlipPdfController extends Controller implements Ha
                 'code' => 'his_unreachable',
                 'message' => 'The hospital information system is unreachable. Try again shortly.',
             ], Response::HTTP_SERVICE_UNAVAILABLE);
+        }
+
+        if (PatientGuarantee::hasPendingForEncounter($encounter->getKey())) {
+            return response()->json([
+                'code' => 'awaiting_approval',
+                'message' => 'A guarantee on this encounter is waiting for approval; the slip cannot be printed yet.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
         $entries = $slips->hisMaifipEntries($encounter);

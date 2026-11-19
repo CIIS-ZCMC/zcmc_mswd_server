@@ -79,7 +79,15 @@ export interface PatientUisRow {
   key: string
   encounter: PatientUisEncounter
   case: PatientUisCase | null
-  /** The guarantors recorded on the encounter. */
-  guarantees: { count: number; total: number }
+  /** The guarantors recorded on the encounter, and where their sign-off stands. */
+  guarantees: {
+    count: number
+    total: number
+    /** At or above the approval threshold and not yet approved. */
+    pendingApproval: number
+    approved: number
+  }
+  /** MAIFIP, City Mayor and Indigency letters printed for the encounter. */
+  letters: { printCount: number; lastPrintedAt: string | null }
   uis: PatientUisInfo
 }

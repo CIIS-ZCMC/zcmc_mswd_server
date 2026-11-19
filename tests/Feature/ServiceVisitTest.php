@@ -444,3 +444,51 @@ it('exposes the open visit on the patient list as active_visit', function () {
     ])
         ->and($rows[$other->id]['active_visit'])->toBeNull();
 });
+
+// ── Details checked ──────────────────────────────────────────────────────────
+
+it('records that the server checked the patient details, once', function () {
+    $visit = queueVisit($this->patient, $this->desk, [
+        'status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(), 'served_by' => $this->worker->id,
+    ]);
+    Sanctum::actingAs($this->worker);
+
+    $this->postJson("/api/service-visits/{$visit->id}/details-checked")
+        ->assertOk()
+        ->assertJsonPath('data.details_checked_at', now()->toJSON());
+
+    // A second call keeps the first stamp.
+    Carbon::setTestNow('2026-10-14 09:00:00');
+    $this->postJson("/api/service-visits/{$visit->id}/details-checked")->assertOk();
+
+    expect($visit->fresh()->details_checked_at->toDateTimeString())->toBe('2026-10-14 08:00:00')
+        ->and($visit->fresh()->details_checked_by)->toBe($this->worker->id);
+});
+
+it('lets only the visit server check the details, and only while in progress', function () {
+    $waiting = queueVisit($this->patient, $this->desk);
+    $serving = queueVisit($this->patient, $this->desk, [
+        'his_transaction_id' => 556, 'status' => ServiceVisit::STATUS_IN_PROGRESS,
+        'started_at' => now(), 'served_by' => $this->worker->id,
+    ]);
+
+    Sanctum::actingAs($this->worker);
+    $this->postJson("/api/service-visits/{$waiting->id}/details-checked")->assertUnprocessable();
+
+    Sanctum::actingAs($this->desk);
+    $this->postJson("/api/service-visits/{$serving->id}/details-checked")->assertForbidden();
+
+    expect($serving->fresh()->details_checked_at)->toBeNull();
+});
+
+it('reports the details check on the registry active visit', function () {
+    queueVisit($this->patient, $this->desk, [
+        'status' => ServiceVisit::STATUS_IN_PROGRESS, 'started_at' => now(),
+        'served_by' => $this->worker->id, 'details_checked_at' => now(),
+    ]);
+    Sanctum::actingAs($this->worker);
+
+    $row = collect($this->getJson('/api/patients')->assertOk()->json('data'))->firstWhere('id', $this->patient->id);
+
+    expect($row['active_visit']['details_checked_at'])->toBe(now()->toJSON());
+});

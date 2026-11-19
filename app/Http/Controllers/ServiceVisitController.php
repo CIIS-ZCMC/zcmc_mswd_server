@@ -92,6 +92,11 @@ class ServiceVisitController extends Controller implements HasMiddleware
         return ServiceVisitResource::make($this->visits->cancel($visit, $request->user(), $validated['cancel_reason']));
     }
 
+    public function detailsChecked(Request $request, ServiceVisit $visit): ServiceVisitResource
+    {
+        return ServiceVisitResource::make($this->visits->markDetailsChecked($visit, $request->user()));
+    }
+
     public function takeOver(Request $request, ServiceVisit $visit): ServiceVisitResource
     {
         $validated = $request->validate(['takeover_reason' => ['required', 'string', 'max:255']]);

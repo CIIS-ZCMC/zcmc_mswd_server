@@ -13,7 +13,11 @@ class UpdateAssessmentRequest extends FormRequest
 {
     public function authorize(): bool
     {
-        return $this->user()?->can('cases.update') ?? false;
+        $assessment = $this->route('assessment');
+
+        return $assessment instanceof Assessment
+            ? $assessment->canBeChangedBy($this->user(), 'cases.update')
+            : ($this->user()?->can('cases.update') ?? false);
     }
 
     /**

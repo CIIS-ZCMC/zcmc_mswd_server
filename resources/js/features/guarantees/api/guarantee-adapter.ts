@@ -40,6 +40,11 @@ export function toPatientGuarantee(api: ApiPatientGuarantee): PatientGuarantee {
     remarks: api.remarks ?? null,
     items: Array.isArray(api.items) ? api.items.map(toGuaranteeItem) : [],
     total: Number(api.total) || 0,
+    approvalStatus: api.approval_status ?? "not_required",
+    approvedAt: api.approved_at ?? null,
+    approvedBy: api.approved_by
+      ? { id: api.approved_by.id, name: api.approved_by.name }
+      : null,
     recordedBy: api.recorded_by
       ? { id: api.recorded_by.id, name: api.recorded_by.name }
       : null,

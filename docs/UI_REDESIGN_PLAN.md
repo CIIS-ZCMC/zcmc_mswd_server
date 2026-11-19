@@ -18,9 +18,9 @@ Until this ships, the module sections of `CLAUDE.md` describe the committed syst
 | Part | Status |
 |------|--------|
 | 1. Layout, nav rail, header | ◐ built, nav gaps |
-| 2. Dashboard (`/`) | ◐ UI only, sample data |
+| 2. Dashboard (`/`) | ◐ UI only, sample data; live wiring pending |
 | 3. Registry `/patients` and profile | ◐ built |
-| 4. Visit stepper and `PatientIntakeDialog` | ◐ Guarantors wired; Annex B and Prints not |
+| 4. Visit stepper and `PatientIntakeDialog` | ◐ wired; SOA amount waits for data |
 | 5. Visit purpose (Intake / Guarantee only) | ☑ done |
 | 6. Theme: font and colour tokens | ◐ hard-coded values |
 | 7. Fix breakages, tests, checks | ◐ typecheck, lint and tests pass; Prettier drift |
@@ -111,26 +111,22 @@ The brand, user name and logout moved out of it.
 - `app.css` sets `--font-sans` and `--font-heading` to it.
 - `components/ui/dialog.tsx` and `alert-dialog.tsx` are restyled.
 
-## Still on sample data or not wired
+## Wired since the first PR
 
-- **Dashboard:** every card uses constants and there is no API behind it. The hard-coded values are:
-  - `DEFAULT_KPI_COLUMNS`, `DEFAULT_INTAKE_ROWS`, `THIS_WEEK_DAYS` / `LAST_WEEK_DAYS`, `DEFAULT_FURTHER_ASSISTANCE_ITEMS`, `DEFAULT_REVISION_ITEMS`
-  - `pendingApprovalsCount={3}`
-  - "6 new intakes since 7:30 AM"
-  - the date "Wed, Sep 23, 2026"
-  - the name fallback "Juan"
-  - sample rows have no `patientId`, so clicking one only opens search
-  - the Processor/Head toggle only changes local state
-- **ANNEX B save:** "Save ANNEX B" and "Save and Add Guarantors" set local state and show a toast. No assessment API is called. It should go through the intake API (`intake.create`), as `NewIntakeAssessmentDialog` does.
-- **Prints** call `window.print()`, not the PDF endpoints (UIS, MAIFIP slip, City Mayor slip, Indigency certificate). Prints should also be logged.
-- **Intake dialog constants:**
-  - `DEMO_FAMILY_MEMBERS`, shown when the patient has none
-  - income default 9000
-  - "Dental caries, unspecified"
-  - "Oct 21, 2026 · 9:31 AM"
-  - "Class C3 · complete"
-- **`AddGuarantorCard`:** `soaAuto` is fixed at "8,000.00".
-- **Stepper labels:** "3 to check" and "≥ ₱50,000 only" are fixed.
+- **Annex B** saves through the intake API (`POST /patients/{id}/intake-assessments`, or `PUT /assessments/{id}` plus the expense routes for an intake already taken). Family, income, expenses, diagnosis and class read from the patient, the Socio-economic record and the HIS encounter. The class is previewed from the matrix; an override sends a code and a reason. Editing an intake needs `cases.update` or `intake.update`.
+- **Prints** open the real PDFs: the UIS (`/assessments/{id}/uis/pdf`, preview not logged), the MAIFIP slip, the City Mayor slip and the Indigency certificate. Every print is logged; the stepper's Letters printed counts the UIS and the letters.
+- **Approval** is real: a guarantee of 50,000 or more is `pending` until a `guarantee.approve` holder approves it on `/approvals`; its slip will not print before that.
+- **Check details** is saved on the visit (`details_checked_at`), and the count comes from the patient's own record.
+- **Dashboard support** is ready: `GET /dashboard/guarantee-totals`, a follow-ups response that names the patient, and the Approvals badge on the rail. The cards themselves still show sample data (see Still to do).
+- The follow-up client paths now match the routes (`/progress-notes/...`).
+
+## Still to do
+
+- **SOA amount:** the guarantor card's `soaAuto` ("8,000.00") and the PHIC and share fields are not saved. They wait for the data to be provided.
+- **Dashboard cards:** wire them to the queue (`useQueue`), the turnaround report, `useMyFollowUps`, `usePendingApprovals` and `useGuaranteeTotals` (`features/dashboard/api` and `hooks` are in place), and hide each card from a user without its permission. The dashboard files are being reworked separately.
+- **Returned for revision:** still sample data. An SCSR cannot be returned yet, and nothing else has a returned state; the module is still being designed.
+- **Other income source** in Annex B step 2 still opens the family-member form; `other_income_sources` is not collected.
+- **Informant date and place of birth** are gone from step 1 (the intake has no field for them).
 
 ## Known breakages
 
@@ -159,20 +155,11 @@ Also fixed:
 
 ## Remaining work
 
-1. Fix the known breakages.
-2. Dashboard: add endpoints, or reuse existing ones, for:
-   - the KPIs
-   - the intake queue (service visits)
-   - further assistance (`my-follow-ups`)
-   - assistance released (assistance reports)
-   - returned-for-revision SCSRs
-
-   Gate each card by permission.
-3. ANNEX B: save through the intake API. Read family, income and expenses from the patient instead of demo values.
-4. Prints: use the existing PDF endpoints and their print logs.
-5. Close the nav gaps, and remove the duplicate mounts and the orphan tab.
-6. Move hard-coded colours and fonts to theme tokens, and check dark mode.
-7. Update `CLAUDE.md`, then delete this plan.
+1. Fix the nav gaps (Patient Cases for `cases.view` alone, `/caseload`, `/reports/turnaround`, Library).
+2. Remove the duplicate mounts (the search dialog on an empty `/patients`, the dashboard's own `ServingBar`) and the orphan `tabs/id-tab.tsx`.
+3. Move hard-coded colours and fonts to theme tokens, and check dark mode.
+4. SOA amount and Returned for revision, above.
+5. Update `CLAUDE.md` (tabs, main layout, fonts), then delete this plan.
 
 ## Verification
 

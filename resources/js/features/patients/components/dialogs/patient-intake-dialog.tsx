@@ -54,6 +54,53 @@ import {
 } from "@/features/guarantees"
 import { useHospitalEncounter } from "@/features/hospital/hooks/use-hospital-encounters"
 import { useQueueActionGate } from "@/features/queue"
+import { useAuth } from "@/features/auth/hooks/use-auth"
+import { ApiError } from "@/lib/api-client"
+import { useQueryClient } from "@tanstack/react-query"
+import { openPdfInNewTab } from "@/lib/open-pdf"
+import { printUisDirectly } from "@/features/cases/api/uis-print-api"
+import {
+  patientUisKeys,
+  usePatientUis,
+} from "@/features/cases/hooks/use-uis-prints"
+import { CityMayorSlipDialog } from "@/features/hospital/components/dialogs/city-mayor-slip-dialog"
+import { IndigencyCertificateDialog } from "@/features/hospital/components/dialogs/indigency-certificate-dialog"
+import {
+  useCreateAssessmentExpense,
+  useCreateIntakeAssessment,
+  useDeleteAssessmentExpense,
+  useMswdClassificationMatrix,
+  useUpdateAssessment,
+  useUpdateAssessmentExpense,
+} from "@/features/cases/hooks/use-assessment"
+import { useSocioeconomic } from "@/features/socioeconomic/hooks/use-socioeconomic"
+import {
+  useAssistanceTypeOptions,
+  useModeOfAssistanceOptions,
+} from "@/features/library/hooks/use-lookup-options"
+import { PsgcAddressFields } from "@/features/reference/components/psgc-address-fields"
+import { EMPTY_PSGC_ADDRESS } from "@/features/reference/types/psgc.types"
+import {
+  useAddFamilyMember,
+  useUpdateFamilyMember,
+  useUpdatePatientBackground,
+} from "../../hooks/use-patient-writes"
+import {
+  LIGHT_OPTIONS,
+  PROBLEM_OPTIONS,
+  RENT_EXPENSE_ID,
+  WATER_OPTIONS,
+  billableExpenses,
+  bracketFor,
+  buildAnnexBCreatePayload,
+  buildAnnexBUpdatePayload,
+  defaultExpenseLines,
+  expenseLinesOf,
+  netPerCapitaIncome,
+  type AnnexBState,
+  type ExpenseLine,
+  type HouseTenure,
+} from "../../lib/annex-b"
 import type { FamilyMember, PatientRecord } from "../../types"
 import type { ServiceVisit } from "@/features/queue/types"
 
@@ -73,6 +120,8 @@ interface PatientIntakeDialogProps {
   onFinishServing?: () => void
   onSuccess?: () => void
 }
+
+type FamilyMemberFormShape = FamilyMemberFormData
 
 interface FamilyMemberFormData {
   firstName: string
@@ -490,103 +539,20 @@ function getMemberInitials(name?: string): string {
   return getInitials(name)
 }
 
-const DEMO_FAMILY_MEMBERS: FamilyMember[] = [
-  {
-    id: "fam-1",
-    fullName: "Maria L. Dolar",
-    relationship: "Spouse",
-    birthdate: "1999-04-03",
-    sex: "Female",
-    age: 27,
-    civilStatus: "Married",
-    occupation: "Vendor",
-    monthlyIncome: 4000,
-    educationalAttainment: "Highschool Graduate",
-    contactNumber: "",
-    isLivingWithPatient: true,
-  },
-  {
-    id: "fam-2",
-    fullName: "Kyle Dolar",
-    relationship: "Child",
-    birthdate: "1999-04-03",
-    sex: "Male",
-    age: 6,
-    civilStatus: "Single",
-    occupation: "",
-    monthlyIncome: 0,
-    educationalAttainment: "",
-    contactNumber: "",
-    isLivingWithPatient: true,
-  },
-]
-
-interface ExpenseItem {
-  id: string
-  name: string
-  amount: number
-  isLocked?: boolean
-  isCustom?: boolean
-  sourceNote?: string
-}
-
-const DEFAULT_EXPENSES: ExpenseItem[] = [
-  {
-    id: "rent",
-    name: "House rent",
-    amount: 3500,
-    isLocked: true,
-    sourceNote: "from House / lot",
-  },
-  { id: "food", name: "Food & daily needs", amount: 7500 },
-  { id: "utilities", name: "Light & water", amount: 1800 },
-  { id: "transport", name: "Transportation", amount: 1200 },
-  { id: "health", name: "Healthcare", amount: 500 },
-]
-
+// Names the UIS section III slots recognise, so each amount prints in its place.
 const PREDEFINED_EXPENSE_CATEGORIES = [
   "Education",
   "Clothing",
+  "Insurance",
+  "House help",
+  "Medical",
+  "Transportation",
+  "Food",
   "Communication / Internet",
   "Loan / Debt amortization",
-  "Insurance / Savings",
-  "Special Medical / Therapy",
-  "Caregiver / House help",
-  "Transportation",
-  "Healthcare",
-  "Food & daily needs",
   "Light & water",
   "Other (specify)",
 ] as const
-
-const ASSISTANCE_TYPE_OPTIONS = [
-  "MEDICAL ASSISTANCE",
-  "FINANCIAL ASSISTANCE",
-  "MATERIAL / MEDICINES ASSISTANCE",
-  "PSYCHOSOCIAL / COUNSELING",
-  "REFERRAL / MALASAKIT",
-  "FUNERAL / BURIAL ASSISTANCE",
-  "TRANSPORTATION ASSISTANCE",
-  "OTHER (SPECIFY)",
-] as const
-
-const PROBLEM_OPTIONS = [
-  "Health / Medical",
-  "Economic & Financial",
-  "Housing / Shelter",
-  "Food & Nutrition",
-  "Employment / Livelihood",
-  "Others",
-]
-
-const SERVICE_OPTIONS = [
-  { id: "lab_xray", label: "Laboratory / X-Ray" },
-  { id: "economic_financial", label: "Economic & Financial" },
-  { id: "hospital_bill", label: "Hospital Bill" },
-  { id: "other_1", label: "Other service" },
-  { id: "other_2", label: "Other service" },
-  { id: "other_3", label: "Other service" },
-]
 
 export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
   open,
@@ -629,26 +595,19 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
     ? `#${activeVisit.hisTransactionId}`
     : patient.hospitalNo
       ? `#${patient.hospitalNo}`
-      : "#3372249"
+      : "—"
 
   const visitDateFormatted = useMemo(() => {
     const raw = activeVisit?.arrivedAt ?? activeVisit?.createdAt
-    if (!raw) return "Oct 21, 2026"
+    if (!raw) return "—"
     const d = new Date(raw)
-    if (Number.isNaN(d.getTime())) return "Oct 21, 2026"
+    if (Number.isNaN(d.getTime())) return "—"
     return d.toLocaleDateString("en-US", {
       month: "short",
       day: "numeric",
       year: "numeric",
     })
   }, [activeVisit])
-
-  const draftSavedTime = useMemo(() => {
-    return new Date().toLocaleTimeString("en-US", {
-      hour: "numeric",
-      minute: "2-digit",
-    })
-  }, [])
 
   // Informant Form State (Step 1)
   const parsedName = useMemo(() => {
@@ -673,53 +632,38 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
     }
   }, [patient.fullName])
 
-  const formattedBirthDate = useMemo(() => {
-    if (!patient.birthDate) return "03/12/1972"
-    const d = new Date(patient.birthDate)
-    if (Number.isNaN(d.getTime())) return patient.birthDate
-    const mm = String(d.getMonth() + 1).padStart(2, "0")
-    const dd = String(d.getDate()).padStart(2, "0")
-    const yyyy = d.getFullYear()
-    return `${mm}/${dd}/${yyyy}`
-  }, [patient.birthDate])
-
   const [informantLastName, setInformantLastName] = useState(
-    patient.lastName || parsedName.last || "Abubakar"
+    patient.lastName || parsedName.last || ""
   )
   const [informantFirstName, setInformantFirstName] = useState(
-    patient.firstName || parsedName.first || "Rosalinda"
+    patient.firstName || parsedName.first || ""
   )
   const [informantMiddleName, setInformantMiddleName] = useState(
-    patient.middleName || parsedName.middle || "Maturan"
+    patient.middleName || parsedName.middle || ""
   )
   const [informantRelationship, setInformantRelationship] =
     useState("Patient (self)")
-  const [informantDob, setInformantDob] = useState(formattedBirthDate)
-  const [informantPob, setInformantPob] = useState(
-    patient.placeOfBirth || "Zamboanga City"
+  const [informantContact, setInformantContact] = useState(
+    patient.contactNo && patient.contactNo !== "N/A" ? patient.contactNo : ""
   )
+  const [informantAddress, setInformantAddress] = useState(
+    patient.presentAddressPsgc ?? EMPTY_PSGC_ADDRESS
+  )
+  // Only an address the worker touched, or one the intake already holds as PSGC, is sent.
+  const [informantAddressTouched, setInformantAddressTouched] = useState(false)
 
   // Step 2 Inline Editor State
   const [isAddingMember, setIsAddingMember] = useState(initialAddingMember)
   const [editingMemberId, setEditingMemberId] = useState<string | null>(null)
 
-  // Patient's own income (Step 2)
-  const [localPatientIncome, setLocalPatientIncome] = useState<number>(() => {
-    return Number(
-      patient.monthlyIncome && patient.monthlyIncome > 0
-        ? patient.monthlyIncome
-        : 9000
-    )
-  })
+  // Patient's own income (Step 2): the patient's record, saved back on edit.
+  const [localPatientIncome, setLocalPatientIncome] = useState<number>(() =>
+    Number(patient.monthlyIncome ?? 0)
+  )
 
-  // Family members list (Step 2)
+  // Family members list (Step 2): the patient's record, saved back on edit.
   const [familyMembersList, setFamilyMembersList] = useState<FamilyMember[]>(
-    () => {
-      if (patient.familyMembers && patient.familyMembers.length > 0) {
-        return patient.familyMembers
-      }
-      return DEMO_FAMILY_MEMBERS
-    }
+    () => patient.familyMembers ?? []
   )
 
   useEffect(() => {
@@ -730,10 +674,12 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
   }, [open, initialAddingMember])
 
   useEffect(() => {
-    if (patient.familyMembers && patient.familyMembers.length > 0) {
-      setFamilyMembersList(patient.familyMembers)
-    }
+    setFamilyMembersList(patient.familyMembers ?? [])
   }, [patient.familyMembers])
+
+  useEffect(() => {
+    setLocalPatientIncome(Number(patient.monthlyIncome ?? 0))
+  }, [patient.monthlyIncome])
 
   // Total Family Income (Step 2)
   const totalFamilyIncome = useMemo(() => {
@@ -747,14 +693,13 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
   const householdCount = familyMembersList.length + 1
 
   // Step 3 Living Conditions & Monthly Expenses State (Figma 257:5835)
-  const [houseLotType, setHouseLotType] = useState<
-    "owned" | "rented" | "rent_free"
-  >("rented")
-  const [monthlyRent, setMonthlyRent] = useState<number>(3500)
-  const [lightSources, setLightSources] = useState<string[]>(["Electricity"])
-  const [waterSources, setWaterSources] = useState<string[]>(["Public faucet"])
-  const [expensesList, setExpensesList] =
-    useState<ExpenseItem[]>(DEFAULT_EXPENSES)
+  const [houseLotType, setHouseLotType] = useState<HouseTenure>("owned")
+  const [monthlyRent, setMonthlyRent] = useState<number>(0)
+  const [lightSources, setLightSources] = useState<string[]>([])
+  const [waterSources, setWaterSources] = useState<string[]>([])
+  const [expensesList, setExpensesList] = useState<ExpenseLine[]>(() =>
+    defaultExpenseLines(null)
+  )
   // Ids for expense lines added in this session (render-pure, unlike Date.now()).
   const nextCustomExpenseId = useRef(0)
 
@@ -778,7 +723,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
   useEffect(() => {
     setExpensesList((prev) =>
       prev.map((item) => {
-        if (item.id === "rent") {
+        if (item.id === RENT_EXPENSE_ID) {
           return {
             ...item,
             amount: houseLotType === "rented" ? monthlyRent : 0,
@@ -841,27 +786,11 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
   }
 
   // Step 4 Diagnosis & Problem State (Figma 257:6148)
-  const [finalDiagnosis, setFinalDiagnosis] = useState<string>(() => {
-    return patient.diagnosis || "Dental caries, unspecified"
-  })
-  const [selectedProblems, setSelectedProblems] = useState<string[]>([
-    "Health / Medical",
-    "Economic & Financial",
-  ])
-  const [typeOfAssistance, setTypeOfAssistance] =
-    useState<string>("MEDICAL ASSISTANCE")
+  // The encounter's diagnosis comes from the HIS; see `finalDiagnosis` below.
+  const [selectedProblems, setSelectedProblems] = useState<string[]>([])
+  const [typeOfAssistance, setTypeOfAssistance] = useState<string>("")
   const [otherAssistanceText, setOtherAssistanceText] = useState<string>("")
   const [medicalHistory, setMedicalHistory] = useState<string>("")
-  const [selectedServices, setSelectedServices] = useState<string[]>([
-    "lab_xray",
-    "economic_financial",
-  ])
-
-  useEffect(() => {
-    if (patient.diagnosis) {
-      setFinalDiagnosis(patient.diagnosis)
-    }
-  }, [patient.diagnosis])
 
   const toggleProblem = (problem: string) => {
     setSelectedProblems((prev) =>
@@ -871,37 +800,41 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
     )
   }
 
-  const toggleService = (serviceId: string) => {
-    setSelectedServices((prev) =>
-      prev.includes(serviceId)
-        ? prev.filter((s) => s !== serviceId)
-        : [...prev, serviceId]
-    )
-  }
-
   // Step 5 Assessment & Classification State (Figma 257:6456)
-  const [classification, setClassification] = useState<string>("CLASS C3")
-  const [classificationCategory] = useState<string>("Financially Indigent")
-  const [assessmentNotes, setAssessmentNotes] = useState<string>(
-    "Patient is a 54-year-old widow admitted for a diabetic foot ulcer and is now post-debridement. The household of 6 relies on the son's tricycle income and the daughter's work as a sales clerk. Monthly expenses already take up most of the family income, leaving no room for the ₱120,000 in antibiotics. The family is cooperative and the watcher is present daily."
-  )
-  const [recommendation, setRecommendation] = useState<string>(
-    "Partially subsidized (C2)"
-  )
-  const [interviewedBy] = useState<string>("Maricel J. Tan, RSW · 09/23/2026")
+  const [assessmentNotes, setAssessmentNotes] = useState<string>("")
+  // The recommendation is a Library mode of assistance, saved by its code.
+  const [recommendationMode, setRecommendationMode] = useState<string>("")
+  const [classOverride, setClassOverride] = useState<{
+    code: string
+    reason: string
+  } | null>(null)
+  const [isOverriding, setIsOverriding] = useState(false)
+  const [overrideCode, setOverrideCode] = useState("")
+  const [overrideReason, setOverrideReason] = useState("")
 
-  const netPerCapita = useMemo(() => {
-    if (totalFamilyIncome === 13000 && totalMonthlyExpenses === 14500) {
-      return "-₱1,500.00"
-    }
-    const perCapita =
-      householdCount > 0 ? netBalance / householdCount : netBalance
-    const absVal = Math.abs(perCapita).toLocaleString("en-PH", {
-      minimumFractionDigits: 2,
-      maximumFractionDigits: 2,
-    })
-    return perCapita < 0 ? `-₱${absVal}` : `₱${absVal}`
-  }, [totalFamilyIncome, totalMonthlyExpenses, netBalance, householdCount])
+  const { user } = useAuth()
+  const { data: matrix } = useMswdClassificationMatrix()
+
+  // Net per capita and the class it falls in, as the server will work them out.
+  const netPerCapitaValue = useMemo(
+    () => netPerCapitaIncome(totalFamilyIncome, totalMonthlyExpenses, householdCount),
+    [totalFamilyIncome, totalMonthlyExpenses, householdCount]
+  )
+  const netPerCapita = `₱${netPerCapitaValue.toLocaleString("en-PH", {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 2,
+  })}`
+  const computedBracket = useMemo(
+    () => bracketFor(matrix, netPerCapitaValue),
+    [matrix, netPerCapitaValue]
+  )
+  const effectiveBracket = classOverride
+    ? (matrix?.find((tier) => tier.code === classOverride.code) ?? null)
+    : computedBracket
+  const classification = effectiveBracket
+    ? `Class ${effectiveBracket.code}`
+    : "Class pending"
+  const classificationCategory = effectiveBracket?.name ?? "Not classified yet"
 
   // Guarantors Section (Figma 312:8294): the encounter's MSWD guarantees and
   // the guarantors posted by hospital billing (HIS, read-only).
@@ -925,13 +858,28 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
   } = useHospitalEncounter(transactionId ?? 0, open && hasEncounter)
   const billingGuarantors = hisEncounter?.guarantors ?? []
 
+  // The final diagnosis is the HIS encounter's, falling back to the patient's.
+  const finalDiagnosis =
+    hisEncounter?.finalDiagnosis ||
+    hisEncounter?.impression ||
+    hisEncounter?.dischargeDiagnosis ||
+    (patient.diagnosis && patient.diagnosis !== "N/A"
+      ? patient.diagnosis
+      : "Not recorded")
+
   const deleteGuaranteeMutation = useDeleteGuarantee(
     patient.id,
     transactionId ?? undefined
   )
 
   const [soaRunDate, setSoaRunDate] = useState("")
-  const [processingDateTime] = useState("Oct 21, 2026 · 9:31 AM")
+  const processingDateTime = useMemo(() => {
+    const raw = activeVisit?.startedAt ?? activeVisit?.arrivedAt
+    if (!raw) return "—"
+    const d = new Date(raw)
+    if (Number.isNaN(d.getTime())) return "—"
+    return `${d.toLocaleDateString("en-US", { month: "short", day: "numeric", year: "numeric" })} · ${d.toLocaleTimeString("en-US", { hour: "numeric", minute: "2-digit" })}`
+  }, [activeVisit?.startedAt, activeVisit?.arrivedAt])
   const [guaranteeFormOpen, setGuaranteeFormOpen] = useState(false)
   const [editingGuarantee, setEditingGuarantee] =
     useState<PatientGuarantee | null>(null)
@@ -999,7 +947,220 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
     })
   }
 
-  const [annexBSaved, setAnnexBSaved] = useState(false)
+  // ---- The encounter's intake (at most one), and the patient's records it draws on.
+  const { data: uisRows = [], isLoading: isUisLoading } = usePatientUis(
+    patient.id
+  )
+  const uisRow = useMemo(
+    () =>
+      transactionId == null
+        ? null
+        : (uisRows.find(
+            (r) =>
+              r.encounter.transactionId != null &&
+              Number(r.encounter.transactionId) === Number(transactionId)
+          ) ?? null),
+    [uisRows, transactionId]
+  )
+  const existing = uisRow?.uis.assessment ?? null
+  const canTakeIntake = usePermission("intake.create")
+  const canEditIntake = usePermission("intake.update")
+  const canSaveAnnexB = existing ? canEditIntake : canTakeIntake
+
+  const socioQuery = useSocioeconomic(patient.id)
+  const socioCurrent = socioQuery.data?.current ?? null
+  const { data: assistanceTypeOptions = [] } = useAssistanceTypeOptions(true)
+  const { data: modeOptions = [] } = useModeOfAssistanceOptions(true)
+
+  const intakeCaseId = existing?.caseId ?? 0
+  const intakeId = existing?.id ?? 0
+  const createIntake = useCreateIntakeAssessment(patient.id, transactionId)
+  const updateIntake = useUpdateAssessment(intakeCaseId, intakeId)
+  const createExpense = useCreateAssessmentExpense(intakeCaseId, intakeId)
+  const updateExpense = useUpdateAssessmentExpense(intakeCaseId, intakeId)
+  const deleteExpense = useDeleteAssessmentExpense(intakeCaseId, intakeId)
+  const addFamilyMember = useAddFamilyMember(patient.id)
+  const updateFamilyMember = useUpdateFamilyMember(patient.id)
+  const updateBackground = useUpdatePatientBackground(patient.id)
+
+  const [justSaved, setJustSaved] = useState(false)
+  const [isSavingAnnexB, setIsSavingAnnexB] = useState(false)
+  const [saveError, setSaveError] = useState<string | null>(null)
+  const annexBSaved = Boolean(existing) || justSaved
+
+  // Fill the wizard once per intake: from the saved one, else from the
+  // patient's newest Socio-economic record.
+  const hydratedKey = useRef<string | null>(null)
+  const socioSettled = socioQuery.isFetched || socioQuery.fetchStatus === "idle"
+  useEffect(() => {
+    if (!open) {
+      hydratedKey.current = null
+      return
+    }
+    if (isUisLoading) return
+    const key = existing ? `intake-${existing.id}` : "new"
+    if (hydratedKey.current === key) return
+    if (!existing && !socioSettled) return
+    hydratedKey.current = key
+
+    if (existing) {
+      setInformantLastName(existing.informantLastName ?? "")
+      setInformantFirstName(existing.informantFirstName ?? "")
+      setInformantMiddleName(existing.informantMiddleName ?? "")
+      setInformantRelationship(existing.informantRelationship ?? "")
+      setInformantContact(existing.informantContact ?? "")
+      if (existing.informantAddressPsgc) {
+        setInformantAddress(existing.informantAddressPsgc)
+      }
+      setHouseLotType(existing.houseTenure === "rented" ? "rented" : "owned")
+      setLightSources(existing.lightSource ?? [])
+      setWaterSources(existing.waterSource ?? [])
+      const lines = expenseLinesOf(existing)
+      setExpensesList(lines)
+      setMonthlyRent(lines.find((l) => l.id === RENT_EXPENSE_ID)?.amount ?? 0)
+      setSelectedProblems(existing.problemCategories ?? [])
+      const specify = existing.problemSpecify ?? ""
+      if (specify.startsWith("Others")) {
+        setTypeOfAssistance("Others")
+        setOtherAssistanceText(specify.replace(/^Others:?\s*/, ""))
+      } else {
+        setTypeOfAssistance(specify)
+      }
+      setMedicalHistory(existing.medicalHistory ?? "")
+      setAssessmentNotes(existing.assessmentNotes ?? "")
+      setRecommendationMode(existing.recommendationMode ?? "")
+      if (existing.hasOverride && existing.classification) {
+        setClassOverride({
+          code: existing.classification,
+          reason: existing.classificationOverrideReason ?? "",
+        })
+      }
+      return
+    }
+
+    if (socioCurrent) {
+      const tenure = socioCurrent.house.tenure === "rented" ? "rented" : "owned"
+      setHouseLotType(tenure)
+      setMonthlyRent(Number(socioCurrent.house.rentAmount) || 0)
+      setLightSources(
+        socioCurrent.lightSource.filter((c) =>
+          LIGHT_OPTIONS.some((o) => o.code === c)
+        )
+      )
+      setWaterSources(
+        socioCurrent.waterSource.filter((c) =>
+          WATER_OPTIONS.some((o) => o.code === c)
+        )
+      )
+      setExpensesList(defaultExpenseLines(socioCurrent))
+    }
+  }, [open, isUisLoading, existing, socioSettled, socioCurrent])
+
+  // The wizard's state in the shape the intake API takes.
+  const buildState = (): AnnexBState => ({
+    informant: {
+      lastName: informantLastName,
+      firstName: informantFirstName,
+      middleName: informantMiddleName,
+      relationship: informantRelationship,
+      contactNumber: informantContact,
+      address: informantAddress,
+      sendAddress:
+        informantAddressTouched ||
+        Boolean(existing?.informantAddressPsgc?.cityCode),
+    },
+    totalFamilyIncome,
+    houseTenure: houseLotType,
+    lightSources,
+    waterSources,
+    expenses: expensesList,
+    presentingProblem: existing?.presentingProblem ?? finalDiagnosis,
+    problemCategories: selectedProblems,
+    assistanceType: typeOfAssistance,
+    otherAssistance: otherAssistanceText,
+    medicalHistory,
+    assessmentNotes,
+    recommendation:
+      modeOptions.find((m) => m.value === recommendationMode)?.label ?? "",
+    recommendationMode: recommendationMode || null,
+    classificationOverride: classOverride,
+  })
+
+  // Brings the saved expense lines in line with the wizard's: delete the gone,
+  // change the different, add the new. Matched by name.
+  const syncExpenses = async (saved: NonNullable<typeof existing>["expenses"]) => {
+    const wanted = billableExpenses(expensesList)
+    const byName = new Map(saved.map((e) => [e.expenseType.trim().toLowerCase(), e]))
+    const keep = new Set<number>()
+
+    for (const want of wanted) {
+      const match = byName.get(want.expense_type.toLowerCase())
+      if (match) {
+        keep.add(match.id)
+        if (Number(match.amount) !== want.amount) {
+          await updateExpense.mutateAsync({
+            expenseId: match.id,
+            payload: { amount: want.amount },
+          })
+        }
+      } else {
+        await createExpense.mutateAsync(want)
+      }
+    }
+    for (const gone of saved) {
+      if (!keep.has(gone.id)) await deleteExpense.mutateAsync(gone.id)
+    }
+  }
+
+  /** Saves ANNEX B (creating the encounter's intake, or editing it). Returns whether it worked. */
+  const saveAnnexB = async (): Promise<boolean> => {
+    if (transactionId == null) {
+      setSaveError("This visit has no hospital encounter to take an intake for.")
+      return false
+    }
+    setSaveError(null)
+    setIsSavingAnnexB(true)
+    try {
+      const state = buildState()
+      if (existing) {
+        // Expense lines first, so the class the server works out sees them.
+        await syncExpenses(existing.expenses)
+        await updateIntake.mutateAsync(buildAnnexBUpdatePayload(state))
+      } else {
+        await createIntake.mutateAsync(buildAnnexBCreatePayload(state))
+      }
+      setJustSaved(true)
+      return true
+    } catch (err) {
+      const message =
+        err instanceof ApiError
+          ? err.firstValidationMessage || err.message
+          : err instanceof Error
+            ? err.message
+            : "ANNEX B could not be saved."
+      setSaveError(message)
+      toast.add({ title: "ANNEX B not saved", description: message, type: "error" })
+      return false
+    } finally {
+      setIsSavingAnnexB(false)
+    }
+  }
+
+  const familyPayload = (data: FamilyMemberFormShape) => ({
+    name: `${data.firstName} ${data.middleName ? data.middleName + " " : ""}${data.lastName}`.trim(),
+    first_name: data.firstName || undefined,
+    middle_name: data.middleName || null,
+    last_name: data.lastName || undefined,
+    relationship: data.relationship,
+    birthdate: data.birthdate || undefined,
+    sex: data.sex,
+    civil_status: data.civilStatus || undefined,
+    age: Number(data.age) || undefined,
+    occupation: data.occupation,
+    monthly_income: Number(data.monthlyIncome) || 0,
+    educational_attainment: data.educationalAttainment || undefined,
+    is_living_with_patient: data.isLivingWithPatient,
+  })
 
   const [isRendered, setIsRendered] = useState(open)
   const [isVisible, setIsVisible] = useState(false)
@@ -1008,13 +1169,44 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
   const [newlyAddedExpenseId, setNewlyAddedExpenseId] = useState<string | null>(
     null
   )
-  const [previewDoc, setPreviewDoc] = useState<{
-    title: string
-    type: "annex-b" | "guarantee-letter"
-    subtitle?: string
-    amount?: string
-    guarantor?: string
-  } | null>(null)
+  const queryClient = useQueryClient()
+  const [cityMayorOpen, setCityMayorOpen] = useState(false)
+  const [indigencyOpen, setIndigencyOpen] = useState(false)
+  const [isPrintingAnnexB, setIsPrintingAnnexB] = useState(false)
+  // A print is logged by the server; refresh what counts the printed letters.
+  const refreshPrintCounts = () =>
+    queryClient.invalidateQueries({ queryKey: patientUisKeys.all })
+
+  const previewAnnexB = async () => {
+    if (!existing) return
+    try {
+      // `preview` is not logged as a print.
+      await openPdfInNewTab(`/assessments/${existing.id}/uis/pdf`, { preview: 1 })
+    } catch (err) {
+      toast.add({
+        title: "Preview failed",
+        description: err instanceof ApiError ? err.message : "Could not open the sheet.",
+        type: "error",
+      })
+    }
+  }
+
+  const printAnnexB = async () => {
+    if (!existing) return
+    setIsPrintingAnnexB(true)
+    try {
+      await printUisDirectly({ assessmentId: existing.id })
+      refreshPrintCounts()
+    } catch (err) {
+      toast.add({
+        title: "Print failed",
+        description: err instanceof ApiError ? err.message : "Could not print the sheet.",
+        type: "error",
+      })
+    } finally {
+      setIsPrintingAnnexB(false)
+    }
+  }
 
   useEffect(() => {
     if (open) {
@@ -1043,11 +1235,8 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
         ) {
           return
         }
-        if (previewDoc) {
-          setPreviewDoc(null)
-        } else {
-          onClose()
-        }
+        if (cityMayorOpen || indigencyOpen) return
+        onClose()
       }
     }
     if (open) {
@@ -1056,7 +1245,8 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
     }
   }, [
     open,
-    previewDoc,
+    cityMayorOpen,
+    indigencyOpen,
     onClose,
     guaranteeFormOpen,
     slipGuaranteeId,
@@ -1129,7 +1319,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                       data-node-id="312:8648"
                       className="flex h-[24px] items-center rounded-full bg-[#e8f6ef] px-[10px] text-[12px] leading-normal font-bold text-[#146b43] dark:bg-emerald-900/40 dark:text-emerald-300"
                     >
-                      Class C3
+                      {classification}
                     </span>
                   ) : (
                     <span
@@ -1461,56 +1651,33 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                   </div>
                 </div>
 
-                {/* Date of birth */}
-                <div
-                  data-node-id="257:6110"
-                  className="flex flex-col gap-[5px]"
-                >
-                  <label
-                    data-node-id="257:6112"
-                    className="text-[12px] leading-normal font-semibold text-[#5b6678] dark:text-muted-foreground"
-                  >
-                    Date of birth
+                {/* Contact number */}
+                <div className="flex flex-col gap-[5px]">
+                  <label className="text-[12px] leading-normal font-semibold text-[#5b6678] dark:text-muted-foreground">
+                    Contact number
                   </label>
-                  <div
-                    data-node-id="257:6113"
-                    className="flex h-[38px] w-full items-center rounded-[10px] border border-[#c6e8ee] bg-[#f1fafb] px-[12px] transition-colors focus-within:border-[#1f5fd6] focus-within:bg-white dark:border-border dark:bg-muted/40 dark:focus-within:bg-card"
-                  >
+                  <div className="flex h-[38px] w-full items-center rounded-[10px] border border-[#c6e8ee] bg-[#f1fafb] px-[12px] transition-colors focus-within:border-[#1f5fd6] focus-within:bg-white dark:border-border dark:bg-muted/40 dark:focus-within:bg-card">
                     <input
                       type="text"
-                      value={informantDob}
-                      onChange={(e) => setInformantDob(e.target.value)}
+                      value={informantContact}
+                      onChange={(e) => setInformantContact(e.target.value)}
                       className="w-full bg-transparent text-[13px] font-medium text-[#1b2433] focus:outline-none dark:text-foreground"
-                      placeholder="MM/DD/YYYY"
-                    />
-                  </div>
-                </div>
-
-                {/* Place of birth */}
-                <div
-                  data-node-id="257:6142"
-                  className="flex flex-col gap-[5px]"
-                >
-                  <label
-                    data-node-id="257:6144"
-                    className="text-[12px] leading-normal font-semibold text-[#5b6678] dark:text-muted-foreground"
-                  >
-                    Place of birth
-                  </label>
-                  <div
-                    data-node-id="257:6145"
-                    className="flex h-[38px] w-full items-center rounded-[10px] border border-[#c6e8ee] bg-[#f1fafb] px-[12px] transition-colors focus-within:border-[#1f5fd6] focus-within:bg-white dark:border-border dark:bg-muted/40 dark:focus-within:bg-card"
-                  >
-                    <input
-                      type="text"
-                      value={informantPob}
-                      onChange={(e) => setInformantPob(e.target.value)}
-                      className="w-full bg-transparent text-[13px] font-medium text-[#1b2433] focus:outline-none dark:text-foreground"
-                      placeholder="Place of birth"
+                      placeholder="09XX XXX XXXX"
                     />
                   </div>
                 </div>
               </div>
+
+              {/* Informant address, picked from PSGC */}
+              <PsgcAddressFields
+                value={informantAddress}
+                onChange={(next) => {
+                  setInformantAddress(next)
+                  setInformantAddressTouched(true)
+                }}
+                label="Informant address"
+                legacyText={existing?.informantAddress ?? null}
+              />
             </div>
           </div>
         )}
@@ -1554,9 +1721,9 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 className="text-[13px] leading-[19.5px] font-normal text-[#1b2433] dark:text-foreground"
               >
                 From{" "}
-                {patient.firstName || patient.fullName.split(" ")[0] || "Kim"}
-                &apos;s record, last confirmed Feb 6, 2026. Ages are updated
-                from birth dates. Edits here save back to the record.
+                {patient.firstName || patient.fullName.split(" ")[0] || "the patient"}
+                &apos;s record. Ages are updated from birth dates. Edits here
+                save back to the record.
               </p>
             </div>
 
@@ -1565,21 +1732,28 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
               <FamilyMemberFormCard
                 title="Edit Family Member"
                 initialData={{
-                  firstName: parsedName.first || "Kim Horace",
-                  middleName: parsedName.middle || "A",
-                  lastName: parsedName.last || "Dolar",
-                  birthdate: "Oct 29, 1999",
-                  age: patient.age || 27,
+                  firstName: parsedName.first || "",
+                  middleName: parsedName.middle || "",
+                  lastName: parsedName.last || "",
+                  birthdate: patient.birthDate ?? "",
+                  age: patient.age ?? "",
                   sex: patient.gender === "Female" ? "Female" : "Male",
                   civilStatus: patient.civilStatus || "Single",
                   relationship: "Patient (self)",
-                  educationalAttainment: "College level",
-                  occupation: patient.occupation || "ZCMC Employee",
+                  educationalAttainment: patient.educationalAttainment ?? "",
+                  occupation: patient.occupation ?? "",
                   monthlyIncome: localPatientIncome,
                   isLivingWithPatient: true,
                 }}
                 onSave={(data) => {
-                  setLocalPatientIncome(Number(data.monthlyIncome) || 0)
+                  const income = Number(data.monthlyIncome) || 0
+                  setLocalPatientIncome(income)
+                  updateBackground.mutate({
+                    monthly_income: income,
+                    occupation: data.occupation,
+                    educational_attainment: data.educationalAttainment,
+                    civil_status: data.civilStatus,
+                  })
                   setEditingMemberId(null)
                 }}
                 onCancel={() => setEditingMemberId(null)}
@@ -1594,7 +1768,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                   data-node-id="I283:4106;283:3943"
                   className="flex size-[38px] shrink-0 items-center justify-center rounded-[19px] bg-[#edf3fe] text-[12px] leading-normal font-bold text-[#1f5fd6]"
                 >
-                  {getInitials(patient.fullName || "Kim Horace A. Dolar")}
+                  {getInitials(patient.fullName)}
                 </div>
 
                 {/* Info Column */}
@@ -1607,7 +1781,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                       data-node-id="I283:4106;283:3949"
                       className="truncate text-[14px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground"
                     >
-                      {patient.fullName || "Kim Horace A. Dolar"}
+                      {patient.fullName}
                     </span>
                     <span
                       data-node-id="I283:4106;283:3951"
@@ -1621,11 +1795,17 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     className="flex flex-col text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground"
                   >
                     <span>
-                      {patient.age || 29} · {patient.gender || "Male"} ·{" "}
-                      {patient.civilStatus || "Married"} · Born 04/03/1999
+                      {patient.age ?? "—"} · {patient.gender || "—"} ·{" "}
+                      {patient.civilStatus || "—"} · Born{" "}
+                      {patient.birthDate
+                        ? new Date(patient.birthDate).toLocaleDateString(
+                            "en-US"
+                          )
+                        : "—"}
                     </span>
                     <span>
-                      College level · {patient.occupation || "ZCMC Employee"}
+                      {patient.educationalAttainment || "Education not recorded"}{" "}
+                      · {patient.occupation || "Occupation not recorded"}
                     </span>
                   </div>
                 </div>
@@ -1675,7 +1855,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 initialData={{
                   firstName: "",
                   middleName: "",
-                  lastName: parsedName.last || "Dolar",
+                  lastName: parsedName.last || "",
                   birthdate: "",
                   age: "",
                   sex: "Male",
@@ -1687,26 +1867,18 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                   isLivingWithPatient: true,
                 }}
                 onSave={(data) => {
-                  const newMember: FamilyMember = {
-                    id: `fam-${Date.now()}`,
-                    fullName:
-                      `${data.firstName} ${data.middleName ? data.middleName + " " : ""}${data.lastName}`.trim(),
-                    firstName: data.firstName,
-                    middleName: data.middleName,
-                    lastName: data.lastName,
-                    relationship: data.relationship,
-                    birthdate: data.birthdate || "2020-01-01",
-                    sex: data.sex,
-                    age: Number(data.age) || 0,
-                    civilStatus: data.civilStatus,
-                    occupation: data.occupation,
-                    monthlyIncome: Number(data.monthlyIncome) || 0,
-                    educationalAttainment: data.educationalAttainment,
-                    contactNumber: "",
-                    isLivingWithPatient: data.isLivingWithPatient,
-                  }
-                  setFamilyMembersList((prev) => [...prev, newMember])
-                  setIsAddingMember(false)
+                  addFamilyMember.mutate(familyPayload(data), {
+                    onSuccess: () => setIsAddingMember(false),
+                    onError: (err) =>
+                      toast.add({
+                        title: "Family member not saved",
+                        description:
+                          err instanceof ApiError
+                            ? err.firstValidationMessage || err.message
+                            : "Could not add the family member.",
+                        type: "error",
+                      }),
+                  })
                 }}
                 onCancel={() => setIsAddingMember(false)}
               />
@@ -1738,31 +1910,21 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                       isLivingWithPatient: member.isLivingWithPatient ?? true,
                     }}
                     onSave={(data) => {
-                      setFamilyMembersList((prev) =>
-                        prev.map((m) =>
-                          m.id === member.id
-                            ? {
-                                ...m,
-                                fullName:
-                                  `${data.firstName} ${data.middleName ? data.middleName + " " : ""}${data.lastName}`.trim(),
-                                firstName: data.firstName,
-                                middleName: data.middleName,
-                                lastName: data.lastName,
-                                relationship: data.relationship,
-                                birthdate: data.birthdate,
-                                sex: data.sex,
-                                age: Number(data.age) || 0,
-                                civilStatus: data.civilStatus,
-                                occupation: data.occupation,
-                                monthlyIncome: Number(data.monthlyIncome) || 0,
-                                educationalAttainment:
-                                  data.educationalAttainment,
-                                isLivingWithPatient: data.isLivingWithPatient,
-                              }
-                            : m
-                        )
+                      updateFamilyMember.mutate(
+                        { memberId: member.id, payload: familyPayload(data) },
+                        {
+                          onSuccess: () => setEditingMemberId(null),
+                          onError: (err) =>
+                            toast.add({
+                              title: "Family member not saved",
+                              description:
+                                err instanceof ApiError
+                                  ? err.firstValidationMessage || err.message
+                                  : "Could not update the family member.",
+                              type: "error",
+                            }),
+                        }
                       )
-                      setEditingMemberId(null)
                     }}
                     onCancel={() => setEditingMemberId(null)}
                   />
@@ -1779,7 +1941,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     const yyyy = d.getFullYear()
                     return `${mm}/${dd}/${yyyy}`
                   })()
-                : "04/03/1999"
+                : "—"
 
               return (
                 <div
@@ -1939,8 +2101,8 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 data-node-id="298:6373"
                 className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground"
               >
-                From {parsedName.first || patient.firstName || "patient"}&apos;s
-                record · Feb 6, 2026
+                From {parsedName.first || patient.firstName || "the patient"}&apos;s
+                record
               </span>
             </div>
 
@@ -2049,43 +2211,6 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     </div>
                   </button>
 
-                  {/* Rent-free Card */}
-                  <button
-                    type="button"
-                    onClick={() => setHouseLotType("rent_free")}
-                    data-node-id="298:6401"
-                    className={cn(
-                      "flex min-w-0 flex-1 cursor-pointer items-start gap-[10px] rounded-[12px] p-[10px_12px] text-left transition-all",
-                      houseLotType === "rent_free"
-                        ? "border-2 border-[#1f5fd6] bg-[#edf3fe] dark:bg-primary/10"
-                        : "border border-[#e4e9f2] bg-white hover:bg-[#f4f7fc] dark:border-border dark:bg-card dark:hover:bg-muted/50"
-                    )}
-                  >
-                    <div className="pt-px">
-                      <div
-                        className={cn(
-                          "flex size-[18px] items-center justify-center rounded-full border-2",
-                          houseLotType === "rent_free"
-                            ? "border-[#1f5fd6]"
-                            : "border-[#cfd7e4] dark:border-muted-foreground"
-                        )}
-                      >
-                        {houseLotType === "rent_free" && (
-                          <div className="size-[8px] rounded-full bg-[#1f5fd6]" />
-                        )}
-                      </div>
-                    </div>
-                    <div className="flex flex-col">
-                      <span className="text-[13px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground">
-                        Rent-free
-                      </span>
-                      <span className="text-[11px] leading-[14.85px] font-normal text-[#5b6678] dark:text-muted-foreground">
-                        Lives with relatives or
-                        <br />
-                        caretaker, no rent
-                      </span>
-                    </div>
-                  </button>
                 </div>
               </div>
 
@@ -2144,14 +2269,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     data-node-id="298:6422"
                     className="flex flex-wrap gap-[6px]"
                   >
-                    {[
-                      "Electricity",
-                      "Kerosene",
-                      "Candle",
-                      "Solar",
-                      "Charcoal",
-                      "None",
-                    ].map((src) => {
+                    {LIGHT_OPTIONS.map(({ code: src, label }) => {
                       const isSelected = lightSources.includes(src)
                       return (
                         <button
@@ -2178,7 +2296,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                             )}
                           </div>
                           <span className="text-[12px] leading-normal font-semibold text-[#0c2a5b] dark:text-foreground">
-                            {src}
+                            {label}
                           </span>
                         </button>
                       )
@@ -2201,12 +2319,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     data-node-id="298:6448"
                     className="flex flex-wrap gap-[6px]"
                   >
-                    {[
-                      "Piped (owned)",
-                      "Public faucet",
-                      "Artesian well",
-                      "Bought / delivered",
-                    ].map((src) => {
+                    {WATER_OPTIONS.map(({ code: src, label }) => {
                       const isSelected = waterSources.includes(src)
                       return (
                         <button
@@ -2233,7 +2346,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                             )}
                           </div>
                           <span className="text-[12px] leading-normal font-semibold text-[#0c2a5b] dark:text-foreground">
-                            {src}
+                            {label}
                           </span>
                         </button>
                       )
@@ -2571,8 +2684,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 data-node-id="257:6215"
                 className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground"
               >
-                From {parsedName.first || patient.firstName || "Kim"}&apos;s
-                record · Feb 6, 2026
+                From the hospital encounter and the patient&apos;s record
               </span>
             </div>
 
@@ -2613,7 +2725,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 data-node-id="257:6311"
                 className="flex flex-wrap items-center gap-[8px]"
               >
-                {PROBLEM_OPTIONS.map((problem) => {
+                {PROBLEM_OPTIONS.map(({ code: problem, label }) => {
                   const isSelected = selectedProblems.includes(problem)
                   return (
                     <button
@@ -2632,7 +2744,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                       ) : (
                         <Plus className="size-[14px] text-[#5b6678] dark:text-muted-foreground" />
                       )}
-                      <span>{problem}</span>
+                      <span>{label}</span>
                     </button>
                   )
                 })}
@@ -2658,7 +2770,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     className="flex h-[38px] w-full cursor-pointer items-center justify-between rounded-[10px] border border-[#c6e8ee] bg-[#f1fafb] px-[12px] text-left transition-colors outline-none hover:border-[#1f5fd6] dark:border-cyan-800 dark:bg-cyan-950/20"
                   >
                     <span className="truncate text-[13px] leading-normal font-medium text-[#1b2433] dark:text-foreground">
-                      {typeOfAssistance}
+                      {typeOfAssistance || "Select the type of assistance"}
                     </span>
                     <ChevronDown className="size-[15px] shrink-0 text-[#5b6678] dark:text-muted-foreground" />
                   </DropdownMenuTrigger>
@@ -2669,7 +2781,10 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     className="w-(--anchor-width) min-w-[280px] rounded-[12px] border border-[#e4e9f2] bg-white p-[6px] shadow-[0px_10px_24px_rgba(12,42,91,0.12)] dark:border-border dark:bg-card"
                   >
                     <div className="max-h-[220px] [scrollbar-width:thin] [scrollbar-color:#cfd7e4_transparent] overflow-y-auto dark:[scrollbar-color:#374151_transparent]">
-                      {ASSISTANCE_TYPE_OPTIONS.map((option) => {
+                      {[
+                        ...assistanceTypeOptions.map((o) => o.label),
+                        "Others",
+                      ].map((option) => {
                         const isSelected = typeOfAssistance === option
                         return (
                           <DropdownMenuItem
@@ -2694,7 +2809,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 </DropdownMenu>
 
                 {/* Custom input when OTHER (SPECIFY) is selected */}
-                {typeOfAssistance === "OTHER (SPECIFY)" && (
+                {typeOfAssistance === "Others" && (
                   <div className="animate-in pt-[2px] duration-150 fade-in-50">
                     <input
                       type="text"
@@ -2731,46 +2846,6 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
               </div>
             </div>
 
-            {/* Services availed Section */}
-            <div data-node-id="270:4062" className="flex flex-col gap-[10px]">
-              <div data-node-id="270:4063" className="flex items-center">
-                <span
-                  data-node-id="270:4064"
-                  className="text-[13px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground"
-                >
-                  Services availed
-                </span>
-              </div>
-
-              <div
-                data-node-id="270:4097"
-                className="flex flex-wrap items-center gap-[8px]"
-              >
-                {SERVICE_OPTIONS.map((svc) => {
-                  const isSelected = selectedServices.includes(svc.id)
-                  return (
-                    <button
-                      key={svc.id}
-                      type="button"
-                      onClick={() => toggleService(svc.id)}
-                      className={cn(
-                        "flex h-[38px] cursor-pointer items-center gap-[6px] rounded-full px-[14px] text-[13px] leading-normal font-semibold transition-all",
-                        isSelected
-                          ? "border border-[#1f5fd6] bg-[#1f5fd6] text-white shadow-xs"
-                          : "border border-[#cfd7e4] bg-white text-[#0c2a5b] hover:bg-[#f4f7fc] dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-muted/50"
-                      )}
-                    >
-                      {isSelected ? (
-                        <Check className="size-[14px] stroke-[2.5] text-white" />
-                      ) : (
-                        <Plus className="size-[14px] text-[#5b6678] dark:text-muted-foreground" />
-                      )}
-                      <span>{svc.label}</span>
-                    </button>
-                  )
-                })}
-              </div>
-            </div>
           </div>
         )}
 
@@ -2930,18 +3005,77 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
               <button
                 type="button"
                 onClick={() => {
-                  const newClass = prompt(
-                    "Override Classification (e.g. CLASS C1, CLASS C2, CLASS C3):",
-                    classification
-                  )
-                  if (newClass) setClassification(newClass)
+                  setIsOverriding((open) => !open)
+                  setOverrideCode(classOverride?.code ?? computedBracket?.code ?? "")
+                  setOverrideReason(classOverride?.reason ?? "")
                 }}
                 data-node-id="257:6697"
                 className="cursor-pointer text-[13px] leading-normal font-semibold text-[#1f5fd6] transition-colors hover:underline"
               >
-                Override...
+                {classOverride ? "Change override" : "Override..."}
               </button>
             </div>
+
+            {isOverriding && (
+              <div className="flex flex-col gap-[10px] rounded-[14px] border border-[#fad5ac] bg-[#fff3e6] px-[16px] py-[14px] dark:border-amber-800/40 dark:bg-amber-950/20">
+                <span className="text-[13px] font-semibold text-[#a5500b] dark:text-amber-400">
+                  Override the class
+                  {computedBracket ? ` (worked out: Class ${computedBracket.code})` : ""}
+                </span>
+                <div className="flex flex-wrap items-center gap-[8px]">
+                  {(matrix ?? []).map((tier) => (
+                    <button
+                      key={tier.code}
+                      type="button"
+                      onClick={() => setOverrideCode(tier.code)}
+                      className={cn(
+                        "h-[34px] cursor-pointer rounded-full border px-[14px] text-[13px] font-semibold transition-colors",
+                        overrideCode === tier.code
+                          ? "border-[#1f5fd6] bg-[#1f5fd6] text-white"
+                          : "border-[#cfd7e4] bg-white text-[#0c2a5b] hover:bg-[#f4f7fc] dark:border-border dark:bg-card dark:text-foreground"
+                      )}
+                    >
+                      Class {tier.code}
+                    </button>
+                  ))}
+                </div>
+                <input
+                  type="text"
+                  value={overrideReason}
+                  onChange={(e) => setOverrideReason(e.target.value)}
+                  placeholder="Why is the class changed? (required)"
+                  className="h-[38px] w-full rounded-[10px] border border-[#c6e8ee] bg-white px-[12px] text-[13px] font-medium text-[#1b2433] outline-none focus:border-[#1f5fd6] dark:border-border dark:bg-card dark:text-foreground"
+                />
+                <div className="flex items-center gap-[8px]">
+                  <button
+                    type="button"
+                    disabled={!overrideCode || !overrideReason.trim()}
+                    onClick={() => {
+                      setClassOverride({
+                        code: overrideCode,
+                        reason: overrideReason.trim(),
+                      })
+                      setIsOverriding(false)
+                    }}
+                    className="h-[34px] cursor-pointer rounded-full bg-[#1f5fd6] px-[16px] text-[13px] font-semibold text-white disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    Apply override
+                  </button>
+                  {classOverride && (
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setClassOverride(null)
+                        setIsOverriding(false)
+                      }}
+                      className="h-[34px] cursor-pointer rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] dark:border-border dark:text-foreground"
+                    >
+                      Use the worked-out class
+                    </button>
+                  )}
+                </div>
+              </div>
+            )}
 
             {/* Assessment & Recommendation Form Section (Figma 257:6662) */}
             <div data-node-id="257:6662" className="flex flex-col gap-[16px]">
@@ -2987,22 +3121,16 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     className="relative flex h-[44px] w-full items-center rounded-[12px] border border-[#c6e8ee] bg-[#f1fafb] px-[14px] dark:border-cyan-800 dark:bg-cyan-950/20"
                   >
                     <select
-                      value={recommendation}
-                      onChange={(e) => setRecommendation(e.target.value)}
+                      value={recommendationMode}
+                      onChange={(e) => setRecommendationMode(e.target.value)}
                       className="w-full cursor-pointer appearance-none bg-transparent text-[14px] leading-normal font-medium text-[#1b2433] outline-none dark:text-foreground"
                     >
-                      <option value="Partially subsidized (C2)">
-                        Partially subsidized (C2)
-                      </option>
-                      <option value="Full subsidy (C3 / Indigent)">
-                        Full subsidy (C3 / Indigent)
-                      </option>
-                      <option value="Partially subsidized (C1)">
-                        Partially subsidized (C1)
-                      </option>
-                      <option value="Non-subsidized (Class D)">
-                        Non-subsidized (Class D)
-                      </option>
+                      <option value="">Select a mode of assistance</option>
+                      {modeOptions.map((mode) => (
+                        <option key={mode.value} value={mode.value}>
+                          {mode.label}
+                        </option>
+                      ))}
                     </select>
                     <img
                       src="/images/patient-registry/expand-more.svg"
@@ -3027,7 +3155,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     data-node-id="257:6682"
                     className="text-[14px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground"
                   >
-                    {interviewedBy}
+                    {existing?.interviewedBy ?? user?.employee_name ?? "—"}
                   </span>
                 </div>
               </div>
@@ -3063,7 +3191,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
               data-node-id="257:6600"
               className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground"
             >
-              Step {currentStep} of 5 · draft saved {draftSavedTime}
+              {saveError ?? `Step ${currentStep} of 5`}
             </span>
 
             {/* Next / Save Buttons */}
@@ -3071,39 +3199,52 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
               <div className="flex items-center gap-[8px]">
                 <button
                   type="button"
-                  onClick={() => {
-                    setAnnexBSaved(true)
+                  onClick={async () => {
+                    if (!(await saveAnnexB())) return
                     toast.add({
                       title: "ANNEX B Saved",
-                      description:
-                        "Assessment & classification saved successfully.",
+                      description: "Assessment & classification saved.",
                       type: "success",
                     })
                     onSuccess?.()
                     onClose()
                   }}
+                  disabled={isSavingAnnexB || !canSaveAnnexB || !canEditGuarantees}
+                  title={
+                    !canSaveAnnexB
+                      ? "You cannot take or edit an intake."
+                      : !canEditGuarantees
+                        ? guaranteeLockReason
+                        : undefined
+                  }
                   data-node-id="257:6601"
-                  className="flex h-[42px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[20px] text-[14px] leading-normal font-semibold text-white drop-shadow-[0px_6px_7px_rgba(31,95,214,0.25)] transition-all hover:bg-[#1a53bd] hover:drop-shadow-[0px_8px_12px_rgba(31,95,214,0.35)] active:scale-[0.98]"
+                  className="flex h-[42px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[20px] text-[14px] leading-normal font-semibold text-white drop-shadow-[0px_6px_7px_rgba(31,95,214,0.25)] transition-all hover:bg-[#1a53bd] hover:drop-shadow-[0px_8px_12px_rgba(31,95,214,0.35)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 >
-                  <span>Save ANNEX B</span>
+                  <span>
+                    {isSavingAnnexB
+                      ? "Saving..."
+                      : existing
+                        ? "Update ANNEX B"
+                        : "Save ANNEX B"}
+                  </span>
                   <Check className="size-[16px] stroke-[2.5]" />
                 </button>
 
                 <button
                   type="button"
-                  onClick={() => {
-                    setAnnexBSaved(true)
+                  onClick={async () => {
+                    if (!(await saveAnnexB())) return
                     toast.add({
                       title: "ANNEX B Saved",
-                      description:
-                        "Draft saved. Now you can assign guarantors & assistance.",
+                      description: "Now you can assign guarantors & assistance.",
                       type: "success",
                     })
                     onSuccess?.()
                     setActiveSection("guarantors")
                   }}
+                  disabled={isSavingAnnexB || !canSaveAnnexB || !canEditGuarantees}
                   data-node-id="312:12656"
-                  className="flex h-[42px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[20px] text-[14px] leading-normal font-semibold text-white drop-shadow-[0px_6px_7px_rgba(31,95,214,0.25)] transition-all hover:bg-[#1a53bd] hover:drop-shadow-[0px_8px_12px_rgba(31,95,214,0.35)] active:scale-[0.98]"
+                  className="flex h-[42px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[20px] text-[14px] leading-normal font-semibold text-white drop-shadow-[0px_6px_7px_rgba(31,95,214,0.25)] transition-all hover:bg-[#1a53bd] hover:drop-shadow-[0px_8px_12px_rgba(31,95,214,0.35)] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-60"
                 >
                   <span>Save and Add Guarantors</span>
                   <Check className="size-[16px] stroke-[2.5]" />
@@ -3576,7 +3717,9 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 data-node-id="312:8673"
                 className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground"
               >
-                Amounts of ₱50,000 and above go to the Head, MSWD for approval.
+                {guarantees.some((g) => g.approvalStatus === "pending")
+                  ? "A guarantee is waiting for approval."
+                  : "Every print is logged."}
               </p>
             </div>
 
@@ -3651,7 +3794,7 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                         data-node-id="321:12815"
                         className="text-[12px] leading-normal font-bold text-[#146b43] dark:text-emerald-400"
                       >
-                        Saved
+                        {existing ? "Saved" : "Not saved yet"}
                       </span>
                     </div>
                   </div>
@@ -3659,7 +3802,9 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                     data-node-id="321:12818"
                     className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground"
                   >
-                    Class C3 · complete
+                    {existing
+                      ? `${classification} · ${uisRow?.uis.ready ? "complete" : "incomplete"}${(uisRow?.uis.printCount ?? 0) > 0 ? ` · printed ${uisRow?.uis.printCount}x` : ""}`
+                      : "Save ANNEX B to print it"}
                   </p>
                 </div>
 
@@ -3670,33 +3815,22 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 >
                   <button
                     type="button"
-                    onClick={() => {
-                      setPreviewDoc({
-                        title: "ANNEX B · Unified Intake Sheet",
-                        type: "annex-b",
-                        subtitle: "Class C3 · complete",
-                      })
-                    }}
+                    onClick={() => void previewAnnexB()}
+                    disabled={!existing}
                     data-node-id="321:13129"
-                    className="cursor-pointer text-[12px] leading-normal font-bold text-[#1f5fd6] transition-colors hover:underline active:scale-[0.98]"
+                    className="cursor-pointer text-[12px] leading-normal font-bold text-[#1f5fd6] transition-colors hover:underline active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     Preview
                   </button>
                   <button
                     type="button"
-                    onClick={() => {
-                      toast.add({
-                        title: "Printing Document",
-                        description: "Sending ANNEX B to printer.",
-                        type: "info",
-                      })
-                      window.print()
-                    }}
+                    onClick={() => void printAnnexB()}
+                    disabled={!existing || isPrintingAnnexB}
                     data-node-id="321:13118"
-                    className="flex h-[34px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[14px] text-[13px] leading-normal font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
+                    className="flex h-[34px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[14px] text-[13px] leading-normal font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                   >
                     <Printer className="size-[17px]" />
-                    <span>Print</span>
+                    <span>{isPrintingAnnexB ? "Printing..." : "Print"}</span>
                   </button>
                 </div>
               </div>
@@ -3728,6 +3862,18 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                   </div>
                   <p className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
                     {formatCurrency(guarantee.total)}
+                    {guarantee.approvalStatus === "pending" && (
+                      <span className="font-semibold text-[#8a5300] dark:text-amber-300">
+                        {" "}
+                        · Awaiting approval
+                      </span>
+                    )}
+                    {guarantee.approvalStatus === "approved" && (
+                      <span className="font-semibold text-[#146b43] dark:text-emerald-400">
+                        {" "}
+                        · Approved
+                      </span>
+                    )}
                   </p>
                 </div>
 
@@ -3735,13 +3881,62 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 <button
                   type="button"
                   onClick={() => setSlipGuaranteeId(guarantee.id)}
-                  className="flex h-[34px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[14px] text-[13px] leading-normal font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
+                  disabled={guarantee.approvalStatus === "pending"}
+                  title={
+                    guarantee.approvalStatus === "pending"
+                      ? "A guarantee of this size needs approval before it can be printed."
+                      : undefined
+                  }
+                  className="flex h-[34px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[14px] text-[13px] leading-normal font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
                 >
                   <Printer className="size-[17px]" />
                   <span>Print</span>
                 </button>
               </div>
             ))}
+
+            {/* City Mayor slip and Certificate of Indigency, for the HIS encounter */}
+            {hasEncounter &&
+              [
+                {
+                  key: "city-mayor",
+                  title: "City Mayor Acknowledgement Slip",
+                  note: "ZCMC-F-MSS-04",
+                  open: () => setCityMayorOpen(true),
+                },
+                {
+                  key: "indigency",
+                  title: "Certificate of Eligibility (Indigency)",
+                  note: "Annex A",
+                  open: () => setIndigencyOpen(true),
+                },
+              ].map((doc) => (
+                <div
+                  key={doc.key}
+                  className="flex items-center gap-[12px] rounded-[16px] border border-[#e4e9f2] bg-white p-[14px] dark:border-border dark:bg-card"
+                >
+                  <div className="flex size-[38px] shrink-0 items-center justify-center rounded-[12px] bg-[#e6f7f7] text-[#0a6b78] dark:bg-cyan-950/40 dark:text-cyan-400">
+                    <FileText className="size-[20px]" />
+                  </div>
+                  <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
+                    <span className="text-[15px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground">
+                      {doc.title}
+                    </span>
+                    <p className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
+                      {doc.note}
+                    </p>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={doc.open}
+                    disabled={!hisEncounter}
+                    className="flex h-[34px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[14px] text-[13px] leading-normal font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98] disabled:cursor-not-allowed disabled:opacity-50"
+                  >
+                    <Printer className="size-[17px]" />
+                    <span>Print</span>
+                  </button>
+                </div>
+              ))}
 
             {/* Signatory Tiers Banner (Figma 321:13099) */}
             <div
@@ -3753,9 +3948,8 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
                 data-node-id="321:13103"
                 className="text-[12px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground"
               >
-                Signatory is picked from the amount. Sample tiers: up to ₱10,000
-                Social worker on duty · ₱10,001–₱49,999 Head, MSWD · ₱50,000 and
-                above Medical Center Chief.
+                A guarantee of ₱50,000 or more is held for the Head or Supervisor
+                to approve; its Acknowledgement Slip prints once it is approved.
               </p>
             </div>
           </div>
@@ -3805,245 +3999,6 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
           </div>
         )}
 
-        {/* Document Preview Modal */}
-        {previewDoc && (
-          <div className="fixed inset-0 z-60 flex animate-in items-center justify-center bg-black/60 p-4 backdrop-blur-xs duration-200 fade-in-50">
-            <div className="relative flex max-h-[90vh] w-full max-w-[640px] animate-in flex-col overflow-hidden rounded-[20px] bg-white shadow-2xl duration-200 zoom-in-95 dark:bg-card">
-              {/* Modal Header */}
-              <div className="flex shrink-0 items-center justify-between border-b border-[#e4e9f2] px-6 py-4 dark:border-border">
-                <div className="flex items-center gap-2.5">
-                  <Printer className="size-5 text-[#1f5fd6]" />
-                  <h4 className="text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">
-                    Document Preview · {previewDoc.title}
-                  </h4>
-                </div>
-                <button
-                  type="button"
-                  onClick={() => setPreviewDoc(null)}
-                  className="flex size-[34px] cursor-pointer items-center justify-center rounded-full border border-[#e4e9f2] bg-white text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:bg-card dark:text-foreground dark:hover:bg-muted"
-                >
-                  <X className="size-4" />
-                </button>
-              </div>
-
-              {/* Document Sheet Body */}
-              <div className="flex-1 [scrollbar-width:thin] overflow-y-auto bg-[#f8fafc] p-6 dark:bg-muted/10">
-                <div className="mx-auto max-w-[540px] rounded-lg border border-[#cfd7e4] bg-white p-7 text-[#1b2433] shadow-xs dark:border-border dark:bg-card dark:text-foreground">
-                  {/* Official Header */}
-                  <div className="mb-5 border-b border-[#e4e9f2] pb-4 text-center dark:border-border">
-                    <p className="text-[10.5px] font-medium tracking-wider text-[#5b6678] uppercase dark:text-muted-foreground">
-                      Republic of the Philippines
-                    </p>
-                    <p className="text-[11.5px] font-semibold text-[#5b6678] uppercase dark:text-muted-foreground">
-                      Department of Health · Center for Health Development IX
-                    </p>
-                    <p className="text-[14px] font-bold tracking-tight text-[#0c2a5b] dark:text-foreground">
-                      ZAMBOANGA CITY MEDICAL CENTER
-                    </p>
-                    <p className="text-[12px] font-semibold text-[#1f5fd6]">
-                      Medical Social Work Department
-                    </p>
-                    <h5 className="mt-3 text-[14px] font-black tracking-wide text-[#0c2a5b] uppercase dark:text-foreground">
-                      {previewDoc.type === "annex-b"
-                        ? "SOCIAL CASE STUDY REPORT / INTAKE SHEET (ANNEX B)"
-                        : `GUARANTEE LETTER · ${previewDoc.guarantor || "GOVERNMENT"}`}
-                    </h5>
-                  </div>
-
-                  {/* Encounter Info Grid */}
-                  <div className="grid grid-cols-2 gap-2.5 border-b border-[#e4e9f2] pb-4 text-[12px] dark:border-border">
-                    <div>
-                      <span className="font-semibold text-[#5b6678] dark:text-muted-foreground">
-                        Patient Name:{" "}
-                      </span>
-                      <span className="font-bold text-[#0c2a5b] dark:text-foreground">
-                        {patient.fullName || "Kim Horace A. Dolar"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-[#5b6678] dark:text-muted-foreground">
-                        Hospital No:{" "}
-                      </span>
-                      <span className="font-bold text-[#0c2a5b] dark:text-foreground">
-                        {patient.hospitalNo || "1460327"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-[#5b6678] dark:text-muted-foreground">
-                        Age / Sex:{" "}
-                      </span>
-                      <span className="font-medium">
-                        {patient.age || 27} y/o · {patient.gender || "Male"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-[#5b6678] dark:text-muted-foreground">
-                        Civil Status:{" "}
-                      </span>
-                      <span className="font-medium">
-                        {patient.civilStatus || "Married"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-[#5b6678] dark:text-muted-foreground">
-                        Classification:{" "}
-                      </span>
-                      <span className="font-bold text-[#146b43]">
-                        {classification || "Class C3 (Full Subsidy)"}
-                      </span>
-                    </div>
-                    <div>
-                      <span className="font-semibold text-[#5b6678] dark:text-muted-foreground">
-                        Date:{" "}
-                      </span>
-                      <span className="font-medium">{visitDateFormatted}</span>
-                    </div>
-                  </div>
-
-                  {/* Preview Content Details */}
-                  {previewDoc.type === "annex-b" ? (
-                    <div className="space-y-3 py-4 text-[12px]">
-                      <div>
-                        <p className="mb-1 text-[11px] font-bold text-[#0c2a5b] uppercase dark:text-foreground">
-                          Final Diagnosis
-                        </p>
-                        <p className="rounded-md bg-[#f4f7fc] p-2.5 font-medium dark:bg-muted/30">
-                          {finalDiagnosis}
-                        </p>
-                      </div>
-                      <div>
-                        <p className="mb-1 text-[11px] font-bold text-[#0c2a5b] uppercase dark:text-foreground">
-                          Financial Assessment
-                        </p>
-                        <div className="grid grid-cols-3 gap-2 rounded-md bg-[#f4f7fc] p-2.5 text-center dark:bg-muted/30">
-                          <div>
-                            <span className="block text-[10.5px] text-[#5b6678] dark:text-muted-foreground">
-                              Family Income
-                            </span>
-                            <span className="font-bold text-[#0c2a5b] dark:text-foreground">
-                              ₱{totalFamilyIncome.toLocaleString()}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="block text-[10.5px] text-[#5b6678] dark:text-muted-foreground">
-                              Monthly Expenses
-                            </span>
-                            <span className="font-bold text-[#0c2a5b] dark:text-foreground">
-                              ₱{totalMonthlyExpenses.toLocaleString()}
-                            </span>
-                          </div>
-                          <div>
-                            <span className="block text-[10.5px] text-[#5b6678] dark:text-muted-foreground">
-                              Net Per Capita
-                            </span>
-                            <span className="font-bold text-[#a5500b]">
-                              {netPerCapita}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <div>
-                        <p className="mb-1 text-[11px] font-bold text-[#0c2a5b] uppercase dark:text-foreground">
-                          Social Worker&apos;s Assessment
-                        </p>
-                        <p className="rounded-md bg-[#f4f7fc] p-2.5 text-[11.5px] leading-relaxed text-[#5b6678] dark:bg-muted/30 dark:text-muted-foreground">
-                          {assessmentNotes}
-                        </p>
-                      </div>
-                    </div>
-                  ) : (
-                    <div className="space-y-3 py-4 text-[12px]">
-                      <div>
-                        <p className="mb-1 text-[11px] font-bold text-[#0c2a5b] uppercase dark:text-foreground">
-                          Assistance Specifications
-                        </p>
-                        <div className="space-y-1.5 rounded-md bg-[#f4f7fc] p-3 dark:bg-muted/30">
-                          <div className="flex justify-between">
-                            <span className="text-[#5b6678] dark:text-muted-foreground">
-                              Fund Source / Guarantor:
-                            </span>
-                            <span className="font-bold text-[#0c2a5b] dark:text-foreground">
-                              {previewDoc.guarantor} Fund
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-[#5b6678] dark:text-muted-foreground">
-                              Guaranteed Amount:
-                            </span>
-                            <span className="text-[14px] font-bold text-[#146b43]">
-                              {previewDoc.amount}
-                            </span>
-                          </div>
-                          <div className="flex justify-between">
-                            <span className="text-[#5b6678] dark:text-muted-foreground">
-                              Authorized Purpose:
-                            </span>
-                            <span className="font-medium text-[#1b2433] dark:text-foreground">
-                              {previewDoc.subtitle}
-                            </span>
-                          </div>
-                        </div>
-                      </div>
-                      <p className="text-[11px] text-[#5b6678] italic dark:text-muted-foreground">
-                        This guarantee letter confirms the credit assistance
-                        granted in accordance with DOH Administrative Orders and
-                        Medical Social Service evaluation.
-                      </p>
-                    </div>
-                  )}
-
-                  {/* Signatures */}
-                  <div className="mt-6 grid grid-cols-2 gap-4 border-t border-[#e4e9f2] pt-4 text-center text-[11px] dark:border-border">
-                    <div>
-                      <div className="mx-auto h-8 w-36 border-b border-[#cfd7e4]" />
-                      <p className="mt-1 font-bold text-[#0c2a5b] dark:text-foreground">
-                        Maricel J. Tan, RSW
-                      </p>
-                      <p className="text-[10px] text-[#5b6678] dark:text-muted-foreground">
-                        Medical Social Worker
-                      </p>
-                    </div>
-                    <div>
-                      <div className="mx-auto h-8 w-36 border-b border-[#cfd7e4]" />
-                      <p className="mt-1 font-bold text-[#0c2a5b] dark:text-foreground">
-                        Sorayda M. Abubakar, RSW
-                      </p>
-                      <p className="text-[10px] text-[#5b6678] dark:text-muted-foreground">
-                        Head, MSWD
-                      </p>
-                    </div>
-                  </div>
-                </div>
-              </div>
-
-              {/* Modal Actions */}
-              <div className="flex shrink-0 items-center justify-end gap-3 border-t border-[#e4e9f2] bg-white px-6 py-3.5 dark:border-border dark:bg-card">
-                <button
-                  type="button"
-                  onClick={() => setPreviewDoc(null)}
-                  className="h-[36px] cursor-pointer rounded-full border border-[#cfd7e4] px-[16px] text-[13px] font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc] active:scale-[0.98] dark:border-border dark:text-foreground dark:hover:bg-muted"
-                >
-                  Close
-                </button>
-                <button
-                  type="button"
-                  onClick={() => {
-                    toast.add({
-                      title: "Printing Document",
-                      description: `Sending ${previewDoc.title} to printer.`,
-                      type: "info",
-                    })
-                    window.print()
-                  }}
-                  className="flex h-[36px] cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[18px] text-[13px] font-semibold text-white shadow-xs transition-colors hover:bg-[#1a53bd] active:scale-[0.98]"
-                >
-                  <Printer className="size-[16px]" />
-                  <span>Print Document</span>
-                </button>
-              </div>
-            </div>
-          </div>
-        )}
       </div>
 
       {hasEncounter && (
@@ -4061,11 +4016,40 @@ export const PatientIntakeDialog: React.FC<PatientIntakeDialogProps> = ({
 
           <AcknowledgementSlipDialog
             open={slipGuaranteeId !== null}
-            onOpenChange={(isOpen) => !isOpen && setSlipGuaranteeId(null)}
+            onOpenChange={(isOpen) => {
+              if (!isOpen) {
+                setSlipGuaranteeId(null)
+                refreshPrintCounts()
+              }
+            }}
             patientId={patient.id}
             transactionId={transactionId}
             guaranteeId={slipGuaranteeId}
           />
+
+          {hisEncounter && (
+            <>
+              <CityMayorSlipDialog
+                open={cityMayorOpen}
+                onOpenChange={(isOpen) => {
+                  setCityMayorOpen(isOpen)
+                  if (!isOpen) refreshPrintCounts()
+                }}
+                encounter={hisEncounter}
+                patient={patient}
+              />
+              <IndigencyCertificateDialog
+                open={indigencyOpen}
+                onOpenChange={(isOpen) => {
+                  setIndigencyOpen(isOpen)
+                  if (!isOpen) refreshPrintCounts()
+                }}
+                encounter={hisEncounter}
+                patient={patient}
+                caseId={uisRow?.case?.id ?? null}
+              />
+            </>
+          )}
         </>
       )}
 

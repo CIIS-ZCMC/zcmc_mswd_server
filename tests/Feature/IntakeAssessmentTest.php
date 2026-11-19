@@ -200,7 +200,7 @@ it('lists an intake without a case on the UIS tab with its guarantors', function
         ->and($intakeRow['case'])->toBeNull()
         ->and($intakeRow['encounter']['transaction_id'])->toBe(42)
         ->and($intakeRow['encounter']['transaction_type'])->toBe('Outpatient Consultation')
-        ->and($intakeRow['guarantees'])->toBe(['count' => 2, 'total' => 1329.6])
+        ->and($intakeRow['guarantees'])->toBe(['count' => 2, 'total' => 1329.6, 'pending_approval' => 0, 'approved' => 0])
         ->and($rows->firstWhere('case.id', $unassessed->id)['uis']['has_assessment'])->toBeFalse();
 });
 

@@ -32,6 +32,7 @@ class PatientsPageController extends Controller
                 'cases.view' => '/caseload',
                 'queue.manage' => '/queue',
                 'dar.manage' => '/dar',
+                'guarantee.approve' => '/approvals',
                 'reports.view' => '/reports/social-cases',
             ])->first(fn (string $url, string $permission) => $request->user()->can($permission));
 

@@ -4,6 +4,7 @@ use App\Http\Controllers\ActivityLogController;
 use App\Http\Controllers\AdmissionResultController;
 use App\Http\Controllers\AmendSocialCaseController;
 use App\Http\Controllers\ApproveAssistanceController;
+use App\Http\Controllers\ApproveGuaranteeController;
 use App\Http\Controllers\AssessmentController;
 use App\Http\Controllers\AssessmentExpenseController;
 use App\Http\Controllers\AssessmentUisController;
@@ -43,6 +44,7 @@ use App\Http\Controllers\FindHospitalPatientController;
 use App\Http\Controllers\FindPatientTransactionController;
 use App\Http\Controllers\FundSourceController;
 use App\Http\Controllers\GuaranteeAcknowledgementSlipPdfController;
+use App\Http\Controllers\GuaranteeTotalsController;
 use App\Http\Controllers\GuarantorController;
 use App\Http\Controllers\HospitalCaseTypeController;
 use App\Http\Controllers\HospitalPatientController;
@@ -78,6 +80,7 @@ use App\Http\Controllers\PatientSocioeconomicController;
 use App\Http\Controllers\PatientTransactionController;
 use App\Http\Controllers\PatientUisController;
 use App\Http\Controllers\PatientWatcherController;
+use App\Http\Controllers\PendingGuaranteesController;
 use App\Http\Controllers\PermissionController;
 use App\Http\Controllers\PromoteAssessmentToSocialCaseController;
 use App\Http\Controllers\PromoteCaseWatcherController;
@@ -221,6 +224,11 @@ Route::middleware('auth:sanctum')->group(function () {
     // patient-transactions/{id}/guarantors.
     Route::get('patients/{patient}/guarantees', [PatientGuaranteeController::class, 'index']);
     Route::post('patients/{patient}/guarantees', [PatientGuaranteeController::class, 'store']);
+    // Guarantees at or above the approval threshold wait for a guarantee.approve sign-off.
+    Route::get('guarantees/pending-approval', PendingGuaranteesController::class);
+    // Dashboard: guarantee amounts per day and guarantor (guarantee.view).
+    Route::get('dashboard/guarantee-totals', GuaranteeTotalsController::class);
+    Route::post('guarantees/{guarantee}/approve', ApproveGuaranteeController::class);
     Route::get('guarantees/{guarantee}', [PatientGuaranteeController::class, 'show']);
     Route::put('guarantees/{guarantee}', [PatientGuaranteeController::class, 'update']);
     Route::delete('guarantees/{guarantee}', [PatientGuaranteeController::class, 'destroy']);
@@ -424,6 +432,7 @@ Route::middleware('auth:sanctum')->group(function () {
     Route::post('service-visits/{visit}/complete', [ServiceVisitController::class, 'complete']);
     Route::post('service-visits/{visit}/cancel', [ServiceVisitController::class, 'cancel']);
     Route::post('service-visits/{visit}/take-over', [ServiceVisitController::class, 'takeOver']);
+    Route::post('service-visits/{visit}/details-checked', [ServiceVisitController::class, 'detailsChecked']);
 
     // Released-aid report snapshots
     Route::get('assistances/{assistance}/reports', [PatientAssistanceReportController::class, 'forAssistance']);

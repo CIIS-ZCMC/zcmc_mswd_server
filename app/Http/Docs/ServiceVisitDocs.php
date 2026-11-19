@@ -43,6 +43,7 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'taken_over_by', ref: '#/components/schemas/ServiceVisitUser', nullable: true),
         new OA\Property(property: 'taken_over_at', type: 'string', format: 'date-time', nullable: true),
         new OA\Property(property: 'takeover_reason', type: 'string', nullable: true),
+        new OA\Property(property: 'details_checked_at', type: 'string', format: 'date-time', nullable: true, description: 'When the server confirmed the patient details with them.'),
         new OA\Property(property: 'dar_entry_id', type: 'integer', nullable: true, description: "The caller's own DAR line for this visit."),
         new OA\Property(property: 'patient', type: 'object', nullable: true, description: 'Same shape as the DAR patient.'),
         new OA\Property(property: 'created_at', type: 'string', format: 'date-time'),
@@ -225,4 +226,24 @@ final class ServiceVisitDocs
         ],
     )]
     public function takeOver(): void {}
+
+    #[OA\Post(
+        path: '/service-visits/{visit}/details-checked',
+        operationId: 'service-visits.details-checked',
+        tags: ['Queue'],
+        summary: 'Record that the patient details were checked with them',
+        description: 'Only the visit `served_by` can, and only while it is in progress (422 otherwise, 403 for another worker). Asking again keeps the first stamp. Requires the `queue.manage` permission.',
+        security: [['sanctum' => []]],
+        parameters: [new OA\Parameter(name: 'visit', in: 'path', required: true, schema: new OA\Schema(type: 'integer'))],
+        responses: [
+            new OA\Response(response: 200, description: 'The visit', content: new OA\JsonContent(properties: [
+                new OA\Property(property: 'data', ref: '#/components/schemas/ServiceVisit'),
+            ])),
+            new OA\Response(response: 401, ref: '#/components/responses/Unauthenticated'),
+            new OA\Response(response: 403, ref: '#/components/responses/Forbidden'),
+            new OA\Response(response: 404, ref: '#/components/responses/NotFound'),
+            new OA\Response(response: 422, ref: '#/components/responses/ValidationError'),
+        ],
+    )]
+    public function detailsChecked(): void {}
 }

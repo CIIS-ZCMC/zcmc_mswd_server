@@ -7,8 +7,6 @@ use App\Models\Assessment;
 use App\Services\AssessmentService;
 use Illuminate\Http\Request;
 use Illuminate\Http\Response;
-use Illuminate\Routing\Controllers\HasMiddleware;
-use Illuminate\Routing\Controllers\Middleware;
 
 /**
  * Replaces an intake's frozen UIS copy with the patient's current identity and
@@ -19,19 +17,17 @@ use Illuminate\Routing\Controllers\Middleware;
  * has not been issued yet. Everything else about the copy stays frozen, which is
  * the point of it. See docs/UIS_SNAPSHOT_PLAN.md.
  */
-class RefreshUisSnapshotController extends Controller implements HasMiddleware
+class RefreshUisSnapshotController extends Controller
 {
     public function __construct(protected AssessmentService $service) {}
-
-    public static function middleware(): array
-    {
-        return [new Middleware('permission:cases.update')];
-    }
 
     public function __invoke(Request $request, Assessment $assessment): AssessmentResource
     {
         // A social case study is a signed document, not a UIS.
         abort_if($assessment->isSocialCase(), Response::HTTP_NOT_FOUND);
+
+        // cases.update or intake.update (this is always an intake here).
+        abort_unless($assessment->canBeChangedBy($request->user(), 'cases.update'), Response::HTTP_FORBIDDEN);
 
         $refreshed = $this->service->refreshSnapshot($assessment, $request->user());
 

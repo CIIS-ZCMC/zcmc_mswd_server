@@ -35,6 +35,13 @@ class GuaranteeAcknowledgementSlipPdfController extends Controller implements Ha
             ], Response::HTTP_UNPROCESSABLE_ENTITY);
         }
 
+        if ($guarantee->isPendingApproval()) {
+            return response()->json([
+                'code' => 'awaiting_approval',
+                'message' => 'This guarantee is waiting for approval and cannot be printed yet.',
+            ], Response::HTTP_UNPROCESSABLE_ENTITY);
+        }
+
         $pdf = $slips->render(
             $guarantee,
             $request->user(),

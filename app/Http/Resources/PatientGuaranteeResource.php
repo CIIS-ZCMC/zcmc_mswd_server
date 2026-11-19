@@ -55,6 +55,12 @@ class PatientGuaranteeResource extends JsonResource
                 'others_specify' => $item->others_specify,
             ])->all()),
             'total' => $this->total(),
+            'approval_status' => $this->approval_status,
+            'approved_at' => $this->approved_at,
+            'approved_by' => $this->whenLoaded('approvedBy', fn () => $this->approvedBy === null ? null : [
+                'id' => $this->approvedBy->id,
+                'name' => $this->approvedBy->employee_name,
+            ]),
             'recorded_by' => $this->whenLoaded('recordedBy', fn () => $this->recordedBy === null ? null : [
                 'id' => $this->recordedBy->id,
                 'name' => $this->recordedBy->employee_name,

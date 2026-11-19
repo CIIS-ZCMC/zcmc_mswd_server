@@ -25,7 +25,9 @@ class AssessmentController extends Controller implements HasMiddleware
         return [
             new Middleware('permission:cases.view', only: ['index']),
             new Middleware('permission:cases.create', only: ['store']),
-            new Middleware('permission:cases.update', only: ['update', 'destroy']),
+            // update is authorized in UpdateAssessmentRequest: cases.update, or
+            // intake.update for an intake.
+            new Middleware('permission:cases.update', only: ['destroy']),
         ];
     }
 

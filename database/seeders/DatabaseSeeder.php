@@ -41,5 +41,8 @@ class DatabaseSeeder extends Seeder
 
         $admin->assignRole('Super Admin');
         $admin->syncRoleCache();
+
+        // Dummy Processor, Case Manager and Supervisor accounts.
+        $this->call(StaffAccountSeeder::class);
     }
 }

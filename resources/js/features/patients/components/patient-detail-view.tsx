@@ -20,9 +20,14 @@ import {
   pickActiveVisit,
   usePatientVisits,
   useQueueActionGate,
+  useMarkDetailsChecked,
   useStartVisit,
   type ServiceVisit,
 } from "@/features/queue"
+import {
+  detailsToCheck as listDetailsToCheck,
+  detailsToCheckLabel,
+} from "../lib/details-check"
 import { usePatientUis } from "@/features/cases/hooks/use-uis-prints"
 import { toast } from "@/components/ui/toast"
 import { ApiError } from "@/lib/api-client"
@@ -177,6 +182,7 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
         takenOverBy: null,
         takenOverAt: null,
         takeoverReason: null,
+        detailsCheckedAt: patient.activeVisit.detailsCheckedAt ?? null,
         darEntryId: null,
         patient: null,
         createdAt: patient.activeVisit.arrivedAt ?? new Date().toISOString(),
@@ -188,7 +194,7 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
   const { data: uisRows = [] } = usePatientUis(patient.id)
   const startVisitMutation = useStartVisit()
   const [nowMs, setNowMs] = useState<number>(() => Date.now())
-  const [detailsChecked, setDetailsChecked] = useState(false)
+  const markDetailsChecked = useMarkDetailsChecked()
   const [isIntakeOpen, setIsIntakeOpen] = useState(false)
   const [intakeSection, setIntakeSection] = useState<
     "annex-b" | "guarantors" | "prints"
@@ -237,14 +243,30 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
     patient.category,
   ])
 
-  const handleDetailsChecked = () => {
-    setDetailsChecked(true)
-    if (isGuaranteeOnly) {
-      setIntakeSection("guarantors")
-    } else {
-      setIntakeSection("annex-b")
-    }
+  // Saved on the visit, so it survives a reload and shows to everyone.
+  const detailsChecked = Boolean(activeVisit?.detailsCheckedAt)
+  const detailsToCheck = useMemo(() => listDetailsToCheck(patient), [patient])
+
+  const openIntakeFor = () => {
+    setIntakeSection(isGuaranteeOnly ? "guarantors" : "annex-b")
     setIsIntakeOpen(true)
+  }
+
+  const handleDetailsChecked = async () => {
+    if (!activeVisit) return
+    try {
+      await markDetailsChecked.mutateAsync(activeVisit.id)
+      openIntakeFor()
+    } catch (err) {
+      toast.add({
+        title: "Could not save",
+        description:
+          err instanceof ApiError
+            ? err.message
+            : "Failed to record that the details were checked.",
+        type: "error",
+      })
+    }
   }
 
   const handleStartServingInline = async (silent = false) => {
@@ -384,7 +406,12 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
     const annexBReady = Boolean(activeUisRow?.uis.ready)
     const annexBStarted = Boolean(activeUisRow?.uis.hasAssessment)
     const guarantorsCount = activeUisRow?.guarantees.count ?? 0
-    const printCount = activeUisRow?.uis.printCount ?? 0
+    // UIS prints plus the MAIFIP, City Mayor and Indigency letters.
+    const printCount =
+      (activeUisRow?.uis.printCount ?? 0) +
+      (activeUisRow?.letters.printCount ?? 0)
+    const pendingApproval = activeUisRow?.guarantees.pendingApproval ?? 0
+    const approvedCount = activeUisRow?.guarantees.approved ?? 0
 
     const queuedStep = {
       id: "queued",
@@ -397,7 +424,7 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
     const checkDetailsStep = {
       id: "check-details",
       label: "Check details",
-      subLabel: detailsChecked ? "Checked" : "3 to check",
+      subLabel: detailsToCheckLabel(detailsToCheck, detailsChecked),
       done: detailsChecked,
       onClick: () => {
         setActiveTab("profile")
@@ -440,12 +467,21 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
       },
     }
 
+    // Only a guarantee at or above the approval threshold needs the Head's sign-off.
     const approvalStep = {
       id: "approval",
       label: "Approval",
-      subLabel: "≥ ₱50,000 only",
-      done: false,
-      onClick: undefined,
+      subLabel:
+        pendingApproval > 0
+          ? "Waiting on approval"
+          : approvedCount > 0
+            ? "Approved"
+            : "Not needed",
+      done: pendingApproval === 0 && approvedCount > 0,
+      onClick: () => {
+        setIntakeSection("guarantors")
+        setIsIntakeOpen(true)
+      },
     }
 
     const lettersPrintedStep = {
@@ -909,7 +945,9 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
                   </span>
                   <span className="text-[13px] leading-normal font-normal text-[#5b6678] dark:text-muted-foreground">
                     {!detailsChecked
-                      ? "3 fields need attention: contact number, PhilHealth no., address last updated 20 months ago."
+                      ? detailsToCheck.length > 0
+                        ? `${detailsToCheck.length} to confirm with the patient: ${detailsToCheck.join(", ")}.`
+                        : "Read the profile back to the patient and confirm it is current."
                       : isGuaranteeOnly
                         ? "Select assistance type and assign guarantors (GLs) to cover hospital bills."
                         : "Review and complete patient social case assessment."}
@@ -1168,7 +1206,9 @@ const PatientDetailViewContent: React.FC<PatientDetailViewProps> = ({
             showCheckDetailsBanner={
               activeVisit?.status === "in_progress" && !detailsChecked
             }
-            onDetailsChecked={handleDetailsChecked}
+            detailsToCheck={detailsToCheck}
+            detailsCheckPending={markDetailsChecked.isPending}
+            onDetailsChecked={() => void handleDetailsChecked()}
             onOpenAddFamilyDialog={() => setIsAddFamilyOpen(true)}
             onOpenEditFamilyDialog={(member) => setEditingFamilyMember(member)}
             onDeleteFamilyMember={handleDeleteFamilyMember}

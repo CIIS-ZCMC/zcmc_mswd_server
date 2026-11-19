@@ -82,6 +82,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'intake.view',
         // Taking an Intake Assessment (UIS) for an encounter, without opening a case
         'intake.create',
+        // Editing an intake the worker took (an SCSR still needs cases.update)
+        'intake.update',
         // Socio-Economic profile (patient-level; independent of cases and the UIS)
         'socioeconomic.view',
         'socioeconomic.create',
@@ -92,6 +94,8 @@ class RolesAndPermissionsSeeder extends Seeder
         'guarantee.create',
         'guarantee.update',
         'guarantee.delete',
+        // Signing off a guarantee at or above the approval threshold (Head, Supervisor)
+        'guarantee.approve',
         // Audit trail
         'audit.view',
         'audit.view_protective',
@@ -132,9 +136,9 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.merge', 'patients.import', 'hospital-patients.view',
             'cases.view', 'cases.create', 'cases.update', 'cases.delete', 'cases.waive_watcher', 'cases.finalize_social_case',
             'assistance.view', 'assistance.create', 'assistance.update', 'assistance.approve',
-            'intake.view', 'intake.create',
+            'intake.view', 'intake.create', 'intake.update',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
-            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete', 'guarantee.approve',
             'audit.view', 'audit.view_protective',
             'reports.view', 'reports.generate',
             'dar.manage', 'queue.manage', 'queue.override',
@@ -145,6 +149,7 @@ class RolesAndPermissionsSeeder extends Seeder
         // and the /admin panel stay with Admin and Super Admin.
         'Head' => [
             'reports.view', 'reports.generate',
+            'guarantee.view', 'guarantee.approve',
             // Sign-off authority
             'assistance.approve', 'cases.finalize_social_case', 'cases.waive_watcher',
         ],
@@ -153,7 +158,7 @@ class RolesAndPermissionsSeeder extends Seeder
             'patients.view', 'patients.create', 'patients.update', 'patients.merge', 'patients.import', 'hospital-patients.view',
             'intake.view',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update',
-            'guarantee.view', 'guarantee.create', 'guarantee.update',
+            'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.approve',
             // Queue, DAR, Reports
             'queue.manage',
             'queue.override',
@@ -166,7 +171,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Case Manager' => [
             // Patients
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
-            'intake.view', 'intake.create',
+            'intake.view', 'intake.create', 'intake.update',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             // Cases
@@ -179,7 +184,7 @@ class RolesAndPermissionsSeeder extends Seeder
         'Processor' => [
             // Patients
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
-            'intake.view', 'intake.create',
+            'intake.view', 'intake.create', 'intake.update',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             // Queue, DAR

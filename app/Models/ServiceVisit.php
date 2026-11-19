@@ -47,6 +47,8 @@ class ServiceVisit extends Model
         'taken_over_by',
         'taken_over_at',
         'takeover_reason',
+        'details_checked_at',
+        'details_checked_by',
     ];
 
     protected function casts(): array
@@ -58,6 +60,7 @@ class ServiceVisit extends Model
             'completed_at' => 'datetime',
             'cancelled_at' => 'datetime',
             'taken_over_at' => 'datetime',
+            'details_checked_at' => 'datetime',
         ];
     }
 

@@ -301,6 +301,7 @@ export function toPatientListRecord(raw: ApiPatient): PatientRecord {
           hisTransactionId: raw.active_visit.his_transaction_id,
           arrivedAt: raw.active_visit.arrived_at,
           purpose: raw.active_visit.purpose,
+          detailsCheckedAt: raw.active_visit.details_checked_at ?? null,
         }
       : null,
     hospitalNo: raw.hospital_id != null ? String(raw.hospital_id) : "—",

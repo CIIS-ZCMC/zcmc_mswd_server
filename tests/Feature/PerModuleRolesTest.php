@@ -37,6 +37,10 @@ it('gates each page on its module', function (string $role, string $url, int $st
     'supervisor library' => ['Supervisor', '/library', 403],
     'supervisor audit' => ['Supervisor', '/audit', 403],
     'head reports' => ['Head', '/reports/social-cases', 200],
+    'head approvals' => ['Head', '/approvals', 200],
+    'supervisor approvals' => ['Supervisor', '/approvals', 200],
+    'processor approvals' => ['Processor', '/approvals', 403],
+    'case manager approvals' => ['Case Manager', '/approvals', 403],
     'head patients' => ['Head', '/patients/1', 403],
     'head queue' => ['Head', '/queue', 403],
     'head dar' => ['Head', '/dar', 403],
@@ -55,7 +59,7 @@ it('lands each role on its first module', function (string $role, string $landin
     'processor' => ['Processor', '/'],
     'supervisor' => ['Supervisor', '/'],
     'case manager' => ['Case Manager', '/'],
-    'head' => ['Head', '/reports/social-cases'],
+    'head' => ['Head', '/approvals'],
 ]);
 
 it('seeds Super Admin with every permission and Admin without the panel ones', function () {

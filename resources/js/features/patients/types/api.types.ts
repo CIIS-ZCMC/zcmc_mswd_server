@@ -342,6 +342,7 @@ export interface ApiPatientActiveVisit {
   his_transaction_id: number
   arrived_at: string | null
   purpose: string | null
+  details_checked_at?: string | null
 }
 
 export interface ApiPatient {

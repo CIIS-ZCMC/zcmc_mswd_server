@@ -5,6 +5,7 @@ namespace App\Services;
 use App\Models\Bizbox\PatientTransaction;
 use App\Models\Patient;
 use App\Models\PatientGuarantee;
+use App\Models\User;
 use Illuminate\Database\Eloquent\Collection;
 use Illuminate\Database\Eloquent\ModelNotFoundException;
 use Illuminate\Support\Facades\DB;
@@ -18,7 +19,7 @@ use Illuminate\Validation\ValidationException;
 class PatientGuaranteeService
 {
     /** Relations every guarantee is returned with. */
-    public const RELATIONS = ['guarantor', 'items.assistanceType', 'items.modeOfAssistance', 'items.fundSource', 'recordedBy'];
+    public const RELATIONS = ['guarantor', 'items.assistanceType', 'items.modeOfAssistance', 'items.fundSource', 'recordedBy', 'approvedBy'];
 
     public function __construct(protected PatientTransactionService $transactions) {}
 
@@ -52,6 +53,7 @@ class PatientGuaranteeService
             ]);
 
             $this->replaceItems($guarantee, $data['items']);
+            $this->syncApproval($guarantee);
 
             return $this->load($guarantee);
         });
@@ -71,8 +73,50 @@ class PatientGuaranteeService
                 $this->replaceItems($guarantee, $data['items']);
             }
 
+            // What was approved is the guarantor and the amounts; a note or a
+            // reference number can change without a new sign-off.
+            if (array_key_exists('items', $data) || $guarantee->wasChanged('guarantor_id')) {
+                $this->syncApproval($guarantee);
+            }
+
             return $this->load($guarantee);
         });
+    }
+
+    /**
+     * Signs off a guarantee that waits for approval.
+     */
+    public function approve(PatientGuarantee $guarantee, User $approver): PatientGuarantee
+    {
+        if (! $guarantee->isPendingApproval()) {
+            throw ValidationException::withMessages([
+                'approval_status' => 'Only a guarantee that is waiting for approval can be approved.',
+            ]);
+        }
+
+        $guarantee->update([
+            'approval_status' => PatientGuarantee::APPROVAL_APPROVED,
+            'approved_by' => $approver->id,
+            'approved_at' => now(),
+        ]);
+
+        return $this->load($guarantee);
+    }
+
+    /**
+     * Guarantees waiting for sign-off, oldest first.
+     *
+     * @return Collection<int, PatientGuarantee>
+     */
+    public function pendingApproval(): Collection
+    {
+        return PatientGuarantee::query()
+            ->where('approval_status', PatientGuarantee::APPROVAL_PENDING)
+            ->with([...self::RELATIONS, 'patient'])
+            ->withSum('items', 'amount')
+            ->orderBy('created_at')
+            ->orderBy('id')
+            ->get();
     }
 
     public function delete(PatientGuarantee $guarantee): bool
@@ -88,6 +132,19 @@ class PatientGuaranteeService
     /**
      * The HIS encounter, which must belong to this patient's hospital record.
      */
+    private function syncApproval(PatientGuarantee $guarantee): void
+    {
+        $needsApproval = (float) $guarantee->items()->sum('amount') >= (float) config('mss.guarantee_approval_threshold');
+
+        $guarantee->update([
+            'approval_status' => $needsApproval
+                ? PatientGuarantee::APPROVAL_PENDING
+                : PatientGuarantee::APPROVAL_NOT_REQUIRED,
+            'approved_by' => null,
+            'approved_at' => null,
+        ]);
+    }
+
     private function encounterOf(Patient $patient, int|string $hisTransactionId): PatientTransaction
     {
         if (blank($patient->hospital_id)) {
