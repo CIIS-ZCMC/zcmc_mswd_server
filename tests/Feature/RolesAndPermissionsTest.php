@@ -46,7 +46,7 @@ it('seeds every default role with the expected permission counts', function () {
     expect(Role::findByName('Processor')->permissions->pluck('name')->all())
         ->toEqualCanonicalizing([
             'patients.view', 'patients.create', 'patients.update', 'patients.delete', 'patients.import', 'hospital-patients.view',
-            'intake.view', 'intake.create',
+            'intake.view', 'intake.create', 'intake.update',
             'socioeconomic.view', 'socioeconomic.create', 'socioeconomic.update', 'socioeconomic.delete',
             'guarantee.view', 'guarantee.create', 'guarantee.update', 'guarantee.delete',
             'queue.manage', 'dar.manage',
@@ -63,6 +63,7 @@ it('seeds every default role with the expected permission counts', function () {
     expect(Role::findByName('Head')->permissions->pluck('name')->all())
         ->toEqualCanonicalizing([
             'reports.view', 'reports.generate',
+            'guarantee.view', 'guarantee.approve',
             'assistance.approve', 'cases.finalize_social_case', 'cases.waive_watcher',
         ]);
 });
@@ -105,6 +106,14 @@ test('role permission matrix', function (string $role, string $permission, bool 
     'supervisor finalizes social cases' => ['Supervisor', 'cases.finalize_social_case', true],
     'supervisor waives the watcher requirement' => ['Supervisor', 'cases.waive_watcher', true],
     'head approves assistance' => ['Head', 'assistance.approve', true],
+    'head approves guarantees' => ['Head', 'guarantee.approve', true],
+    'supervisor approves guarantees' => ['Supervisor', 'guarantee.approve', true],
+    'processor cannot approve guarantees' => ['Processor', 'guarantee.approve', false],
+    'case manager cannot approve guarantees' => ['Case Manager', 'guarantee.approve', false],
+    'processor edits an intake' => ['Processor', 'intake.update', true],
+    'case manager edits an intake' => ['Case Manager', 'intake.update', true],
+    'supervisor cannot edit an intake' => ['Supervisor', 'intake.update', false],
+    'head cannot edit an intake' => ['Head', 'intake.update', false],
     'head finalizes social cases' => ['Head', 'cases.finalize_social_case', true],
     'head waives the watcher requirement' => ['Head', 'cases.waive_watcher', true],
     'case manager works cases' => ['Case Manager', 'cases.create', true],

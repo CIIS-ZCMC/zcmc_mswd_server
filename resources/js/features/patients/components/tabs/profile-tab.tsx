@@ -114,6 +114,9 @@ const FieldBox: React.FC<FieldBoxProps> = ({
 interface ProfileTabProps {
   patient: PatientRecord
   showCheckDetailsBanner?: boolean
+  /** What is missing or unmatched, from detailsToCheck(). */
+  detailsToCheck?: string[]
+  detailsCheckPending?: boolean
   onDetailsChecked?: () => void
   onOpenAddFamilyDialog?: () => void
   onOpenEditFamilyDialog?: (member: FamilyMember) => void
@@ -123,6 +126,8 @@ interface ProfileTabProps {
 export const ProfileTab: React.FC<ProfileTabProps> = ({
   patient,
   showCheckDetailsBanner = false,
+  detailsToCheck = [],
+  detailsCheckPending = false,
   onDetailsChecked,
 }) => {
   const [isEditingDemographics, setIsEditingDemographics] = useState(false)
@@ -191,11 +196,14 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
               </span>
               <div className="flex min-w-0 flex-1 flex-col gap-[2px]">
                 <span className="text-[15px] leading-normal font-bold text-[#0c2a5b] dark:text-foreground">
-                  Check details · 4 to confirm with the patient
+                  {detailsToCheck.length > 0
+                    ? `Check details · ${detailsToCheck.length} to confirm with the patient`
+                    : "Check details · confirm them with the patient"}
                 </span>
                 <span className="text-[13px] leading-normal font-normal text-[#8a5300] dark:text-amber-300">
-                  Contact no. and PhilHealth no. are missing; barangay and address
-                  were last updated 2 years ago
+                  {detailsToCheck.length > 0
+                    ? detailsToCheck.join(", ")
+                    : "Nothing looks missing. Read the profile back to the patient."}
                 </span>
               </div>
             </div>
@@ -203,8 +211,9 @@ export const ProfileTab: React.FC<ProfileTabProps> = ({
             <button
               type="button"
               onClick={onDetailsChecked}
+              disabled={detailsCheckPending}
               data-node-id="I243:3787;225:5939"
-              className="flex h-[42px] shrink-0 cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[18px] text-white shadow-[0px_6px_7px_rgba(31,95,214,0.25)] transition-colors hover:bg-[#1950b8]"
+              className="flex h-[42px] shrink-0 cursor-pointer items-center gap-[6px] rounded-full bg-[#1f5fd6] px-[18px] text-white shadow-[0px_6px_7px_rgba(31,95,214,0.25)] transition-colors hover:bg-[#1950b8] disabled:cursor-not-allowed disabled:opacity-60"
             >
               <img
                 alt=""

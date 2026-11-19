@@ -49,6 +49,7 @@ class ServiceVisitResource extends JsonResource
             'taken_over_by' => $this->whenLoaded('takenOverBy', fn () => self::user($this->takenOverBy)),
             'taken_over_at' => $this->taken_over_at,
             'takeover_reason' => $this->takeover_reason,
+            'details_checked_at' => $this->details_checked_at,
             // A DAR is its owner's only, so this is the caller's own line for the visit.
             'dar_entry_id' => $this->whenLoaded('darEntries', fn () => $this->darEntries->firstWhere('user_id', $request->user()?->id)?->id),
             'patient' => $this->whenLoaded('patient', fn () => $this->patient === null

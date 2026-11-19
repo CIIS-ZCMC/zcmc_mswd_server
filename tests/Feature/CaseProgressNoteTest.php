@@ -247,6 +247,11 @@ it('returns only the actor\'s due and overdue follow-ups', function () {
 
     $narratives = array_column($response->json('data'), 'narrative');
     expect($narratives)->toBe(['Overdue.', 'Due today.']); // oldest owed first
+
+    // Each line says whose follow-up it is, so the dashboard can open the patient.
+    expect($response->json('data.0.patient_id'))->toBe($this->patient->id)
+        ->and($response->json('data.0.patient_name'))->toBe("{$this->patient->last_name}, {$this->patient->first_name}")
+        ->and($response->json('data.0.case_code'))->not->toBeNull();
 });
 
 it('requires cases.view for the follow-up worklist', function () {

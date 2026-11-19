@@ -1,5 +1,6 @@
 <?php
 
+use App\Http\Controllers\Web\ApprovalsPageController;
 use App\Http\Controllers\Web\AuditPageController;
 use App\Http\Controllers\Web\AuthController;
 use App\Http\Controllers\Web\CasesPageController;
@@ -59,6 +60,11 @@ Route::middleware('auth')->group(function () {
     Route::get('/dar', [DarPageController::class, 'index'])
         ->middleware('permission:dar.manage')
         ->name('dar.index');
+
+    // Guarantees waiting for the Head's or Supervisor's sign-off
+    Route::get('/approvals', [ApprovalsPageController::class, 'index'])
+        ->middleware('permission:guarantee.approve')
+        ->name('approvals.index');
 
     // Turnaround Time Queue Board
     Route::get('/queue', [QueuePageController::class, 'index'])

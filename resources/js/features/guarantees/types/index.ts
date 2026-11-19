@@ -28,6 +28,12 @@ interface ApiLineOption {
   code?: string | null
 }
 
+/**
+ * A guarantee at or above the approval threshold is `pending` until a
+ * `guarantee.approve` holder approves it; smaller ones are `not_required`.
+ */
+export type GuaranteeApprovalStatus = "not_required" | "pending" | "approved"
+
 /** A breakdown line: Type of Assistance, amount, Mode of Assistance, Fund Source. */
 export interface ApiGuaranteeItem {
   id?: number
@@ -66,6 +72,12 @@ export interface ApiPatientGuarantee {
   remarks?: string | null
   items?: ApiGuaranteeItem[]
   total?: number | string
+  approval_status?: GuaranteeApprovalStatus
+  approved_at?: string | null
+  approved_by?: {
+    id: number
+    name: string | null
+  } | null
   recorded_by?: {
     id: number
     name: string
@@ -88,6 +100,12 @@ export interface PatientGuarantee {
   remarks: string | null
   items: GuaranteeItem[]
   total: number
+  approvalStatus: GuaranteeApprovalStatus
+  approvedAt: string | null
+  approvedBy: {
+    id: number
+    name: string | null
+  } | null
   recordedBy: {
     id: number
     name: string

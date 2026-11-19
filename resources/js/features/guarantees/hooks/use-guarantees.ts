@@ -8,6 +8,10 @@ import {
   updateGuarantee,
 } from "../api/guarantee-api"
 import type { SaveGuaranteeInput } from "../types"
+import { approvalKeys } from "./use-approvals"
+
+/** The patient's UIS rows (cases feature) carry per-encounter guarantee counts and approvals. */
+const PATIENT_UIS_KEY = ["patient-uis"] as const
 
 export const guaranteeKeys = {
   all: ["guarantees"] as const,
@@ -82,6 +86,8 @@ export function useCreateGuarantee(
       queryClient.invalidateQueries({
         queryKey: guaranteeKeys.byPatient(patientId),
       })
+      queryClient.invalidateQueries({ queryKey: PATIENT_UIS_KEY })
+      queryClient.invalidateQueries({ queryKey: approvalKeys.all })
     },
   })
 }
@@ -110,6 +116,8 @@ export function useUpdateGuarantee(
       queryClient.invalidateQueries({
         queryKey: guaranteeKeys.detail(data.id),
       })
+      queryClient.invalidateQueries({ queryKey: PATIENT_UIS_KEY })
+      queryClient.invalidateQueries({ queryKey: approvalKeys.all })
     },
   })
 }
@@ -129,6 +137,8 @@ export function useDeleteGuarantee(
       queryClient.invalidateQueries({
         queryKey: guaranteeKeys.byPatient(patientId),
       })
+      queryClient.invalidateQueries({ queryKey: PATIENT_UIS_KEY })
+      queryClient.invalidateQueries({ queryKey: approvalKeys.all })
     },
   })
 }

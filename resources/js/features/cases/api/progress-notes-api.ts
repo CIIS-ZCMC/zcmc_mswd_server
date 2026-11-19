@@ -22,26 +22,26 @@ export async function createCaseProgressNote(
   return toCaseProgressNote(res.data)
 }
 
-/** PUT /case-progress-notes/{noteId} */
+/** PUT /progress-notes/{noteId} */
 export async function updateCaseProgressNote(
   noteId: number | string,
   payload: UpdateProgressNotePayload
 ): Promise<CaseProgressNote> {
-  const res = await apiClient.put<ApiEnvelope<any>>(`/case-progress-notes/${noteId}`, payload)
+  const res = await apiClient.put<ApiEnvelope<any>>(`/progress-notes/${noteId}`, payload)
   return toCaseProgressNote(res.data)
 }
 
-/** DELETE /case-progress-notes/{noteId} */
+/** DELETE /progress-notes/{noteId} */
 export async function deleteCaseProgressNote(noteId: number | string): Promise<void> {
-  await apiClient.delete(`/case-progress-notes/${noteId}`)
+  await apiClient.delete(`/progress-notes/${noteId}`)
 }
 
-/** POST /case-progress-notes/{noteId}/complete-follow-up */
+/** POST /progress-notes/{noteId}/complete-follow-up */
 export async function completeProgressNoteFollowUp(
   noteId: number | string
 ): Promise<CaseProgressNote> {
   const res = await apiClient.post<ApiEnvelope<any>>(
-    `/case-progress-notes/${noteId}/complete-follow-up`
+    `/progress-notes/${noteId}/complete-follow-up`
   )
   return toCaseProgressNote(res.data)
 }

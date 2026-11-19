@@ -10,6 +10,7 @@ use App\Models\Assessment;
 use App\Models\AssessmentExpense;
 use App\Services\AssessmentExpenseService;
 use Illuminate\Http\JsonResponse;
+use Illuminate\Http\Request;
 use Illuminate\Http\Resources\Json\AnonymousResourceCollection;
 use Illuminate\Http\Response;
 use Illuminate\Routing\Controllers\HasMiddleware;
@@ -23,8 +24,8 @@ class AssessmentExpenseController extends Controller implements HasMiddleware
     {
         return [
             new Middleware('permission:cases.view', only: ['index']),
-            new Middleware('permission:cases.create', only: ['store']),
-            new Middleware('permission:cases.update', only: ['update', 'destroy']),
+            // store and update are authorized in their requests, destroy below:
+            // the cases permission, or intake.update for an intake's lines.
         ];
     }
 
@@ -47,8 +48,10 @@ class AssessmentExpenseController extends Controller implements HasMiddleware
         );
     }
 
-    public function destroy(AssessmentExpense $expense): Response
+    public function destroy(Request $request, AssessmentExpense $expense): Response
     {
+        abort_unless($expense->assessment->canBeChangedBy($request->user(), 'cases.update'), Response::HTTP_FORBIDDEN);
+
         $this->service->delete($expense);
 
         return response()->noContent();

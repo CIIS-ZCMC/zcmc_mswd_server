@@ -30,6 +30,9 @@ return new class extends Migration
             $table->foreignId('taken_over_by')->nullable()->constrained('users')->restrictOnDelete();
             $table->dateTime('taken_over_at')->nullable();
             $table->string('takeover_reason')->nullable();
+            // The server confirmed the patient's contact, ID and address details with them.
+            $table->dateTime('details_checked_at')->nullable();
+            $table->foreignId('details_checked_by')->nullable()->constrained('users')->restrictOnDelete();
             $table->timestamps();
 
             $table->index(['status', 'arrived_at']);

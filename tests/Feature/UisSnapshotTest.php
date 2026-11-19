@@ -253,13 +253,19 @@ it('refreshes the frozen copy on request, stamping who and when', function () {
         ->and(renderSheet($refreshed))->toContain('Luz Reyes', 'Teacher');
 });
 
-it('refuses a refresh without cases.update, and for a social case study', function () {
+it('refuses a refresh without cases.update or intake.update, and for a social case study', function () {
     Sanctum::actingAs($this->worker);
     snapshotEncounter();
     $intake = takeIntake();
 
-    $viewer = User::factory()->create(['role' => 'Processor']);
-    $viewer->assignRole('Processor');
+    // A Processor holds intake.update, so may refresh an intake; Head holds neither.
+    $processor = User::factory()->create(['role' => 'Processor']);
+    $processor->assignRole('Processor');
+    Sanctum::actingAs($processor);
+    $this->postJson("/api/assessments/{$intake->id}/uis-snapshot/refresh")->assertOk();
+
+    $viewer = User::factory()->create(['role' => 'Head']);
+    $viewer->assignRole('Head');
     Sanctum::actingAs($viewer);
     $this->postJson("/api/assessments/{$intake->id}/uis-snapshot/refresh")->assertForbidden();
 

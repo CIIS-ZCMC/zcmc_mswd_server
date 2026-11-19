@@ -20,6 +20,12 @@ class PatientGuarantee extends Model
 {
     use Auditable, SoftDeletes;
 
+    public const APPROVAL_NOT_REQUIRED = 'not_required';
+
+    public const APPROVAL_PENDING = 'pending';
+
+    public const APPROVAL_APPROVED = 'approved';
+
     protected $fillable = [
         'patient_id',
         'his_transaction_id',
@@ -29,6 +35,9 @@ class PatientGuarantee extends Model
         'guaranteed_on',
         'remarks',
         'recorded_by',
+        'approval_status',
+        'approved_by',
+        'approved_at',
     ];
 
     protected function casts(): array
@@ -37,6 +46,7 @@ class PatientGuarantee extends Model
             'his_transaction_id' => 'integer',
             'hospital_id' => 'integer',
             'guaranteed_on' => 'date',
+            'approved_at' => 'datetime',
         ];
     }
 
@@ -53,6 +63,25 @@ class PatientGuarantee extends Model
     public function recordedBy(): BelongsTo
     {
         return $this->belongsTo(User::class, 'recorded_by');
+    }
+
+    public function approvedBy(): BelongsTo
+    {
+        return $this->belongsTo(User::class, 'approved_by');
+    }
+
+    public function isPendingApproval(): bool
+    {
+        return $this->approval_status === self::APPROVAL_PENDING;
+    }
+
+    /** Whether any guarantee on this HIS encounter still waits for sign-off. */
+    public static function hasPendingForEncounter(int|string $hisTransactionId): bool
+    {
+        return static::query()
+            ->where('his_transaction_id', $hisTransactionId)
+            ->where('approval_status', self::APPROVAL_PENDING)
+            ->exists();
     }
 
     public function items(): HasMany

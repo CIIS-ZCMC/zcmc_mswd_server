@@ -42,7 +42,7 @@ Request flow: `routes/api.php` → thin `Http/Controllers` (mostly single-action
 
 - **Inertia Layer (`resources/js/pages/`)**:
   - Owns routing, auth session state, shared user props (`auth.user`, `auth.roles`, `auth.permissions`), and initial page renders.
-  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /dar`, `GET /queue`, `GET /reports`, `GET /reports/social-cases`, `GET /reports/turnaround`, `GET /audit`, `GET /library`. Each carries its module's `permission:` gate except `/`, which redirects a user without `patients.view` to their first module (Reports lands on `/reports/social-cases`) or answers 403.
+  - Page routes in `routes/web.php`: `GET /login`, `GET /` (Patients registry), `GET /patients/{patient}`, `GET /caseload`, `GET /cases/{case}`, `GET /dar`, `GET /queue`, `GET /approvals`, `GET /reports`, `GET /reports/social-cases`, `GET /reports/turnaround`, `GET /audit`, `GET /library`. Each carries its module's `permission:` gate except `/`, which redirects a user without `patients.view` to their first module (a Head lands on `/approvals`, else Reports on `/reports/social-cases`) or answers 403.
   - Sign-in routes: `GET /signing-in/{uuid}` (UMIS), `GET /auth/iam/redirect` and `GET /callback` (IAM), `POST /login`, `POST /logout` (see Auth & Users).
   - Main persistent layout is `resources/js/components/layout/main-layout.tsx`.
 - **API & TanStack Query Layer**:
@@ -73,7 +73,7 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and 
 
   | Role | Code | Modules |
   |---|---|---|
-  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge); may also take an Intake Assessment (`intake.create`) without holding any Cases permission |
+  | Processor | `processor` | Patients, Queue, DAR (full CRUD, no merge); may also take an Intake Assessment (`intake.create`) and edit it (`intake.update`) without holding any Cases permission |
   | Case Manager | `case_manager` | Patients, Cases, Queue, DAR (full CRUD, no merge or sign-offs) |
   | Supervisor | `supervisor` | Patients, Queue, DAR, Reports |
   | Head (was `MSS Head`) | `head` | Reports |
@@ -84,11 +84,11 @@ Sign-in is **UMIS** (the ZCMC Portal hands staff over) by default; ZCMC IAM and 
 
   Supervisor and Admin hold `queue.override` (taking over another worker's visit); Processor and Case Manager don't.
 
-  Supervisor and Head also hold the sign-off permissions `assistance.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use these through the API only. Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); managing users/roles (`users.manage`, `roles.manage`) and `/admin` (`panel.access`) are Super Admin only, though Admin holds `users.view`. `admin` can be granted from UMIS or IAM; `super_admin` never.
+  Supervisor and Head also hold the sign-off permissions `assistance.approve`, `guarantee.approve`, `cases.finalize_social_case` and `cases.waive_watcher`; neither has `cases.view`, so they can use the case ones through the API only (`guarantee.approve` has its own `/approvals` page). Case Manager and Processor hold none. Library and Audit belong to Admin (and Super Admin); managing users/roles (`users.manage`, `roles.manage`) and `/admin` (`panel.access`) are Super Admin only, though Admin holds `users.view`. `admin` can be granted from UMIS or IAM; `super_admin` never.
 
-  Finer points of the seeder: Supervisor holds `patients.merge` but no `*.delete` and no `intake.create`; Case Manager holds `assistance.view|create|update` but not approve; Processor holds no `cases.*` or `assistance.*`; Head holds only `reports.view`, `reports.generate` and the three sign-offs (no `patients.view`, no `intake.view`).
+  Finer points of the seeder: Supervisor holds `patients.merge` but no `*.delete` and no `intake.create`; Case Manager holds `assistance.view|create|update` but not approve; Processor holds no `cases.*` or `assistance.*`; Head holds only `reports.view`, `reports.generate`, `guarantee.view` and the four sign-offs (no `patients.view`, no `intake.view`).
 
-  Permission groups besides the module CRUD ones: `hospital-patients.view` (the Filament HIS patients screen only; the API's HIS lookups sit under `patients.view`), `socioeconomic.*`, `guarantee.*`, `assistance.*` (plus `assistance.approve`), `intake.view|create`, `queue.manage|override`, `dar.manage`, `library.manage`, `audit.view` and `audit.view_protective`, `reports.view` (screens) and `reports.generate` (CSV/PDF exports).
+  Permission groups besides the module CRUD ones: `hospital-patients.view` (the Filament HIS patients screen only; the API's HIS lookups sit under `patients.view`), `socioeconomic.*`, `guarantee.*`, `assistance.*` (plus `assistance.approve`), `intake.view|create|update`, `queue.manage|override`, `dar.manage`, `library.manage`, `audit.view` and `audit.view_protective`, `reports.view` (screens) and `reports.generate` (CSV/PDF exports).
 - Web page routes carry the same `permission:` gates as the API. `/` sends a user without `patients.view` to their first module (cases, queue, DAR, reports). The sidebar tabs and the patient-list query follow `usePermission`.
 - `services.umis.role_map` / `services.iam.role_map` (config arrays) are only needed when the provider sends a value that is neither a role code nor a name.
 - Password login (`POST /login`, `POST /api/login`) is for the local **Super Admin (`super_admin`)** under every provider, and for every role under `AUTH_PROVIDER=local` (`User::canSignInWithPassword()`). `APP_ENV` plays no part. `RolesAndPermissionsSeeder` creates the Super Admin role and `DatabaseSeeder` the first account. The login page links it as "Administrator sign-in" (`/login?admin`).
@@ -129,7 +129,7 @@ Socio-economic classification of a patient for an encounter.
 - Net Per Capita Income = (family income − household expenses) ÷ household size (patient + family members, min 1).
 - Brackets A, B, C1, C2, C3, D with a computed discount (`CalculateMswdClassificationAction`, `MswdClassificationMatrix`). A worker may override the bracket with a written reason.
 - Assessments are append-only snapshots; a re-assessment links to its parent (`parent_assessment_id`).
-- Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up). Taking one needs `intake.create` (Processor, Case Manager, Admin), not `cases.create`; the sheet routes need `intake.view`.
+- Intake Assessment (UIS / Annex B): anchored to patient + HIS encounter, at most one per encounter; case link is optional (a case opened later picks it up). Taking one needs `intake.create` (Processor, Case Manager, Admin), not `cases.create`; the sheet routes need `intake.view`. Editing one (its fields, expense lines, snapshot refresh) needs `cases.update` or, for an intake and never an SCSR, `intake.update` (`Assessment::canBeChangedBy()`).
 - The UIS is a **printable, not a stored record**; every print is logged (`uis_print_logs`).
 - But its patient data **is** frozen: sections I (identity) and II (family composition) are captured on `assessments.uis_snapshot` when the intake is taken, so editing the patient afterwards cannot rewrite a sheet already issued. `household_size` is frozen with it, so the per-capita income stops moving; `interviewed_at` / `interviewed_by` print instead of the print date and printing user. Section V stays **live** (a guarantee is a later decision on the same encounter). `POST /assessments/{id}/uis-snapshot/refresh` (`cases.update`) pulls current data in and records who and when. The on-screen sheet reads the same copy through `uisSheetData()` (`features/cases/lib/uis-sheet-data.ts`), which mirrors `UisSnapshotService::sheetData()`. (Plan: `UIS_SNAPSHOT_PLAN.md` in git history.)
 - Family income, house tenure, light/water and the section III expense lines are imported from the patient's newest Socioeconomic record when an intake is taken (what the request supplies wins) and on Refresh (which overwrites; a patient with no record, or a record with no expense items, leaves the assessment's own alone). `assessments.socioeconomic_profile_id` records which record, so the sheet can tell a newer one exists.
@@ -161,6 +161,7 @@ Patient watchers (people staying with the patient) assigned to open cases. Plan:
 ### Guarantees
 Who guarantees a patient's bill for one HIS encounter, and the breakdown of where the money comes from.
 - Breakdown line order: Type of Assistance → Amount → Mode of Assistance → Fund Source, all from the Library.
+- Approval: a guarantee whose breakdown totals `config('mss.guarantee_approval_threshold')` (50,000) or more is `pending` until a `guarantee.approve` holder signs it off (`POST /guarantees/{id}/approve`; list at `GET /guarantees/pending-approval`, page `/approvals`); below it is `not_required`. Editing the items or the guarantor sends an approved one back to `pending`. A pending guarantee's slip answers 422 `awaiting_approval`, per guarantee and per encounter.
 - Prints the DOH-MAIFIP Acknowledgement Slip (`GET /guarantees/{id}/acknowledgement-slip/pdf`, or per encounter `GET /patient-transactions/{id}/acknowledgement-slip/pdf`; print-logged).
 - Front: `features/guarantees`. Back: `PatientGuaranteeService`, `GuarantorService`, `AcknowledgementSlipPdfService`.
 
@@ -175,6 +176,7 @@ Time in → Start → Complete (or Cancel) per HIS encounter visit, stamped by t
 - A visit in progress belongs to its `served_by`: only they can complete or cancel it (403 otherwise), and `useQueueActionGate` makes the patient's records view-only for everyone else except Admin and Super Admin. That records lock is UI only; the record APIs don't check it. It covers creating and editing, not printing: the print buttons (UIS, encounter printables, Acknowledgement Slip) work without a visit.
 - A worker serves one visit at a time: Start and Take Over answer 422 while they have another visit in progress. `ServingBar` (in `main-layout.tsx`, fed by `useMyActiveVisit`) shows that visit on every page with a timer and Complete.
 - `queue.override` (Supervisor, Admin, Super Admin) can Take Over a visit with a reason (`POST /service-visits/{id}/take-over`). The timer keeps running and `served_by` moves to them.
+- The server confirms the patient's details with them once per visit (`POST /service-visits/{id}/details-checked`, only the visit's `served_by`, in progress; stored as `details_checked_at`). The visit stepper reads it, and `detailsToCheck()` lists what is missing (contact number, PhilHealth number, address not matched to PSGC).
 - Completing a visit offers what to print (UIS, MAIFIP slip, City Mayor slip, Indigency certificate: `VisitPrintPrompt`), then "Add to DAR?". A visit left unfiled shows Add to DAR on the worker's Served Today card.
 - Targets per stage (waiting / processing / total, minutes) are set in the Library.
 - Visits are completed from three places, each with the print and DAR prompts: `QueueBoard`, the encounter dialog's Queue & TAT tab (`ServiceVisitPanel`) and the patient header's `PatientActiveQueueStatusDialog`.

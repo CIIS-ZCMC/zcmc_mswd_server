@@ -662,8 +662,8 @@ export const AddGuarantorCard: React.FC<AddGuarantorCardProps> = ({
             data-node-id="312:12004"
             className="text-[12px] font-semibold leading-normal"
           >
-            ₱50,000 and above · goes to the Head, MSWD for approval · signatory:
-            Medical Center Chief
+            ₱50,000 and above · held for the Head or Supervisor to approve before
+            its letter can be printed
           </span>
         </div>
       )}

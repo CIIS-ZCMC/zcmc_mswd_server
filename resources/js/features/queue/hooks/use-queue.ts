@@ -4,6 +4,7 @@ import {
   completeVisit,
   getPatientVisits,
   getQueue,
+  markDetailsChecked,
   startVisit,
   takeOverVisit,
   timeInVisit,
@@ -39,6 +40,16 @@ export const queueKeys = {
       String(patientId),
       { transactionId },
     ] as const,
+}
+
+/** The server confirms the patient's details; refreshes the registry's active visit. */
+export function useMarkDetailsChecked() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: (visitId: number) => markDetailsChecked(visitId),
+    onSuccess: () => invalidateVisitQueries(queryClient),
+  })
 }
 
 export function useQueue(date?: string, enabled = true) {

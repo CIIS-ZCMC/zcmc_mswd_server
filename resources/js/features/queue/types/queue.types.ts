@@ -44,6 +44,7 @@ export interface ApiServiceVisit {
   taken_over_by?: ServiceVisitUser | null
   taken_over_at?: string | null
   takeover_reason?: string | null
+  details_checked_at?: string | null
   dar_entry_id?: number | null
   patient?: ServiceVisitPatient | null
   created_at: string
@@ -77,6 +78,8 @@ export interface ServiceVisit {
   takenOverBy: ServiceVisitUser | null
   takenOverAt: string | null
   takeoverReason: string | null
+  /** When the server confirmed the patient's details with them. */
+  detailsCheckedAt: string | null
   /** The signed-in user's own DAR line for this visit. */
   darEntryId: number | null
   patient: ServiceVisitPatient | null

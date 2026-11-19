@@ -33,6 +33,7 @@ export function toServiceVisit(raw: ApiServiceVisit): ServiceVisit {
     takenOverBy: raw.taken_over_by ?? null,
     takenOverAt: raw.taken_over_at ?? null,
     takeoverReason: raw.takeover_reason ?? null,
+    detailsCheckedAt: raw.details_checked_at ?? null,
     darEntryId: raw.dar_entry_id ?? null,
     patient: raw.patient ?? null,
     createdAt: raw.created_at,

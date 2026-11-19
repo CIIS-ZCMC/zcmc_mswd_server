@@ -158,7 +158,13 @@ export interface ApiPatientUisRow {
   encounter: ApiPatientUisEncounter
   /** null for an intake taken before any case was opened. */
   case: ApiPatientUisCase | null
-  guarantees: { count: number; total: number | string }
+  guarantees: {
+    count: number
+    total: number | string
+    pending_approval?: number
+    approved?: number
+  }
+  letters?: { print_count: number; last_printed_at: string | null }
   uis: ApiPatientUisInfo
 }
 

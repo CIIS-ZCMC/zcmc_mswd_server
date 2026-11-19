@@ -47,6 +47,15 @@ export async function timeInVisit(
   return toServiceVisit(res.data)
 }
 
+export async function markDetailsChecked(
+  visitId: number
+): Promise<ServiceVisit> {
+  const res = await apiClient.post<{ data: ApiServiceVisit }>(
+    `/service-visits/${visitId}/details-checked`
+  )
+  return toServiceVisit(res.data)
+}
+
 export async function startVisit(visitId: number): Promise<ServiceVisit> {
   const res = await apiClient.post<{ data: ApiServiceVisit }>(
     `/service-visits/${visitId}/start`

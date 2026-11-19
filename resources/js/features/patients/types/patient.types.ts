@@ -91,5 +91,6 @@ export interface PatientRecord {
     hisTransactionId: number
     arrivedAt: string | null
     purpose: string | null
+    detailsCheckedAt?: string | null
   } | null
 }

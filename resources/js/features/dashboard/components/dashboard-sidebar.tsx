@@ -2,6 +2,7 @@ import React, { useState } from "react"
 import { router, usePage } from "@inertiajs/react"
 import { useAuth } from "@/features/auth/hooks/use-auth"
 import { usePermission } from "@/features/auth/hooks/use-permission"
+import { usePendingApprovals } from "@/features/guarantees/hooks/use-approvals"
 import { cn } from "@/lib/utils"
 
 function getInitials(name: string): string {
@@ -65,6 +66,24 @@ function ApprovalIcon({ className }: { className?: string }) {
   )
 }
 
+function QueueIcon({ className }: { className?: string }) {
+  return (
+    <svg
+      viewBox="0 0 24 24"
+      fill="none"
+      stroke="currentColor"
+      strokeWidth="1.75"
+      strokeLinecap="round"
+      strokeLinejoin="round"
+      className={cn("size-[22px] shrink-0", className)}
+      aria-hidden="true"
+    >
+      <circle cx="12" cy="12" r="9" />
+      <polyline points="12 7 12 12 15.5 14" />
+    </svg>
+  )
+}
+
 function BarChartIcon({ className }: { className?: string }) {
   return (
     <svg
@@ -104,12 +123,15 @@ function LogoutIcon({ className }: { className?: string }) {
 }
 
 interface DashboardSidebarProps {
+  /**
+   * Ignored: the Approvals badge reads the real count. Kept only until the
+   * dashboard page stops passing it.
+   */
   pendingApprovalsCount?: number
   defaultCollapsed?: boolean
 }
 
 export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
-  pendingApprovalsCount = 3,
   defaultCollapsed = false,
 }) => {
   const [collapsed, setCollapsed] = useState(defaultCollapsed)
@@ -120,6 +142,9 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
   const canViewCases = usePermission("cases.view")
   const canViewPatients = usePermission("patients.view")
   const canManageQueue = usePermission("queue.manage")
+  const canApprove = usePermission("guarantee.approve")
+  const { data: pendingApprovals } = usePendingApprovals()
+  const pendingApprovalsCount = pendingApprovals?.count ?? 0
   const canViewReports = usePermission("reports.view")
   const canManageDar = usePermission("dar.manage")
   const canViewAudit = usePermission("audit.view")
@@ -139,7 +164,8 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
     pathname.startsWith("/patients") ||
     pathname.startsWith("/caseload") ||
     pathname.startsWith("/cases")
-  const isApprovalsActive = pathname.startsWith("/queue")
+  const isQueueActive = pathname.startsWith("/queue")
+  const isApprovalsActive = pathname.startsWith("/approvals")
   const isReportsActive = pathname.startsWith("/reports")
   const isDarActive = pathname.startsWith("/dar")
   const isAuditActive = pathname.startsWith("/audit")
@@ -299,6 +325,37 @@ export const DashboardSidebar: React.FC<DashboardSidebarProps> = ({
         <button
           type="button"
           onClick={() => router.visit("/queue")}
+          title="Queue"
+          className={cn(
+            "flex h-[44px] shrink-0 cursor-pointer items-center rounded-[12px] px-[12px] text-left transition-all",
+            collapsed ? "gap-0" : "w-full gap-[12px]",
+            isQueueActive
+              ? "bg-white text-[#1f5fd6] shadow-[0px_1px_1px_rgba(12,42,91,0.06),0px_6px_8px_rgba(12,42,91,0.08)]"
+              : "text-[#0c2a5b] hover:bg-white/50"
+          )}
+        >
+          <span className={cn("shrink-0", collapsed && "mr-[-6px]")}>
+            <QueueIcon
+              className={isQueueActive ? "text-[#1f5fd6]" : "text-[#0c2a5b]"}
+            />
+          </span>
+          {!collapsed && (
+            <span
+              className={cn(
+                "flex-1 truncate text-[14px] font-semibold",
+                isQueueActive ? "text-[#1f5fd6]" : "text-[#0c2a5b]"
+              )}
+            >
+              Queue
+            </span>
+          )}
+        </button>
+      )}
+
+      {canApprove && (
+        <button
+          type="button"
+          onClick={() => router.visit("/approvals")}
           title="Approvals"
           className={cn(
             "flex h-[44px] shrink-0 cursor-pointer items-center rounded-[12px] px-[12px] text-left transition-all",

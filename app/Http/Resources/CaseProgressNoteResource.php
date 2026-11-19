@@ -30,6 +30,12 @@ class CaseProgressNoteResource extends JsonResource
                 'id' => $this->followUpDoneBy->id,
                 'name' => $this->followUpDoneBy->employee_name,
             ]),
+            // A due follow-up is listed away from its case, so say whose it is.
+            'case_code' => $this->whenLoaded('case', fn () => $this->case?->case_code),
+            'patient_id' => $this->whenLoaded('case', fn () => $this->case?->patient_id),
+            'patient_name' => $this->whenLoaded('case', fn () => $this->case?->relationLoaded('patient') && $this->case->patient !== null
+                ? trim("{$this->case->patient->last_name}, {$this->case->patient->first_name}")
+                : null),
             'created_at' => $this->created_at,
             'updated_at' => $this->updated_at,
         ];

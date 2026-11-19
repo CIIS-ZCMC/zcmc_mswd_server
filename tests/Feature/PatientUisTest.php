@@ -1,5 +1,6 @@
 <?php
 
+use App\Models\AcknowledgementSlipPrintLog;
 use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Patient;
@@ -183,4 +184,29 @@ it('matches the classification household for the same patient', function () {
     $this->getJson("/api/patients/{$this->patient->id}/uis")
         ->assertJsonPath('data.0.uis.household_size', 2)
         ->assertJsonPath('data.0.uis.assessment.id', $created->json('data.id'));
+});
+
+it('counts the letters printed for an encounter apart from its UIS prints', function () {
+    Sanctum::actingAs($this->worker);
+
+    $case = uisCase($this->patient, $this->worker, 'CASE-LET', ['transaction_id' => 321]);
+    Assessment::create([
+        'case_id' => $case->id, 'created_by' => $this->worker->id, 'classification' => 'C3',
+        'total_family_income' => 4500, 'informant_name' => 'Maria', 'presenting_problem' => 'Meds',
+        'recommendation' => 'Assist',
+    ]);
+
+    foreach ([['maifip', 321], ['city_mayor', 321], ['indigency', 999]] as [$form, $transaction]) {
+        AcknowledgementSlipPrintLog::create([
+            'form' => $form, 'patient_id' => $this->patient->id, 'his_transaction_id' => $transaction,
+            'printed_by' => $this->worker->id, 'printed_at' => '2026-10-20 09:00:00',
+        ]);
+    }
+
+    $row = $this->getJson("/api/patients/{$this->patient->id}/uis")->assertOk()->json('data.0');
+
+    expect($row['letters']['print_count'])->toBe(2)
+        ->and($row['letters']['last_printed_at'])->toBe('2026-10-20 09:00:00')
+        ->and($row['uis']['print_count'])->toBe(0)
+        ->and($row['guarantees']['pending_approval'])->toBe(0);
 });

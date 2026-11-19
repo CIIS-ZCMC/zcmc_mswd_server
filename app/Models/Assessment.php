@@ -297,6 +297,20 @@ class Assessment extends Model
         return $this->social_case_status !== null;
     }
 
+    /**
+     * Whether the user may change this assessment: the cases permission always
+     * does; `intake.update` does for an intake (UIS), never for an SCSR.
+     */
+    public function canBeChangedBy(?User $user, string $casesPermission): bool
+    {
+        if ($user === null) {
+            return false;
+        }
+
+        return $user->can($casesPermission)
+            || (! $this->isSocialCase() && $user->can('intake.update'));
+    }
+
     public function isSocialCaseEditable(): bool
     {
         return in_array($this->social_case_status, self::SOCIAL_CASE_EDITABLE_STATUSES, true);

@@ -1311,7 +1311,7 @@
                     "Auth"
                 ],
                 "summary": "Authenticate and issue a bearer token",
-                "description": "Public, but rate-limited to 6 requests/minute. Returns the user and a Sanctum token.",
+                "description": "Public, but rate-limited to 6 requests/minute. Returns the user and a Sanctum token. Only the local super admin can sign in this way; everyone else signs in through ZCMC IAM.",
                 "operationId": "auth.login",
                 "requestBody": {
                     "required": true,
@@ -6224,6 +6224,257 @@
                 ]
             }
         },
+        "/guarantees/pending-approval": {
+            "get": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "Guarantees waiting for approval",
+                "description": "Guarantees at or above the approval threshold that no one has signed off yet, oldest first. Requires the `guarantee.approve` permission.",
+                "operationId": "guarantees.pending-approval",
+                "responses": {
+                    "200": {
+                        "description": "The waiting guarantees",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "properties": {
+                                                    "id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "patient": {
+                                                        "properties": {
+                                                            "id": {
+                                                                "type": "integer"
+                                                            },
+                                                            "name": {
+                                                                "type": "string"
+                                                            },
+                                                            "hospital_id": {
+                                                                "type": "integer",
+                                                                "nullable": true
+                                                            }
+                                                        },
+                                                        "type": "object",
+                                                        "nullable": true
+                                                    },
+                                                    "his_transaction_id": {
+                                                        "type": "integer"
+                                                    },
+                                                    "guarantor": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "reference_no": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "guaranteed_on": {
+                                                        "type": "string",
+                                                        "format": "date"
+                                                    },
+                                                    "total": {
+                                                        "type": "number",
+                                                        "format": "float"
+                                                    },
+                                                    "recorded_by": {
+                                                        "type": "string",
+                                                        "nullable": true
+                                                    },
+                                                    "created_at": {
+                                                        "type": "string",
+                                                        "format": "date-time"
+                                                    }
+                                                },
+                                                "type": "object"
+                                            }
+                                        },
+                                        "count": {
+                                            "type": "integer"
+                                        },
+                                        "threshold": {
+                                            "type": "number",
+                                            "format": "float"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/guarantees/{guarantee}/approve": {
+            "post": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "Approve a guarantee",
+                "description": "Signs off a guarantee that is `pending` (422 otherwise). Requires the `guarantee.approve` permission.",
+                "operationId": "guarantees.approve",
+                "parameters": [
+                    {
+                        "name": "guarantee",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "The approved guarantee",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/PatientGuarantee"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/dashboard/guarantee-totals": {
+            "get": {
+                "tags": [
+                    "Patient Guarantors"
+                ],
+                "summary": "Guarantee amounts per day and guarantor",
+                "description": "For the dashboard Assistance released card. Counts guarantees by `guaranteed_on`, once they need no approval or have it. Patients with a protective case are left out without `audit.view_protective`. The last 7 days by default. Requires the `guarantee.view` permission.",
+                "operationId": "dashboard.guarantee-totals",
+                "parameters": [
+                    {
+                        "name": "from",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    },
+                    {
+                        "name": "to",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "format": "date"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Totals per day",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "properties": {
+                                                "from": {
+                                                    "type": "string",
+                                                    "format": "date"
+                                                },
+                                                "to": {
+                                                    "type": "string",
+                                                    "format": "date"
+                                                },
+                                                "protective_excluded": {
+                                                    "type": "boolean"
+                                                },
+                                                "total": {
+                                                    "type": "number",
+                                                    "format": "float"
+                                                },
+                                                "days": {
+                                                    "type": "array",
+                                                    "items": {
+                                                        "properties": {
+                                                            "date": {
+                                                                "type": "string",
+                                                                "format": "date"
+                                                            },
+                                                            "total": {
+                                                                "type": "number",
+                                                                "format": "float"
+                                                            },
+                                                            "by_guarantor": {
+                                                                "type": "object",
+                                                                "additionalProperties": {
+                                                                    "type": "number",
+                                                                    "format": "float"
+                                                                }
+                                                            }
+                                                        },
+                                                        "type": "object"
+                                                    }
+                                                }
+                                            },
+                                            "type": "object"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/patients/{patient}/ids": {
             "get": {
                 "tags": [
@@ -7824,6 +8075,120 @@
                 ]
             }
         },
+        "/psgc/cities": {
+            "get": {
+                "tags": [
+                    "Reference"
+                ],
+                "summary": "Find a city or municipality for an address",
+                "description": "At most 30 results. Matches the name of the city, its province or (for a Manila district) its city. Cities in `services.psgc.home_region` come first.",
+                "operationId": "psgc.cities",
+                "parameters": [
+                    {
+                        "name": "search",
+                        "in": "query",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 100
+                        }
+                    },
+                    {
+                        "name": "code",
+                        "in": "query",
+                        "description": "Return just this city",
+                        "required": false,
+                        "schema": {
+                            "type": "string",
+                            "maxLength": 10,
+                            "minLength": 10
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Matching cities",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PsgcCity"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/psgc/cities/{city}/barangays": {
+            "get": {
+                "tags": [
+                    "Reference"
+                ],
+                "summary": "List a city's barangays",
+                "operationId": "psgc.cities.barangays",
+                "parameters": [
+                    {
+                        "name": "city",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "string",
+                            "pattern": "^[0-9]{10}$"
+                        }
+                    }
+                ],
+                "responses": {
+                    "200": {
+                        "description": "Barangays, sorted by name",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "type": "array",
+                                            "items": {
+                                                "$ref": "#/components/schemas/PsgcBarangay"
+                                            }
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
         "/cases/{case}/reassess": {
             "post": {
                 "tags": [
@@ -8632,7 +8997,7 @@
                     "Queue"
                 ],
                 "summary": "Start serving a waiting patient",
-                "description": "waiting → in_progress; the caller becomes `served_by`. 422 from any other status. Requires the `queue.manage` permission.",
+                "description": "waiting → in_progress; the caller becomes `served_by` and holds the visit. 422 from any other status, or while the caller is serving another visit (one at a time). Requires the `queue.manage` permission.",
                 "operationId": "service-visits.start",
                 "parameters": [
                     {
@@ -8686,7 +9051,7 @@
                     "Queue"
                 ],
                 "summary": "Complete a visit in progress",
-                "description": "in_progress → completed; stops the turnaround clock. 422 from any other status. Requires the `queue.manage` permission.",
+                "description": "in_progress → completed; stops the turnaround clock. 403 unless the caller is `served_by`; 422 from any other status. Requires the `queue.manage` permission.",
                 "operationId": "service-visits.complete",
                 "parameters": [
                     {
@@ -8757,7 +9122,7 @@
                     "Queue"
                 ],
                 "summary": "Cancel an open visit",
-                "description": "waiting or in_progress → cancelled, with a reason. Cancelled visits are left out of turnaround figures. Requires the `queue.manage` permission.",
+                "description": "waiting or in_progress → cancelled, with a reason. A visit in progress can be cancelled only by its `served_by` (403 otherwise). Cancelled visits are left out of turnaround figures. Requires the `queue.manage` permission.",
                 "operationId": "service-visits.cancel",
                 "parameters": [
                     {
@@ -8788,6 +9153,133 @@
                         }
                     }
                 },
+                "responses": {
+                    "200": {
+                        "description": "The visit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceVisit"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/service-visits/{visit}/take-over": {
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Take over another worker's visit in progress",
+                "description": "The caller becomes `served_by`, with a reason; the turnaround clock keeps running. 422 unless in progress, when it is already the caller's, or while the caller is serving another visit. Requires the `queue.manage` and `queue.override` permissions.",
+                "operationId": "service-visits.take-over",
+                "parameters": [
+                    {
+                        "name": "visit",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
+                "requestBody": {
+                    "required": true,
+                    "content": {
+                        "application/json": {
+                            "schema": {
+                                "required": [
+                                    "takeover_reason"
+                                ],
+                                "properties": {
+                                    "takeover_reason": {
+                                        "type": "string",
+                                        "maxLength": 255
+                                    }
+                                },
+                                "type": "object"
+                            }
+                        }
+                    }
+                },
+                "responses": {
+                    "200": {
+                        "description": "The visit",
+                        "content": {
+                            "application/json": {
+                                "schema": {
+                                    "properties": {
+                                        "data": {
+                                            "$ref": "#/components/schemas/ServiceVisit"
+                                        }
+                                    },
+                                    "type": "object"
+                                }
+                            }
+                        }
+                    },
+                    "401": {
+                        "$ref": "#/components/responses/Unauthenticated"
+                    },
+                    "403": {
+                        "$ref": "#/components/responses/Forbidden"
+                    },
+                    "404": {
+                        "$ref": "#/components/responses/NotFound"
+                    },
+                    "422": {
+                        "$ref": "#/components/responses/ValidationError"
+                    }
+                },
+                "security": [
+                    {
+                        "sanctum": []
+                    }
+                ]
+            }
+        },
+        "/service-visits/{visit}/details-checked": {
+            "post": {
+                "tags": [
+                    "Queue"
+                ],
+                "summary": "Record that the patient details were checked with them",
+                "description": "Only the visit `served_by` can, and only while it is in progress (422 otherwise, 403 for another worker). Asking again keeps the first stamp. Requires the `queue.manage` permission.",
+                "operationId": "service-visits.details-checked",
+                "parameters": [
+                    {
+                        "name": "visit",
+                        "in": "path",
+                        "required": true,
+                        "schema": {
+                            "type": "integer"
+                        }
+                    }
+                ],
                 "responses": {
                     "200": {
                         "description": "The visit",
@@ -10144,6 +10636,11 @@
                         "description": "OpenAPI docs for App\\Http\\Controllers\\DarEntryController and DarExportController:\nthe signed-in worker's Daily Accomplishment Report. Every route needs `dar.manage`\nand only ever reaches the caller's own lines.",
                         "type": "integer"
                     },
+                    "service_visit_id": {
+                        "description": "The queue visit this line was filed from.",
+                        "type": "integer",
+                        "nullable": true
+                    },
                     "entry_date": {
                         "type": "string",
                         "format": "date"
@@ -10225,6 +10722,11 @@
                     "patient_id": {
                         "type": "integer"
                     },
+                    "service_visit_id": {
+                        "description": "On create only: a visit the caller completed for this patient, once per worker.",
+                        "type": "integer",
+                        "nullable": true
+                    },
                     "entry_date": {
                         "type": "string",
                         "format": "date"
@@ -10241,6 +10743,76 @@
                         "type": "string",
                         "nullable": true,
                         "maxLength": 500
+                    }
+                },
+                "type": "object"
+            },
+            "PsgcCity": {
+                "description": "A city, municipality or Manila district (SubMun) that has barangays.",
+                "properties": {
+                    "code": {
+                        "description": "10-digit PSGC code",
+                        "type": "string",
+                        "example": "0931700000"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "City of Zamboanga"
+                    },
+                    "label": {
+                        "description": "Names the city for a Manila district: \"Tondo I/II, City of Manila\"",
+                        "type": "string",
+                        "example": "City of Zamboanga"
+                    },
+                    "kind": {
+                        "type": "string",
+                        "nullable": true,
+                        "enum": [
+                            "City",
+                            "Mun",
+                            "SubMun",
+                            "SGU"
+                        ]
+                    },
+                    "province": {
+                        "description": "Null for independent cities and NCR",
+                        "properties": {
+                            "code": {
+                                "type": "string"
+                            },
+                            "name": {
+                                "type": "string"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
+                    "region": {
+                        "properties": {
+                            "code": {
+                                "type": "string",
+                                "example": "0900000000"
+                            },
+                            "name": {
+                                "type": "string",
+                                "example": "Region IX (Zamboanga Peninsula)"
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    }
+                },
+                "type": "object"
+            },
+            "PsgcBarangay": {
+                "properties": {
+                    "code": {
+                        "type": "string",
+                        "example": "0931700001"
+                    },
+                    "name": {
+                        "type": "string",
+                        "example": "Arena Blanco"
                     }
                 },
                 "type": "object"
@@ -10554,6 +11126,33 @@
                         "type": "string",
                         "nullable": true
                     },
+                    "approval_status": {
+                        "description": "A guarantee totalling the approval threshold (config `mss.guarantee_approval_threshold`, 50,000) or more is `pending` until a `guarantee.approve` holder approves it. Its slip will not print while pending.",
+                        "type": "string",
+                        "enum": [
+                            "not_required",
+                            "pending",
+                            "approved"
+                        ]
+                    },
+                    "approved_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "approved_by": {
+                        "properties": {
+                            "id": {
+                                "type": "integer"
+                            },
+                            "name": {
+                                "type": "string",
+                                "nullable": true
+                            }
+                        },
+                        "type": "object",
+                        "nullable": true
+                    },
                     "items": {
                         "description": "Type of Assistance, amount, Mode of Assistance, Fund Source. Lines from before this shape have no type or mode.",
                         "type": "array",
@@ -10787,9 +11386,15 @@
                         "oneOf": [
                             {
                                 "$ref": "#/components/schemas/Patient"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
                             }
-                        ],
-                        "nullable": true
+                        ]
                     },
                     "assigned_user": {
                         "properties": {
@@ -11478,9 +12083,15 @@
                         "oneOf": [
                             {
                                 "$ref": "#/components/schemas/UisSnapshot"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
                             }
-                        ],
-                        "nullable": true
+                        ]
                     },
                     "uis_snapshot_at": {
                         "type": "string",
@@ -12322,9 +12933,15 @@
                         "oneOf": [
                             {
                                 "$ref": "#/components/schemas/HospitalPatient"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
                             }
-                        ],
-                        "nullable": true
+                        ]
                     },
                     "patient_name": {
                         "type": "string",
@@ -13492,6 +14109,13 @@
                             "type": "string"
                         }
                     },
+                    "role_codes": {
+                        "description": "Role system codes, e.g. case_manager (when loaded).",
+                        "type": "array",
+                        "items": {
+                            "type": "string"
+                        }
+                    },
                     "permissions": {
                         "description": "Effective permission names (when roles/permissions loaded).",
                         "type": "array",
@@ -13546,8 +14170,14 @@
                         "example": 1
                     },
                     "name": {
+                        "description": "Display name; may be renamed.",
                         "type": "string",
-                        "example": "case-manager"
+                        "example": "Case Manager"
+                    },
+                    "code": {
+                        "description": "Stable system code, fixed once created. Optional on create (defaults to the name in snake case); never accepted on update.",
+                        "type": "string",
+                        "example": "case_manager"
                     },
                     "guard_name": {
                         "type": "string",
@@ -13787,32 +14417,90 @@
                         "oneOf": [
                             {
                                 "$ref": "#/components/schemas/ServiceVisitUser"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
                             }
-                        ],
-                        "nullable": true
+                        ]
                     },
                     "served_by": {
                         "oneOf": [
                             {
                                 "$ref": "#/components/schemas/ServiceVisitUser"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
                             }
-                        ],
-                        "nullable": true
+                        ]
                     },
                     "completed_by": {
                         "oneOf": [
                             {
                                 "$ref": "#/components/schemas/ServiceVisitUser"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
                             }
-                        ],
-                        "nullable": true
+                        ]
                     },
                     "cancelled_by": {
                         "oneOf": [
                             {
                                 "$ref": "#/components/schemas/ServiceVisitUser"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
                             }
-                        ],
+                        ]
+                    },
+                    "taken_over_by": {
+                        "oneOf": [
+                            {
+                                "$ref": "#/components/schemas/ServiceVisitUser"
+                            },
+                            {
+                                "type": "object",
+                                "nullable": true,
+                                "enum": [
+                                    null
+                                ]
+                            }
+                        ]
+                    },
+                    "taken_over_at": {
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "takeover_reason": {
+                        "type": "string",
+                        "nullable": true
+                    },
+                    "details_checked_at": {
+                        "description": "When the server confirmed the patient details with them.",
+                        "type": "string",
+                        "format": "date-time",
+                        "nullable": true
+                    },
+                    "dar_entry_id": {
+                        "description": "The caller's own DAR line for this visit.",
+                        "type": "integer",
                         "nullable": true
                     },
                     "patient": {

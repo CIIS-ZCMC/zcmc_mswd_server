@@ -88,6 +88,12 @@ use OpenApi\Attributes as OA;
         new OA\Property(property: 'reference_no', type: 'string', nullable: true),
         new OA\Property(property: 'guaranteed_on', type: 'string', format: 'date'),
         new OA\Property(property: 'remarks', type: 'string', nullable: true),
+        new OA\Property(property: 'approval_status', type: 'string', enum: ['not_required', 'pending', 'approved'], description: 'A guarantee totalling the approval threshold (config `mss.guarantee_approval_threshold`, 50,000) or more is `pending` until a `guarantee.approve` holder approves it. Its slip will not print while pending.'),
+        new OA\Property(property: 'approved_at', type: 'string', format: 'date-time', nullable: true),
+        new OA\Property(property: 'approved_by', properties: [
+            new OA\Property(property: 'id', type: 'integer'),
+            new OA\Property(property: 'name', type: 'string', nullable: true),
+        ], type: 'object', nullable: true),
         new OA\Property(property: 'items', type: 'array', description: 'Type of Assistance, amount, Mode of Assistance, Fund Source. Lines from before this shape have no type or mode.', items: new OA\Items(properties: [
             new OA\Property(property: 'id', type: 'integer'),
             new OA\Property(property: 'assistance_type', properties: [

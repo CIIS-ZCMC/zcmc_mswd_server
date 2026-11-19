@@ -21,10 +21,17 @@ return new class extends Migration
             $table->date('guaranteed_on');
             $table->text('remarks')->nullable();
             $table->foreignId('recorded_by')->constrained('users');
+            // Sign-off: a guarantee totalling config('mss.guarantee_approval_threshold') or
+            // more is 'pending' until a guarantee.approve holder approves it; below that
+            // it is 'not_required'. Changing its items or guarantor sends it back to pending.
+            $table->string('approval_status', 20)->default('not_required');
+            $table->foreignId('approved_by')->nullable()->constrained('users');
+            $table->timestamp('approved_at')->nullable();
             $table->timestamps();
             $table->softDeletes();
 
             $table->index('his_transaction_id');
+            $table->index('approval_status');
             $table->index(['patient_id', 'his_transaction_id']);
         });
 

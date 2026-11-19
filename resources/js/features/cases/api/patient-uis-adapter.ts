@@ -34,6 +34,12 @@ export function adaptPatientUisRow(api: ApiPatientUisRow): PatientUisRow {
     guarantees: {
       count: Number(api.guarantees?.count ?? 0),
       total: Number(api.guarantees?.total ?? 0),
+      pendingApproval: Number(api.guarantees?.pending_approval ?? 0),
+      approved: Number(api.guarantees?.approved ?? 0),
+    },
+    letters: {
+      printCount: Number(api.letters?.print_count ?? 0),
+      lastPrintedAt: api.letters?.last_printed_at ?? null,
     },
     uis: {
       hasAssessment: Boolean(api.uis.has_assessment),

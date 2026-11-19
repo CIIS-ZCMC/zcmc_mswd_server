@@ -3,6 +3,7 @@
 namespace App\Http\Controllers;
 
 use App\Http\Resources\AssessmentResource;
+use App\Models\AcknowledgementSlipPrintLog;
 use App\Models\Assessment;
 use App\Models\CaseModel;
 use App\Models\Patient;
@@ -68,6 +69,10 @@ class PatientUisController extends Controller implements HasMiddleware
 
         $guarantees = $this->guaranteeStats($patient);
         $prints = UisPrintLog::query()->where('patient_id', $patient->id)->get(['case_id', 'transaction_id', 'printed_at']);
+        // MAIFIP, City Mayor and Indigency prints are logged apart from the UIS.
+        $letterPrints = AcknowledgementSlipPrintLog::query()
+            ->where('patient_id', $patient->id)
+            ->get(['his_transaction_id', 'printed_at']);
 
         $rows = $intakes->map(fn (Assessment $intake) => [
             'intake' => $intake,
@@ -86,7 +91,7 @@ class PatientUisController extends Controller implements HasMiddleware
         $data = $rows
             ->sortByDesc(fn (array $row) => (string) ($row['case']?->date_opened ?? $row['intake']?->encounter_date ?? $row['intake']?->created_at))
             ->values()
-            ->map(function (array $row) use ($readiness, $hasFamily, $householdSize, $guarantees, $prints, $request, $latestRecord) {
+            ->map(function (array $row) use ($readiness, $hasFamily, $householdSize, $guarantees, $prints, $letterPrints, $request, $latestRecord) {
                 /** @var Assessment|null $intake */
                 ['intake' => $intake, 'case' => $case, 'transaction_id' => $transactionId] = $row;
 
@@ -112,7 +117,11 @@ class PatientUisController extends Controller implements HasMiddleware
                     'guarantees' => [
                         'count' => $guarantee['count'] ?? 0,
                         'total' => $guarantee['total'] ?? 0.0,
+                        // Those at or above the approval threshold, and where each stands.
+                        'pending_approval' => $guarantee['pending'] ?? 0,
+                        'approved' => $guarantee['approved'] ?? 0,
                     ],
+                    'letters' => $this->letterStats($letterPrints, $transactionId),
                     'uis' => $readiness->build(
                         assessment: $intake,
                         hasFamily: $hasFamily,
@@ -174,11 +183,31 @@ class PatientUisController extends Controller implements HasMiddleware
         return PatientGuarantee::query()
             ->where('patient_id', $patient->id)
             ->withSum('items', 'amount')
-            ->get(['id', 'his_transaction_id'])
+            ->get(['id', 'his_transaction_id', 'approval_status'])
             ->groupBy('his_transaction_id')
             ->map(fn (Collection $group) => [
                 'count' => $group->count(),
                 'total' => round((float) $group->sum('items_sum_amount'), 2),
+                'pending' => $group->where('approval_status', PatientGuarantee::APPROVAL_PENDING)->count(),
+                'approved' => $group->where('approval_status', PatientGuarantee::APPROVAL_APPROVED)->count(),
             ]);
+    }
+
+    /**
+     * How many letters (MAIFIP, City Mayor, Indigency) were printed for an encounter.
+     *
+     * @param  Collection<int, AcknowledgementSlipPrintLog>  $logs
+     * @return array{print_count: int, last_printed_at: string|null}
+     */
+    private function letterStats(Collection $logs, int|string|null $transactionId): array
+    {
+        $rows = $transactionId === null
+            ? collect()
+            : $logs->filter(fn (AcknowledgementSlipPrintLog $log) => (string) $log->his_transaction_id === (string) $transactionId);
+
+        return [
+            'print_count' => $rows->count(),
+            'last_printed_at' => $rows->max('printed_at')?->toDateTimeString(),
+        ];
     }
 }

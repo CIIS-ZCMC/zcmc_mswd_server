@@ -104,6 +104,25 @@ class ServiceVisitService
     }
 
     /**
+     * Records that the server has checked the patient's details with them. Only the
+     * visit's server can, and only while it is in progress; asking again changes nothing.
+     */
+    public function markDetailsChecked(ServiceVisit $visit, User $user): ServiceVisit
+    {
+        return $this->transition($visit, function (ServiceVisit $visit) use ($user) {
+            $this->ensureStatus($visit, [ServiceVisit::STATUS_IN_PROGRESS], 'Start serving the patient before checking their details.');
+            $this->ensureNotHeldByAnother($visit, $user);
+
+            if ($visit->details_checked_at === null) {
+                $visit->update([
+                    'details_checked_at' => now(),
+                    'details_checked_by' => $user->id,
+                ]);
+            }
+        });
+    }
+
+    /**
      * Moves a visit in progress to the caller, for when its server is away. The
      * turnaround clock keeps running; the audit trail keeps who held it before.
      */
