@@ -1,96 +1,138 @@
-import React, { useState } from "react"
+import React, { useMemo, useState } from "react"
 import { ChevronDown } from "lucide-react"
-import { cn } from "@/lib/utils"
+import type { GuaranteeTotals } from "../api/dashboard-api"
+import { compactPeso, dayLabel, toDateKey, workingDays } from "../lib/week"
 
-interface StackedDayData {
-  dayLabel: string
-  isToday?: boolean
-  amountLabel: string
-  /** Heights in px from bottom to top: MAIFIP, PCSO, Mayor's Office, CAF */
-  segments: {
-    maifip: number
-    pcso: number
-    mayorsOffice: number
-    caf: number
-  }
+/** Colours for the guarantors the design names; others take the fallbacks. */
+const KNOWN_COLORS: Record<string, string> = {
+  MAIFIP: "#1f5fd6",
+  PCSO: "#0c2a5b",
+  "Mayor's Office": "#5ec3cf",
+  CAF: "#f2a65a",
 }
 
-const THIS_WEEK_DAYS: StackedDayData[] = [
-  {
-    dayLabel: "Thu 17",
-    amountLabel: "₱82k",
-    segments: { maifip: 38, pcso: 26, mayorsOffice: 18, caf: 10 },
-  },
-  {
-    dayLabel: "Fri 18",
-    amountLabel: "₱88k",
-    segments: { maifip: 44, pcso: 22, mayorsOffice: 20, caf: 14 },
-  },
-  {
-    dayLabel: "Mon 21",
-    amountLabel: "₱93k",
-    segments: { maifip: 52, pcso: 30, mayorsOffice: 14, caf: 10 },
-  },
-  {
-    dayLabel: "Tue 22",
-    amountLabel: "₱118k",
-    segments: { maifip: 64, pcso: 34, mayorsOffice: 22, caf: 16 },
-  },
-  {
-    dayLabel: "Today",
-    isToday: true,
-    amountLabel: "₱83.5k",
-    segments: { maifip: 42, pcso: 24, mayorsOffice: 18, caf: 12 },
-  },
-]
+const FALLBACK_COLORS = ["#8b5cf6", "#16a34a", "#d7263d", "#a16207", "#64748b"]
 
-const LAST_WEEK_DAYS: StackedDayData[] = [
-  {
-    dayLabel: "Mon 14",
-    amountLabel: "₱74k",
-    segments: { maifip: 34, pcso: 22, mayorsOffice: 16, caf: 8 },
-  },
-  {
-    dayLabel: "Tue 15",
-    amountLabel: "₱91k",
-    segments: { maifip: 46, pcso: 24, mayorsOffice: 18, caf: 12 },
-  },
-  {
-    dayLabel: "Wed 16",
-    amountLabel: "₱86k",
-    segments: { maifip: 42, pcso: 26, mayorsOffice: 14, caf: 10 },
-  },
-  {
-    dayLabel: "Thu 17",
-    amountLabel: "₱82k",
-    segments: { maifip: 38, pcso: 26, mayorsOffice: 18, caf: 10 },
-  },
-  {
-    dayLabel: "Fri 18",
-    amountLabel: "₱88k",
-    segments: { maifip: 44, pcso: 22, mayorsOffice: 20, caf: 14 },
-  },
-]
+/** Tallest bar, in pixels. */
+const MAX_BAR_HEIGHT = 170
 
-export const AssistanceReleasedCard: React.FC = () => {
+interface StackSegment {
+  name: string
+  color: string
+  height: number
+  amount: number
+}
+
+interface DayBar {
+  key: string
+  dayLabel: string
+  amountLabel: string
+  isToday: boolean
+  segments: StackSegment[]
+}
+
+interface AssistanceReleasedCardProps {
+  today?: Date
+  thisWeek?: GuaranteeTotals
+  lastWeek?: GuaranteeTotals
+  isLoading?: boolean
+}
+
+const peso = new Intl.NumberFormat("en-PH", {
+  style: "currency",
+  currency: "PHP",
+  maximumFractionDigits: 0,
+})
+
+export const AssistanceReleasedCard: React.FC<AssistanceReleasedCardProps> = ({
+  today: todayProp,
+  thisWeek,
+  lastWeek,
+  isLoading = false,
+}) => {
   const [period, setPeriod] = useState<"this_week" | "last_week">("this_week")
+  const [today] = useState(() => todayProp ?? new Date())
 
-  const days = period === "this_week" ? THIS_WEEK_DAYS : LAST_WEEK_DAYS
-  const totalDisplay = period === "this_week" ? "₱464,500" : "₱421,000"
+  const totals = period === "this_week" ? thisWeek : lastWeek
+
+  const { bars, legend } = useMemo(() => {
+    const days = workingDays(today, period === "this_week" ? 0 : 1)
+    const byDate = new Map((totals?.days ?? []).map((d) => [d.date, d]))
+
+    // Guarantors in order of the most money across the period.
+    const sums = new Map<string, number>()
+    for (const day of totals?.days ?? []) {
+      for (const [name, amount] of Object.entries(day.byGuarantor)) {
+        sums.set(name, (sums.get(name) ?? 0) + amount)
+      }
+    }
+    const names = [...sums.entries()]
+      .sort((a, b) => b[1] - a[1])
+      .map(([name]) => name)
+
+    let fallback = 0
+    const colors = new Map<string, string>()
+    for (const name of names) {
+      colors.set(
+        name,
+        KNOWN_COLORS[name] ??
+          FALLBACK_COLORS[fallback++ % FALLBACK_COLORS.length]
+      )
+    }
+
+    const maxTotal = Math.max(
+      0,
+      ...days.map((d) => byDate.get(toDateKey(d))?.total ?? 0)
+    )
+
+    const dayBars: DayBar[] = days.map((d) => {
+      const key = toDateKey(d)
+      const entry = byDate.get(key)
+      const total = entry?.total ?? 0
+
+      return {
+        key,
+        dayLabel: dayLabel(d, today),
+        amountLabel: total > 0 ? compactPeso(total) : "",
+        isToday: key === toDateKey(today),
+        // Smallest guarantor on top, as in the design.
+        segments: [...names]
+          .reverse()
+          .filter((name) => (entry?.byGuarantor[name] ?? 0) > 0)
+          .map((name) => {
+            const amount = entry?.byGuarantor[name] ?? 0
+            return {
+              name,
+              color: colors.get(name) ?? FALLBACK_COLORS[0],
+              amount,
+              height: Math.max(
+                3,
+                Math.round((amount / maxTotal) * MAX_BAR_HEIGHT)
+              ),
+            }
+          }),
+      }
+    })
+
+    return {
+      bars: dayBars,
+      legend: names.map((name) => ({ name, color: colors.get(name)! })),
+    }
+  }, [today, period, totals])
 
   return (
     <div
       data-node-id="144:1617"
-      className="flex w-full flex-col gap-[16px] rounded-[16px] border border-[#e4e9f2] bg-white p-[24px]"
+      className="flex w-full flex-col gap-[8px] rounded-[16px] border border-[#e4e9f2] bg-white p-[24px] shadow-[0px_1px_2px_0px_rgba(12,42,91,0.04),0px_2px_6px_0px_rgba(12,42,91,0.05)]"
     >
       {/* Header */}
-      <div className="flex items-center justify-between gap-3">
+      <div className="flex items-start justify-between gap-[12px]">
         <div className="flex flex-col gap-[2px]">
-          <h2 className="text-[17px] leading-tight font-bold tracking-[-0.17px] text-[#0c2a5b]">
+          <h2 className="text-[16px] leading-normal font-bold text-[#0c2a5b]">
             Assistance released
           </h2>
-          <p className="text-[12.5px] leading-normal font-normal text-[#5b6678]">
-            Last 5 working days · by guarantor
+          <p className="text-[12px] leading-normal font-normal text-[#5b6678]">
+            Working days · by guarantor
           </p>
         </div>
 
@@ -101,93 +143,85 @@ export const AssistanceReleasedCard: React.FC = () => {
               prev === "this_week" ? "last_week" : "this_week"
             )
           }
-          className="flex shrink-0 cursor-pointer items-center gap-[4px] rounded-full border border-[#e4e9f2] bg-[#f4f7fc] px-[13px] py-[6px] text-[12px] leading-tight font-semibold text-[#0c2a5b] transition-colors hover:border-[#1f5fd6]/40"
+          className="flex h-[32px] shrink-0 cursor-pointer items-center gap-[4px] rounded-full border border-[#e4e9f2] bg-white px-[13px] text-[12px] leading-normal font-semibold text-[#0c2a5b] transition-colors hover:bg-[#f4f7fc]"
         >
           <span>{period === "this_week" ? "This week" : "Last week"}</span>
           <ChevronDown className="size-[16px] text-[#0c2a5b]" />
         </button>
       </div>
 
-      {/* Total & Legend */}
-      <div className="flex flex-wrap items-baseline justify-between gap-3">
-        <span className="text-[28px] leading-[28px] font-bold tracking-[-0.56px] text-[#0c2a5b]">
-          {totalDisplay}
+      {/* Total Amount */}
+      <div className="pt-[4px]">
+        <span className="text-[28px] leading-tight font-bold tracking-[-0.6px] text-[#0c2a5b]">
+          {isLoading ? "…" : peso.format(totals?.total ?? 0)}
         </span>
-
-        <div className="flex flex-wrap items-center gap-[12px]">
-          <div className="flex items-center gap-[6px]">
-            <span className="size-[8px] rounded-[2px] bg-[#1f5fd6]" />
-            <span className="text-[11.5px] font-medium text-[#5b6678]">
-              MAIFIP
-            </span>
-          </div>
-          <div className="flex items-center gap-[6px]">
-            <span className="size-[8px] rounded-[2px] bg-[#0c2a5b]" />
-            <span className="text-[11.5px] font-medium text-[#5b6678]">
-              PCSO
-            </span>
-          </div>
-          <div className="flex items-center gap-[6px]">
-            <span className="size-[8px] rounded-[2px] bg-[#5ec3cf]" />
-            <span className="text-[11.5px] font-medium text-[#5b6678]">
-              Mayor&apos;s Office
-            </span>
-          </div>
-          <div className="flex items-center gap-[6px]">
-            <span className="size-[8px] rounded-[2px] bg-[#f2a65a]" />
-            <span className="text-[11.5px] font-medium text-[#5b6678]">
-              CAF
-            </span>
-          </div>
-        </div>
       </div>
 
-      {/* Stacked Bar Chart */}
-      <div className="grid h-[180px] grid-cols-5 items-end gap-[14px] pt-[8px] pb-[4px]">
-        {days.map((day) => (
-          <div
-            key={day.dayLabel}
-            className="flex h-full flex-col items-center justify-end gap-[6px]"
-          >
-            {/* Stacked Bar */}
-            <div className="flex w-full flex-col-reverse gap-[2px] overflow-hidden rounded-t-[6px]">
-              <div
-                style={{ height: `${day.segments.maifip}px` }}
-                className="w-full shrink-0 rounded-t-[3px] bg-[#1f5fd6] transition-all duration-300"
-                title="MAIFIP"
-              />
-              <div
-                style={{ height: `${day.segments.pcso}px` }}
-                className="w-full shrink-0 rounded-t-[3px] bg-[#0c2a5b] transition-all duration-300"
-                title="PCSO"
-              />
-              <div
-                style={{ height: `${day.segments.mayorsOffice}px` }}
-                className="w-full shrink-0 rounded-t-[3px] bg-[#5ec3cf] transition-all duration-300"
-                title="Mayor's Office"
-              />
-              <div
-                style={{ height: `${day.segments.caf}px` }}
-                className="w-full shrink-0 rounded-t-[3px] bg-[#f2a65a] transition-all duration-300"
-                title="CAF"
-              />
-            </div>
-
-            {/* Day Label */}
+      {/* Legend */}
+      <div className="flex min-h-[18px] flex-wrap items-center gap-[12px] pt-[2px]">
+        {legend.map((item) => (
+          <div key={item.name} className="flex items-center gap-[6px]">
             <span
-              className={cn(
-                "text-[11px] leading-tight whitespace-nowrap",
-                day.isToday
-                  ? "font-bold text-[#0c2a5b]"
-                  : "font-semibold text-[#5b6678]"
-              )}
-            >
-              {day.dayLabel}
+              className="size-[10px] shrink-0 rounded-[3px]"
+              style={{ backgroundColor: item.color }}
+            />
+            <span className="text-[12px] leading-normal font-medium text-[#5b6678]">
+              {item.name}
+            </span>
+          </div>
+        ))}
+        {!isLoading && legend.length === 0 && (
+          <span className="text-[12px] text-[#8a94a6]">
+            Nothing released in this period.
+          </span>
+        )}
+      </div>
+
+      {/* Bar Chart Area */}
+      <div className="flex h-[223px] items-end gap-[16px] border-b border-[#e4e9f2] pt-[8px] pb-[5px]">
+        {bars.map((bar) => (
+          <div
+            key={bar.key}
+            className="flex h-full flex-1 flex-col items-center justify-end gap-[6px]"
+          >
+            {/* Amount label on top */}
+            <span className="text-[11px] leading-normal font-semibold whitespace-nowrap text-[#5b6678]">
+              {bar.amountLabel}
             </span>
 
-            {/* Amount Label */}
-            <span className="text-[10.5px] leading-tight font-normal text-[#8a94a6] whitespace-nowrap">
-              {day.amountLabel}
+            {/* Stacked Bars */}
+            <div className="flex w-[44px] max-w-[44px] flex-col gap-[2px]">
+              {bar.segments.map((seg) => (
+                <div
+                  key={seg.name}
+                  style={{
+                    height: `${seg.height}px`,
+                    backgroundColor: seg.color,
+                  }}
+                  className="w-full shrink-0 rounded-[4px] transition-all"
+                  title={`${seg.name}: ${peso.format(seg.amount)}`}
+                />
+              ))}
+            </div>
+          </div>
+        ))}
+      </div>
+
+      {/* Day Labels */}
+      <div className="flex items-start gap-[16px] pt-[4px]">
+        {bars.map((bar) => (
+          <div
+            key={bar.key}
+            className="flex flex-1 items-center justify-center text-center"
+          >
+            <span
+              className={`text-[12px] leading-normal whitespace-nowrap ${
+                bar.isToday
+                  ? "font-bold text-[#1f5fd6]"
+                  : "font-medium text-[#5b6678]"
+              }`}
+            >
+              {bar.dayLabel}
             </span>
           </div>
         ))}
@@ -195,4 +229,3 @@ export const AssistanceReleasedCard: React.FC = () => {
     </div>
   )
 }
-
