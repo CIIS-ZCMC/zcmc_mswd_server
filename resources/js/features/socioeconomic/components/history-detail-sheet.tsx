@@ -43,9 +43,12 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
   isOpen,
   onClose,
 }) => {
-  const { data: profile, isLoading, isError, error } = useSocioeconomicProfile(
-    isOpen ? profileId : null
-  )
+  const {
+    data: profile,
+    isLoading,
+    isError,
+    error,
+  } = useSocioeconomicProfile(isOpen ? profileId : null)
 
   const formattedDate = profile?.recordedOn
     ? (() => {
@@ -63,17 +66,17 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
     <Sheet open={isOpen} onOpenChange={(open) => !open && onClose()}>
       <SheetContent
         side="right"
-        className="w-full sm:max-w-lg overflow-y-auto p-0 flex flex-col gap-0"
+        className="flex w-full flex-col gap-0 overflow-y-auto p-0 font-[Plus_Jakarta_Sans,sans-serif] sm:max-w-lg"
       >
-        <SheetHeader className="p-5 border-b bg-muted/20">
-          <SheetTitle className="text-base font-bold flex items-center gap-2">
-            <Calendar className="size-4 text-primary" />
+        <SheetHeader className="border-b border-[#e4e9f2] bg-[#f4f7fc] p-5 dark:border-border dark:bg-muted/40">
+          <SheetTitle className="flex items-center gap-2 text-[16px] font-bold text-[#0c2a5b] dark:text-foreground">
+            <Calendar className="size-4 text-[#1f5fd6]" />
             <span>List of Expenses — {formattedDate}</span>
           </SheetTitle>
-          <SheetDescription className="text-xs">
+          <SheetDescription className="text-[12px] text-[#5b6678] dark:text-muted-foreground">
             {profile?.recordedBy?.name ? (
-              <span className="flex items-center gap-1 mt-0.5">
-                <User className="size-3" />
+              <span className="mt-0.5 flex items-center gap-1">
+                <User className="size-3 text-emerald-600 dark:text-emerald-400" />
                 Assessed by {profile.recordedBy.name}
               </span>
             ) : (
@@ -82,7 +85,7 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
           </SheetDescription>
         </SheetHeader>
 
-        <div className="p-5 space-y-5 flex-1">
+        <div className="flex-1 space-y-5 p-5">
           {isLoading && (
             <div className="space-y-4">
               <Skeleton className="h-20 w-full rounded-lg" />
@@ -95,7 +98,8 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
             <Alert variant="destructive">
               <AlertTitle>Failed to load profile</AlertTitle>
               <AlertDescription className="text-xs">
-                {(error as Error)?.message || "An unexpected error occurred while fetching the snapshot."}
+                {(error as Error)?.message ||
+                  "An unexpected error occurred while fetching the snapshot."}
               </AlertDescription>
             </Alert>
           )}
@@ -104,14 +108,18 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
             <>
               {/* Financial Balance Summary */}
               <div className="grid grid-cols-2 gap-2.5">
-                <div className="p-3 rounded-lg border bg-card/60">
-                  <span className="text-[11px] text-muted-foreground block">Total Family Income</span>
+                <div className="rounded-lg border bg-card/60 p-3">
+                  <span className="block text-[11px] text-muted-foreground">
+                    Total Family Income
+                  </span>
                   <span className="text-sm font-bold text-foreground">
                     {formatCurrency(profile.income.totalFamilyIncome)}
                   </span>
                 </div>
-                <div className="p-3 rounded-lg border bg-card/60">
-                  <span className="text-[11px] text-muted-foreground block">Total Expenses</span>
+                <div className="rounded-lg border bg-card/60 p-3">
+                  <span className="block text-[11px] text-muted-foreground">
+                    Total Expenses
+                  </span>
                   <span className="text-sm font-bold text-foreground">
                     {formatCurrency(profile.total)}
                   </span>
@@ -119,41 +127,57 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
               </div>
 
               {/* Net Balance */}
-              <div className="p-3 rounded-lg border bg-muted/20 flex items-center justify-between text-xs">
-                <span className="text-muted-foreground font-medium">Net Monthly Balance:</span>
-                <span className={`font-bold text-sm ${
-                  profile.income.balance !== null && profile.income.balance < 0
-                    ? "text-rose-600"
-                    : "text-foreground"
-                }`}>
+              <div className="flex items-center justify-between rounded-lg border bg-muted/20 p-3 text-xs">
+                <span className="font-medium text-muted-foreground">
+                  Net Monthly Balance:
+                </span>
+                <span
+                  className={`text-sm font-bold ${
+                    profile.income.balance !== null &&
+                    profile.income.balance < 0
+                      ? "text-rose-600"
+                      : "text-foreground"
+                  }`}
+                >
                   {formatCurrency(profile.income.balance)}
                 </span>
               </div>
 
               {/* Housing & Utilities */}
-              <div className="space-y-2 pt-2 border-t">
+              <div className="space-y-2 border-t pt-2">
                 <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                   <Home className="size-3.5" />
                   <span>House & Utilities</span>
                 </div>
-                <div className="grid grid-cols-1 sm:grid-cols-3 gap-2 text-xs">
-                  <div className="p-2.5 rounded-lg border bg-muted/10">
-                    <span className="text-[11px] text-muted-foreground block">House / Lot</span>
-                    <span className="font-semibold text-foreground">
-                      {labelFor(HOUSE_TENURE_OPTIONS, profile.house.tenure) || "—"}
+                <div className="grid grid-cols-1 gap-2 text-xs sm:grid-cols-3">
+                  <div className="rounded-lg border bg-muted/10 p-2.5">
+                    <span className="block text-[11px] text-muted-foreground">
+                      House / Lot
                     </span>
-                    {isRented && profile.house.rentAmount !== null && profile.house.rentAmount !== undefined && (
-                      <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(profile.house.rentAmount)}/mo
-                      </span>
-                    )}
+                    <span className="font-semibold text-foreground">
+                      {labelFor(HOUSE_TENURE_OPTIONS, profile.house.tenure) ||
+                        "—"}
+                    </span>
+                    {isRented &&
+                      profile.house.rentAmount !== null &&
+                      profile.house.rentAmount !== undefined && (
+                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                          {formatCurrency(profile.house.rentAmount)}/mo
+                        </span>
+                      )}
                   </div>
-                  <div className="p-2.5 rounded-lg border bg-muted/10">
-                    <span className="text-[11px] text-muted-foreground block">Light Source</span>
-                    <div className="flex flex-wrap gap-1 mt-0.5">
+                  <div className="rounded-lg border bg-muted/10 p-2.5">
+                    <span className="block text-[11px] text-muted-foreground">
+                      Light Source
+                    </span>
+                    <div className="mt-0.5 flex flex-wrap gap-1">
                       {profile.lightSource.length > 0 ? (
                         profile.lightSource.map((s) => (
-                          <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Badge
+                            key={s}
+                            variant="outline"
+                            className="px-1.5 py-0 text-[10px]"
+                          >
                             {labelFor(LIGHT_SOURCE_OPTIONS, s) || s}
                           </Badge>
                         ))
@@ -161,18 +185,25 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
                         <span className="text-muted-foreground">—</span>
                       )}
                     </div>
-                    {profile.lightAmount !== null && profile.lightAmount !== undefined && (
-                      <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(profile.lightAmount)}/mo
-                      </span>
-                    )}
+                    {profile.lightAmount !== null &&
+                      profile.lightAmount !== undefined && (
+                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                          {formatCurrency(profile.lightAmount)}/mo
+                        </span>
+                      )}
                   </div>
-                  <div className="p-2.5 rounded-lg border bg-muted/10">
-                    <span className="text-[11px] text-muted-foreground block">Water Source</span>
-                    <div className="flex flex-wrap gap-1 mt-0.5">
+                  <div className="rounded-lg border bg-muted/10 p-2.5">
+                    <span className="block text-[11px] text-muted-foreground">
+                      Water Source
+                    </span>
+                    <div className="mt-0.5 flex flex-wrap gap-1">
                       {profile.waterSource.length > 0 ? (
                         profile.waterSource.map((s) => (
-                          <Badge key={s} variant="outline" className="text-[10px] px-1.5 py-0">
+                          <Badge
+                            key={s}
+                            variant="outline"
+                            className="px-1.5 py-0 text-[10px]"
+                          >
                             {labelFor(WATER_SOURCE_OPTIONS, s) || s}
                           </Badge>
                         ))
@@ -180,17 +211,18 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
                         <span className="text-muted-foreground">—</span>
                       )}
                     </div>
-                    {profile.waterAmount !== null && profile.waterAmount !== undefined && (
-                      <span className="text-[11px] text-muted-foreground block mt-0.5">
-                        {formatCurrency(profile.waterAmount)}/mo
-                      </span>
-                    )}
+                    {profile.waterAmount !== null &&
+                      profile.waterAmount !== undefined && (
+                        <span className="mt-0.5 block text-[11px] text-muted-foreground">
+                          {formatCurrency(profile.waterAmount)}/mo
+                        </span>
+                      )}
                   </div>
                 </div>
               </div>
 
               {/* Itemized Expenses */}
-              <div className="space-y-2 pt-2 border-t">
+              <div className="space-y-2 border-t pt-2">
                 <div className="flex items-center justify-between">
                   <div className="flex items-center gap-1.5 text-xs font-semibold text-muted-foreground">
                     <Receipt className="size-3.5" />
@@ -201,57 +233,73 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
                   </span>
                 </div>
 
-                <div className="rounded-lg border overflow-hidden">
+                <div className="overflow-hidden rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/40 hover:bg-muted/40">
-                        <TableHead className="text-xs h-7">Item</TableHead>
-                        <TableHead className="text-xs h-7 text-right">Amount</TableHead>
+                        <TableHead className="h-7 text-xs">Item</TableHead>
+                        <TableHead className="h-7 text-right text-xs">
+                          Amount
+                        </TableHead>
                       </TableRow>
                     </TableHeader>
                     <TableBody>
-                      {isRented && profile.house.rentAmount !== null && profile.house.rentAmount > 0 && (
-                        <TableRow className="text-xs">
-                          <TableCell className="py-1.5 font-medium">House / Lot Rent</TableCell>
-                          <TableCell className="py-1.5 text-right font-medium">
-                            {formatCurrency(profile.house.rentAmount)}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {profile.lightAmount !== null && profile.lightAmount > 0 && (
-                        <TableRow className="text-xs">
-                          <TableCell className="py-1.5 font-medium">Light Source</TableCell>
-                          <TableCell className="py-1.5 text-right font-medium">
-                            {formatCurrency(profile.lightAmount)}
-                          </TableCell>
-                        </TableRow>
-                      )}
-                      {profile.waterAmount !== null && profile.waterAmount > 0 && (
-                        <TableRow className="text-xs">
-                          <TableCell className="py-1.5 font-medium">Water Source</TableCell>
-                          <TableCell className="py-1.5 text-right font-medium">
-                            {formatCurrency(profile.waterAmount)}
-                          </TableCell>
-                        </TableRow>
-                      )}
+                      {isRented &&
+                        profile.house.rentAmount !== null &&
+                        profile.house.rentAmount > 0 && (
+                          <TableRow className="text-xs">
+                            <TableCell className="py-1.5 font-medium">
+                              House / Lot Rent
+                            </TableCell>
+                            <TableCell className="py-1.5 text-right font-medium">
+                              {formatCurrency(profile.house.rentAmount)}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      {profile.lightAmount !== null &&
+                        profile.lightAmount > 0 && (
+                          <TableRow className="text-xs">
+                            <TableCell className="py-1.5 font-medium">
+                              Light Source
+                            </TableCell>
+                            <TableCell className="py-1.5 text-right font-medium">
+                              {formatCurrency(profile.lightAmount)}
+                            </TableCell>
+                          </TableRow>
+                        )}
+                      {profile.waterAmount !== null &&
+                        profile.waterAmount > 0 && (
+                          <TableRow className="text-xs">
+                            <TableCell className="py-1.5 font-medium">
+                              Water Source
+                            </TableCell>
+                            <TableCell className="py-1.5 text-right font-medium">
+                              {formatCurrency(profile.waterAmount)}
+                            </TableCell>
+                          </TableRow>
+                        )}
                       {EXPENSE_ITEM_KEYS.map((key) => {
                         const amount = profile.expenses[key]
                         const label = EXPENSE_ITEM_LABELS[key]
                         const isOthers = key === "others"
-                        const specifyText = isOthers ? profile.expenses.othersSpecify : null
+                        const specifyText = isOthers
+                          ? profile.expenses.othersSpecify
+                          : null
 
                         return (
                           <TableRow key={key} className="text-xs">
                             <TableCell className="py-1.5 font-medium">
                               <span>{label}</span>
                               {isOthers && specifyText && (
-                                <span className="text-muted-foreground font-normal ml-1">
+                                <span className="ml-1 font-normal text-muted-foreground">
                                   ({specifyText})
                                 </span>
                               )}
                             </TableCell>
                             <TableCell className="py-1.5 text-right font-medium">
-                              {amount !== null && amount !== undefined && amount > 0
+                              {amount !== null &&
+                              amount !== undefined &&
+                              amount > 0
                                 ? formatCurrency(amount)
                                 : "—"}
                             </TableCell>
@@ -265,9 +313,11 @@ export const HistoryDetailSheet: React.FC<HistoryDetailSheetProps> = ({
 
               {/* Remarks */}
               {profile.remarks && (
-                <div className="space-y-1 pt-2 border-t text-xs">
-                  <span className="text-muted-foreground font-medium">Remarks</span>
-                  <p className="bg-muted/20 p-2.5 rounded border whitespace-pre-line text-foreground">
+                <div className="space-y-1 border-t pt-2 text-xs">
+                  <span className="font-medium text-muted-foreground">
+                    Remarks
+                  </span>
+                  <p className="rounded border bg-muted/20 p-2.5 whitespace-pre-line text-foreground">
                     {profile.remarks}
                   </p>
                 </div>

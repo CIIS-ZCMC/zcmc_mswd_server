@@ -102,7 +102,9 @@ const emptyAmounts = (): Record<ExpenseItemKey, string> => ({
 })
 
 /** The form's starting values: the record being edited, or a blank form dated today. */
-function buildInitialState(initialProfile?: SocioeconomicCurrent | null): FormState {
+function buildInitialState(
+  initialProfile?: SocioeconomicCurrent | null
+): FormState {
   if (!initialProfile) {
     return {
       recordedOn: new Date().toISOString().slice(0, 10),
@@ -130,26 +132,34 @@ function buildInitialState(initialProfile?: SocioeconomicCurrent | null): FormSt
     }
   })
   // An "others" note keeps the Others item active even without an amount.
-  if (initialProfile.expenses.othersSpecify && !activeExpenseKeys.includes("others")) {
+  if (
+    initialProfile.expenses.othersSpecify &&
+    !activeExpenseKeys.includes("others")
+  ) {
     activeExpenseKeys.push("others")
   }
 
   const tenure = initialProfile.house.tenure
   return {
-    recordedOn: initialProfile.recordedOn ? initialProfile.recordedOn.slice(0, 10) : "",
+    recordedOn: initialProfile.recordedOn
+      ? initialProfile.recordedOn.slice(0, 10)
+      : "",
     houseTenure: tenure === "rented" || tenure === "owned" ? tenure : "owned",
     houseRentAmount:
-      initialProfile.house.rentAmount !== null && initialProfile.house.rentAmount !== undefined
+      initialProfile.house.rentAmount !== null &&
+      initialProfile.house.rentAmount !== undefined
         ? String(initialProfile.house.rentAmount)
         : "",
     lightSource: initialProfile.lightSource || [],
     lightAmount:
-      initialProfile.lightAmount !== null && initialProfile.lightAmount !== undefined
+      initialProfile.lightAmount !== null &&
+      initialProfile.lightAmount !== undefined
         ? String(initialProfile.lightAmount)
         : "",
     waterSource: initialProfile.waterSource || [],
     waterAmount:
-      initialProfile.waterAmount !== null && initialProfile.waterAmount !== undefined
+      initialProfile.waterAmount !== null &&
+      initialProfile.waterAmount !== undefined
         ? String(initialProfile.waterAmount)
         : "",
     activeExpenseKeys,
@@ -175,7 +185,12 @@ export const ProfileFormDialog: React.FC<ProfileFormDialogProps> = (props) => {
     if (props.isOpen) setOpenCount((count) => count + 1)
   }
 
-  return <ProfileForm key={`${openCount}-${props.initialProfile?.id ?? "new"}`} {...props} />
+  return (
+    <ProfileForm
+      key={`${openCount}-${props.initialProfile?.id ?? "new"}`}
+      {...props}
+    />
+  )
 }
 
 const ProfileForm: React.FC<ProfileFormDialogProps> = ({
@@ -193,7 +208,9 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
   const [recordedOn, setRecordedOn] = useState(init.recordedOn)
 
   // House & Utilities
-  const [houseTenure, setHouseTenure] = useState<"owned" | "rented" | "">(init.houseTenure)
+  const [houseTenure, setHouseTenure] = useState<"owned" | "rented" | "">(
+    init.houseTenure
+  )
   const [houseRentAmount, setHouseRentAmount] = useState(init.houseRentAmount)
   const [lightSource, setLightSource] = useState<string[]>(init.lightSource)
   const [lightAmount, setLightAmount] = useState(init.lightAmount)
@@ -201,12 +218,18 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
   const [waterAmount, setWaterAmount] = useState(init.waterAmount)
 
   // Appendable 8 Itemized Expenses
-  const [activeExpenseKeys, setActiveExpenseKeys] = useState<ExpenseItemKey[]>(init.activeExpenseKeys)
-  const [expenseAmounts, setExpenseAmounts] = useState<Record<ExpenseItemKey, string>>(init.expenseAmounts)
+  const [activeExpenseKeys, setActiveExpenseKeys] = useState<ExpenseItemKey[]>(
+    init.activeExpenseKeys
+  )
+  const [expenseAmounts, setExpenseAmounts] = useState<
+    Record<ExpenseItemKey, string>
+  >(init.expenseAmounts)
   const [othersSpecify, setOthersSpecify] = useState(init.othersSpecify)
 
   // Income Sources
-  const [otherIncomeRows, setOtherIncomeRows] = useState<OtherSourceRow[]>(init.otherIncomeRows)
+  const [otherIncomeRows, setOtherIncomeRows] = useState<OtherSourceRow[]>(
+    init.otherIncomeRows
+  )
   const [refreshIncome, setRefreshIncome] = useState(false)
 
   const [formError, setFormError] = useState<string | null>(null)
@@ -215,7 +238,6 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
   const createMutation = useCreateSocioeconomicProfile(patientId)
   const updateMutation = useUpdateSocioeconomicProfile(patientId)
   const isSubmitting = createMutation.isPending || updateMutation.isPending
-
 
   const handleTenureChange = (newTenure: "owned" | "rented") => {
     setHouseTenure(newTenure)
@@ -226,7 +248,9 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
 
   const handleToggleLightSource = (value: string) => {
     setLightSource((prev) => {
-      const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+      const next = prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value]
       if (next.length === 0) setLightAmount("")
       return next
     })
@@ -234,7 +258,9 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
 
   const handleToggleWaterSource = (value: string) => {
     setWaterSource((prev) => {
-      const next = prev.includes(value) ? prev.filter((v) => v !== value) : [...prev, value]
+      const next = prev.includes(value)
+        ? prev.filter((v) => v !== value)
+        : [...prev, value]
       if (next.length === 0) setWaterAmount("")
       return next
     })
@@ -271,7 +297,11 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
     setOtherIncomeRows((prev) => prev.filter((_, i) => i !== index))
   }
 
-  const handleOtherIncomeChange = (index: number, field: keyof OtherSourceRow, value: string) => {
+  const handleOtherIncomeChange = (
+    index: number,
+    field: keyof OtherSourceRow,
+    value: string
+  ) => {
     setOtherIncomeRows((prev) => {
       const next = [...prev]
       next[index] = { ...next[index], [field]: value }
@@ -289,23 +319,29 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
   }
 
   // --- Live Calculations ---
-  const rentNumber = houseTenure === "rented" ? parseFloat(houseRentAmount) || 0 : 0
+  const rentNumber =
+    houseTenure === "rented" ? parseFloat(houseRentAmount) || 0 : 0
   const lightNumber = lightSource.length > 0 ? parseFloat(lightAmount) || 0 : 0
   const waterNumber = waterSource.length > 0 ? parseFloat(waterAmount) || 0 : 0
   const eightExpensesSum = activeExpenseKeys.reduce((sum, key) => {
     const val = parseFloat(expenseAmounts[key])
     return !isNaN(val) && val > 0 ? sum + val : sum
   }, 0)
-  const computedTotalExpenses = rentNumber + lightNumber + waterNumber + eightExpensesSum
+  const computedTotalExpenses =
+    rentNumber + lightNumber + waterNumber + eightExpensesSum
 
-  const patientIncomeVal = liveIncome?.patientIncome ?? initialProfile?.income.patientIncome ?? 0
+  const patientIncomeVal =
+    liveIncome?.patientIncome ?? initialProfile?.income.patientIncome ?? 0
   const familyMembersTotalVal =
-    liveIncome?.familyMembersTotal ?? initialProfile?.income.familyMembersTotal ?? 0
+    liveIncome?.familyMembersTotal ??
+    initialProfile?.income.familyMembersTotal ??
+    0
   const otherSourcesSum = otherIncomeRows.reduce((sum, row) => {
     const amt = parseFloat(row.amount)
     return !isNaN(amt) && amt > 0 ? sum + amt : sum
   }, 0)
-  const computedTotalFamilyIncome = patientIncomeVal + familyMembersTotalVal + otherSourcesSum
+  const computedTotalFamilyIncome =
+    patientIncomeVal + familyMembersTotalVal + otherSourcesSum
   const computedBalance = computedTotalFamilyIncome - computedTotalExpenses
 
   // Family members list for auto lines
@@ -316,10 +352,13 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
       name: fm.name,
       relationship: fm.relationship,
       monthlyIncome: fm.monthlyIncome,
-    })) || [])
+    })) ||
+      [])
 
   // Un-added expense categories for quick-add chips
-  const availableExpenseKeys = EXPENSE_ITEM_KEYS.filter((k) => !activeExpenseKeys.includes(k))
+  const availableExpenseKeys = EXPENSE_ITEM_KEYS.filter(
+    (k) => !activeExpenseKeys.includes(k)
+  )
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -337,7 +376,12 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
     }
 
     const cleanedOtherSources: OtherIncomeSource[] = otherIncomeRows
-      .filter((row) => row.source.trim() !== "" && !isNaN(parseFloat(row.amount)) && parseFloat(row.amount) >= 0)
+      .filter(
+        (row) =>
+          row.source.trim() !== "" &&
+          !isNaN(parseFloat(row.amount)) &&
+          parseFloat(row.amount) >= 0
+      )
       .map((row) => ({
         source: row.source.trim(),
         amount: parseFloat(row.amount),
@@ -346,20 +390,39 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
     const payload: SaveSocioeconomicInput = {
       recordedOn,
       houseTenure: houseTenure || null,
-      houseRentAmount: houseTenure === "rented" ? parseNumOrNull(houseRentAmount) : null,
+      houseRentAmount:
+        houseTenure === "rented" ? parseNumOrNull(houseRentAmount) : null,
       lightSource,
       lightAmount: lightSource.length > 0 ? parseNumOrNull(lightAmount) : null,
       waterSource,
       waterAmount: waterSource.length > 0 ? parseNumOrNull(waterAmount) : null,
-      food: activeExpenseKeys.includes("food") ? parseNumOrNull(expenseAmounts.food) : null,
-      transport: activeExpenseKeys.includes("transport") ? parseNumOrNull(expenseAmounts.transport) : null,
-      medical: activeExpenseKeys.includes("medical") ? parseNumOrNull(expenseAmounts.medical) : null,
-      insurance: activeExpenseKeys.includes("insurance") ? parseNumOrNull(expenseAmounts.insurance) : null,
-      education: activeExpenseKeys.includes("education") ? parseNumOrNull(expenseAmounts.education) : null,
-      clothing: activeExpenseKeys.includes("clothing") ? parseNumOrNull(expenseAmounts.clothing) : null,
-      houseHelp: activeExpenseKeys.includes("houseHelp") ? parseNumOrNull(expenseAmounts.houseHelp) : null,
-      others: activeExpenseKeys.includes("others") ? parseNumOrNull(expenseAmounts.others) : null,
-      othersSpecify: activeExpenseKeys.includes("others") ? othersSpecify.trim() || null : null,
+      food: activeExpenseKeys.includes("food")
+        ? parseNumOrNull(expenseAmounts.food)
+        : null,
+      transport: activeExpenseKeys.includes("transport")
+        ? parseNumOrNull(expenseAmounts.transport)
+        : null,
+      medical: activeExpenseKeys.includes("medical")
+        ? parseNumOrNull(expenseAmounts.medical)
+        : null,
+      insurance: activeExpenseKeys.includes("insurance")
+        ? parseNumOrNull(expenseAmounts.insurance)
+        : null,
+      education: activeExpenseKeys.includes("education")
+        ? parseNumOrNull(expenseAmounts.education)
+        : null,
+      clothing: activeExpenseKeys.includes("clothing")
+        ? parseNumOrNull(expenseAmounts.clothing)
+        : null,
+      houseHelp: activeExpenseKeys.includes("houseHelp")
+        ? parseNumOrNull(expenseAmounts.houseHelp)
+        : null,
+      others: activeExpenseKeys.includes("others")
+        ? parseNumOrNull(expenseAmounts.others)
+        : null,
+      othersSpecify: activeExpenseKeys.includes("others")
+        ? othersSpecify.trim() || null
+        : null,
       otherIncomeSources: cleanedOtherSources,
       remarks: initialProfile?.remarks ?? null,
       ...(isEdit ? { refreshIncome } : {}),
@@ -367,7 +430,10 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
 
     try {
       if (isEdit && initialProfile) {
-        await updateMutation.mutateAsync({ id: initialProfile.id, input: payload })
+        await updateMutation.mutateAsync({
+          id: initialProfile.id,
+          input: payload,
+        })
       } else {
         await createMutation.mutateAsync(payload)
       }
@@ -380,76 +446,93 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
         })
         setFieldErrors(serverErrors)
       }
-      setFormError(err instanceof Error && err.message ? err.message : "Failed to save record.")
+      setFormError(
+        err instanceof Error && err.message
+          ? err.message
+          : "Failed to save record."
+      )
     }
   }
 
   return (
     <Dialog open={isOpen} onOpenChange={(open) => !open && onClose()}>
-      <DialogContent className="sm:max-w-4xl max-h-[92vh] overflow-y-auto p-0 flex flex-col gap-0 border shadow-2xl">
+      <DialogContent className="flex max-h-[92vh] flex-col gap-0 overflow-y-auto rounded-[20px] border border-[#e4e9f2] p-0 font-[Plus_Jakarta_Sans,sans-serif] shadow-2xl sm:max-w-4xl dark:border-border">
         {/* Modal Header */}
-        <DialogHeader className="p-5 sm:p-6 border-b bg-muted/20">
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+        <DialogHeader className="border-b border-[#e4e9f2] bg-[#f4f7fc] p-5 sm:p-6 dark:border-border dark:bg-muted/40">
+          <div className="flex flex-col justify-between gap-4 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
-              <div className="p-2.5 rounded-xl bg-primary/10 text-primary border border-primary/20 shrink-0">
-                <Receipt className="size-5" />
+              <div className="flex size-[34px] shrink-0 items-center justify-center rounded-full bg-[#edf3fe] text-[#1f5fd6] dark:bg-primary/20">
+                <Receipt className="size-4.5" />
               </div>
               <div>
-                <DialogTitle className="text-lg sm:text-xl font-bold">
-                  {isEdit ? "Update List of Expenses" : "Record List of Expenses"}
+                <DialogTitle className="text-[18px] font-bold text-[#0c2a5b] dark:text-foreground">
+                  {isEdit
+                    ? "Update List of Expenses"
+                    : "Record List of Expenses"}
                 </DialogTitle>
-                <DialogDescription className="text-sm text-muted-foreground mt-0.5">
-                  Financial balance overview, family income, housing status, utilities, and itemized household costs.
+                <DialogDescription className="mt-0.5 text-[13px] text-[#5b6678] dark:text-muted-foreground">
+                  Financial balance overview, family income, housing status,
+                  utilities, and itemized household costs.
                 </DialogDescription>
               </div>
             </div>
 
             {/* Assessment Date Selector */}
-            <div className="flex items-center gap-2 shrink-0 bg-background px-3 py-1.5 rounded-lg border shadow-2xs">
-              <Calendar className="size-4 text-primary shrink-0" />
+            <div className="flex shrink-0 items-center gap-2 rounded-full border border-[#cfd7e4] bg-white px-3 py-1.5 shadow-xs dark:border-border dark:bg-card">
+              <Calendar className="size-4 shrink-0 text-[#1f5fd6]" />
               <div className="space-y-0.5">
                 <Input
                   id="recordedOn"
                   type="date"
                   value={recordedOn}
                   onChange={(e) => setRecordedOn(e.target.value)}
-                  className="h-8 text-sm font-semibold w-38 border-0 p-0 focus-visible:ring-0 bg-transparent"
+                  className="h-7 w-38 border-0 bg-transparent p-0 text-[13px] font-semibold text-[#1b2433] focus-visible:ring-0 dark:text-foreground"
                   required
                 />
                 {fieldErrors.recorded_on && (
-                  <p className="text-xs text-destructive font-medium">{fieldErrors.recorded_on}</p>
+                  <p className="text-xs font-medium text-destructive">
+                    {fieldErrors.recorded_on}
+                  </p>
                 )}
               </div>
             </div>
           </div>
         </DialogHeader>
 
-        <form onSubmit={handleSubmit} className="p-5 sm:p-6 space-y-4 flex-1">
+        <form onSubmit={handleSubmit} className="flex-1 space-y-4 p-5 sm:p-6">
           {formError && (
             <Alert variant="destructive" className="py-2.5">
               <AlertCircle className="size-4" />
-              <AlertDescription className="text-sm">{formError}</AlertDescription>
+              <AlertDescription className="text-sm">
+                {formError}
+              </AlertDescription>
             </Alert>
           )}
 
           {/* ================= 1. COMPACT FINANCIAL BALANCE OVERVIEW BANNER ================= */}
-          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3.5 rounded-xl border bg-primary/5 border-primary/20">
+          <div className="flex flex-col justify-between gap-3 rounded-xl border border-primary/20 bg-primary/5 p-3.5 sm:flex-row sm:items-center">
             <div className="flex items-center gap-3">
-              <div className="p-2 rounded-lg bg-primary/10 text-primary border border-primary/20 shrink-0">
+              <div className="shrink-0 rounded-lg border border-primary/20 bg-primary/10 p-2 text-primary">
                 <PiggyBank className="size-4.5" />
               </div>
               <div>
                 <div className="flex items-center gap-2">
-                  <span className="font-bold text-sm text-foreground">Financial Overview</span>
+                  <span className="text-sm font-bold text-foreground">
+                    Financial Overview
+                  </span>
                   <Badge
                     variant="outline"
-                    className={`text-xs font-bold px-2 py-0.5 rounded-full flex items-center gap-1 ${
+                    className={`flex items-center gap-1 rounded-full px-2 py-0.5 text-xs font-bold ${
                       computedBalance >= 0
-                        ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border-emerald-500/30"
-                        : "bg-rose-500/10 text-rose-600 dark:text-rose-400 border-rose-500/30"
+                        ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-600 dark:text-emerald-400"
+                        : "border-rose-500/30 bg-rose-500/10 text-rose-600 dark:text-rose-400"
                     }`}
                   >
-                    {computedBalance >= 0 ? <TrendingUp className="size-3" /> : <TrendingDown className="size-3" />}
+                    {computedBalance >= 0 ? (
+                      <TrendingUp className="size-3" />
+                    ) : (
+                      <TrendingDown className="size-3" />
+                    )}
                     <span>{computedBalance >= 0 ? "Surplus" : "Deficit"}</span>
                   </Badge>
                 </div>
@@ -462,36 +545,36 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
             </div>
 
             {/* Compact 3-Value Strip */}
-            <div className="grid grid-cols-3 gap-2.5 shrink-0">
-              <div className="px-3 py-1.5 rounded-lg bg-background border text-center shadow-2xs">
-                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider block">
+            <div className="grid shrink-0 grid-cols-3 gap-2.5">
+              <div className="rounded-lg border bg-background px-3 py-1.5 text-center shadow-2xs">
+                <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                   Total Income
                 </span>
-                <span className="text-sm sm:text-base font-bold text-foreground block">
+                <span className="block text-sm font-bold text-foreground sm:text-base">
                   {formatCurrency(computedTotalFamilyIncome)}
                 </span>
               </div>
 
-              <div className="px-3 py-1.5 rounded-lg bg-background border text-center shadow-2xs">
-                <span className="text-xs text-muted-foreground font-semibold uppercase tracking-wider block">
+              <div className="rounded-lg border bg-background px-3 py-1.5 text-center shadow-2xs">
+                <span className="block text-xs font-semibold tracking-wider text-muted-foreground uppercase">
                   Total Expenses
                 </span>
-                <span className="text-sm sm:text-base font-bold text-foreground block">
+                <span className="block text-sm font-bold text-foreground sm:text-base">
                   {formatCurrency(computedTotalExpenses)}
                 </span>
               </div>
 
               <div
-                className={`px-3 py-1.5 rounded-lg border text-center shadow-2xs ${
+                className={`rounded-lg border px-3 py-1.5 text-center shadow-2xs ${
                   computedBalance >= 0
-                    ? "bg-emerald-500/10 border-emerald-500/30 text-emerald-700 dark:text-emerald-300"
-                    : "bg-rose-500/10 border-rose-500/30 text-rose-700 dark:text-rose-300"
+                    ? "border-emerald-500/30 bg-emerald-500/10 text-emerald-700 dark:text-emerald-300"
+                    : "border-rose-500/30 bg-rose-500/10 text-rose-700 dark:text-rose-300"
                 }`}
               >
-                <span className="text-xs font-semibold uppercase tracking-wider block opacity-85">
+                <span className="block text-xs font-semibold tracking-wider uppercase opacity-85">
                   Net Balance
                 </span>
-                <span className="text-sm sm:text-base font-bold block">
+                <span className="block text-sm font-bold sm:text-base">
                   {formatCurrency(computedBalance)}
                 </span>
               </div>
@@ -499,12 +582,12 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
           </div>
 
           {/* ================= 2. FAMILY INCOME BREAKDOWN ================= */}
-          <Card className="shadow-2xs border bg-card">
-            <CardContent className="p-4 space-y-3">
+          <Card className="border bg-card shadow-2xs">
+            <CardContent className="space-y-3 p-4">
               <div className="flex items-center justify-between">
                 <div className="flex items-center gap-2">
                   <Wallet className="size-4.5 text-emerald-600 dark:text-emerald-400" />
-                  <span className="text-sm font-bold text-foreground uppercase tracking-wide">
+                  <span className="text-sm font-bold tracking-wide text-foreground uppercase">
                     Family Income Breakdown
                   </span>
                 </div>
@@ -513,7 +596,7 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                   variant="ghost"
                   size="sm"
                   onClick={navigateToFamily}
-                  className="h-6 text-xs font-semibold text-primary hover:text-primary gap-1 px-2 cursor-pointer"
+                  className="h-6 cursor-pointer gap-1 px-2 text-xs font-semibold text-primary hover:text-primary"
                 >
                   <span>Manage family</span>
                   <ArrowUpRight className="size-3.5" />
@@ -521,36 +604,44 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
               </div>
 
               {/* Compact Inline Incomes Grid */}
-              <div className="flex flex-wrap items-center gap-2 p-2.5 rounded-lg border bg-muted/20 text-sm">
-                <span className="text-xs font-medium text-muted-foreground">Declared:</span>
-                <span className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background border text-xs sm:text-sm font-medium shadow-2xs">
+              <div className="flex flex-wrap items-center gap-2 rounded-lg border bg-muted/20 p-2.5 text-sm">
+                <span className="text-xs font-medium text-muted-foreground">
+                  Declared:
+                </span>
+                <span className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-xs font-medium shadow-2xs sm:text-sm">
                   <span className="text-muted-foreground">Patient:</span>
-                  <strong className="text-foreground font-bold">{formatCurrency(patientIncomeVal)}</strong>
+                  <strong className="font-bold text-foreground">
+                    {formatCurrency(patientIncomeVal)}
+                  </strong>
                 </span>
 
                 {displayFamilyMembers.map((fm, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-md bg-background border text-xs sm:text-sm font-medium shadow-2xs"
+                    className="inline-flex items-center gap-1.5 rounded-md border bg-background px-2.5 py-1 text-xs font-medium shadow-2xs sm:text-sm"
                   >
-                    <span className="text-muted-foreground truncate max-w-[150px]">
+                    <span className="max-w-[150px] truncate text-muted-foreground">
                       {fm.name} ({fm.relationship || "Member"}):
                     </span>
-                    <strong className="text-foreground font-bold">{formatCurrency(fm.monthlyIncome)}</strong>
+                    <strong className="font-bold text-foreground">
+                      {formatCurrency(fm.monthlyIncome)}
+                    </strong>
                   </span>
                 ))}
               </div>
 
               {/* Other Income Repeater */}
-              <div className="space-y-2 pt-1 border-t">
+              <div className="space-y-2 border-t pt-1">
                 <div className="flex items-center justify-between">
-                  <span className="text-sm font-semibold text-foreground">Other Family Incomes</span>
+                  <span className="text-sm font-semibold text-foreground">
+                    Other Family Incomes
+                  </span>
                   <Button
                     type="button"
                     variant="outline"
                     size="sm"
                     onClick={handleAddOtherIncomeRow}
-                    className="h-7 text-xs font-medium gap-1 px-2.5 cursor-pointer"
+                    className="h-7 cursor-pointer gap-1 px-2.5 text-xs font-medium"
                   >
                     <Plus className="size-3.5" />
                     <span>Add Source</span>
@@ -564,11 +655,17 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                         <Input
                           placeholder="Source (e.g. Sari-sari, Remittance)"
                           value={row.source}
-                          onChange={(e) => handleOtherIncomeChange(index, "source", e.target.value)}
-                          className="h-8 text-sm flex-1 bg-background"
+                          onChange={(e) =>
+                            handleOtherIncomeChange(
+                              index,
+                              "source",
+                              e.target.value
+                            )
+                          }
+                          className="h-8 flex-1 bg-background text-sm"
                         />
-                        <div className="w-32 relative">
-                          <span className="absolute left-2.5 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                        <div className="relative w-32">
+                          <span className="absolute top-1/2 left-2.5 -translate-y-1/2 text-sm font-bold text-muted-foreground">
                             ₱
                           </span>
                           <Input
@@ -577,8 +674,14 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                             min="0"
                             placeholder="0.00"
                             value={row.amount}
-                            onChange={(e) => handleOtherIncomeChange(index, "amount", e.target.value)}
-                            className="h-8 text-sm pl-6 text-right font-semibold bg-background"
+                            onChange={(e) =>
+                              handleOtherIncomeChange(
+                                index,
+                                "amount",
+                                e.target.value
+                              )
+                            }
+                            className="h-8 bg-background pl-6 text-right text-sm font-semibold"
                           />
                         </div>
                         <Button
@@ -586,7 +689,7 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                           variant="ghost"
                           size="sm"
                           onClick={() => handleRemoveOtherIncomeRow(index)}
-                          className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive cursor-pointer shrink-0"
+                          className="h-8 w-8 shrink-0 cursor-pointer p-0 text-muted-foreground hover:text-destructive"
                         >
                           <Trash2 className="size-3.5" />
                         </Button>
@@ -598,13 +701,17 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
 
               {/* Refresh Income Switch (Edit mode only) */}
               {isEdit && (
-                <div className="flex items-center justify-between p-2.5 rounded-lg border bg-muted/15 text-sm">
+                <div className="flex items-center justify-between rounded-lg border bg-muted/15 p-2.5 text-sm">
                   <div className="space-y-0.5">
-                    <Label htmlFor="refreshIncome" className="text-sm font-semibold cursor-pointer">
+                    <Label
+                      htmlFor="refreshIncome"
+                      className="cursor-pointer text-sm font-semibold"
+                    >
                       Refresh income from family records
                     </Label>
                     <p className="text-xs text-muted-foreground">
-                      Re-reads current monthly incomes from latest family members master list.
+                      Re-reads current monthly incomes from latest family
+                      members master list.
                     </p>
                   </div>
                   <Switch
@@ -618,72 +725,86 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
           </Card>
 
           {/* ================= 3. HOUSE STATUS & UTILITIES ================= */}
-          <Card className="shadow-2xs border bg-card">
-            <CardHeader className="py-3 px-4 border-b bg-muted/10">
-              <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-foreground">
+          <Card className="border bg-card shadow-2xs">
+            <CardHeader className="border-b bg-muted/10 px-4 py-3">
+              <CardTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-foreground uppercase">
                 <Home className="size-4.5 text-amber-600 dark:text-amber-400" />
                 <span>House / Lot Status & Utilities</span>
               </CardTitle>
             </CardHeader>
 
-            <CardContent className="p-4 space-y-4">
+            <CardContent className="space-y-4 p-4">
               {/* House / Lot Status */}
               <div className="space-y-2">
                 <div className="flex items-center justify-between">
-                  <Label className="text-sm font-semibold text-foreground">House / Lot Arrangement</Label>
+                  <Label className="text-sm font-semibold text-foreground">
+                    House / Lot Arrangement
+                  </Label>
                   {houseTenure === "rented" && (
-                    <span className="text-xs text-amber-600 dark:text-amber-400 font-medium">
+                    <span className="text-xs font-medium text-amber-600 dark:text-amber-400">
                       Rent will be factored into total expenses
                     </span>
                   )}
                 </div>
 
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <div className="grid grid-cols-1 gap-3 sm:grid-cols-2">
                   <button
                     type="button"
                     onClick={() => handleTenureChange("owned")}
-                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                       houseTenure === "owned"
-                        ? "bg-primary/10 border-primary text-primary font-semibold shadow-xs ring-1 ring-primary"
-                        : "bg-background hover:bg-muted/50 border-border text-muted-foreground"
+                        ? "border-primary bg-primary/10 font-semibold text-primary shadow-xs ring-1 ring-primary"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
-                    <div className={`p-2 rounded-lg ${houseTenure === "owned" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    <div
+                      className={`rounded-lg p-2 ${houseTenure === "owned" ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                    >
                       <Home className="size-4.5" />
                     </div>
                     <div>
-                      <span className="text-sm font-bold block">Owned</span>
-                      <span className="text-xs text-muted-foreground">Fully owned dwelling</span>
+                      <span className="block text-sm font-bold">Owned</span>
+                      <span className="text-xs text-muted-foreground">
+                        Fully owned dwelling
+                      </span>
                     </div>
                   </button>
 
                   <button
                     type="button"
                     onClick={() => handleTenureChange("rented")}
-                    className={`flex items-center gap-3 p-3 rounded-xl border text-left transition-all cursor-pointer ${
+                    className={`flex cursor-pointer items-center gap-3 rounded-xl border p-3 text-left transition-all ${
                       houseTenure === "rented"
-                        ? "bg-primary/10 border-primary text-primary font-semibold shadow-xs ring-1 ring-primary"
-                        : "bg-background hover:bg-muted/50 border-border text-muted-foreground"
+                        ? "border-primary bg-primary/10 font-semibold text-primary shadow-xs ring-1 ring-primary"
+                        : "border-border bg-background text-muted-foreground hover:bg-muted/50"
                     }`}
                   >
-                    <div className={`p-2 rounded-lg ${houseTenure === "rented" ? "bg-primary text-primary-foreground" : "bg-muted"}`}>
+                    <div
+                      className={`rounded-lg p-2 ${houseTenure === "rented" ? "bg-primary text-primary-foreground" : "bg-muted"}`}
+                    >
                       <Receipt className="size-4.5" />
                     </div>
                     <div>
-                      <span className="text-sm font-bold block">Rented</span>
-                      <span className="text-xs text-muted-foreground">Rented apartment / room</span>
+                      <span className="block text-sm font-bold">Rented</span>
+                      <span className="text-xs text-muted-foreground">
+                        Rented apartment / room
+                      </span>
                     </div>
                   </button>
                 </div>
 
                 {/* Monthly Rent Input (when rented) */}
                 {houseTenure === "rented" && (
-                  <div className="p-3.5 rounded-lg border bg-amber-500/5 border-amber-500/20 space-y-1.5 animate-in fade-in-50 duration-150">
-                    <Label htmlFor="houseRentAmount" className="text-sm font-semibold text-foreground">
-                      Monthly House Rent (₱) <span className="text-destructive">*</span>
+                  <div className="animate-in space-y-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3.5 duration-150 fade-in-50">
+                    <Label
+                      htmlFor="houseRentAmount"
+                      className="text-sm font-semibold text-foreground"
+                    >
+                      Monthly House Rent (₱){" "}
+                      <span className="text-destructive">*</span>
                     </Label>
                     <div className="relative">
-                      <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                      <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-bold text-muted-foreground">
                         ₱
                       </span>
                       <Input
@@ -694,19 +815,21 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                         placeholder="0.00"
                         value={houseRentAmount}
                         onChange={(e) => setHouseRentAmount(e.target.value)}
-                        className="h-9 text-sm pl-7 text-right font-semibold bg-background"
+                        className="h-9 bg-background pl-7 text-right text-sm font-semibold"
                         required={houseTenure === "rented"}
                       />
                     </div>
                     {fieldErrors.house_rent_amount && (
-                      <p className="text-xs text-destructive font-medium">{fieldErrors.house_rent_amount}</p>
+                      <p className="text-xs font-medium text-destructive">
+                        {fieldErrors.house_rent_amount}
+                      </p>
                     )}
                   </div>
                 )}
               </div>
 
               {/* Light & Water Sources Multi-select Badges + Monthly Amounts */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-2 border-t">
+              <div className="grid grid-cols-1 gap-4 border-t pt-2 sm:grid-cols-2">
                 {/* Light Source */}
                 <div className="space-y-2.5">
                   <div className="flex items-center gap-1.5 text-sm font-bold text-foreground">
@@ -721,25 +844,30 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                           key={opt.value}
                           type="button"
                           onClick={() => handleToggleLightSource(opt.value)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-all cursor-pointer ${
+                          className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all sm:text-sm ${
                             selected
-                              ? "bg-amber-500/15 text-amber-900 dark:text-amber-200 border-amber-500/50 shadow-2xs"
-                              : "bg-background hover:bg-muted text-muted-foreground border-border"
+                              ? "border-amber-500/50 bg-amber-500/15 text-amber-900 shadow-2xs dark:text-amber-200"
+                              : "border-border bg-background text-muted-foreground hover:bg-muted"
                           }`}
                         >
-                          {selected ? <Check className="size-3.5 text-amber-600 dark:text-amber-300" /> : null}
+                          {selected ? (
+                            <Check className="size-3.5 text-amber-600 dark:text-amber-300" />
+                          ) : null}
                           <span>{opt.label}</span>
                         </button>
                       )
                     })}
                   </div>
                   {lightSource.length > 0 && (
-                    <div className="p-3 rounded-lg border bg-amber-500/5 border-amber-500/20 space-y-1.5 animate-in fade-in-50 duration-150">
-                      <Label htmlFor="lightAmount" className="text-xs font-semibold text-foreground">
+                    <div className="animate-in space-y-1.5 rounded-lg border border-amber-500/20 bg-amber-500/5 p-3 duration-150 fade-in-50">
+                      <Label
+                        htmlFor="lightAmount"
+                        className="text-xs font-semibold text-foreground"
+                      >
                         Monthly Light / Power Amount (₱)
                       </Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-bold text-muted-foreground">
                           ₱
                         </span>
                         <Input
@@ -750,11 +878,13 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                           placeholder="0.00"
                           value={lightAmount}
                           onChange={(e) => setLightAmount(e.target.value)}
-                          className="h-9 text-sm pl-7 text-right font-semibold bg-background"
+                          className="h-9 bg-background pl-7 text-right text-sm font-semibold"
                         />
                       </div>
                       {fieldErrors.light_amount && (
-                        <p className="text-xs text-destructive font-medium">{fieldErrors.light_amount}</p>
+                        <p className="text-xs font-medium text-destructive">
+                          {fieldErrors.light_amount}
+                        </p>
                       )}
                     </div>
                   )}
@@ -774,25 +904,30 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                           key={opt.value}
                           type="button"
                           onClick={() => handleToggleWaterSource(opt.value)}
-                          className={`flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-semibold border transition-all cursor-pointer ${
+                          className={`flex cursor-pointer items-center gap-1.5 rounded-lg border px-3 py-1.5 text-xs font-semibold transition-all sm:text-sm ${
                             selected
-                              ? "bg-blue-500/15 text-blue-900 dark:text-blue-200 border-blue-500/50 shadow-2xs"
-                              : "bg-background hover:bg-muted text-muted-foreground border-border"
+                              ? "border-blue-500/50 bg-blue-500/15 text-blue-900 shadow-2xs dark:text-blue-200"
+                              : "border-border bg-background text-muted-foreground hover:bg-muted"
                           }`}
                         >
-                          {selected ? <Check className="size-3.5 text-blue-600 dark:text-blue-300" /> : null}
+                          {selected ? (
+                            <Check className="size-3.5 text-blue-600 dark:text-blue-300" />
+                          ) : null}
                           <span>{opt.label}</span>
                         </button>
                       )
                     })}
                   </div>
                   {waterSource.length > 0 && (
-                    <div className="p-3 rounded-lg border bg-blue-500/5 border-blue-500/20 space-y-1.5 animate-in fade-in-50 duration-150">
-                      <Label htmlFor="waterAmount" className="text-xs font-semibold text-foreground">
+                    <div className="animate-in space-y-1.5 rounded-lg border border-blue-500/20 bg-blue-500/5 p-3 duration-150 fade-in-50">
+                      <Label
+                        htmlFor="waterAmount"
+                        className="text-xs font-semibold text-foreground"
+                      >
                         Monthly Water Amount (₱)
                       </Label>
                       <div className="relative">
-                        <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                        <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-bold text-muted-foreground">
                           ₱
                         </span>
                         <Input
@@ -803,11 +938,13 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                           placeholder="0.00"
                           value={waterAmount}
                           onChange={(e) => setWaterAmount(e.target.value)}
-                          className="h-9 text-sm pl-7 text-right font-semibold bg-background"
+                          className="h-9 bg-background pl-7 text-right text-sm font-semibold"
                         />
                       </div>
                       {fieldErrors.water_amount && (
-                        <p className="text-xs text-destructive font-medium">{fieldErrors.water_amount}</p>
+                        <p className="text-xs font-medium text-destructive">
+                          {fieldErrors.water_amount}
+                        </p>
                       )}
                     </div>
                   )}
@@ -817,10 +954,10 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
           </Card>
 
           {/* ================= 4. APPENDABLE MONTHLY HOUSEHOLD EXPENSES ================= */}
-          <Card className="shadow-2xs border bg-card">
-            <CardHeader className="py-3 px-4 border-b bg-muted/10">
+          <Card className="border bg-card shadow-2xs">
+            <CardHeader className="border-b bg-muted/10 px-4 py-3">
               <div className="flex items-center justify-between">
-                <CardTitle className="text-sm font-bold uppercase tracking-wider flex items-center gap-2 text-foreground">
+                <CardTitle className="flex items-center gap-2 text-sm font-bold tracking-wider text-foreground uppercase">
                   <Receipt className="size-4.5 text-violet-600 dark:text-violet-400" />
                   <span>Itemized Monthly Household Expenses</span>
                 </CardTitle>
@@ -831,14 +968,14 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                       variant="ghost"
                       size="sm"
                       onClick={handleAppendAllExpenses}
-                      className="h-6 text-xs text-muted-foreground hover:text-foreground px-2 cursor-pointer font-medium"
+                      className="h-6 cursor-pointer px-2 text-xs font-medium text-muted-foreground hover:text-foreground"
                     >
                       + Add All Items
                     </Button>
                   )}
                   <Badge
                     variant="outline"
-                    className="text-xs sm:text-sm font-bold bg-violet-500/10 text-violet-700 dark:text-violet-300 border-violet-500/30"
+                    className="border-violet-500/30 bg-violet-500/10 text-xs font-bold text-violet-700 sm:text-sm dark:text-violet-300"
                   >
                     Subtotal: {formatCurrency(eightExpensesSum)}
                   </Badge>
@@ -846,10 +983,10 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
               </div>
             </CardHeader>
 
-            <CardContent className="p-4 space-y-3">
+            <CardContent className="space-y-3 p-4">
               {/* Quick-Add Category Badges */}
               {availableExpenseKeys.length > 0 && (
-                <div className="space-y-2 p-3 rounded-xl border bg-muted/15">
+                <div className="space-y-2 rounded-xl border bg-muted/15 p-3">
                   <div className="flex items-center justify-between">
                     <span className="text-xs font-semibold text-foreground">
                       Click to append expense category:
@@ -866,7 +1003,7 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                           key={key}
                           type="button"
                           onClick={() => handleAppendExpense(key)}
-                          className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg text-xs sm:text-sm font-medium border bg-background hover:bg-primary/10 hover:text-primary hover:border-primary/40 text-foreground transition-colors cursor-pointer shadow-2xs"
+                          className="flex cursor-pointer items-center gap-1.5 rounded-lg border bg-background px-3 py-1.5 text-xs font-medium text-foreground shadow-2xs transition-colors hover:border-primary/40 hover:bg-primary/10 hover:text-primary sm:text-sm"
                         >
                           <Plus className="size-3.5 text-primary" />
                           <span>{label}</span>
@@ -879,21 +1016,28 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
 
               {/* Table of Active Appended Expenses */}
               {activeExpenseKeys.length === 0 ? (
-                <div className="text-center py-8 border rounded-xl bg-muted/10 space-y-1.5">
-                  <Receipt className="size-7 text-muted-foreground mx-auto opacity-50" />
-                  <p className="text-sm font-semibold text-foreground">No monthly expense items added yet.</p>
+                <div className="space-y-1.5 rounded-xl border bg-muted/10 py-8 text-center">
+                  <Receipt className="mx-auto size-7 text-muted-foreground opacity-50" />
+                  <p className="text-sm font-semibold text-foreground">
+                    No monthly expense items added yet.
+                  </p>
                   <p className="text-xs text-muted-foreground">
-                    Click any category badge above (e.g., Food, Medical, Transpo) to append an expense.
+                    Click any category badge above (e.g., Food, Medical,
+                    Transpo) to append an expense.
                   </p>
                 </div>
               ) : (
-                <div className="rounded-lg border overflow-hidden">
+                <div className="overflow-hidden rounded-lg border">
                   <Table>
                     <TableHeader>
                       <TableRow className="bg-muted/30">
-                        <TableHead className="w-12 text-center text-xs sm:text-sm font-bold">#</TableHead>
-                        <TableHead className="text-xs sm:text-sm font-bold">Expense Category</TableHead>
-                        <TableHead className="w-48 sm:w-60 text-right text-xs sm:text-sm font-bold">
+                        <TableHead className="w-12 text-center text-xs font-bold sm:text-sm">
+                          #
+                        </TableHead>
+                        <TableHead className="text-xs font-bold sm:text-sm">
+                          Expense Category
+                        </TableHead>
+                        <TableHead className="w-48 text-right text-xs font-bold sm:w-60 sm:text-sm">
                           Monthly Amount (₱)
                         </TableHead>
                         <TableHead className="w-12 p-0"></TableHead>
@@ -906,12 +1050,18 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                         const isOthers = key === "others"
 
                         return (
-                          <TableRow key={key} className={isOthers ? "bg-muted/10" : ""}>
+                          <TableRow
+                            key={key}
+                            className={isOthers ? "bg-muted/10" : ""}
+                          >
                             <TableCell className="text-center text-sm font-medium text-muted-foreground">
                               {index + 1}
                             </TableCell>
-                            <TableCell className="align-middle py-2.5">
-                              <Label htmlFor={`expense-${key}`} className="text-sm font-semibold text-foreground block cursor-pointer">
+                            <TableCell className="py-2.5 align-middle">
+                              <Label
+                                htmlFor={`expense-${key}`}
+                                className="block cursor-pointer text-sm font-semibold text-foreground"
+                              >
                                 {label}
                               </Label>
                               {isOthers && (
@@ -919,14 +1069,16 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                                   id="othersSpecify"
                                   placeholder="Specify details for other expenses..."
                                   value={othersSpecify}
-                                  onChange={(e) => setOthersSpecify(e.target.value)}
-                                  className="h-8 text-sm mt-1.5 bg-background placeholder:text-muted-foreground/60"
+                                  onChange={(e) =>
+                                    setOthersSpecify(e.target.value)
+                                  }
+                                  className="mt-1.5 h-8 bg-background text-sm placeholder:text-muted-foreground/60"
                                 />
                               )}
                             </TableCell>
-                            <TableCell className="text-right align-middle py-2.5">
+                            <TableCell className="py-2.5 text-right align-middle">
                               <div className="relative inline-block w-full sm:w-48">
-                                <span className="absolute left-3 top-1/2 -translate-y-1/2 text-sm font-bold text-muted-foreground">
+                                <span className="absolute top-1/2 left-3 -translate-y-1/2 text-sm font-bold text-muted-foreground">
                                   ₱
                                 </span>
                                 <Input
@@ -936,18 +1088,23 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                                   min="0"
                                   placeholder="0.00"
                                   value={expenseAmounts[key]}
-                                  onChange={(e) => handleExpenseAmountChange(key, e.target.value)}
-                                  className="h-9 text-sm pl-7 text-right font-semibold bg-background"
+                                  onChange={(e) =>
+                                    handleExpenseAmountChange(
+                                      key,
+                                      e.target.value
+                                    )
+                                  }
+                                  className="h-9 bg-background pl-7 text-right text-sm font-semibold"
                                 />
                               </div>
                             </TableCell>
-                            <TableCell className="text-center align-middle p-1">
+                            <TableCell className="p-1 text-center align-middle">
                               <Button
                                 type="button"
                                 variant="ghost"
                                 size="sm"
                                 onClick={() => handleRemoveExpense(key)}
-                                className="h-8 w-8 p-0 text-muted-foreground hover:text-destructive cursor-pointer"
+                                className="h-8 w-8 cursor-pointer p-0 text-muted-foreground hover:text-destructive"
                                 title={`Remove ${label}`}
                               >
                                 <Trash2 className="size-4" />
@@ -960,17 +1117,24 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
 
                     <TableFooter className="bg-muted/40 font-semibold">
                       <TableRow>
-                        <TableCell colSpan={2} className="text-sm font-bold text-foreground">
-                          Itemized Expenses Subtotal ({activeExpenseKeys.length} items)
+                        <TableCell
+                          colSpan={2}
+                          className="text-sm font-bold text-foreground"
+                        >
+                          Itemized Expenses Subtotal ({activeExpenseKeys.length}{" "}
+                          items)
                         </TableCell>
-                        <TableCell className="text-right text-sm sm:text-base font-bold text-foreground">
+                        <TableCell className="text-right text-sm font-bold text-foreground sm:text-base">
                           {formatCurrency(eightExpensesSum)}
                         </TableCell>
                         <TableCell></TableCell>
                       </TableRow>
                       {houseTenure === "rented" && (
                         <TableRow className="bg-muted/20">
-                          <TableCell colSpan={2} className="text-sm text-muted-foreground">
+                          <TableCell
+                            colSpan={2}
+                            className="text-sm text-muted-foreground"
+                          >
                             + Monthly House Rent
                           </TableCell>
                           <TableCell className="text-right text-sm font-semibold text-foreground">
@@ -980,10 +1144,13 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
                         </TableRow>
                       )}
                       <TableRow className="bg-primary/5 text-primary">
-                        <TableCell colSpan={2} className="text-sm sm:text-base font-bold">
+                        <TableCell
+                          colSpan={2}
+                          className="text-sm font-bold sm:text-base"
+                        >
                           Grand Total Monthly Expenses (Rent + Items)
                         </TableCell>
-                        <TableCell className="text-right text-sm sm:text-base font-bold">
+                        <TableCell className="text-right text-sm font-bold sm:text-base">
                           {formatCurrency(computedTotalExpenses)}
                         </TableCell>
                         <TableCell></TableCell>
@@ -996,20 +1163,20 @@ const ProfileForm: React.FC<ProfileFormDialogProps> = ({
           </Card>
 
           {/* Modal Footer */}
-          <DialogFooter className="pt-4 border-t gap-2 flex flex-row items-center justify-end">
+          <DialogFooter className="flex flex-row items-center justify-end gap-2.5 border-t border-[#e4e9f2] p-4 sm:p-5 dark:border-border">
             <Button
               type="button"
               variant="outline"
               onClick={onClose}
               disabled={isSubmitting}
-              className="text-sm font-medium cursor-pointer h-9 px-4"
+              className="h-[36px] cursor-pointer rounded-full border-[#cfd7e4] px-5 text-[13px] font-semibold hover:bg-[#f4f7fc] dark:border-border dark:hover:bg-muted"
             >
               Cancel
             </Button>
             <Button
               type="submit"
               disabled={isSubmitting}
-              className="text-sm font-semibold gap-1.5 cursor-pointer bg-primary text-primary-foreground hover:bg-primary/90 h-9 px-5"
+              className="h-[36px] cursor-pointer gap-2 rounded-full bg-[#1f5fd6] px-6 text-[13px] font-bold text-white shadow-[0px_6px_7px_rgba(31,95,214,0.25)] transition-all hover:bg-[#1a53bd]"
             >
               {isSubmitting ? (
                 "Saving..."
